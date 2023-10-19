@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -14,7 +15,7 @@ import (
 
 	dcontext "github.com/distribution/distribution/v3/context"
 	"github.com/distribution/distribution/v3/registry/auth"
-	"github.com/docker/libtrust"
+	"github.com/go-jose/go-jose/v3"
 )
 
 // accessSet maps a typed, named resource to
@@ -132,7 +133,7 @@ type accessController struct {
 	issuer       string
 	service      string
 	rootCerts    *x509.CertPool
-	trustedKeys  map[string]libtrust.PublicKey
+	trustedKeys  map[string]crypto.PublicKey
 }
 
 // tokenAccessOptions is a convenience type for handling
@@ -143,6 +144,7 @@ type tokenAccessOptions struct {
 	issuer         string
 	service        string
 	rootCertBundle string
+	jwks           string
 }
 
 // checkOptions gathers the necessary options
@@ -150,17 +152,26 @@ type tokenAccessOptions struct {
 func checkOptions(options map[string]interface{}) (tokenAccessOptions, error) {
 	var opts tokenAccessOptions
 
-	keys := []string{"realm", "issuer", "service", "rootcertbundle"}
+	keys := []string{"realm", "issuer", "service", "rootcertbundle", "jwks"}
 	vals := make([]string, 0, len(keys))
 	for _, key := range keys {
 		val, ok := options[key].(string)
 		if !ok {
+			// NOTE(milosgajdos): this func makes me intensely sad
+			// just like all the other weakly typed config options.
+			// Either of these config options may be missing, but
+			// at least one must be present: we handle those cases
+			// in newAccessController func which consumes this one.
+			if key == "rootcertbundle" || key == "jwks" {
+				vals = append(vals, "")
+				continue
+			}
 			return opts, fmt.Errorf("token auth requires a valid option string: %q", key)
 		}
 		vals = append(vals, val)
 	}
 
-	opts.realm, opts.issuer, opts.service, opts.rootCertBundle = vals[0], vals[1], vals[2], vals[3]
+	opts.realm, opts.issuer, opts.service, opts.rootCertBundle, opts.jwks = vals[0], vals[1], vals[2], vals[3], vals[4]
 
 	autoRedirectVal, ok := options["autoredirect"]
 	if ok {
@@ -174,22 +185,16 @@ func checkOptions(options map[string]interface{}) (tokenAccessOptions, error) {
 	return opts, nil
 }
 
-// newAccessController creates an accessController using the given options.
-func newAccessController(options map[string]interface{}) (auth.AccessController, error) {
-	config, err := checkOptions(options)
+func getRootCerts(path string) ([]*x509.Certificate, error) {
+	fp, err := os.Open(path)
 	if err != nil {
-		return nil, err
-	}
-
-	fp, err := os.Open(config.rootCertBundle)
-	if err != nil {
-		return nil, fmt.Errorf("unable to open token auth root certificate bundle file %q: %s", config.rootCertBundle, err)
+		return nil, fmt.Errorf("unable to open token auth root certificate bundle file %q: %s", path, err)
 	}
 	defer fp.Close()
 
 	rawCertBundle, err := io.ReadAll(fp)
 	if err != nil {
-		return nil, fmt.Errorf("unable to read token auth root certificate bundle file %q: %s", config.rootCertBundle, err)
+		return nil, fmt.Errorf("unable to read token auth root certificate bundle file %q: %s", path, err)
 	}
 
 	var rootCerts []*x509.Certificate
@@ -207,19 +212,72 @@ func newAccessController(options map[string]interface{}) (auth.AccessController,
 		pemBlock, rawCertBundle = pem.Decode(rawCertBundle)
 	}
 
-	if len(rootCerts) == 0 {
-		return nil, errors.New("token auth requires at least one token signing root certificate")
+	return rootCerts, nil
+}
+
+func getJwks(path string) (*jose.JSONWebKeySet, error) {
+	// TODO(milosgajdos): we should consider providing a JWKS
+	// URL from which the JWKS could be fetched
+	jp, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("unable to open jwks file %q: %s", path, err)
+	}
+	defer jp.Close()
+
+	rawJWKS, err := io.ReadAll(jp)
+	if err != nil {
+		return nil, fmt.Errorf("unable to read token jwks file %q: %s", path, err)
+	}
+
+	var jwks jose.JSONWebKeySet
+	if err := json.Unmarshal(rawJWKS, &jwks); err != nil {
+		return nil, fmt.Errorf("failed to parse jwks: %v", err)
+	}
+
+	return &jwks, nil
+}
+
+// newAccessController creates an accessController using the given options.
+func newAccessController(options map[string]interface{}) (auth.AccessController, error) {
+	config, err := checkOptions(options)
+	if err != nil {
+		return nil, err
+	}
+
+	var (
+		rootCerts []*x509.Certificate
+		jwks      *jose.JSONWebKeySet
+	)
+
+	if config.rootCertBundle != "" {
+		rootCerts, err = getRootCerts(config.rootCertBundle)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if config.jwks != "" {
+		jwks, err = getJwks(config.jwks)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if (len(rootCerts) == 0 && jwks == nil) || // no certs bundle and no jwks
+		(len(rootCerts) == 0 && jwks != nil && len(jwks.Keys) == 0) { // no certs bundle and empty jwks
+		return nil, errors.New("token auth requires at least one token signing key")
 	}
 
 	rootPool := x509.NewCertPool()
-	trustedKeys := make(map[string]libtrust.PublicKey, len(rootCerts))
 	for _, rootCert := range rootCerts {
 		rootPool.AddCert(rootCert)
-		pubKey, err := libtrust.FromCryptoPublicKey(crypto.PublicKey(rootCert.PublicKey))
-		if err != nil {
-			return nil, fmt.Errorf("unable to get public key from token auth root certificate: %s", err)
+	}
+
+	trustedKeys := make(map[string]crypto.PublicKey)
+	if jwks != nil {
+		for _, key := range jwks.Keys {
+			trustedKeys[key.KeyID] = key.Public()
 		}
-		trustedKeys[pubKey.KeyID()] = pubKey
 	}
 
 	return &accessController{
@@ -266,12 +324,13 @@ func (ac *accessController) Authorized(ctx context.Context, accessItems ...auth.
 		TrustedKeys:       ac.trustedKeys,
 	}
 
-	if err = token.Verify(verifyOpts); err != nil {
+	claims, err := token.Verify(verifyOpts)
+	if err != nil {
 		challenge.err = err
 		return nil, challenge
 	}
 
-	accessSet := token.accessSet()
+	accessSet := claims.accessSet()
 	for _, access := range accessItems {
 		if !accessSet.contains(access) {
 			challenge.err = ErrInsufficientScope
@@ -279,9 +338,9 @@ func (ac *accessController) Authorized(ctx context.Context, accessItems ...auth.
 		}
 	}
 
-	ctx = auth.WithResources(ctx, token.resources())
+	ctx = auth.WithResources(ctx, claims.resources())
 
-	return auth.WithUser(ctx, auth.UserInfo{Name: token.Claims.Subject}), nil
+	return auth.WithUser(ctx, auth.UserInfo{Name: claims.Subject}), nil
 }
 
 // init handles registering the token auth backend.

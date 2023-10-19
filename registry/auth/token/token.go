@@ -3,14 +3,12 @@ package token
 import (
 	"crypto"
 	"crypto/x509"
-	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
-	"github.com/docker/libtrust"
+	"github.com/go-jose/go-jose/v3"
+	"github.com/go-jose/go-jose/v3/jwt"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/distribution/distribution/v3/registry/auth"
@@ -54,21 +52,10 @@ type ClaimSet struct {
 	Access []*ResourceActions `json:"access"`
 }
 
-// Header describes the header section of a JSON Web Token.
-type Header struct {
-	Type       string           `json:"typ"`
-	SigningAlg string           `json:"alg"`
-	KeyID      string           `json:"kid,omitempty"`
-	X5c        []string         `json:"x5c,omitempty"`
-	RawJWK     *json.RawMessage `json:"jwk,omitempty"`
-}
-
-// Token describes a JSON Web Token.
+// Token is a JSON Web Token.
 type Token struct {
-	Raw       string
-	Header    *Header
-	Claims    *ClaimSet
-	Signature []byte
+	Raw string
+	JWT *jwt.JSONWebToken
 }
 
 // VerifyOptions is used to specify
@@ -77,264 +64,178 @@ type VerifyOptions struct {
 	TrustedIssuers    []string
 	AcceptedAudiences []string
 	Roots             *x509.CertPool
-	TrustedKeys       map[string]libtrust.PublicKey
+	TrustedKeys       map[string]crypto.PublicKey
 }
 
 // NewToken parses the given raw token string
 // and constructs an unverified JSON Web Token.
 func NewToken(rawToken string) (*Token, error) {
-	// We expect 3 parts, but limit the split to 4 to detect cases where
-	// the token contains too many (or too few) separators.
-	parts := strings.SplitN(rawToken, TokenSeparator, 4)
-	if len(parts) != 3 {
+	token, err := jwt.ParseSigned(rawToken)
+	if err != nil {
 		return nil, ErrMalformedToken
 	}
 
-	var (
-		rawHeader, rawClaims   = parts[0], parts[1]
-		headerJSON, claimsJSON []byte
-		err                    error
-	)
-
-	defer func() {
-		if err != nil {
-			log.Infof("error while unmarshalling raw token: %s", err)
-		}
-	}()
-
-	if headerJSON, err = joseBase64UrlDecode(rawHeader); err != nil {
-		err = fmt.Errorf("unable to decode header: %s", err)
-		return nil, ErrMalformedToken
-	}
-
-	if claimsJSON, err = joseBase64UrlDecode(rawClaims); err != nil {
-		err = fmt.Errorf("unable to decode claims: %s", err)
-		return nil, ErrMalformedToken
-	}
-
-	token := new(Token)
-	token.Header = new(Header)
-	token.Claims = new(ClaimSet)
-
-	token.Raw = strings.Join(parts[:2], TokenSeparator)
-	if token.Signature, err = joseBase64UrlDecode(parts[2]); err != nil {
-		err = fmt.Errorf("unable to decode signature: %s", err)
-		return nil, ErrMalformedToken
-	}
-
-	if err = json.Unmarshal(headerJSON, token.Header); err != nil {
-		return nil, ErrMalformedToken
-	}
-
-	if err = json.Unmarshal(claimsJSON, token.Claims); err != nil {
-		return nil, ErrMalformedToken
-	}
-
-	return token, nil
+	return &Token{
+		Raw: rawToken,
+		JWT: token,
+	}, nil
 }
 
 // Verify attempts to verify this token using the given options.
 // Returns a nil error if the token is valid.
-func (t *Token) Verify(verifyOpts VerifyOptions) error {
+func (t *Token) Verify(verifyOpts VerifyOptions) (*ClaimSet, error) {
+	// Verify that the signing key is trusted.
+	signingKey, err := t.VerifySigningKey(verifyOpts)
+	if err != nil {
+		log.Infof("failed to verify token: %v", err)
+		return nil, ErrInvalidToken
+	}
+
+	// NOTE(milosgajdos): Claims both verifies the signature
+	// and returns the claims within the payload
+	var claims ClaimSet
+	err = t.JWT.Claims(signingKey, &claims)
+	if err != nil {
+		return nil, err
+	}
+
 	// Verify that the Issuer claim is a trusted authority.
-	if !contains(verifyOpts.TrustedIssuers, t.Claims.Issuer) {
-		log.Infof("token from untrusted issuer: %q", t.Claims.Issuer)
-		return ErrInvalidToken
+	if !contains(verifyOpts.TrustedIssuers, claims.Issuer) {
+		log.Infof("token from untrusted issuer: %q", claims.Issuer)
+		return nil, ErrInvalidToken
 	}
 
 	// Verify that the Audience claim is allowed.
-	if !containsAny(verifyOpts.AcceptedAudiences, t.Claims.Audience) {
-		log.Infof("token intended for another audience: %v", t.Claims.Audience)
-		return ErrInvalidToken
+	if !containsAny(verifyOpts.AcceptedAudiences, claims.Audience) {
+		log.Infof("token intended for another audience: %v", claims.Audience)
+		return nil, ErrInvalidToken
 	}
 
 	// Verify that the token is currently usable and not expired.
 	currentTime := time.Now()
 
-	ExpWithLeeway := time.Unix(t.Claims.Expiration, 0).Add(Leeway)
+	ExpWithLeeway := time.Unix(claims.Expiration, 0).Add(Leeway)
 	if currentTime.After(ExpWithLeeway) {
 		log.Infof("token not to be used after %s - currently %s", ExpWithLeeway, currentTime)
-		return ErrInvalidToken
+		return nil, ErrInvalidToken
 	}
 
-	NotBeforeWithLeeway := time.Unix(t.Claims.NotBefore, 0).Add(-Leeway)
+	NotBeforeWithLeeway := time.Unix(claims.NotBefore, 0).Add(-Leeway)
 	if currentTime.Before(NotBeforeWithLeeway) {
 		log.Infof("token not to be used before %s - currently %s", NotBeforeWithLeeway, currentTime)
-		return ErrInvalidToken
+		return nil, ErrInvalidToken
 	}
 
-	// Verify the token signature.
-	if len(t.Signature) == 0 {
-		log.Info("token has no signature")
-		return ErrInvalidToken
-	}
-
-	// Verify that the signing key is trusted.
-	signingKey, err := t.VerifySigningKey(verifyOpts)
-	if err != nil {
-		log.Info(err)
-		return ErrInvalidToken
-	}
-
-	// Finally, verify the signature of the token using the key which signed it.
-	if err := signingKey.Verify(strings.NewReader(t.Raw), t.Header.SigningAlg, t.Signature); err != nil {
-		log.Infof("unable to verify token signature: %s", err)
-		return ErrInvalidToken
-	}
-
-	return nil
+	return &claims, nil
 }
 
-// VerifySigningKey attempts to get the key which was used to sign this token.
-// The token header should contain either of these 3 fields:
-//
-//	`x5c` - The x509 certificate chain for the signing key. Needs to be
-//	        verified.
-//	`jwk` - The JSON Web Key representation of the signing key.
-//	        May contain its own `x5c` field which needs to be verified.
-//	`kid` - The unique identifier for the key. This library interprets it
-//	        as a libtrust fingerprint. The key itself can be looked up in
-//	        the trustedKeys field of the given verify options.
-//
-// Each of these methods are tried in that order of preference until the
-// signing key is found or an error is returned.
-func (t *Token) VerifySigningKey(verifyOpts VerifyOptions) (signingKey libtrust.PublicKey, err error) {
-	// First attempt to get an x509 certificate chain from the header.
-	var (
-		x5c    = t.Header.X5c
-		rawJWK = t.Header.RawJWK
-		keyID  = t.Header.KeyID
-	)
+// VerifySigningKey attempts to verify and return the signing key which was used to sign the token.
+func (t *Token) VerifySigningKey(verifyOpts VerifyOptions) (signingKey crypto.PublicKey, err error) {
+	if len(t.JWT.Headers) == 0 {
+		return nil, ErrInvalidToken
+	}
+
+	// NOTE(milosgajdos): docker auth spec does not seem to
+	// support tokens signed by multiple signatures so we are
+	// verifying the first one in the list only at the moment.
+	header := t.JWT.Headers[0]
 
 	switch {
-	case len(x5c) > 0:
-		signingKey, err = parseAndVerifyCertChain(x5c, verifyOpts.Roots)
-	case rawJWK != nil:
-		signingKey, err = parseAndVerifyRawJWK(rawJWK, verifyOpts)
-	case len(keyID) > 0:
-		signingKey = verifyOpts.TrustedKeys[keyID]
+	case header.JSONWebKey != nil:
+		signingKey, err = verifyJWK(header, verifyOpts)
+	case len(header.KeyID) > 0:
+		signingKey = verifyOpts.TrustedKeys[header.KeyID]
 		if signingKey == nil {
-			err = fmt.Errorf("token signed by untrusted key with ID: %q", keyID)
+			err = fmt.Errorf("token signed by untrusted key with ID: %q", header.KeyID)
 		}
 	default:
-		err = errors.New("unable to get token signing key")
+		signingKey, err = verifyCertChain(header, verifyOpts.Roots)
 	}
 
 	return
 }
 
-func parseAndVerifyCertChain(x5c []string, roots *x509.CertPool) (leafKey libtrust.PublicKey, err error) {
-	if len(x5c) == 0 {
-		return nil, errors.New("empty x509 certificate chain")
-	}
-
-	// Ensure the first element is encoded correctly.
-	leafCertDer, err := base64.StdEncoding.DecodeString(x5c[0])
-	if err != nil {
-		return nil, fmt.Errorf("unable to decode leaf certificate: %s", err)
-	}
-
-	// And that it is a valid x509 certificate.
-	leafCert, err := x509.ParseCertificate(leafCertDer)
-	if err != nil {
-		return nil, fmt.Errorf("unable to parse leaf certificate: %s", err)
-	}
-
-	// The rest of the certificate chain are intermediate certificates.
-	intermediates := x509.NewCertPool()
-	for i := 1; i < len(x5c); i++ {
-		intermediateCertDer, err := base64.StdEncoding.DecodeString(x5c[i])
-		if err != nil {
-			return nil, fmt.Errorf("unable to decode intermediate certificate: %s", err)
-		}
-
-		intermediateCert, err := x509.ParseCertificate(intermediateCertDer)
-		if err != nil {
-			return nil, fmt.Errorf("unable to parse intermediate certificate: %s", err)
-		}
-
-		intermediates.AddCert(intermediateCert)
-	}
-
+func verifyCertChain(header jose.Header, roots *x509.CertPool) (signingKey crypto.PublicKey, err error) {
 	verifyOpts := x509.VerifyOptions{
-		Intermediates: intermediates,
-		Roots:         roots,
-		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
+		Roots:     roots,
+		KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
 	}
 
 	// TODO: this call returns certificate chains which we ignore for now, but
 	// we should check them for revocations if we have the ability later.
-	if _, err = leafCert.Verify(verifyOpts); err != nil {
-		return nil, fmt.Errorf("unable to verify certificate chain: %s", err)
-	}
-
-	// Get the public key from the leaf certificate.
-	leafCryptoKey, ok := leafCert.PublicKey.(crypto.PublicKey)
-	if !ok {
-		return nil, errors.New("unable to get leaf cert public key value")
-	}
-
-	leafKey, err = libtrust.FromCryptoPublicKey(leafCryptoKey)
+	chains, err := header.Certificates(verifyOpts)
 	if err != nil {
-		return nil, fmt.Errorf("unable to make libtrust public key from leaf certificate: %s", err)
+		return nil, err
 	}
+	signingKey = getCertPubKey(chains)
 
 	return
 }
 
-func parseAndVerifyRawJWK(rawJWK *json.RawMessage, verifyOpts VerifyOptions) (pubKey libtrust.PublicKey, err error) {
-	pubKey, err = libtrust.UnmarshalPublicKeyJWK([]byte(*rawJWK))
-	if err != nil {
-		return nil, fmt.Errorf("unable to decode raw JWK value: %s", err)
-	}
+func verifyJWK(header jose.Header, verifyOpts VerifyOptions) (signingKey crypto.PublicKey, err error) {
+	jwk := header.JSONWebKey
+	signingKey = jwk.Key
 
 	// Check to see if the key includes a certificate chain.
-	x5cVal, ok := pubKey.GetExtendedField("x5c").([]interface{})
-	if !ok {
+	if len(jwk.Certificates) == 0 {
 		// The JWK should be one of the trusted root keys.
-		if _, trusted := verifyOpts.TrustedKeys[pubKey.KeyID()]; !trusted {
+		if _, trusted := verifyOpts.TrustedKeys[jwk.KeyID]; !trusted {
 			return nil, errors.New("untrusted JWK with no certificate chain")
 		}
-
 		// The JWK is one of the trusted keys.
 		return
 	}
 
-	// Ensure each item in the chain is of the correct type.
-	x5c := make([]string, len(x5cVal))
-	for i, val := range x5cVal {
-		certString, ok := val.(string)
-		if !ok || len(certString) == 0 {
-			return nil, errors.New("malformed certificate chain")
+	opts := x509.VerifyOptions{
+		Roots:     verifyOpts.Roots,
+		KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
+	}
+
+	leaf := jwk.Certificates[0]
+	if opts.Intermediates == nil {
+		opts.Intermediates = x509.NewCertPool()
+		for _, intermediate := range jwk.Certificates[1:] {
+			opts.Intermediates.AddCert(intermediate)
 		}
-		x5c[i] = certString
 	}
 
-	// Ensure that the x509 certificate chain can
-	// be verified up to one of our trusted roots.
-	leafKey, err := parseAndVerifyCertChain(x5c, verifyOpts.Roots)
+	// TODO: this call returns certificate chains which we ignore for now, but
+	// we should check them for revocations if we have the ability later.
+	chains, err := leaf.Verify(opts)
 	if err != nil {
-		return nil, fmt.Errorf("could not verify JWK certificate chain: %s", err)
+		return nil, err
 	}
-
-	// Verify that the public key in the leaf cert *is* the signing key.
-	if pubKey.KeyID() != leafKey.KeyID() {
-		return nil, errors.New("leaf certificate public key ID does not match JWK key ID")
-	}
+	signingKey = getCertPubKey(chains)
 
 	return
 }
 
+func getCertPubKey(chains [][]*x509.Certificate) crypto.PublicKey {
+	// NOTE(milosgajdos): if there are no certificates
+	// header.Certificates call above returns error, so we are
+	// guaranteed to get at least one certificate chain.
+	// We pick the leaf certificate chain.
+	chain := chains[0]
+
+	// NOTE(milosgajdos): header.Certificates call returns the result
+	// of leafCert.Verify which is a call to x509.Certificate.Verify.
+	// If successful, it returns one or more chains where the first
+	// element of the chain is x5c and the last element is from opts.Roots.
+	// See: https://pkg.go.dev/crypto/x509#Certificate.Verify
+	cert := chain[0]
+
+	// NOTE: we dont have to verify that the public key in the leaf cert
+	// *is* the signing key: if it's not the signing then token claims
+	// verifcation with this key fails
+	return cert.PublicKey.(crypto.PublicKey)
+}
+
 // accessSet returns a set of actions available for the resource
 // actions listed in the `access` section of this token.
-func (t *Token) accessSet() accessSet {
-	if t.Claims == nil {
-		return nil
-	}
+func (c *ClaimSet) accessSet() accessSet {
+	accessSet := make(accessSet, len(c.Access))
 
-	accessSet := make(accessSet, len(t.Claims.Access))
-
-	for _, resourceActions := range t.Claims.Access {
+	for _, resourceActions := range c.Access {
 		resource := auth.Resource{
 			Type: resourceActions.Type,
 			Name: resourceActions.Name,
@@ -354,13 +255,10 @@ func (t *Token) accessSet() accessSet {
 	return accessSet
 }
 
-func (t *Token) resources() []auth.Resource {
-	if t.Claims == nil {
-		return nil
-	}
-
+func (c *ClaimSet) resources() []auth.Resource {
 	resourceSet := map[auth.Resource]struct{}{}
-	for _, resourceActions := range t.Claims.Access {
+
+	for _, resourceActions := range c.Access {
 		resource := auth.Resource{
 			Type:  resourceActions.Type,
 			Class: resourceActions.Class,
@@ -375,8 +273,4 @@ func (t *Token) resources() []auth.Resource {
 	}
 
 	return resources
-}
-
-func (t *Token) compactRaw() string {
-	return fmt.Sprintf("%s.%s", t.Raw, joseBase64UrlEncode(t.Signature))
 }
