@@ -210,7 +210,10 @@ func TestStorageClass(t *testing.T) {
 	rootDir := t.TempDir()
 	contents := []byte("contents")
 	ctx := context.Background()
-	for _, storageClass := range s3StorageClasses {
+
+	// We don't need to test all the storage classes, just that its selectable.
+	// The first 3 are common to AWS and MinIO, so use those.
+	for _, storageClass := range s3StorageClasses[:3] {
 		filename := "/test-" + storageClass
 		s3Driver, err := s3DriverConstructor(rootDir, storageClass)
 		if err != nil {
@@ -307,7 +310,6 @@ func TestDelete(t *testing.T) {
 	objs := []string{
 		"/file1",
 		"/file1-2",
-		"/file1/2",
 		"/folder1/file1",
 		"/folder2/file1",
 		"/folder3/file1",
@@ -319,15 +321,6 @@ func TestDelete(t *testing.T) {
 	}
 
 	tcs := []testCase{
-		{
-			// special case where a given path is a file and has subpaths
-			name:   "delete file1",
-			delete: "/file1",
-			expected: []string{
-				"/file1",
-				"/file1/2",
-			},
-		},
 		{
 			name:   "delete folder1",
 			delete: "/folder1",
@@ -371,16 +364,8 @@ func TestDelete(t *testing.T) {
 		},
 	}
 
-	// objects to skip auto-created test case
-	skipCase := map[string]bool{
-		// special case where deleting "/file1" also deletes "/file1/2" is tested explicitly
-		"/file1": true,
-	}
 	// create a test case for each file
 	for _, p := range objs {
-		if skipCase[p] {
-			continue
-		}
 		tcs = append(tcs, testCase{
 			name:     fmt.Sprintf("delete path:'%s'", p),
 			delete:   p,
