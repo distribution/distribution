@@ -635,7 +635,7 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 		}
 
 		// Add username to request logging
-		context.Context = dcontext.WithLogger(context.Context, dcontext.GetLogger(context.Context, auth.UserNameKey))
+		context.Context = dcontext.WithLogger(context.Context, dcontext.GetLogger(context.Context, userNameKey))
 
 		// sync up context on the request.
 		r = r.WithContext(context)
@@ -822,10 +822,10 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 		return fmt.Errorf("access controller returned neither an access grant nor an error")
 	}
 
-	ctx := auth.WithUser(context.Context, grant.User)
-	ctx = auth.WithResources(ctx, grant.Resources)
+	ctx := withUser(context.Context, grant.User)
+	ctx = withResources(ctx, grant.Resources)
 
-	dcontext.GetLogger(ctx, auth.UserNameKey).Info("authorized request")
+	dcontext.GetLogger(ctx, userNameKey).Info("authorized request")
 	// TODO(stevvooe): This pattern needs to be cleaned up a bit. One context
 	// should be replaced by another, rather than replacing the context on a
 	// mutable object.

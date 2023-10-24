@@ -32,20 +32,9 @@
 package auth
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net/http"
-)
-
-const (
-	// UserKey is used to get the user object from
-	// a user context
-	UserKey = "auth.user"
-
-	// UserNameKey is used to get the user name from
-	// a user context
-	UserNameKey = "auth.user.name"
 )
 
 var (
@@ -113,63 +102,6 @@ type AccessController interface {
 // CredentialAuthenticator is an object which is able to authenticate credentials
 type CredentialAuthenticator interface {
 	AuthenticateUser(username, password string) error
-}
-
-// WithUser returns a context with the authorized user info.
-func WithUser(ctx context.Context, user UserInfo) context.Context {
-	return userInfoContext{
-		Context: ctx,
-		user:    user,
-	}
-}
-
-type userInfoContext struct {
-	context.Context
-	user UserInfo
-}
-
-func (uic userInfoContext) Value(key interface{}) interface{} {
-	switch key {
-	case UserKey:
-		return uic.user
-	case UserNameKey:
-		return uic.user.Name
-	}
-
-	return uic.Context.Value(key)
-}
-
-// WithResources returns a context with the authorized resources.
-func WithResources(ctx context.Context, resources []Resource) context.Context {
-	return resourceContext{
-		Context:   ctx,
-		resources: resources,
-	}
-}
-
-type resourceContext struct {
-	context.Context
-	resources []Resource
-}
-
-type resourceKey struct{}
-
-func (rc resourceContext) Value(key interface{}) interface{} {
-	if key == (resourceKey{}) {
-		return rc.resources
-	}
-
-	return rc.Context.Value(key)
-}
-
-// AuthorizedResources returns the list of resources which have
-// been authorized for this request.
-func AuthorizedResources(ctx context.Context) []Resource {
-	if resources, ok := ctx.Value(resourceKey{}).([]Resource); ok {
-		return resources
-	}
-
-	return nil
 }
 
 // InitFunc is the type of an AccessController factory function and is used

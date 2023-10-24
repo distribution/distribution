@@ -13,7 +13,6 @@ import (
 	"github.com/distribution/distribution/v3/manifest/ocischema"
 	"github.com/distribution/distribution/v3/manifest/schema2"
 	"github.com/distribution/distribution/v3/registry/api/errcode"
-	"github.com/distribution/distribution/v3/registry/auth"
 	"github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/reference"
 	"github.com/gorilla/handlers"
@@ -394,7 +393,7 @@ func (imh *manifestHandler) applyResourcePolicy(manifest distribution.Manifest) 
 		return errcode.ErrorCodeDenied.WithMessage(fmt.Sprintf("registry does not allow %s manifest", class))
 	}
 
-	resources := auth.AuthorizedResources(imh)
+	resources := authorizedResources(imh)
 	n := imh.Repository.Named().Name()
 
 	var foundResource bool
