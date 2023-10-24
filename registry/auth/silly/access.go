@@ -43,12 +43,7 @@ func newAccessController(options map[string]interface{}) (auth.AccessController,
 
 // Authorized simply checks for the existence of the authorization header,
 // responding with a bearer challenge if it doesn't exist.
-func (ac *accessController) Authorized(ctx context.Context, accessRecords ...auth.Access) (context.Context, error) {
-	req, err := dcontext.GetRequest(ctx)
-	if err != nil {
-		return nil, err
-	}
-
+func (ac *accessController) Authorized(req *http.Request, accessRecords ...auth.Access) (context.Context, error) {
 	if req.Header.Get("Authorization") == "" {
 		challenge := challenge{
 			realm:   ac.realm,
@@ -66,7 +61,7 @@ func (ac *accessController) Authorized(ctx context.Context, accessRecords ...aut
 		return nil, &challenge
 	}
 
-	ctx = auth.WithUser(ctx, auth.UserInfo{Name: "silly"})
+	ctx := auth.WithUser(req.Context(), auth.UserInfo{Name: "silly"})
 	ctx = dcontext.WithLogger(ctx, dcontext.GetLogger(ctx, auth.UserNameKey, auth.UserKey))
 
 	return ctx, nil

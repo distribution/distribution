@@ -8,7 +8,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/distribution/distribution/v3/registry/auth"
 )
 
@@ -33,7 +32,6 @@ func TestBasicAccessController(t *testing.T) {
 		"realm": testRealm,
 		"path":  tempFile.Name(),
 	}
-	ctx := dcontext.Background()
 
 	accessController, err := newAccessController(options)
 	if err != nil {
@@ -45,8 +43,7 @@ func TestBasicAccessController(t *testing.T) {
 	userNumber := 0
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := dcontext.WithRequest(ctx, r)
-		authCtx, err := accessController.Authorized(ctx)
+		authCtx, err := accessController.Authorized(r)
 		if err != nil {
 			switch err := err.(type) {
 			case auth.Challenge:

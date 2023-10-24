@@ -18,7 +18,7 @@
 //		resource := auth.Resource{Type: "customerOrder", Name: orderNumber}
 //		access := auth.Access{Resource: resource, Action: "update"}
 //
-//		if ctx, err := accessController.Authorized(ctx, access); err != nil {
+//		if ctx, err := accessController.Authorized(r, access); err != nil {
 //			if challenge, ok := err.(auth.Challenge) {
 //				// Let the challenge write the response.
 //				challenge.SetHeaders(r, w)
@@ -93,16 +93,15 @@ type Challenge interface {
 // and required access levels for a request. Implementations can support both
 // complete denial and http authorization challenges.
 type AccessController interface {
-	// Authorized returns a non-nil error if the context is granted access and
+	// Authorized returns a nil error if the request is granted access and
 	// returns a new authorized context. If one or more Access structs are
 	// provided, the requested access will be compared with what is available
-	// to the context. The given context will contain a "http.request" key with
-	// a `*http.Request` value. If the error is non-nil, access should always
-	// be denied. The error may be of type Challenge, in which case the caller
-	// may have the Challenge handle the request or choose what action to take
-	// based on the Challenge header or response status. The returned context
-	// object should have a "auth.user" value set to a UserInfo struct.
-	Authorized(ctx context.Context, access ...Access) (context.Context, error)
+	// to the request. Access is denied if the error is non-nil. The error may
+	// be of type Challenge, in which case the caller may have the Challenge
+	// handle the request or choose what action to take based on the Challenge
+	// header or response status. The returned context object should be derived
+	// from r.Context() and have a "auth.user" value set to a UserInfo struct.
+	Authorized(r *http.Request, access ...Access) (context.Context, error)
 }
 
 // CredentialAuthenticator is an object which is able to authenticate credentials

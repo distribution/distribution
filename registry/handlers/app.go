@@ -797,7 +797,7 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 		accessRecords = appendCatalogAccessRecord(accessRecords, r)
 	}
 
-	ctx, err := app.accessController.Authorized(context.Context, accessRecords...)
+	ctx, err := app.accessController.Authorized(r.WithContext(context.Context), accessRecords...)
 	if err != nil {
 		switch err := err.(type) {
 		case auth.Challenge:

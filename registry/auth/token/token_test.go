@@ -18,7 +18,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/distribution/distribution/v3/registry/auth"
 	"github.com/go-jose/go-jose/v3"
 	"github.com/go-jose/go-jose/v3/jwt"
@@ -466,8 +465,7 @@ func TestAccessController(t *testing.T) {
 		Action: "baz",
 	}
 
-	ctx := dcontext.WithRequest(dcontext.Background(), req)
-	authCtx, err := accessController.Authorized(ctx, testAccess)
+	authCtx, err := accessController.Authorized(req, testAccess)
 	challenge, ok := err.(auth.Challenge)
 	if !ok {
 		t.Fatal("accessController did not return a challenge")
@@ -502,7 +500,7 @@ func TestAccessController(t *testing.T) {
 
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token.Raw))
 
-	authCtx, err = accessController.Authorized(ctx, testAccess)
+	authCtx, err = accessController.Authorized(req, testAccess)
 	challenge, ok = err.(auth.Challenge)
 	if !ok {
 		t.Fatal("accessController did not return a challenge")
@@ -534,7 +532,7 @@ func TestAccessController(t *testing.T) {
 
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token.Raw))
 
-	authCtx, err = accessController.Authorized(ctx, testAccess)
+	authCtx, err = accessController.Authorized(req, testAccess)
 	challenge, ok = err.(auth.Challenge)
 	if !ok {
 		t.Fatal("accessController did not return a challenge")
@@ -564,7 +562,7 @@ func TestAccessController(t *testing.T) {
 
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token.Raw))
 
-	authCtx, err = accessController.Authorized(ctx, testAccess)
+	authCtx, err = accessController.Authorized(req, testAccess)
 	if err != nil {
 		t.Fatalf("accessController returned unexpected error: %s", err)
 	}
@@ -594,7 +592,7 @@ func TestAccessController(t *testing.T) {
 
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token.Raw))
 
-	_, err = accessController.Authorized(ctx, testAccess)
+	_, err = accessController.Authorized(req, testAccess)
 	if err != nil {
 		t.Fatalf("accessController returned unexpected error: %s", err)
 	}

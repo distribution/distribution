@@ -49,12 +49,7 @@ func newAccessController(options map[string]interface{}) (auth.AccessController,
 	return &accessController{realm: realm.(string), path: path}, nil
 }
 
-func (ac *accessController) Authorized(ctx context.Context, accessRecords ...auth.Access) (context.Context, error) {
-	req, err := dcontext.GetRequest(ctx)
-	if err != nil {
-		return nil, err
-	}
-
+func (ac *accessController) Authorized(req *http.Request, accessRecords ...auth.Access) (context.Context, error) {
 	username, password, ok := req.BasicAuth()
 	if !ok {
 		return nil, &challenge{
@@ -92,14 +87,14 @@ func (ac *accessController) Authorized(ctx context.Context, accessRecords ...aut
 	ac.mu.Unlock()
 
 	if err := localHTPasswd.authenticateUser(username, password); err != nil {
-		dcontext.GetLogger(ctx).Errorf("error authenticating user %q: %v", username, err)
+		dcontext.GetLogger(req.Context()).Errorf("error authenticating user %q: %v", username, err)
 		return nil, &challenge{
 			realm: ac.realm,
 			err:   auth.ErrAuthenticationFailure,
 		}
 	}
 
-	return auth.WithUser(ctx, auth.UserInfo{Name: username}), nil
+	return auth.WithUser(req.Context(), auth.UserInfo{Name: username}), nil
 }
 
 // challenge implements the auth.Challenge interface.
