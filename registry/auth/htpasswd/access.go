@@ -49,7 +49,7 @@ func newAccessController(options map[string]interface{}) (auth.AccessController,
 	return &accessController{realm: realm.(string), path: path}, nil
 }
 
-func (ac *accessController) Authorized(req *http.Request, accessRecords ...auth.Access) (context.Context, error) {
+func (ac *accessController) Authorized(req *http.Request, accessRecords ...auth.Access) (*auth.Grant, error) {
 	username, password, ok := req.BasicAuth()
 	if !ok {
 		return nil, &challenge{
@@ -94,7 +94,7 @@ func (ac *accessController) Authorized(req *http.Request, accessRecords ...auth.
 		}
 	}
 
-	return auth.WithUser(req.Context(), auth.UserInfo{Name: username}), nil
+	return &auth.Grant{User: auth.UserInfo{Name: username}}, nil
 }
 
 // challenge implements the auth.Challenge interface.

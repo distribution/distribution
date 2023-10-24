@@ -797,7 +797,7 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 		accessRecords = appendCatalogAccessRecord(accessRecords, r)
 	}
 
-	ctx, err := app.accessController.Authorized(r.WithContext(context.Context), accessRecords...)
+	grant, err := app.accessController.Authorized(r.WithContext(context.Context), accessRecords...)
 	if err != nil {
 		switch err := err.(type) {
 		case auth.Challenge:
@@ -818,6 +818,12 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 
 		return err
 	}
+	if grant == nil {
+		return fmt.Errorf("access controller returned neither an access grant nor an error")
+	}
+
+	ctx := auth.WithUser(context.Context, grant.User)
+	ctx = auth.WithResources(ctx, grant.Resources)
 
 	dcontext.GetLogger(ctx, auth.UserNameKey).Info("authorized request")
 	// TODO(stevvooe): This pattern needs to be cleaned up a bit. One context

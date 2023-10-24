@@ -1,7 +1,6 @@
 package token
 
 import (
-	"context"
 	"crypto"
 	"crypto/x509"
 	"encoding/json"
@@ -291,7 +290,7 @@ func newAccessController(options map[string]interface{}) (auth.AccessController,
 
 // Authorized handles checking whether the given request is authorized
 // for actions on resources described by the given access items.
-func (ac *accessController) Authorized(req *http.Request, accessItems ...auth.Access) (context.Context, error) {
+func (ac *accessController) Authorized(req *http.Request, accessItems ...auth.Access) (*auth.Grant, error) {
 	challenge := &authChallenge{
 		realm:        ac.realm,
 		autoRedirect: ac.autoRedirect,
@@ -332,9 +331,10 @@ func (ac *accessController) Authorized(req *http.Request, accessItems ...auth.Ac
 		}
 	}
 
-	ctx := auth.WithResources(req.Context(), claims.resources())
-
-	return auth.WithUser(ctx, auth.UserInfo{Name: claims.Subject}), nil
+	return &auth.Grant{
+		User:      auth.UserInfo{Name: claims.Subject},
+		Resources: claims.resources(),
+	}, nil
 }
 
 // init handles registering the token auth backend.

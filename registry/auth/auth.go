@@ -76,6 +76,12 @@ type Access struct {
 	Action string
 }
 
+// Grant describes the permitted level of access for an authorized request.
+type Grant struct {
+	User      UserInfo   // The authenticated user for the request.
+	Resources []Resource // The list of resources which have been authorized for the request.
+}
+
 // Challenge is a special error type which is used for HTTP 401 Unauthorized
 // responses and is able to write the response with WWW-Authenticate challenge
 // header values based on the error.
@@ -93,15 +99,15 @@ type Challenge interface {
 // and required access levels for a request. Implementations can support both
 // complete denial and http authorization challenges.
 type AccessController interface {
-	// Authorized returns a nil error if the request is granted access and
-	// returns a new authorized context. If one or more Access structs are
-	// provided, the requested access will be compared with what is available
-	// to the request. Access is denied if the error is non-nil. The error may
-	// be of type Challenge, in which case the caller may have the Challenge
-	// handle the request or choose what action to take based on the Challenge
-	// header or response status. The returned context object should be derived
-	// from r.Context() and have a "auth.user" value set to a UserInfo struct.
-	Authorized(r *http.Request, access ...Access) (context.Context, error)
+	// Authorized determines if the request is granted access. If one or more
+	// Access structs are provided, the requested access will be compared with
+	// what is available to the request.
+	//
+	// Return a Grant to grant the request access. Return an error to deny
+	// access. The error may be of type Challenge, in which case the caller may
+	// have the Challenge handle the request or choose what action to take based
+	// on the Challenge header or response status.
+	Authorized(r *http.Request, access ...Access) (*Grant, error)
 }
 
 // CredentialAuthenticator is an object which is able to authenticate credentials
