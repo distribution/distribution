@@ -16,7 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
 
-	"github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/internal/dcontext"
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/distribution/v3/registry/storage/driver/testsuites"
 )
@@ -180,7 +180,7 @@ func TestEmptyRootList(t *testing.T) {
 
 	filename := "/test"
 	contents := []byte("contents")
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	err = rootedDriver.PutContent(ctx, filename, contents)
 	if err != nil {
 		t.Fatalf("unexpected error creating content: %v", err)
@@ -209,7 +209,7 @@ func TestStorageClass(t *testing.T) {
 
 	rootDir := t.TempDir()
 	contents := []byte("contents")
-	ctx := context.Background()
+	ctx := dcontext.Background()
 
 	// We don't need to test all the storage classes, just that its selectable.
 	// The first 3 are common to AWS and MinIO, so use those.
@@ -377,7 +377,7 @@ func TestDelete(t *testing.T) {
 		// init file structure matching objs
 		var created []string
 		for _, p := range objs {
-			err := drvr.PutContent(context.Background(), p, []byte("content "+p))
+			err := drvr.PutContent(dcontext.Background(), p, []byte("content "+p))
 			if err != nil {
 				fmt.Printf("unable to init file %s: %s\n", p, err)
 				continue
@@ -390,7 +390,7 @@ func TestDelete(t *testing.T) {
 	cleanup := func(objs []string) {
 		var lastErr error
 		for _, p := range objs {
-			err := drvr.Delete(context.Background(), p)
+			err := drvr.Delete(dcontext.Background(), p)
 			if err != nil {
 				switch err.(type) {
 				case storagedriver.PathNotFoundError:
@@ -409,7 +409,7 @@ func TestDelete(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			objs := init()
 
-			err := drvr.Delete(context.Background(), tc.delete)
+			err := drvr.Delete(dcontext.Background(), tc.delete)
 
 			if tc.err != nil {
 				if err == nil {
@@ -437,7 +437,7 @@ func TestDelete(t *testing.T) {
 				return false
 			}
 			for _, path := range objs {
-				stat, err := drvr.Stat(context.Background(), path)
+				stat, err := drvr.Stat(dcontext.Background(), path)
 				if err != nil {
 					switch err.(type) {
 					case storagedriver.PathNotFoundError:
@@ -491,7 +491,7 @@ func TestWalk(t *testing.T) {
 	// create file structure matching fileset above
 	created := make([]string, 0, len(fileset))
 	for _, p := range fileset {
-		err := drvr.PutContent(context.Background(), p, []byte("content "+p))
+		err := drvr.PutContent(dcontext.Background(), p, []byte("content "+p))
 		if err != nil {
 			fmt.Printf("unable to create file %s: %s\n", p, err)
 			continue
@@ -503,7 +503,7 @@ func TestWalk(t *testing.T) {
 	defer func() {
 		var lastErr error
 		for _, p := range created {
-			err := drvr.Delete(context.Background(), p)
+			err := drvr.Delete(dcontext.Background(), p)
 			if err != nil {
 				_ = fmt.Errorf("cleanup failed for path %s: %s", p, err)
 				lastErr = err
@@ -692,7 +692,7 @@ func TestWalk(t *testing.T) {
 			tc.from = "/"
 		}
 		t.Run(tc.name, func(t *testing.T) {
-			err := drvr.Walk(context.Background(), tc.from, func(fileInfo storagedriver.FileInfo) error {
+			err := drvr.Walk(dcontext.Background(), tc.from, func(fileInfo storagedriver.FileInfo) error {
 				walked = append(walked, fileInfo.Path())
 				return tc.fn(fileInfo)
 			}, tc.options...)
@@ -718,7 +718,7 @@ func TestOverThousandBlobs(t *testing.T) {
 		t.Fatalf("unexpected error creating driver with standard storage: %v", err)
 	}
 
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	for i := 0; i < 1005; i++ {
 		filename := "/thousandfiletest/file" + strconv.Itoa(i)
 		contents := []byte("contents")
@@ -746,7 +746,7 @@ func TestMoveWithMultipartCopy(t *testing.T) {
 		t.Fatalf("unexpected error creating driver: %v", err)
 	}
 
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	sourcePath := "/source"
 	destPath := "/dest"
 
@@ -795,7 +795,7 @@ func TestListObjectsV2(t *testing.T) {
 		t.Fatalf("unexpected error creating driver: %v", err)
 	}
 
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	n := 6
 	prefix := "/test-list-objects-v2"
 	var filePaths []string

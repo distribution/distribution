@@ -1,16 +1,16 @@
-// Package context provides several utilities for working with
+// Package dcontext provides several utilities for working with
 // Go's context in http requests. Primarily, the focus is on logging relevant
 // request information but this package is not limited to that purpose.
 //
 // The easiest way to get started is to get the background context:
 //
-//	ctx := context.Background()
+//	ctx := dcontext.Background()
 //
 // The returned context should be passed around your application and be the
 // root of all other context instances. If the application has a version, this
 // line should be called before anything else:
 //
-//	ctx := context.WithVersion(context.Background(), version)
+//	ctx := dcontext.WithVersion(dcontext.Background(), version)
 //
 // The above will store the version in the context and will be available to
 // the logger.
@@ -27,7 +27,7 @@
 // the context and reported with the logger. The following example would
 // return a logger that prints the version with each log message:
 //
-//	ctx := context.Context(context.Background(), "version", version)
+//	ctx := context.WithValue(dcontext.Background(), "version", version)
 //	GetLogger(ctx, "version").Infof("this log message has a version field")
 //
 // The above would print out a log message like this:
@@ -85,4 +85,4 @@
 // can be traced in log messages. Using the fields like "http.request.id", one
 // can analyze call flow for a particular request with a simple grep of the
 // logs.
-package context
+package dcontext

@@ -19,9 +19,9 @@ import (
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/configuration"
-	dcontext "github.com/distribution/distribution/v3/context"
 	"github.com/distribution/distribution/v3/health"
 	"github.com/distribution/distribution/v3/health/checks"
+	"github.com/distribution/distribution/v3/internal/dcontext"
 	prometheus "github.com/distribution/distribution/v3/metrics"
 	"github.com/distribution/distribution/v3/notifications"
 	"github.com/distribution/distribution/v3/registry/api/errcode"

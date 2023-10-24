@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/distribution/distribution/v3/configuration"
-	"github.com/distribution/distribution/v3/context"
 	"github.com/distribution/distribution/v3/health"
+	"github.com/distribution/distribution/v3/internal/dcontext"
 )
 
 func TestFileHealthCheck(t *testing.T) {
@@ -39,7 +39,7 @@ func TestFileHealthCheck(t *testing.T) {
 		},
 	}
 
-	ctx := context.Background()
+	ctx := dcontext.Background()
 
 	app := NewApp(ctx, config)
 	healthRegistry := health.NewRegistry()
@@ -103,7 +103,7 @@ func TestTCPHealthCheck(t *testing.T) {
 		},
 	}
 
-	ctx := context.Background()
+	ctx := dcontext.Background()
 
 	app := NewApp(ctx, config)
 	healthRegistry := health.NewRegistry()
@@ -165,7 +165,7 @@ func TestHTTPHealthCheck(t *testing.T) {
 		},
 	}
 
-	ctx := context.Background()
+	ctx := dcontext.Background()
 
 	app := NewApp(ctx, config)
 	healthRegistry := health.NewRegistry()

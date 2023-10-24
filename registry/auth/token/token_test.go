@@ -18,7 +18,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/distribution/distribution/v3/registry/auth"
 	"github.com/go-jose/go-jose/v3"
 	"github.com/go-jose/go-jose/v3/jwt"
@@ -466,7 +466,7 @@ func TestAccessController(t *testing.T) {
 		Action: "baz",
 	}
 
-	ctx := context.WithRequest(context.Background(), req)
+	ctx := dcontext.WithRequest(dcontext.Background(), req)
 	authCtx, err := accessController.Authorized(ctx, testAccess)
 	challenge, ok := err.(auth.Challenge)
 	if !ok {

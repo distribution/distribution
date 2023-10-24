@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/distribution/distribution/v3/registry/api/errcode"
 	"github.com/gorilla/handlers"
 	"github.com/opencontainers/go-digest"
@@ -53,7 +53,7 @@ type blobHandler struct {
 // GetBlob fetches the binary data from backend storage returns it in the
 // response.
 func (bh *blobHandler) GetBlob(w http.ResponseWriter, r *http.Request) {
-	context.GetLogger(bh).Debug("GetBlob")
+	dcontext.GetLogger(bh).Debug("GetBlob")
 	blobs := bh.Repository.Blobs(bh)
 	desc, err := blobs.Stat(bh, bh.Digest)
 	if err != nil {
@@ -66,7 +66,7 @@ func (bh *blobHandler) GetBlob(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := blobs.ServeBlob(bh, w, r, desc.Digest); err != nil {
-		context.GetLogger(bh).Debugf("unexpected error getting blob HTTP handler: %v", err)
+		dcontext.GetLogger(bh).Debugf("unexpected error getting blob HTTP handler: %v", err)
 		bh.Errors = append(bh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 		return
 	}
@@ -74,7 +74,7 @@ func (bh *blobHandler) GetBlob(w http.ResponseWriter, r *http.Request) {
 
 // DeleteBlob deletes a layer blob
 func (bh *blobHandler) DeleteBlob(w http.ResponseWriter, r *http.Request) {
-	context.GetLogger(bh).Debug("DeleteBlob")
+	dcontext.GetLogger(bh).Debug("DeleteBlob")
 
 	blobs := bh.Repository.Blobs(bh)
 	err := blobs.Delete(bh, bh.Digest)
@@ -88,7 +88,7 @@ func (bh *blobHandler) DeleteBlob(w http.ResponseWriter, r *http.Request) {
 			return
 		default:
 			bh.Errors = append(bh.Errors, err)
-			context.GetLogger(bh).Errorf("Unknown error deleting blob: %s", err.Error())
+			dcontext.GetLogger(bh).Errorf("Unknown error deleting blob: %s", err.Error())
 			return
 		}
 	}

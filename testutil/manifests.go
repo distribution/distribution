@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/distribution/distribution/v3/manifest/manifestlist"
 	"github.com/distribution/distribution/v3/manifest/schema2"
 	"github.com/opencontainers/go-digest"
@@ -12,7 +12,7 @@ import (
 
 // MakeManifestList constructs a manifest list out of a list of manifest digests
 func MakeManifestList(blobstatter distribution.BlobStatter, manifestDigests []digest.Digest) (*manifestlist.DeserializedManifestList, error) {
-	ctx := context.Background()
+	ctx := dcontext.Background()
 
 	manifestDescriptors := make([]manifestlist.ManifestDescriptor, 0, len(manifestDigests))
 	for _, manifestDigest := range manifestDigests {
@@ -39,7 +39,7 @@ func MakeManifestList(blobstatter distribution.BlobStatter, manifestDigests []di
 // MakeSchema2Manifest constructs a schema 2 manifest from a given list of digests and returns
 // the digest of the manifest
 func MakeSchema2Manifest(repository distribution.Repository, digests []digest.Digest) (distribution.Manifest, error) {
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	blobStore := repository.Blobs(ctx)
 
 	var configJSON []byte
