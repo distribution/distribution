@@ -40,16 +40,6 @@ func WithRequest(ctx context.Context, r *http.Request) context.Context {
 	}
 }
 
-// GetRequest returns the http request in the given context. Returns
-// ErrNoRequestContext if the context does not have an http request associated
-// with it.
-func GetRequest(ctx context.Context) (*http.Request, error) {
-	if r, ok := ctx.Value("http.request").(*http.Request); r != nil && ok {
-		return r, nil
-	}
-	return nil, ErrNoRequestContext
-}
-
 // GetRequestID attempts to resolve the current request id, if possible. An
 // error is return if it is not available on the context.
 func GetRequestID(ctx context.Context) string {
