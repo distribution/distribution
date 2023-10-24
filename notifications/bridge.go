@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/internal/dcontext"
+	"github.com/distribution/distribution/v3/internal/requestutil"
 	"github.com/distribution/reference"
 	events "github.com/docker/go-events"
 	"github.com/google/uuid"
@@ -49,7 +49,7 @@ func NewBridge(ub URLBuilder, source SourceRecord, actor ActorRecord, request Re
 func NewRequestRecord(id string, r *http.Request) RequestRecord {
 	return RequestRecord{
 		ID:        id,
-		Addr:      dcontext.RemoteAddr(r),
+		Addr:      requestutil.RemoteAddr(r),
 		Host:      r.Host,
 		Method:    r.Method,
 		UserAgent: r.UserAgent(),

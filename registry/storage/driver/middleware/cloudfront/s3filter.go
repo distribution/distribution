@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/distribution/distribution/v3/internal/dcontext"
+	"github.com/distribution/distribution/v3/internal/requestutil"
 )
 
 const (
@@ -188,7 +189,7 @@ func parseIPFromRequest(ctx context.Context) (net.IP, error) {
 	if err != nil {
 		return nil, err
 	}
-	ipStr := dcontext.RemoteIP(request)
+	ipStr := requestutil.RemoteIP(request)
 	ip := net.ParseIP(ipStr)
 	if ip == nil {
 		return nil, fmt.Errorf("invalid ip address from requester: %s", ipStr)
@@ -208,7 +209,7 @@ func eligibleForS3(ctx context.Context, awsIPs *awsIPs) bool {
 			} else {
 				loggerField := map[interface{}]interface{}{
 					"user-client": request.UserAgent(),
-					"ip":          dcontext.RemoteIP(request),
+					"ip":          requestutil.RemoteIP(request),
 				}
 				if awsIPs.contains(addr) {
 					dcontext.GetLoggerWithFields(ctx, loggerField).Info("request from the allowed AWS region, skipping CloudFront")
