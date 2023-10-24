@@ -40,6 +40,7 @@ package base
 import (
 	"context"
 	"io"
+	"net/http"
 	"time"
 
 	"github.com/distribution/distribution/v3/internal/dcontext"
@@ -208,18 +209,18 @@ func (base *Base) Delete(ctx context.Context, path string) error {
 	return err
 }
 
-// URLFor wraps URLFor of underlying storage driver.
-func (base *Base) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
-	ctx, done := dcontext.WithTrace(ctx)
-	defer done("%s.URLFor(%q)", base.Name(), path)
+// RedirectURL wraps RedirectURL of the underlying storage driver.
+func (base *Base) RedirectURL(r *http.Request, path string) (string, error) {
+	ctx, done := dcontext.WithTrace(r.Context())
+	defer done("%s.RedirectURL(%q)", base.Name(), path)
 
 	if !storagedriver.PathRegexp.MatchString(path) {
 		return "", storagedriver.InvalidPathError{Path: path, DriverName: base.StorageDriver.Name()}
 	}
 
 	start := time.Now()
-	str, e := base.StorageDriver.URLFor(ctx, path, options)
-	storageAction.WithValues(base.Name(), "URLFor").UpdateSince(start)
+	str, e := base.StorageDriver.RedirectURL(r.WithContext(ctx), path)
+	storageAction.WithValues(base.Name(), "RedirectURL").UpdateSince(start)
 	return str, base.setDriverName(e)
 }
 

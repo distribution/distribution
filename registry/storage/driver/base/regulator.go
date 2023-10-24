@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
 	"reflect"
 	"strconv"
 	"sync"
@@ -172,13 +173,11 @@ func (r *regulator) Delete(ctx context.Context, path string) error {
 	return r.StorageDriver.Delete(ctx, path)
 }
 
-// URLFor returns a URL which may be used to retrieve the content stored at
-// the given path, possibly using the given options.
-// May return an ErrUnsupportedMethod in certain StorageDriver
-// implementations.
-func (r *regulator) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
+// RedirectURL returns a URL which may be used to retrieve the content stored at
+// the given path.
+func (r *regulator) RedirectURL(req *http.Request, path string) (string, error) {
 	r.enter()
 	defer r.exit()
 
-	return r.StorageDriver.URLFor(ctx, path, options)
+	return r.StorageDriver.RedirectURL(req, path)
 }

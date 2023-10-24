@@ -20,7 +20,7 @@ type blobServer struct {
 	driver   driver.StorageDriver
 	statter  distribution.BlobStatter
 	pathFn   func(dgst digest.Digest) (string, error)
-	redirect bool // allows disabling URLFor redirects
+	redirect bool // allows disabling RedirectURL redirects
 }
 
 func (bs *blobServer) ServeBlob(ctx context.Context, w http.ResponseWriter, r *http.Request, dgst digest.Digest) error {
@@ -35,19 +35,16 @@ func (bs *blobServer) ServeBlob(ctx context.Context, w http.ResponseWriter, r *h
 	}
 
 	if bs.redirect {
-		redirectURL, err := bs.driver.URLFor(ctx, path, map[string]interface{}{"method": r.Method})
-		switch err.(type) {
-		case nil:
-			// Redirect to storage URL.
-			http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
-			return err
-
-		case driver.ErrUnsupportedMethod:
-			// Fallback to serving the content directly.
-		default:
-			// Some unexpected error.
+		redirectURL, err := bs.driver.RedirectURL(r, path)
+		if err != nil {
 			return err
 		}
+		if redirectURL != "" {
+			// Redirect to storage URL.
+			http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
+			return nil
+		}
+		// Fallback to serving the content directly.
 	}
 
 	br, err := newFileReader(ctx, bs.driver, path, desc.Size)

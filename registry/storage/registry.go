@@ -34,7 +34,7 @@ type manifestURLs struct {
 type RegistryOption func(*registry) error
 
 // EnableRedirect is a functional option for NewRegistry. It causes the backend
-// blob server to attempt using (StorageDriver).URLFor to serve all blobs.
+// blob server to attempt using (StorageDriver).RedirectURL to serve all blobs.
 func EnableRedirect(registry *registry) error {
 	registry.blobServer.redirect = true
 	return nil
@@ -102,7 +102,7 @@ func BlobDescriptorCacheProvider(blobDescriptorCacheProvider cache.BlobDescripto
 // NewRegistry creates a new registry instance from the provided driver. The
 // resulting registry may be shared by multiple goroutines but is cheap to
 // allocate. If the Redirect option is specified, the backend blob server will
-// attempt to use (StorageDriver).URLFor to serve all blobs.
+// attempt to use (StorageDriver).RedirectURL to serve all blobs.
 func NewRegistry(ctx context.Context, driver storagedriver.StorageDriver, options ...RegistryOption) (distribution.Namespace, error) {
 	// create global statter
 	statter := &blobStatter{

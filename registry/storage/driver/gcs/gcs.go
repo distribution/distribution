@@ -810,40 +810,24 @@ func storageCopyObject(ctx context.Context, srcBucket, srcName string, destBucke
 	return attrs, err
 }
 
-// URLFor returns a URL which may be used to retrieve the content stored at
+// RedirectURL returns a URL which may be used to retrieve the content stored at
 // the given path, possibly using the given options.
-// Returns ErrUnsupportedMethod if this driver has no privateKey
-func (d *driver) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
+func (d *driver) RedirectURL(r *http.Request, path string) (string, error) {
 	if d.privateKey == nil {
-		return "", storagedriver.ErrUnsupportedMethod{}
+		return "", nil
 	}
 
-	name := d.pathToKey(path)
-	methodString := http.MethodGet
-	method, ok := options["method"]
-	if ok {
-		methodString, ok = method.(string)
-		if !ok || (methodString != http.MethodGet && methodString != http.MethodHead) {
-			return "", storagedriver.ErrUnsupportedMethod{}
-		}
-	}
-
-	expiresTime := time.Now().Add(20 * time.Minute)
-	expires, ok := options["expiry"]
-	if ok {
-		et, ok := expires.(time.Time)
-		if ok {
-			expiresTime = et
-		}
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		return "", nil
 	}
 
 	opts := &storage.SignedURLOptions{
 		GoogleAccessID: d.email,
 		PrivateKey:     d.privateKey,
-		Method:         methodString,
-		Expires:        expiresTime,
+		Method:         r.Method,
+		Expires:        time.Now().Add(20 * time.Minute),
 	}
-	return storage.SignedURL(d.bucket, name, opts)
+	return storage.SignedURL(d.bucket, d.pathToKey(path), opts)
 }
 
 // Walk traverses a filesystem defined within driver, starting

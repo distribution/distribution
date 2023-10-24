@@ -8,6 +8,7 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path"
 	"sort"
@@ -733,9 +734,9 @@ func (suite *DriverSuite) TestDelete(c *check.C) {
 	c.Assert(strings.Contains(err.Error(), suite.Name()), check.Equals, true)
 }
 
-// TestURLFor checks that the URLFor method functions properly, but only if it
-// is implemented
-func (suite *DriverSuite) TestURLFor(c *check.C) {
+// TestRedirectURL checks that the RedirectURL method functions properly,
+// but only if it is implemented
+func (suite *DriverSuite) TestRedirectURL(c *check.C) {
 	filename := randomPath(32)
 	contents := randomContents(32)
 
@@ -744,8 +745,8 @@ func (suite *DriverSuite) TestURLFor(c *check.C) {
 	err := suite.StorageDriver.PutContent(suite.ctx, filename, contents)
 	c.Assert(err, check.IsNil)
 
-	url, err := suite.StorageDriver.URLFor(suite.ctx, filename, nil)
-	if _, ok := err.(storagedriver.ErrUnsupportedMethod); ok {
+	url, err := suite.StorageDriver.RedirectURL(httptest.NewRequest(http.MethodGet, filename, nil), filename)
+	if url == "" && err == nil {
 		return
 	}
 	c.Assert(err, check.IsNil)
@@ -758,8 +759,8 @@ func (suite *DriverSuite) TestURLFor(c *check.C) {
 	c.Assert(err, check.IsNil)
 	c.Assert(read, check.DeepEquals, contents)
 
-	url, err = suite.StorageDriver.URLFor(suite.ctx, filename, map[string]interface{}{"method": http.MethodHead})
-	if _, ok := err.(storagedriver.ErrUnsupportedMethod); ok {
+	url, err = suite.StorageDriver.RedirectURL(httptest.NewRequest(http.MethodHead, filename, nil), filename)
+	if url == "" && err == nil {
 		return
 	}
 	c.Assert(err, check.IsNil)

@@ -1,8 +1,8 @@
 package middleware
 
 import (
-	"context"
 	"fmt"
+	"net/http"
 	"net/url"
 	"path"
 
@@ -42,7 +42,7 @@ func newRedirectStorageMiddleware(sd storagedriver.StorageDriver, options map[st
 	return &redirectStorageMiddleware{StorageDriver: sd, scheme: u.Scheme, host: u.Host, basePath: u.Path}, nil
 }
 
-func (r *redirectStorageMiddleware) URLFor(ctx context.Context, urlPath string, options map[string]interface{}) (string, error) {
+func (r *redirectStorageMiddleware) RedirectURL(_ *http.Request, urlPath string) (string, error) {
 	if r.basePath != "" {
 		urlPath = path.Join(r.basePath, urlPath)
 	}

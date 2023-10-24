@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"context"
 	"testing"
 
 	"gopkg.in/check.v1"
@@ -37,7 +36,7 @@ func (s *MiddlewareSuite) TestHttpsPort(c *check.C) {
 	c.Assert(m.scheme, check.Equals, "https")
 	c.Assert(m.host, check.Equals, "example.com:5443")
 
-	url, err := middleware.URLFor(context.TODO(), "/rick/data", nil)
+	url, err := middleware.RedirectURL(nil, "/rick/data")
 	c.Assert(err, check.Equals, nil)
 	c.Assert(url, check.Equals, "https://example.com:5443/rick/data")
 }
@@ -53,7 +52,7 @@ func (s *MiddlewareSuite) TestHTTP(c *check.C) {
 	c.Assert(m.scheme, check.Equals, "http")
 	c.Assert(m.host, check.Equals, "example.com")
 
-	url, err := middleware.URLFor(context.TODO(), "morty/data", nil)
+	url, err := middleware.RedirectURL(nil, "morty/data")
 	c.Assert(err, check.Equals, nil)
 	c.Assert(url, check.Equals, "http://example.com/morty/data")
 }
@@ -71,12 +70,12 @@ func (s *MiddlewareSuite) TestPath(c *check.C) {
 	c.Assert(m.host, check.Equals, "example.com")
 	c.Assert(m.basePath, check.Equals, "/path")
 
-	// call URLFor() with no leading slash
-	url, err := middleware.URLFor(context.TODO(), "morty/data", nil)
+	// call RedirectURL() with no leading slash
+	url, err := middleware.RedirectURL(nil, "morty/data")
 	c.Assert(err, check.Equals, nil)
 	c.Assert(url, check.Equals, "https://example.com/path/morty/data")
-	// call URLFor() with leading slash
-	url, err = middleware.URLFor(context.TODO(), "/morty/data", nil)
+	// call RedirectURL() with leading slash
+	url, err = middleware.RedirectURL(nil, "/morty/data")
 	c.Assert(err, check.Equals, nil)
 	c.Assert(url, check.Equals, "https://example.com/path/morty/data")
 
@@ -91,12 +90,12 @@ func (s *MiddlewareSuite) TestPath(c *check.C) {
 	c.Assert(m.host, check.Equals, "example.com")
 	c.Assert(m.basePath, check.Equals, "/path/")
 
-	// call URLFor() with no leading slash
-	url, err = middleware.URLFor(context.TODO(), "morty/data", nil)
+	// call RedirectURL() with no leading slash
+	url, err = middleware.RedirectURL(nil, "morty/data")
 	c.Assert(err, check.Equals, nil)
 	c.Assert(url, check.Equals, "https://example.com/path/morty/data")
-	// call URLFor() with leading slash
-	url, err = middleware.URLFor(context.TODO(), "/morty/data", nil)
+	// call RedirectURL() with leading slash
+	url, err = middleware.RedirectURL(nil, "/morty/data")
 	c.Assert(err, check.Equals, nil)
 	c.Assert(url, check.Equals, "https://example.com/path/morty/data")
 }
