@@ -8,8 +8,8 @@ import (
 	"mime"
 	"net/http"
 
+	"github.com/distribution/distribution/v3/internal/client/auth/challenge"
 	"github.com/distribution/distribution/v3/registry/api/errcode"
-	"github.com/distribution/distribution/v3/registry/client/auth/challenge"
 )
 
 // ErrNoErrorsInBody is returned when an HTTP response body parses to an empty
