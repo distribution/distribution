@@ -10,8 +10,8 @@ import (
 
 	"github.com/distribution/distribution/v3"
 	dcontext "github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/internal/uuid"
 	"github.com/distribution/distribution/v3/registry/storage/driver"
-	"github.com/distribution/distribution/v3/uuid"
 	"github.com/distribution/reference"
 	"github.com/opencontainers/go-digest"
 )
