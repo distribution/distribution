@@ -23,9 +23,9 @@ import (
 	"github.com/distribution/distribution/v3/configuration"
 	dcontext "github.com/distribution/distribution/v3/context"
 	"github.com/distribution/distribution/v3/health"
+	"github.com/distribution/distribution/v3/internal/uuid"
 	"github.com/distribution/distribution/v3/registry/handlers"
 	"github.com/distribution/distribution/v3/registry/listener"
-	"github.com/distribution/distribution/v3/uuid"
 	"github.com/distribution/distribution/v3/version"
 )
 
