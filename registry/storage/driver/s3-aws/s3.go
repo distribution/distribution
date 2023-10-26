@@ -761,6 +761,20 @@ func (d *driver) Writer(ctx context.Context, path string, appendParam bool) (sto
 // Stat retrieves the FileInfo for the given path, including the current size
 // in bytes and the creation time.
 func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo, error) {
+	headResponse, err := d.S3.HeadObjectWithContext(ctx, &s3.HeadObjectInput{
+		Bucket: aws.String(d.Bucket),
+		Key:    aws.String(d.s3Path(path)),
+	})
+	if err == nil {
+		fi := storagedriver.FileInfoFields{
+			Path:    path,
+			IsDir:   false,
+			Size:    *headResponse.ContentLength,
+			ModTime: *headResponse.LastModified,
+		}
+		return storagedriver.FileInfoInternal{FileInfoFields: fi}, nil
+	}
+
 	resp, err := d.S3.ListObjectsV2WithContext(ctx, &s3.ListObjectsV2Input{
 		Bucket:  aws.String(d.Bucket),
 		Prefix:  aws.String(d.s3Path(path)),
