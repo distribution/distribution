@@ -1,0 +1,48 @@
+version: 0.1
+http:
+    addr: :5000
+    debug:
+      addr: :5001
+      prometheus:
+        enabled: true
+        path: /metrics
+    draintimeout: 5s
+    secret: hmacsecret
+log:
+    accesslog:
+      disabled: false
+    fields:
+      environment: local
+      service: registry
+    formatter: text
+    level: debug
+redis:
+   addr: redis:6379
+   db: 0
+   dialtimeout: 5s
+   readtimeout: 10ms
+   writetimeout: 10ms
+   pool:
+     idletimeout: 60s
+     maxactive: 64
+     maxidle: 16
+storage:
+  redirect:
+    disable: true
+  cache:
+    blobdescriptor: redis
+  maintenance:
+    uploadpurging:
+      enabled: false
+  s3:
+    region: us-east-1
+    accesskey: distribution
+    secretkey: password
+    bucket: images-local
+    rootdirectory: /registry-v2
+    regionendpoint: http://minio:9000
+    encrypt: false
+    secure: false
+    chunksize: 33554432
+    secure: true
+    v4auth: true

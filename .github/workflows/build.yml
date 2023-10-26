@@ -28,6 +28,9 @@ jobs:
         go:
           - 1.20.10
           - 1.21.3
+        target:
+          - test-coverage
+          - test-cloud-storage
     steps:
       -
         name: Checkout
@@ -40,7 +43,7 @@ jobs:
       -
         name: Test
         run: |
-          make coverage
+          make ${{ matrix.target }}
       -
         name: Codecov
         uses: codecov/codecov-action@v3
