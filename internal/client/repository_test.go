@@ -18,12 +18,12 @@ import (
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/context"
-	"github.com/distribution/distribution/v3/internal/uuid"
 	"github.com/distribution/distribution/v3/manifest"
 	"github.com/distribution/distribution/v3/manifest/ocischema"
 	"github.com/distribution/distribution/v3/registry/api/errcode"
 	"github.com/distribution/distribution/v3/testutil"
 	"github.com/distribution/reference"
+	"github.com/google/uuid"
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
@@ -200,7 +200,7 @@ func TestBlobServeBlobHEAD(t *testing.T) {
 
 func TestBlobResume(t *testing.T) {
 	dgst, b1 := newRandomBlob(1024)
-	id := uuid.Generate().String()
+	id := uuid.NewString()
 	var m testutil.RequestResponseMap
 	repo, _ := reference.WithName("test.example.com/repo1")
 	m = append(m, testutil.RequestResponseMapping{
@@ -440,7 +440,7 @@ func TestBlobUploadChunked(t *testing.T) {
 		b1[513:1024],
 	}
 	repo, _ := reference.WithName("test.example.com/uploadrepo")
-	uuids := []string{uuid.Generate().String()}
+	uuids := []string{uuid.NewString()}
 	m = append(m, testutil.RequestResponseMapping{
 		Request: testutil.Request{
 			Method: http.MethodPost,
@@ -458,7 +458,7 @@ func TestBlobUploadChunked(t *testing.T) {
 	})
 	offset := 0
 	for i, chunk := range chunks {
-		uuids = append(uuids, uuid.Generate().String())
+		uuids = append(uuids, uuid.NewString())
 		newOffset := offset + len(chunk)
 		m = append(m, testutil.RequestResponseMapping{
 			Request: testutil.Request{
@@ -555,7 +555,7 @@ func TestBlobUploadMonolithic(t *testing.T) {
 	dgst, b1 := newRandomBlob(1024)
 	var m testutil.RequestResponseMap
 	repo, _ := reference.WithName("test.example.com/uploadrepo")
-	uploadID := uuid.Generate().String()
+	uploadID := uuid.NewString()
 	m = append(m, testutil.RequestResponseMapping{
 		Request: testutil.Request{
 			Method: http.MethodPost,
@@ -663,7 +663,7 @@ func TestBlobUploadMonolithicDockerUploadUUIDFromURL(t *testing.T) {
 	dgst, b1 := newRandomBlob(1024)
 	var m testutil.RequestResponseMap
 	repo, _ := reference.WithName("test.example.com/uploadrepo")
-	uploadID := uuid.Generate().String()
+	uploadID := uuid.NewString()
 	m = append(m, testutil.RequestResponseMapping{
 		Request: testutil.Request{
 			Method: http.MethodPost,

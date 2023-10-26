@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/distribution/distribution/v3/internal/uuid"
+	"github.com/google/uuid"
 )
 
 // instanceContext is a context that provides only an instance id. It is
@@ -22,7 +22,7 @@ func (ic *instanceContext) Value(key interface{}) interface{} {
 			// call a random generator from the package initialization
 			// code. For various reasons random could not be available
 			// https://github.com/distribution/distribution/issues/782
-			ic.id = uuid.Generate().String()
+			ic.id = uuid.NewString()
 		})
 		return ic.id
 	}

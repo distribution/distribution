@@ -23,7 +23,6 @@ import (
 	"github.com/distribution/distribution/v3/configuration"
 	dcontext "github.com/distribution/distribution/v3/context"
 	"github.com/distribution/distribution/v3/health"
-	"github.com/distribution/distribution/v3/internal/uuid"
 	"github.com/distribution/distribution/v3/registry/handlers"
 	"github.com/distribution/distribution/v3/registry/listener"
 	"github.com/distribution/distribution/v3/version"
@@ -135,10 +134,6 @@ func NewRegistry(ctx context.Context, config *configuration.Configuration) (*Reg
 	if err != nil {
 		return nil, fmt.Errorf("error configuring logger: %v", err)
 	}
-
-	// inject a logger into the uuid library. warns us if there is a problem
-	// with uuid generation under low entropy.
-	uuid.Loggerf = dcontext.GetLogger(ctx).Warnf
 
 	app := handlers.NewApp(ctx, config)
 	// TODO(aaronl): The global scope of the health checks means NewRegistry

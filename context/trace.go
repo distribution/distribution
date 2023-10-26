@@ -5,7 +5,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/distribution/distribution/v3/internal/uuid"
+	"github.com/google/uuid"
 )
 
 // WithTrace allocates a traced timing span in a new context. This allows a
@@ -46,7 +46,7 @@ func WithTrace(ctx context.Context) (context.Context, func(format string, a ...i
 	f := runtime.FuncForPC(pc)
 	ctx = &traced{
 		Context: ctx,
-		id:      uuid.Generate().String(),
+		id:      uuid.NewString(),
 		start:   time.Now(),
 		parent:  GetStringValue(ctx, "trace.id"),
 		fnname:  f.Name(),
