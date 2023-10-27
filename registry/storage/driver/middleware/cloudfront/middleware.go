@@ -48,7 +48,7 @@ var _ storagedriver.StorageDriver = &cloudFrontStorageMiddleware{}
 //     default value. "aws", only aws IP goes to S3 directly. "awsregion", only
 //     regions listed in awsregion options goes to S3 directly
 //   - awsregion: a comma separated string of AWS regions.
-func newCloudFrontStorageMiddleware(storageDriver storagedriver.StorageDriver, options map[string]interface{}) (storagedriver.StorageDriver, error) {
+func newCloudFrontStorageMiddleware(ctx context.Context, storageDriver storagedriver.StorageDriver, options map[string]interface{}) (storagedriver.StorageDriver, error) {
 	// parse baseurl
 	base, ok := options["baseurl"]
 	if !ok {
@@ -157,7 +157,10 @@ func newCloudFrontStorageMiddleware(storageDriver storagedriver.StorageDriver, o
 			case "", "none":
 				awsIPs = nil
 			case "aws":
-				awsIPs = newAWSIPs(ipRangesURL, updateFrequency, nil)
+				awsIPs, err = newAWSIPs(ctx, ipRangesURL, updateFrequency, nil)
+				if err != nil {
+					return nil, err
+				}
 			case "awsregion":
 				var awsRegion []string
 				if i, ok := options["awsregion"]; ok {
@@ -165,7 +168,10 @@ func newCloudFrontStorageMiddleware(storageDriver storagedriver.StorageDriver, o
 						for _, awsRegions := range strings.Split(regions, ",") {
 							awsRegion = append(awsRegion, strings.ToLower(strings.TrimSpace(awsRegions)))
 						}
-						awsIPs = newAWSIPs(ipRangesURL, updateFrequency, awsRegion)
+						awsIPs, err = newAWSIPs(ctx, ipRangesURL, updateFrequency, awsRegion)
+						if err != nil {
+							return nil, err
+						}
 					} else {
 						return nil, fmt.Errorf("awsRegion must be a comma separated string of valid aws regions")
 					}

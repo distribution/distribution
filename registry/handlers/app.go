@@ -148,7 +148,7 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 
 	startUploadPurger(app, app.driver, dcontext.GetLogger(app), purgeConfig)
 
-	app.driver, err = applyStorageMiddleware(app.driver, config.Middleware["storage"])
+	app.driver, err = applyStorageMiddleware(app, app.driver, config.Middleware["storage"])
 	if err != nil {
 		panic(err)
 	}
@@ -938,9 +938,9 @@ func applyRepoMiddleware(ctx context.Context, repository distribution.Repository
 }
 
 // applyStorageMiddleware wraps a storage driver with the configured middlewares
-func applyStorageMiddleware(driver storagedriver.StorageDriver, middlewares []configuration.Middleware) (storagedriver.StorageDriver, error) {
+func applyStorageMiddleware(ctx context.Context, driver storagedriver.StorageDriver, middlewares []configuration.Middleware) (storagedriver.StorageDriver, error) {
 	for _, mw := range middlewares {
-		smw, err := storagemiddleware.Get(mw.Name, mw.Options, driver)
+		smw, err := storagemiddleware.Get(ctx, mw.Name, mw.Options, driver)
 		if err != nil {
 			return nil, fmt.Errorf("unable to configure storage middleware (%s): %v", mw.Name, err)
 		}
