@@ -348,22 +348,20 @@ func (app *App) RegisterHealthChecks(healthRegistries ...*health.Registry) {
 			interval = defaultCheckInterval
 		}
 
-		storageDriverCheck := func(context.Context) error {
-			_, err := app.driver.Stat(app, "/") // "/" should always exist
+		storageDriverCheck := health.CheckFunc(func(ctx context.Context) error {
+			_, err := app.driver.Stat(ctx, "/") // "/" should always exist
 			if _, ok := err.(storagedriver.PathNotFoundError); ok {
 				err = nil // pass this through, backend is responding, but this path doesn't exist.
 			}
 			if err != nil {
-				dcontext.GetLogger(app).Errorf("storage driver health check: %v", err)
+				dcontext.GetLogger(ctx).Errorf("storage driver health check: %v", err)
 			}
 			return err
-		}
+		})
 
-		if app.Config.Health.StorageDriver.Threshold != 0 {
-			healthRegistry.RegisterPeriodicThresholdFunc("storagedriver_"+app.Config.Storage.Type(), interval, app.Config.Health.StorageDriver.Threshold, storageDriverCheck)
-		} else {
-			healthRegistry.RegisterPeriodicFunc("storagedriver_"+app.Config.Storage.Type(), interval, storageDriverCheck)
-		}
+		updater := health.NewThresholdStatusUpdater(app.Config.Health.StorageDriver.Threshold)
+		healthRegistry.Register("storagedriver_"+app.Config.Storage.Type(), updater)
+		go health.Poll(app, updater, storageDriverCheck, interval)
 	}
 
 	for _, fileChecker := range app.Config.Health.FileCheckers {
@@ -372,7 +370,9 @@ func (app *App) RegisterHealthChecks(healthRegistries ...*health.Registry) {
 			interval = defaultCheckInterval
 		}
 		dcontext.GetLogger(app).Infof("configuring file health check path=%s, interval=%d", fileChecker.File, interval/time.Second)
-		healthRegistry.Register(fileChecker.File, health.PeriodicChecker(checks.FileChecker(fileChecker.File), interval))
+		u := health.NewStatusUpdater()
+		healthRegistry.Register(fileChecker.File, u)
+		go health.Poll(app, u, checks.FileChecker(fileChecker.File), interval)
 	}
 
 	for _, httpChecker := range app.Config.Health.HTTPCheckers {
@@ -388,13 +388,10 @@ func (app *App) RegisterHealthChecks(healthRegistries ...*health.Registry) {
 
 		checker := checks.HTTPChecker(httpChecker.URI, statusCode, httpChecker.Timeout, httpChecker.Headers)
 
-		if httpChecker.Threshold != 0 {
-			dcontext.GetLogger(app).Infof("configuring HTTP health check uri=%s, interval=%d, threshold=%d", httpChecker.URI, interval/time.Second, httpChecker.Threshold)
-			healthRegistry.Register(httpChecker.URI, health.PeriodicThresholdChecker(checker, interval, httpChecker.Threshold))
-		} else {
-			dcontext.GetLogger(app).Infof("configuring HTTP health check uri=%s, interval=%d", httpChecker.URI, interval/time.Second)
-			healthRegistry.Register(httpChecker.URI, health.PeriodicChecker(checker, interval))
-		}
+		dcontext.GetLogger(app).Infof("configuring HTTP health check uri=%s, interval=%d, threshold=%d", httpChecker.URI, interval/time.Second, httpChecker.Threshold)
+		updater := health.NewThresholdStatusUpdater(httpChecker.Threshold)
+		healthRegistry.Register(httpChecker.URI, updater)
+		go health.Poll(app, updater, checker, interval)
 	}
 
 	for _, tcpChecker := range app.Config.Health.TCPCheckers {
@@ -405,13 +402,10 @@ func (app *App) RegisterHealthChecks(healthRegistries ...*health.Registry) {
 
 		checker := checks.TCPChecker(tcpChecker.Addr, tcpChecker.Timeout)
 
-		if tcpChecker.Threshold != 0 {
-			dcontext.GetLogger(app).Infof("configuring TCP health check addr=%s, interval=%d, threshold=%d", tcpChecker.Addr, interval/time.Second, tcpChecker.Threshold)
-			healthRegistry.Register(tcpChecker.Addr, health.PeriodicThresholdChecker(checker, interval, tcpChecker.Threshold))
-		} else {
-			dcontext.GetLogger(app).Infof("configuring TCP health check addr=%s, interval=%d", tcpChecker.Addr, interval/time.Second)
-			healthRegistry.Register(tcpChecker.Addr, health.PeriodicChecker(checker, interval))
-		}
+		dcontext.GetLogger(app).Infof("configuring TCP health check addr=%s, interval=%d, threshold=%d", tcpChecker.Addr, interval/time.Second, tcpChecker.Threshold)
+		updater := health.NewThresholdStatusUpdater(tcpChecker.Threshold)
+		healthRegistry.Register(tcpChecker.Addr, updater)
+		go health.Poll(app, updater, checker, interval)
 	}
 }
 

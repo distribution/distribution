@@ -3,6 +3,7 @@ package health
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"sync"
@@ -104,7 +105,7 @@ func (tu *thresholdUpdater) Check(context.Context) error {
 	tu.mu.Lock()
 	defer tu.mu.Unlock()
 
-	if tu.count >= tu.threshold {
+	if tu.count >= tu.threshold || errors.As(tu.status, new(pollingTerminatedErr)) {
 		return tu.status
 	}
 
@@ -128,38 +129,35 @@ func (tu *thresholdUpdater) Update(status error) {
 
 // NewThresholdStatusUpdater returns a new thresholdUpdater
 func NewThresholdStatusUpdater(t int) Updater {
-	return &thresholdUpdater{threshold: t}
+	if t > 0 {
+		return &thresholdUpdater{threshold: t}
+	}
+	return NewStatusUpdater()
 }
 
-// PeriodicChecker wraps an updater to provide a periodic checker
-func PeriodicChecker(check Checker, period time.Duration) Checker {
-	u := NewStatusUpdater()
-	go func() {
-		t := time.NewTicker(period)
-		defer t.Stop()
-		for {
-			<-t.C
-			u.Update(check.Check(context.Background()))
-		}
-	}()
+type pollingTerminatedErr struct{ Err error }
 
-	return u
+func (e pollingTerminatedErr) Error() string {
+	return fmt.Sprintf("health: check is not polled: %v", e.Err)
 }
 
-// PeriodicThresholdChecker wraps an updater to provide a periodic checker that
-// uses a threshold before it changes status
-func PeriodicThresholdChecker(check Checker, period time.Duration, threshold int) Checker {
-	tu := NewThresholdStatusUpdater(threshold)
-	go func() {
-		t := time.NewTicker(period)
-		defer t.Stop()
-		for {
-			<-t.C
-			tu.Update(check.Check(context.Background()))
-		}
-	}()
+func (e pollingTerminatedErr) Unwrap() error { return e.Err }
 
-	return tu
+// Poll periodically polls the checker c at interval and updates the updater u
+// with the result. The checker is called with ctx as the context. When ctx is
+// done, Poll updates the updater with ctx.Err() and returns.
+func Poll(ctx context.Context, u Updater, c Checker, interval time.Duration) {
+	t := time.NewTicker(interval)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			u.Update(pollingTerminatedErr{Err: ctx.Err()})
+			return
+		case <-t.C:
+			u.Update(c.Check(ctx))
+		}
+	}
 }
 
 // CheckStatus returns a map with all the current health check errors
@@ -213,30 +211,6 @@ func (registry *Registry) RegisterFunc(name string, check CheckFunc) {
 // registry directly from an arbitrary func(context.Context) error.
 func RegisterFunc(name string, check CheckFunc) {
 	DefaultRegistry.RegisterFunc(name, check)
-}
-
-// RegisterPeriodicFunc allows the convenience of registering a PeriodicChecker
-// from an arbitrary func(context.Context) error.
-func (registry *Registry) RegisterPeriodicFunc(name string, period time.Duration, check CheckFunc) {
-	registry.Register(name, PeriodicChecker(check, period))
-}
-
-// RegisterPeriodicFunc allows the convenience of registering a PeriodicChecker
-// in the default registry from an arbitrary func() error.
-func RegisterPeriodicFunc(name string, period time.Duration, check CheckFunc) {
-	DefaultRegistry.RegisterPeriodicFunc(name, period, check)
-}
-
-// RegisterPeriodicThresholdFunc allows the convenience of registering a
-// PeriodicChecker from an arbitrary func() error.
-func (registry *Registry) RegisterPeriodicThresholdFunc(name string, period time.Duration, threshold int, check CheckFunc) {
-	registry.Register(name, PeriodicThresholdChecker(check, period, threshold))
-}
-
-// RegisterPeriodicThresholdFunc allows the convenience of registering a
-// PeriodicChecker in the default registry from an arbitrary func() error.
-func RegisterPeriodicThresholdFunc(name string, period time.Duration, threshold int, check CheckFunc) {
-	DefaultRegistry.RegisterPeriodicThresholdFunc(name, period, threshold, check)
 }
 
 // StatusHandler returns a JSON blob with all the currently registered Health Checks
