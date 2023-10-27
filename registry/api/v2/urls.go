@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"path/filepath"
 
 	"github.com/distribution/reference"
 	"github.com/gorilla/mux"
@@ -68,7 +69,7 @@ func NewURLBuilderFromRequest(r *http.Request, relative bool) *URLBuilder {
 				scheme = fproto
 			}
 			if fhost := forwardedHeader["host"]; len(fhost) > 0 {
-				host = fhost
+				host = filepath.Clean(fhost)
 			}
 		}
 	} else {
