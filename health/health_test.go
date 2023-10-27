@@ -1,6 +1,7 @@
 package health
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -36,7 +37,7 @@ func TestReturns503IfThereAreErrorChecks(t *testing.T) {
 	}
 
 	// Create a manual error
-	Register("some_check", CheckFunc(func() error {
+	Register("some_check", CheckFunc(func(context.Context) error {
 		return errors.New("This Check did not succeed")
 	}))
 

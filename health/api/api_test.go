@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -59,7 +60,7 @@ func TestPOSTDownHandlerChangeStatus(t *testing.T) {
 		t.Errorf("Did not get a 200.")
 	}
 
-	if len(health.CheckStatus()) != 1 {
+	if len(health.CheckStatus(context.Background())) != 1 {
 		t.Errorf("DownHandler didn't add an error check.")
 	}
 }
@@ -80,7 +81,7 @@ func TestPOSTUpHandlerChangeStatus(t *testing.T) {
 		t.Errorf("Did not get a 200.")
 	}
 
-	if len(health.CheckStatus()) != 0 {
+	if len(health.CheckStatus(context.Background())) != 0 {
 		t.Errorf("UpHandler didn't remove the error check.")
 	}
 }

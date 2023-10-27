@@ -348,7 +348,7 @@ func (app *App) RegisterHealthChecks(healthRegistries ...*health.Registry) {
 			interval = defaultCheckInterval
 		}
 
-		storageDriverCheck := func() error {
+		storageDriverCheck := func(context.Context) error {
 			_, err := app.driver.Stat(app, "/") // "/" should always exist
 			if _, ok := err.(storagedriver.PathNotFoundError); ok {
 				err = nil // pass this through, backend is responding, but this path doesn't exist.
