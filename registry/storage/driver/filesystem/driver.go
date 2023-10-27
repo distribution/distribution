@@ -40,7 +40,7 @@ func init() {
 // filesystemDriverFactory implements the factory.StorageDriverFactory interface
 type filesystemDriverFactory struct{}
 
-func (factory *filesystemDriverFactory) Create(parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
+func (factory *filesystemDriverFactory) Create(ctx context.Context, parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
 	return FromParameters(parameters)
 }
 

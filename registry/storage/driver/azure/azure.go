@@ -46,16 +46,16 @@ func init() {
 
 type azureDriverFactory struct{}
 
-func (factory *azureDriverFactory) Create(parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
+func (factory *azureDriverFactory) Create(ctx context.Context, parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
 	params, err := NewParameters(parameters)
 	if err != nil {
 		return nil, err
 	}
-	return New(params)
+	return New(ctx, params)
 }
 
 // New constructs a new Driver from parameters
-func New(params *Parameters) (*Driver, error) {
+func New(ctx context.Context, params *Parameters) (*Driver, error) {
 	azClient, err := newAzureClient(params)
 	if err != nil {
 		return nil, err

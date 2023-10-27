@@ -53,16 +53,16 @@ var GCCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		driver, err := factory.Create(config.Storage.Type(), config.Storage.Parameters())
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "failed to construct %s driver: %v", config.Storage.Type(), err)
-			os.Exit(1)
-		}
-
 		ctx := dcontext.Background()
 		ctx, err = configureLogging(ctx, config)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "unable to configure logging with config: %s", err)
+			os.Exit(1)
+		}
+
+		driver, err := factory.Create(ctx, config.Storage.Type(), config.Storage.Parameters())
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to construct %s driver: %v", config.Storage.Type(), err)
 			os.Exit(1)
 		}
 

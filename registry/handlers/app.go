@@ -116,7 +116,7 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 	storageParams["useragent"] = fmt.Sprintf("distribution/%s %s", version.Version, runtime.Version())
 
 	var err error
-	app.driver, err = factory.Create(config.Storage.Type(), storageParams)
+	app.driver, err = factory.Create(app, config.Storage.Type(), storageParams)
 	if err != nil {
 		// TODO(stevvooe): Move the creation of a service into a protected
 		// method, where this is created lazily. Its status can be queried via

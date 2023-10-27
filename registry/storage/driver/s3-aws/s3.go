@@ -150,8 +150,8 @@ func init() {
 // s3DriverFactory implements the factory.StorageDriverFactory interface
 type s3DriverFactory struct{}
 
-func (factory *s3DriverFactory) Create(parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
-	return FromParameters(parameters)
+func (factory *s3DriverFactory) Create(ctx context.Context, parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
+	return FromParameters(ctx, parameters)
 }
 
 var _ storagedriver.StorageDriver = &driver{}
@@ -189,7 +189,7 @@ type Driver struct {
 // - region
 // - bucket
 // - encrypt
-func FromParameters(parameters map[string]interface{}) (*Driver, error) {
+func FromParameters(ctx context.Context, parameters map[string]interface{}) (*Driver, error) {
 	// Providing no values for these is valid in case the user is authenticating
 	// with an IAM on an ec2 instance (in which case the instance credentials will
 	// be summoned when GetAuth is called)
@@ -468,7 +468,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		getS3LogLevelFromParam(parameters["loglevel"]),
 	}
 
-	return New(params)
+	return New(ctx, params)
 }
 
 func getS3LogLevelFromParam(param interface{}) aws.LogLevelType {
@@ -529,7 +529,7 @@ func getParameterAsInt64(parameters map[string]interface{}, name string, default
 
 // New constructs a new Driver with the given AWS credentials, region, encryption flag, and
 // bucketName
-func New(params DriverParameters) (*Driver, error) {
+func New(ctx context.Context, params DriverParameters) (*Driver, error) {
 	if !params.V4Auth &&
 		(params.RegionEndpoint == "" ||
 			strings.Contains(params.RegionEndpoint, "s3.amazonaws.com")) {

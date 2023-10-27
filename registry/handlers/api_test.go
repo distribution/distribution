@@ -1377,7 +1377,7 @@ const (
 	repositoryWithGenericStorageError = "genericstorageerr"
 )
 
-func (factory *storageManifestErrDriverFactory) Create(parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
+func (factory *storageManifestErrDriverFactory) Create(ctx context.Context, parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
 	// Initialize the mock driver
 	errGenericStorage := errors.New("generic storage error")
 	return &mockErrorDriver{

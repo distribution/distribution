@@ -141,7 +141,7 @@ func init() {
 			getS3LogLevelFromParam(logLevel),
 		}
 
-		return New(parameters)
+		return New(context.Background(), parameters)
 	}
 
 	// Skip S3 storage driver tests if environment variable parameters are not provided
