@@ -68,7 +68,7 @@ func init() {
 		if err != nil {
 			return nil, err
 		}
-		return New(params)
+		return New(context.Background(), params)
 	}
 
 	// Skip Azure storage driver tests if environment variable parameters are not provided

@@ -21,7 +21,7 @@ func init() {
 // inMemoryDriverFacotry implements the factory.StorageDriverFactory interface.
 type inMemoryDriverFactory struct{}
 
-func (factory *inMemoryDriverFactory) Create(parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
+func (factory *inMemoryDriverFactory) Create(ctx context.Context, parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
 	return New(), nil
 }
 

@@ -15,21 +15,21 @@ var _ = check.Suite(&MiddlewareSuite{})
 
 func (s *MiddlewareSuite) TestNoConfig(c *check.C) {
 	options := make(map[string]interface{})
-	_, err := newRedirectStorageMiddleware(nil, options)
+	_, err := newRedirectStorageMiddleware(context.Background(), nil, options)
 	c.Assert(err, check.ErrorMatches, "no baseurl provided")
 }
 
 func (s *MiddlewareSuite) TestMissingScheme(c *check.C) {
 	options := make(map[string]interface{})
 	options["baseurl"] = "example.com"
-	_, err := newRedirectStorageMiddleware(nil, options)
+	_, err := newRedirectStorageMiddleware(context.Background(), nil, options)
 	c.Assert(err, check.ErrorMatches, "no scheme specified for redirect baseurl")
 }
 
 func (s *MiddlewareSuite) TestHttpsPort(c *check.C) {
 	options := make(map[string]interface{})
 	options["baseurl"] = "https://example.com:5443"
-	middleware, err := newRedirectStorageMiddleware(nil, options)
+	middleware, err := newRedirectStorageMiddleware(context.Background(), nil, options)
 	c.Assert(err, check.Equals, nil)
 
 	m, ok := middleware.(*redirectStorageMiddleware)
@@ -45,7 +45,7 @@ func (s *MiddlewareSuite) TestHttpsPort(c *check.C) {
 func (s *MiddlewareSuite) TestHTTP(c *check.C) {
 	options := make(map[string]interface{})
 	options["baseurl"] = "http://example.com"
-	middleware, err := newRedirectStorageMiddleware(nil, options)
+	middleware, err := newRedirectStorageMiddleware(context.Background(), nil, options)
 	c.Assert(err, check.Equals, nil)
 
 	m, ok := middleware.(*redirectStorageMiddleware)
@@ -62,7 +62,7 @@ func (s *MiddlewareSuite) TestPath(c *check.C) {
 	// basePath: end with no slash
 	options := make(map[string]interface{})
 	options["baseurl"] = "https://example.com/path"
-	middleware, err := newRedirectStorageMiddleware(nil, options)
+	middleware, err := newRedirectStorageMiddleware(context.Background(), nil, options)
 	c.Assert(err, check.Equals, nil)
 
 	m, ok := middleware.(*redirectStorageMiddleware)
@@ -82,7 +82,7 @@ func (s *MiddlewareSuite) TestPath(c *check.C) {
 
 	// basePath: end with slash
 	options["baseurl"] = "https://example.com/path/"
-	middleware, err = newRedirectStorageMiddleware(nil, options)
+	middleware, err = newRedirectStorageMiddleware(context.Background(), nil, options)
 	c.Assert(err, check.Equals, nil)
 
 	m, ok = middleware.(*redirectStorageMiddleware)

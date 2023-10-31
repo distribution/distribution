@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"os"
 	"testing"
 
@@ -15,7 +16,7 @@ var _ = check.Suite(&MiddlewareSuite{})
 
 func (s *MiddlewareSuite) TestNoConfig(c *check.C) {
 	options := make(map[string]interface{})
-	_, err := newCloudFrontStorageMiddleware(nil, options)
+	_, err := newCloudFrontStorageMiddleware(context.Background(), nil, options)
 	c.Assert(err, check.ErrorMatches, "no baseurl provided")
 }
 
@@ -48,7 +49,7 @@ pZeMRablbPQdp8/1NyIwimq1VlG0ohQ4P6qhW7E09ZMC
 	defer os.Remove(file.Name())
 	options["privatekey"] = file.Name()
 	options["keypairid"] = "test"
-	storageDriver, err := newCloudFrontStorageMiddleware(nil, options)
+	storageDriver, err := newCloudFrontStorageMiddleware(context.Background(), nil, options)
 	if err != nil {
 		t.Fatal(err)
 	}

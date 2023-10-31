@@ -87,8 +87,8 @@ func init() {
 type gcsDriverFactory struct{}
 
 // Create StorageDriver from parameters
-func (factory *gcsDriverFactory) Create(parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
-	return FromParameters(parameters)
+func (factory *gcsDriverFactory) Create(ctx context.Context, parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
+	return FromParameters(ctx, parameters)
 }
 
 var _ storagedriver.StorageDriver = &driver{}
@@ -118,8 +118,7 @@ type baseEmbed struct {
 // FromParameters constructs a new Driver with a given parameters map
 // Required parameters:
 // - bucket
-func FromParameters(parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
-	ctx := context.TODO()
+func FromParameters(ctx context.Context, parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
 	bucket, ok := parameters["bucket"]
 	if !ok || fmt.Sprint(bucket) == "" {
 		return nil, fmt.Errorf("No bucket parameter provided")
@@ -229,11 +228,11 @@ func FromParameters(parameters map[string]interface{}) (storagedriver.StorageDri
 		gcs:            gcs,
 	}
 
-	return New(params)
+	return New(ctx, params)
 }
 
 // New constructs a new driver
-func New(params driverParameters) (storagedriver.StorageDriver, error) {
+func New(ctx context.Context, params driverParameters) (storagedriver.StorageDriver, error) {
 	rootDirectory := strings.Trim(params.rootDirectory, "/")
 	if rootDirectory != "" {
 		rootDirectory += "/"
