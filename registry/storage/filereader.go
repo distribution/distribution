@@ -15,7 +15,7 @@ import (
 // set this correctly, so we may want to leave it to the driver. For
 // out of process drivers, we'll have to optimize this buffer size for
 // local communication.
-const fileReaderBufferSize = 4 << 20
+const fileReaderBufferSize = 4 * 1024 * 1024
 
 // remoteFileReader provides a read seeker interface to files stored in
 // storagedriver. Used to implement part of layer interface and will be used

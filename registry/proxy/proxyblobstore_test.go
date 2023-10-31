@@ -320,7 +320,7 @@ func TestProxyStoreServeMany(t *testing.T) {
 func TestProxyStoreServeBig(t *testing.T) {
 	te := makeTestEnv(t, "foo/bar")
 
-	blobSize := 2 << 20
+	blobSize := 2 * 1024 * 1024
 	blobCount := 4
 	numUnique := 2
 	populate(t, te, blobCount, blobSize, numUnique)
