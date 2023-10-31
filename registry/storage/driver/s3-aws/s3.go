@@ -46,11 +46,11 @@ const driverName = "s3aws"
 
 // minChunkSize defines the minimum multipart upload chunk size
 // S3 API requires multipart upload chunks to be at least 5MB
-const minChunkSize = 5 << 20
+const minChunkSize = 5 * 1024 * 1024
 
 // maxChunkSize defines the maximum multipart upload chunk size allowed by S3.
 // S3 API requires max upload chunk to be 5GB.
-const maxChunkSize = 5 << 30
+const maxChunkSize = 5 * 1024 * 1024 * 1024
 
 const defaultChunkSize = 2 * minChunkSize
 
@@ -58,7 +58,7 @@ const (
 	// defaultMultipartCopyChunkSize defines the default chunk size for all
 	// but the last Upload Part - Copy operation of a multipart copy.
 	// Empirically, 32 MB is optimal.
-	defaultMultipartCopyChunkSize = 32 << 20
+	defaultMultipartCopyChunkSize = 32 * 1024 * 1024
 
 	// defaultMultipartCopyMaxConcurrency defines the default maximum number
 	// of concurrent Upload Part - Copy operations for a multipart copy.
@@ -67,7 +67,7 @@ const (
 	// defaultMultipartCopyThresholdSize defines the default object size
 	// above which multipart copy will be used. (PUT Object - Copy is used
 	// for objects at or below this size.)  Empirically, 32 MB is optimal.
-	defaultMultipartCopyThresholdSize = 32 << 20
+	defaultMultipartCopyThresholdSize = 32 * 1024 * 1024
 )
 
 // listMax is the largest amount of objects you can request from S3 in a list call
@@ -680,9 +680,9 @@ func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.Read
 
 // Writer returns a FileWriter which will store the content written to it
 // at the location designated by "path" after the call to Commit.
-func (d *driver) Writer(ctx context.Context, path string, appendParam bool) (storagedriver.FileWriter, error) {
+func (d *driver) Writer(ctx context.Context, path string, appendMode bool) (storagedriver.FileWriter, error) {
 	key := d.s3Path(path)
-	if !appendParam {
+	if !appendMode {
 		// TODO (brianbland): cancel other uploads at this path
 		resp, err := d.S3.CreateMultipartUploadWithContext(ctx, &s3.CreateMultipartUploadInput{
 			Bucket:               aws.String(d.Bucket),
