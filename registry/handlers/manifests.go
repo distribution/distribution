@@ -24,7 +24,7 @@ import (
 const (
 	defaultArch         = "amd64"
 	defaultOS           = "linux"
-	maxManifestBodySize = 4 << 20
+	maxManifestBodySize = 4 * 1024 * 1024
 	imageClass          = "image"
 )
 
