@@ -94,7 +94,7 @@ func init() {
 			maxConcurrency: 8,
 		}
 
-		return New(parameters)
+		return New(context.Background(), parameters)
 	}
 
 	testsuites.RegisterSuite(func() (storagedriver.StorageDriver, error) {
