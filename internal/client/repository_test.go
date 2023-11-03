@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/distribution/distribution/v3/manifest"
 	"github.com/distribution/distribution/v3/manifest/ocischema"
 	"github.com/distribution/distribution/v3/registry/api/errcode"
@@ -108,7 +108,7 @@ func TestBlobServeBlob(t *testing.T) {
 	e, c := testServer(m)
 	defer c()
 
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	repo, _ := reference.WithName("test.example.com/repo1")
 	r, err := NewRepository(repo, e, nil)
 	if err != nil {
@@ -157,7 +157,7 @@ func TestBlobServeBlobHEAD(t *testing.T) {
 	e, c := testServer(m)
 	defer c()
 
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	repo, _ := reference.WithName("test.example.com/repo1")
 	r, err := NewRepository(repo, e, nil)
 	if err != nil {
@@ -250,7 +250,7 @@ func TestBlobResume(t *testing.T) {
 	e, c := testServer(m)
 	defer c()
 
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	r, err := NewRepository(repo, e, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -307,7 +307,7 @@ func TestBlobDelete(t *testing.T) {
 	e, c := testServer(m)
 	defer c()
 
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	r, err := NewRepository(repo, e, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -327,7 +327,7 @@ func TestBlobFetch(t *testing.T) {
 	e, c := testServer(m)
 	defer c()
 
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	repo, _ := reference.WithName("test.example.com/repo1")
 	r, err := NewRepository(repo, e, nil)
 	if err != nil {
@@ -382,7 +382,7 @@ func TestBlobExistsNoContentLength(t *testing.T) {
 	e, c := testServer(m)
 	defer c()
 
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	r, err := NewRepository(repo, e, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -406,7 +406,7 @@ func TestBlobExists(t *testing.T) {
 	e, c := testServer(m)
 	defer c()
 
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	repo, _ := reference.WithName("test.example.com/repo1")
 	r, err := NewRepository(repo, e, nil)
 	if err != nil {
@@ -512,7 +512,7 @@ func TestBlobUploadChunked(t *testing.T) {
 	e, c := testServer(m)
 	defer c()
 
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	r, err := NewRepository(repo, e, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -622,7 +622,7 @@ func TestBlobUploadMonolithic(t *testing.T) {
 	e, c := testServer(m)
 	defer c()
 
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	r, err := NewRepository(repo, e, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -728,7 +728,7 @@ func TestBlobUploadMonolithicDockerUploadUUIDFromURL(t *testing.T) {
 	e, c := testServer(m)
 	defer c()
 
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	r, err := NewRepository(repo, e, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -833,7 +833,7 @@ func TestBlobUploadMonolithicNoDockerUploadUUID(t *testing.T) {
 	e, c := testServer(m)
 	defer c()
 
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	r, err := NewRepository(repo, e, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -891,7 +891,7 @@ func TestBlobMount(t *testing.T) {
 	e, c := testServer(m)
 	defer c()
 
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	r, err := NewRepository(repo, e, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -1066,7 +1066,7 @@ func checkEqualManifest(m1, m2 *ocischema.DeserializedManifest) error {
 }
 
 func TestOCIManifestFetch(t *testing.T) {
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	repo, _ := reference.WithName("test.example.com/repo")
 	m1, dgst, pl := newRandomOCIManifest(t, 6)
 	var m testutil.RequestResponseMap
@@ -1149,7 +1149,7 @@ func TestManifestFetchWithEtag(t *testing.T) {
 	e, c := testServer(m)
 	defer c()
 
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	r, err := NewRepository(repo, e, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -1171,7 +1171,7 @@ func TestManifestFetchWithEtag(t *testing.T) {
 }
 
 func TestManifestFetchWithAccept(t *testing.T) {
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	repo, _ := reference.WithName("test.example.com/repo")
 	_, dgst, _ := newRandomOCIManifest(t, 6)
 	headers := make(chan []string, 1)
@@ -1258,7 +1258,7 @@ func TestManifestDelete(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	ms, err := r.Manifests(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -1315,7 +1315,7 @@ func TestManifestPut(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	ms, err := r.Manifests(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -1372,7 +1372,7 @@ func TestManifestTags(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	tagService := r.Tags(ctx)
 
 	tags, err := tagService.All(ctx)
@@ -1423,7 +1423,7 @@ func TestTagDelete(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	ts := r.Tags(ctx)
 
 	if err := ts.Untag(ctx, tag); err != nil {
@@ -1460,7 +1460,7 @@ func TestObtainsErrorForMissingTag(t *testing.T) {
 	e, c := testServer(m)
 	defer c()
 
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	r, err := NewRepository(repo, e, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -1487,7 +1487,7 @@ func TestObtainsManifestForTagWithoutHeaders(t *testing.T) {
 	e, c := testServer(m)
 	defer c()
 
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	r, err := NewRepository(repo, e, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -1566,7 +1566,7 @@ func TestManifestTagsPaginated(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	tagService := r.Tags(ctx)
 
 	tags, err := tagService.All(ctx)
@@ -1614,7 +1614,7 @@ func TestManifestUnauthorized(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	ms, err := r.Manifests(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -1652,7 +1652,7 @@ func TestCatalog(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	numFilled, err := r.Repositories(ctx, entries, "")
 	if err != io.EOF {
 		t.Fatal(err)
@@ -1684,7 +1684,7 @@ func TestCatalogInParts(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	numFilled, err := r.Repositories(ctx, entries, "")
 	if err != nil {
 		t.Fatal(err)

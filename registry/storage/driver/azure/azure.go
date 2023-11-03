@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
 	"strings"
 	"time"
 
@@ -302,7 +303,7 @@ func (d *driver) List(ctx context.Context, path string) ([]string, error) {
 // Move moves an object stored at sourcePath to destPath, removing the original
 // object.
 func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) error {
-	sourceBlobURL, err := d.URLFor(ctx, sourcePath, nil)
+	sourceBlobURL, err := d.signBlobURL(ctx, sourcePath)
 	if err != nil {
 		return err
 	}
@@ -382,18 +383,15 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 	return nil
 }
 
-// URLFor returns a publicly accessible URL for the blob stored at given path
+// RedirectURL returns a publicly accessible URL for the blob stored at given path
 // for specified duration by making use of Azure Storage Shared Access Signatures (SAS).
 // See https://msdn.microsoft.com/en-us/library/azure/ee395415.aspx for more info.
-func (d *driver) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
+func (d *driver) RedirectURL(req *http.Request, path string) (string, error) {
+	return d.signBlobURL(req.Context(), path)
+}
+
+func (d *driver) signBlobURL(ctx context.Context, path string) (string, error) {
 	expiresTime := time.Now().UTC().Add(20 * time.Minute) // default expiration
-	expires, ok := options["expiry"]
-	if ok {
-		t, ok := expires.(time.Time)
-		if ok {
-			expiresTime = t
-		}
-	}
 	blobName := d.blobName(path)
 	blobRef := d.client.NewBlobClient(blobName)
 	return d.azClient.SignBlobURL(ctx, blobRef.URL(), expiresTime)

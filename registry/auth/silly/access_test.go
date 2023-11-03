@@ -5,7 +5,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/distribution/distribution/v3/context"
 	"github.com/distribution/distribution/v3/registry/auth"
 )
 
@@ -16,8 +15,7 @@ func TestSillyAccessController(t *testing.T) {
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := context.WithRequest(context.Background(), r)
-		authCtx, err := ac.Authorized(ctx)
+		grant, err := ac.Authorized(r)
 		if err != nil {
 			switch err := err.(type) {
 			case auth.Challenge:
@@ -29,13 +27,12 @@ func TestSillyAccessController(t *testing.T) {
 			}
 		}
 
-		userInfo, ok := authCtx.Value(auth.UserKey).(auth.UserInfo)
-		if !ok {
-			t.Fatal("silly accessController did not set auth.user context")
+		if grant == nil {
+			t.Fatal("silly accessController did not return auth grant")
 		}
 
-		if userInfo.Name != "silly" {
-			t.Fatalf("expected user name %q, got %q", "silly", userInfo.Name)
+		if grant.User.Name != "silly" {
+			t.Fatalf("expected user name %q, got %q", "silly", grant.User.Name)
 		}
 
 		w.WriteHeader(http.StatusNoContent)

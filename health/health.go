@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/distribution/distribution/v3/registry/api/errcode"
 )
 
@@ -279,7 +279,7 @@ func Handler(handler http.Handler) http.Handler {
 func statusResponse(w http.ResponseWriter, r *http.Request, status int, checks map[string]string) {
 	p, err := json.Marshal(checks)
 	if err != nil {
-		context.GetLogger(context.Background()).Errorf("error serializing health status: %v", err)
+		dcontext.GetLogger(dcontext.Background()).Errorf("error serializing health status: %v", err)
 		p, err = json.Marshal(struct {
 			ServerError string `json:"server_error"`
 		}{
@@ -288,7 +288,7 @@ func statusResponse(w http.ResponseWriter, r *http.Request, status int, checks m
 		status = http.StatusInternalServerError
 
 		if err != nil {
-			context.GetLogger(context.Background()).Errorf("error serializing health status failure message: %v", err)
+			dcontext.GetLogger(dcontext.Background()).Errorf("error serializing health status failure message: %v", err)
 			return
 		}
 	}
@@ -297,7 +297,7 @@ func statusResponse(w http.ResponseWriter, r *http.Request, status int, checks m
 	w.Header().Set("Content-Length", fmt.Sprint(len(p)))
 	w.WriteHeader(status)
 	if _, err := w.Write(p); err != nil {
-		context.GetLogger(context.Background()).Errorf("error writing health status response body: %v", err)
+		dcontext.GetLogger(dcontext.Background()).Errorf("error writing health status response body: %v", err)
 	}
 }
 

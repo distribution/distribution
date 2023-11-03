@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/opencontainers/go-digest"
 )
 
@@ -96,7 +96,7 @@ func CreateRandomLayers(n int) (map[digest.Digest]io.ReadSeeker, error) {
 
 // UploadBlobs lets you upload blobs to a repository
 func UploadBlobs(repository distribution.Repository, layers map[digest.Digest]io.ReadSeeker) error {
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	for dgst, rs := range layers {
 		wr, err := repository.Blobs(ctx).Create(ctx)
 		if err != nil {

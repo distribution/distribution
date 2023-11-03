@@ -18,7 +18,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/distribution/distribution/v3/context"
 	"github.com/distribution/distribution/v3/registry/auth"
 	"github.com/go-jose/go-jose/v3"
 	"github.com/go-jose/go-jose/v3/jwt"
@@ -466,8 +465,7 @@ func TestAccessController(t *testing.T) {
 		Action: "baz",
 	}
 
-	ctx := context.WithRequest(context.Background(), req)
-	authCtx, err := accessController.Authorized(ctx, testAccess)
+	grant, err := accessController.Authorized(req, testAccess)
 	challenge, ok := err.(auth.Challenge)
 	if !ok {
 		t.Fatal("accessController did not return a challenge")
@@ -477,8 +475,8 @@ func TestAccessController(t *testing.T) {
 		t.Fatalf("accessControler did not get expected error - got %s - expected %s", challenge, ErrTokenRequired)
 	}
 
-	if authCtx != nil {
-		t.Fatalf("expected nil auth context but got %s", authCtx)
+	if grant != nil {
+		t.Fatalf("expected nil auth grant but got %#v", grant)
 	}
 
 	// 2. Supply an invalid token.
@@ -502,7 +500,7 @@ func TestAccessController(t *testing.T) {
 
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token.Raw))
 
-	authCtx, err = accessController.Authorized(ctx, testAccess)
+	grant, err = accessController.Authorized(req, testAccess)
 	challenge, ok = err.(auth.Challenge)
 	if !ok {
 		t.Fatal("accessController did not return a challenge")
@@ -512,8 +510,8 @@ func TestAccessController(t *testing.T) {
 		t.Fatalf("accessControler did not get expected error - got %s - expected %s", challenge, ErrTokenRequired)
 	}
 
-	if authCtx != nil {
-		t.Fatalf("expected nil auth context but got %s", authCtx)
+	if grant != nil {
+		t.Fatalf("expected nil auth grant but got %#v", grant)
 	}
 
 	// create a valid jwk
@@ -534,7 +532,7 @@ func TestAccessController(t *testing.T) {
 
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token.Raw))
 
-	authCtx, err = accessController.Authorized(ctx, testAccess)
+	grant, err = accessController.Authorized(req, testAccess)
 	challenge, ok = err.(auth.Challenge)
 	if !ok {
 		t.Fatal("accessController did not return a challenge")
@@ -544,8 +542,8 @@ func TestAccessController(t *testing.T) {
 		t.Fatalf("accessControler did not get expected error - got %s - expected %s", challenge, ErrInsufficientScope)
 	}
 
-	if authCtx != nil {
-		t.Fatalf("expected nil auth context but got %s", authCtx)
+	if grant != nil {
+		t.Fatalf("expected nil auth grant but got %#v", grant)
 	}
 
 	// 4. Supply the token we need, or deserve, or whatever.
@@ -564,18 +562,13 @@ func TestAccessController(t *testing.T) {
 
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token.Raw))
 
-	authCtx, err = accessController.Authorized(ctx, testAccess)
+	grant, err = accessController.Authorized(req, testAccess)
 	if err != nil {
 		t.Fatalf("accessController returned unexpected error: %s", err)
 	}
 
-	userInfo, ok := authCtx.Value(auth.UserKey).(auth.UserInfo)
-	if !ok {
-		t.Fatal("token accessController did not set auth.user context")
-	}
-
-	if userInfo.Name != "foo" {
-		t.Fatalf("expected user name %q, got %q", "foo", userInfo.Name)
+	if grant.User.Name != "foo" {
+		t.Fatalf("expected user name %q, got %q", "foo", grant.User.Name)
 	}
 
 	// 5. Supply a token with full admin rights, which is represented as "*".
@@ -594,7 +587,7 @@ func TestAccessController(t *testing.T) {
 
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token.Raw))
 
-	_, err = accessController.Authorized(ctx, testAccess)
+	_, err = accessController.Authorized(req, testAccess)
 	if err != nil {
 		t.Fatalf("accessController returned unexpected error: %s", err)
 	}

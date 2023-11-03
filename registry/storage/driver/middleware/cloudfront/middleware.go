@@ -7,13 +7,14 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/service/cloudfront/sign"
-	dcontext "github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/internal/dcontext"
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	storagemiddleware "github.com/distribution/distribution/v3/registry/storage/driver/middleware"
 )
@@ -201,18 +202,18 @@ type S3BucketKeyer interface {
 	S3BucketKey(path string) string
 }
 
-// URLFor attempts to find a url which may be used to retrieve the file at the given path.
+// RedirectURL attempts to find a url which may be used to retrieve the file at the given path.
 // Returns an error if the file cannot be found.
-func (lh *cloudFrontStorageMiddleware) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
+func (lh *cloudFrontStorageMiddleware) RedirectURL(r *http.Request, path string) (string, error) {
 	// TODO(endophage): currently only supports S3
 	keyer, ok := lh.StorageDriver.(S3BucketKeyer)
 	if !ok {
-		dcontext.GetLogger(ctx).Warn("the CloudFront middleware does not support this backend storage driver")
-		return lh.StorageDriver.URLFor(ctx, path, options)
+		dcontext.GetLogger(r.Context()).Warn("the CloudFront middleware does not support this backend storage driver")
+		return lh.StorageDriver.RedirectURL(r, path)
 	}
 
-	if eligibleForS3(ctx, lh.awsIPs) {
-		return lh.StorageDriver.URLFor(ctx, path, options)
+	if eligibleForS3(r, lh.awsIPs) {
+		return lh.StorageDriver.RedirectURL(r, path)
 	}
 
 	// Get signed cloudfront url.

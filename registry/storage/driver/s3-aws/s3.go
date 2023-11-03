@@ -36,7 +36,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 
-	dcontext "github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/internal/dcontext"
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/distribution/v3/registry/storage/driver/base"
 	"github.com/distribution/distribution/v3/registry/storage/driver/factory"
@@ -1036,30 +1036,13 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 	return nil
 }
 
-// URLFor returns a URL which may be used to retrieve the content stored at the given path.
-// May return an UnsupportedMethodErr in certain StorageDriver implementations.
-func (d *driver) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
-	methodString := http.MethodGet
-	method, ok := options["method"]
-	if ok {
-		methodString, ok = method.(string)
-		if !ok || (methodString != http.MethodGet && methodString != http.MethodHead) {
-			return "", storagedriver.ErrUnsupportedMethod{}
-		}
-	}
-
+// RedirectURL returns a URL which may be used to retrieve the content stored at the given path.
+func (d *driver) RedirectURL(r *http.Request, path string) (string, error) {
 	expiresIn := 20 * time.Minute
-	expires, ok := options["expiry"]
-	if ok {
-		et, ok := expires.(time.Time)
-		if ok {
-			expiresIn = time.Until(et)
-		}
-	}
 
 	var req *request.Request
 
-	switch methodString {
+	switch r.Method {
 	case http.MethodGet:
 		req, _ = d.S3.GetObjectRequest(&s3.GetObjectInput{
 			Bucket: aws.String(d.Bucket),
@@ -1071,7 +1054,7 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 			Key:    aws.String(d.s3Path(path)),
 		})
 	default:
-		panic("unreachable")
+		return "", nil
 	}
 
 	return req.Presign(expiresIn)

@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
@@ -11,8 +10,6 @@ import (
 	"reflect" // used as a replacement for testify
 	"testing"
 	"time"
-
-	dcontext "github.com/distribution/distribution/v3/context"
 )
 
 // Rather than pull in all of testify
@@ -276,29 +273,22 @@ func TestEligibleForS3(t *testing.T) {
 		}},
 		initialized: true,
 	}
-	empty := context.TODO()
-	makeContext := func(ip string) context.Context {
-		req := &http.Request{
-			RemoteAddr: ip,
-		}
-
-		return dcontext.WithRequest(empty, req)
-	}
 
 	tests := []struct {
-		Context  context.Context
-		Expected bool
+		RemoteAddr string
+		Expected   bool
 	}{
-		{Context: empty, Expected: false},
-		{Context: makeContext("192.168.1.2"), Expected: true},
-		{Context: makeContext("192.168.0.2"), Expected: false},
+		{RemoteAddr: "", Expected: false},
+		{RemoteAddr: "192.168.1.2", Expected: true},
+		{RemoteAddr: "192.168.0.2", Expected: false},
 	}
 
 	for _, tc := range tests {
 		tc := tc
-		t.Run(fmt.Sprintf("Client IP = %v", tc.Context.Value("http.request.ip")), func(t *testing.T) {
+		t.Run(fmt.Sprintf("Client IP = %v", tc.RemoteAddr), func(t *testing.T) {
 			t.Parallel()
-			assertEqual(t, tc.Expected, eligibleForS3(tc.Context, ips))
+			req := &http.Request{RemoteAddr: tc.RemoteAddr}
+			assertEqual(t, tc.Expected, eligibleForS3(req, ips))
 		})
 	}
 }
@@ -312,29 +302,22 @@ func TestEligibleForS3WithAWSIPNotInitialized(t *testing.T) {
 		}},
 		initialized: false,
 	}
-	empty := context.TODO()
-	makeContext := func(ip string) context.Context {
-		req := &http.Request{
-			RemoteAddr: ip,
-		}
-
-		return dcontext.WithRequest(empty, req)
-	}
 
 	tests := []struct {
-		Context  context.Context
-		Expected bool
+		RemoteAddr string
+		Expected   bool
 	}{
-		{Context: empty, Expected: false},
-		{Context: makeContext("192.168.1.2"), Expected: false},
-		{Context: makeContext("192.168.0.2"), Expected: false},
+		{RemoteAddr: "", Expected: false},
+		{RemoteAddr: "192.168.1.2", Expected: false},
+		{RemoteAddr: "192.168.0.2", Expected: false},
 	}
 
 	for _, tc := range tests {
 		tc := tc
-		t.Run(fmt.Sprintf("Client IP = %v", tc.Context.Value("http.request.ip")), func(t *testing.T) {
+		t.Run(fmt.Sprintf("Client IP = %v", tc.RemoteAddr), func(t *testing.T) {
 			t.Parallel()
-			assertEqual(t, tc.Expected, eligibleForS3(tc.Context, ips))
+			req := &http.Request{RemoteAddr: tc.RemoteAddr}
+			assertEqual(t, tc.Expected, eligibleForS3(req, ips))
 		})
 	}
 }

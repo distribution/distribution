@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"cloud.google.com/go/storage"
-	dcontext "github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/internal/dcontext"
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/distribution/v3/registry/storage/driver/testsuites"
 	"golang.org/x/oauth2"

@@ -5,9 +5,9 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/distribution/distribution/v3/context"
 	"github.com/distribution/distribution/v3/internal/client/auth"
 	"github.com/distribution/distribution/v3/internal/client/auth/challenge"
+	"github.com/distribution/distribution/v3/internal/dcontext"
 )
 
 const challengeHeader = "Docker-Distribution-Api-Version"
@@ -44,7 +44,7 @@ func configureAuth(username, password, remoteURL string) (auth.CredentialStore, 
 	}
 
 	for _, url := range authURLs {
-		context.GetLogger(context.Background()).Infof("Discovered token authentication URL: %s", url)
+		dcontext.GetLogger(dcontext.Background()).Infof("Discovered token authentication URL: %s", url)
 		creds[url] = userpass{
 			username: username,
 			password: password,

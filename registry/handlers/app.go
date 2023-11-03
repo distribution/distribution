@@ -19,9 +19,9 @@ import (
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/configuration"
-	dcontext "github.com/distribution/distribution/v3/context"
 	"github.com/distribution/distribution/v3/health"
 	"github.com/distribution/distribution/v3/health/checks"
+	"github.com/distribution/distribution/v3/internal/dcontext"
 	prometheus "github.com/distribution/distribution/v3/metrics"
 	"github.com/distribution/distribution/v3/notifications"
 	"github.com/distribution/distribution/v3/registry/api/errcode"
@@ -635,7 +635,7 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 		}
 
 		// Add username to request logging
-		context.Context = dcontext.WithLogger(context.Context, dcontext.GetLogger(context.Context, auth.UserNameKey))
+		context.Context = dcontext.WithLogger(context.Context, dcontext.GetLogger(context.Context, userNameKey))
 
 		// sync up context on the request.
 		r = r.WithContext(context)
@@ -797,7 +797,7 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 		accessRecords = appendCatalogAccessRecord(accessRecords, r)
 	}
 
-	ctx, err := app.accessController.Authorized(context.Context, accessRecords...)
+	grant, err := app.accessController.Authorized(r.WithContext(context.Context), accessRecords...)
 	if err != nil {
 		switch err := err.(type) {
 		case auth.Challenge:
@@ -818,8 +818,14 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 
 		return err
 	}
+	if grant == nil {
+		return fmt.Errorf("access controller returned neither an access grant nor an error")
+	}
 
-	dcontext.GetLogger(ctx, auth.UserNameKey).Info("authorized request")
+	ctx := withUser(context.Context, grant.User)
+	ctx = withResources(ctx, grant.Resources)
+
+	dcontext.GetLogger(ctx, userNameKey).Info("authorized request")
 	// TODO(stevvooe): This pattern needs to be cleaned up a bit. One context
 	// should be replaced by another, rather than replacing the context on a
 	// mutable object.

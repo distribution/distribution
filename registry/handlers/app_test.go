@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/distribution/distribution/v3/configuration"
-	"github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/distribution/distribution/v3/registry/api/errcode"
 	v2 "github.com/distribution/distribution/v3/registry/api/v2"
 	"github.com/distribution/distribution/v3/registry/auth"
@@ -25,7 +25,7 @@ import (
 // tested individually.
 func TestAppDispatcher(t *testing.T) {
 	driver := inmemory.New()
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	registry, err := storage.NewRegistry(ctx, driver, storage.BlobDescriptorCacheProvider(memorycache.NewInMemoryBlobDescriptorCacheProvider(0)), storage.EnableDelete, storage.EnableRedirect)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
@@ -139,7 +139,7 @@ func TestAppDispatcher(t *testing.T) {
 // TestNewApp covers the creation of an application via NewApp with a
 // configuration.
 func TestNewApp(t *testing.T) {
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	config := configuration.Configuration{
 		Storage: configuration.Storage{
 			"inmemory": nil,

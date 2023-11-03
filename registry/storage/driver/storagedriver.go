@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
@@ -92,11 +93,10 @@ type StorageDriver interface {
 	// Delete recursively deletes all objects stored at "path" and its subpaths.
 	Delete(ctx context.Context, path string) error
 
-	// URLFor returns a URL which may be used to retrieve the content stored at
-	// the given path, possibly using the given options.
-	// May return an ErrUnsupportedMethod in certain StorageDriver
-	// implementations.
-	URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error)
+	// RedirectURL returns a URL which the client of the request r may use
+	// to retrieve the content stored at path. Returning the empty string
+	// signals that the request may not be redirected.
+	RedirectURL(r *http.Request, path string) (string, error)
 
 	// Walk traverses a filesystem defined within driver, starting
 	// from the given path, calling f on each file.

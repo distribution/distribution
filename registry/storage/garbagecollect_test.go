@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
 	"github.com/distribution/distribution/v3/testutil"
@@ -21,7 +21,7 @@ type image struct {
 }
 
 func createRegistry(t *testing.T, driver driver.StorageDriver, options ...RegistryOption) distribution.Namespace {
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	options = append(options, EnableDelete)
 	registry, err := NewRegistry(ctx, driver, options...)
 	if err != nil {
@@ -31,7 +31,7 @@ func createRegistry(t *testing.T, driver driver.StorageDriver, options ...Regist
 }
 
 func makeRepository(t *testing.T, registry distribution.Namespace, name string) distribution.Repository {
-	ctx := context.Background()
+	ctx := dcontext.Background()
 
 	// Initialize a dummy repository
 	named, err := reference.WithName(name)
@@ -47,7 +47,7 @@ func makeRepository(t *testing.T, registry distribution.Namespace, name string) 
 }
 
 func makeManifestService(t *testing.T, repository distribution.Repository) distribution.ManifestService {
-	ctx := context.Background()
+	ctx := dcontext.Background()
 
 	manifestService, err := repository.Manifests(ctx)
 	if err != nil {
@@ -57,7 +57,7 @@ func makeManifestService(t *testing.T, repository distribution.Repository) distr
 }
 
 func allManifests(t *testing.T, manifestService distribution.ManifestService) map[digest.Digest]struct{} {
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	allManMap := make(map[digest.Digest]struct{})
 	manifestEnumerator, ok := manifestService.(distribution.ManifestEnumerator)
 	if !ok {
@@ -74,7 +74,7 @@ func allManifests(t *testing.T, manifestService distribution.ManifestService) ma
 }
 
 func allBlobs(t *testing.T, registry distribution.Namespace) map[digest.Digest]struct{} {
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	blobService := registry.Blobs()
 	allBlobsMap := make(map[digest.Digest]struct{})
 	err := blobService.Enumerate(ctx, func(dgst digest.Digest) error {
@@ -95,7 +95,7 @@ func uploadImage(t *testing.T, repository distribution.Repository, im image) dig
 	}
 
 	// upload manifest
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	manifestService := makeManifestService(t, repository)
 	manifestDigest, err := manifestService.Put(ctx, im.manifest)
 	if err != nil {
@@ -130,7 +130,7 @@ func uploadRandomSchema2Image(t *testing.T, repository distribution.Repository) 
 }
 
 func TestNoDeletionNoEffect(t *testing.T) {
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	inmemoryDriver := inmemory.New()
 
 	registry := createRegistry(t, inmemoryDriver)
@@ -158,7 +158,7 @@ func TestNoDeletionNoEffect(t *testing.T) {
 	before := allBlobs(t, registry)
 
 	// Run GC
-	err = MarkAndSweep(context.Background(), inmemoryDriver, registry, GCOpts{
+	err = MarkAndSweep(dcontext.Background(), inmemoryDriver, registry, GCOpts{
 		DryRun:         false,
 		RemoveUntagged: false,
 	})
@@ -173,7 +173,7 @@ func TestNoDeletionNoEffect(t *testing.T) {
 }
 
 func TestDeleteManifestIfTagNotFound(t *testing.T) {
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	inmemoryDriver := inmemory.New()
 
 	registry := createRegistry(t, inmemoryDriver)
@@ -233,7 +233,7 @@ func TestDeleteManifestIfTagNotFound(t *testing.T) {
 	before2 := allManifests(t, manifestService)
 
 	// run GC with dry-run (should not remove anything)
-	err = MarkAndSweep(context.Background(), inmemoryDriver, registry, GCOpts{
+	err = MarkAndSweep(dcontext.Background(), inmemoryDriver, registry, GCOpts{
 		DryRun:         true,
 		RemoveUntagged: true,
 	})
@@ -250,7 +250,7 @@ func TestDeleteManifestIfTagNotFound(t *testing.T) {
 	}
 
 	// Run GC (removes everything because no manifests with tags exist)
-	err = MarkAndSweep(context.Background(), inmemoryDriver, registry, GCOpts{
+	err = MarkAndSweep(dcontext.Background(), inmemoryDriver, registry, GCOpts{
 		DryRun:         false,
 		RemoveUntagged: true,
 	})
@@ -269,7 +269,7 @@ func TestDeleteManifestIfTagNotFound(t *testing.T) {
 }
 
 func TestGCWithMissingManifests(t *testing.T) {
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	d := inmemory.New()
 
 	registry := createRegistry(t, d)
@@ -288,7 +288,7 @@ func TestGCWithMissingManifests(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = MarkAndSweep(context.Background(), d, registry, GCOpts{
+	err = MarkAndSweep(dcontext.Background(), d, registry, GCOpts{
 		DryRun:         false,
 		RemoveUntagged: false,
 	})
@@ -303,7 +303,7 @@ func TestGCWithMissingManifests(t *testing.T) {
 }
 
 func TestDeletionHasEffect(t *testing.T) {
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	inmemoryDriver := inmemory.New()
 
 	registry := createRegistry(t, inmemoryDriver)
@@ -318,7 +318,7 @@ func TestDeletionHasEffect(t *testing.T) {
 	manifests.Delete(ctx, image3.manifestDigest)
 
 	// Run GC
-	err := MarkAndSweep(context.Background(), inmemoryDriver, registry, GCOpts{
+	err := MarkAndSweep(dcontext.Background(), inmemoryDriver, registry, GCOpts{
 		DryRun:         false,
 		RemoveUntagged: false,
 	})
@@ -368,7 +368,7 @@ func getKeys(digests map[digest.Digest]io.ReadSeeker) (ds []digest.Digest) {
 }
 
 func TestDeletionWithSharedLayer(t *testing.T) {
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	inmemoryDriver := inmemory.New()
 
 	registry := createRegistry(t, inmemoryDriver)
@@ -455,7 +455,7 @@ func TestOrphanBlobDeleted(t *testing.T) {
 	uploadRandomSchema2Image(t, repo)
 
 	// Run GC
-	err = MarkAndSweep(context.Background(), inmemoryDriver, registry, GCOpts{
+	err = MarkAndSweep(dcontext.Background(), inmemoryDriver, registry, GCOpts{
 		DryRun:         false,
 		RemoveUntagged: false,
 	})

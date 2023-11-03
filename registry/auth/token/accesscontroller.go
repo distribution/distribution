@@ -1,7 +1,6 @@
 package token
 
 import (
-	"context"
 	"crypto"
 	"crypto/x509"
 	"encoding/json"
@@ -13,7 +12,6 @@ import (
 	"os"
 	"strings"
 
-	dcontext "github.com/distribution/distribution/v3/context"
 	"github.com/distribution/distribution/v3/registry/auth"
 	"github.com/go-jose/go-jose/v3"
 )
@@ -292,17 +290,12 @@ func newAccessController(options map[string]interface{}) (auth.AccessController,
 
 // Authorized handles checking whether the given request is authorized
 // for actions on resources described by the given access items.
-func (ac *accessController) Authorized(ctx context.Context, accessItems ...auth.Access) (context.Context, error) {
+func (ac *accessController) Authorized(req *http.Request, accessItems ...auth.Access) (*auth.Grant, error) {
 	challenge := &authChallenge{
 		realm:        ac.realm,
 		autoRedirect: ac.autoRedirect,
 		service:      ac.service,
 		accessSet:    newAccessSet(accessItems...),
-	}
-
-	req, err := dcontext.GetRequest(ctx)
-	if err != nil {
-		return nil, err
 	}
 
 	prefix, rawToken, ok := strings.Cut(req.Header.Get("Authorization"), " ")
@@ -338,9 +331,10 @@ func (ac *accessController) Authorized(ctx context.Context, accessItems ...auth.
 		}
 	}
 
-	ctx = auth.WithResources(ctx, claims.resources())
-
-	return auth.WithUser(ctx, auth.UserInfo{Name: claims.Subject}), nil
+	return &auth.Grant{
+		User:      auth.UserInfo{Name: claims.Subject},
+		Resources: claims.resources(),
+	}, nil
 }
 
 // init handles registering the token auth backend.

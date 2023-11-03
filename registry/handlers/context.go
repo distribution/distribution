@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/distribution/distribution/v3"
-	dcontext "github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/distribution/distribution/v3/registry/api/errcode"
 	v2 "github.com/distribution/distribution/v3/registry/api/v2"
 	"github.com/distribution/distribution/v3/registry/auth"
@@ -77,10 +77,20 @@ func getUploadUUID(ctx context.Context) (uuid string) {
 	return dcontext.GetStringValue(ctx, "vars.uuid")
 }
 
+const (
+	// userKey is used to get the user object from
+	// a user context
+	userKey = "auth.user"
+
+	// userNameKey is used to get the user name from
+	// a user context
+	userNameKey = "auth.user.name"
+)
+
 // getUserName attempts to resolve a username from the context and request. If
 // a username cannot be resolved, the empty string is returned.
 func getUserName(ctx context.Context, r *http.Request) string {
-	username := dcontext.GetStringValue(ctx, auth.UserNameKey)
+	username := dcontext.GetStringValue(ctx, userNameKey)
 
 	// Fallback to request user with basic auth
 	if username == "" {
@@ -92,4 +102,61 @@ func getUserName(ctx context.Context, r *http.Request) string {
 	}
 
 	return username
+}
+
+// withUser returns a context with the authorized user info.
+func withUser(ctx context.Context, user auth.UserInfo) context.Context {
+	return userInfoContext{
+		Context: ctx,
+		user:    user,
+	}
+}
+
+type userInfoContext struct {
+	context.Context
+	user auth.UserInfo
+}
+
+func (uic userInfoContext) Value(key interface{}) interface{} {
+	switch key {
+	case userKey:
+		return uic.user
+	case userNameKey:
+		return uic.user.Name
+	}
+
+	return uic.Context.Value(key)
+}
+
+// withResources returns a context with the authorized resources.
+func withResources(ctx context.Context, resources []auth.Resource) context.Context {
+	return resourceContext{
+		Context:   ctx,
+		resources: resources,
+	}
+}
+
+type resourceContext struct {
+	context.Context
+	resources []auth.Resource
+}
+
+type resourceKey struct{}
+
+func (rc resourceContext) Value(key interface{}) interface{} {
+	if key == (resourceKey{}) {
+		return rc.resources
+	}
+
+	return rc.Context.Value(key)
+}
+
+// authorizedResources returns the list of resources which have
+// been authorized for this request.
+func authorizedResources(ctx context.Context) []auth.Resource {
+	if resources, ok := ctx.Value(resourceKey{}).([]auth.Resource); ok {
+		return resources
+	}
+
+	return nil
 }

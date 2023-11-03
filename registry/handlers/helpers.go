@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	dcontext "github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/internal/dcontext"
 )
 
 // closeResources closes all the provided resources after running the target
