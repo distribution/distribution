@@ -1,4 +1,60 @@
----
+middleware:
+  storage:
+  - name: cloudfront
+    disabled: false
+    options:
+      baseurl: http://d111111abcdef8.cloudfront.net
+      privatekey: /path/to/asecret.pem
+      keypairid: asecret
+      duration: 60smiddleware:
+  storage:
+  - name: cloudfront
+    disabled: false
+    options:
+      baseurl: http://d111111abcdef8.cloudfront.net
+      privatekey: /path/to/asecret.pem
+      keypairid: asecret
+      duration: 60shttp://d111111abcdef8.cloudfront.netversion: 0.1
+log:
+  level: debug
+storage:
+    filesystem:
+        rootdirectory: /var/lib/registry
+http:
+    addr: localhost:5000
+    secret: asecretforlocaldevelopment
+    debug:
+        addr: localhost:5001validation:
+  manifests:
+    urls:
+      allow:
+        - ^https?://([^/]+\.)*example\.com/
+      deny:
+        - ^https?://www\.example\.com/proxy:
+  remoteurl: https://registry-1.docker.io
+  username: [username]
+  password: [password]
+  ttl: 168hhttps://registry-1.docker.iohealth:
+  storagedriver:
+    enabled: true
+    interval: 10s
+    threshold: 3
+  file:
+    - file: /path/to/checked/file
+      interval: 10s
+  http:
+    - uri: http://server.to.check/must/return/200
+      headers:
+        Authorization: [Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==]
+      statuscode: 200
+      timeout: 3s
+      interval: 10s
+      threshold: 3
+  tcp:
+    - addr: redis-server.domain.com:6379
+      timeout: 3s
+      interval: 10s
+      threshold: 33200http://server.to.check/must/return/200redis-server.domain.com:6379--
 title: "Configuring a registry"
 description: "Explains how to configure a registry"
 keywords: registry, on-prem, images, tags, repository, distribution, configuration
