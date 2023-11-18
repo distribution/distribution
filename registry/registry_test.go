@@ -219,7 +219,9 @@ func buildRegistryTLSConfig(name, keyType string, cipherSuites []string) (*regis
 		return nil, fmt.Errorf("failed to create certificate: %v", err)
 	}
 	if _, err := os.Stat(os.TempDir()); os.IsNotExist(err) {
-		os.Mkdir(os.TempDir(), 1777)
+		if err := os.Mkdir(os.TempDir(), 1777); err != nil {
+			return nil, fmt.Errorf("failed to create temp dir: %v", err)
+		}
 	}
 
 	certPath := path.Join(os.TempDir(), name+".pem")

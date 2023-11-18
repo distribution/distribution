@@ -14,6 +14,7 @@ import (
 
 	"github.com/distribution/distribution/v3/registry/auth"
 	"github.com/go-jose/go-jose/v3"
+	"github.com/sirupsen/logrus"
 )
 
 // accessSet maps a typed, named resource to
@@ -339,5 +340,7 @@ func (ac *accessController) Authorized(req *http.Request, accessItems ...auth.Ac
 
 // init handles registering the token auth backend.
 func init() {
-	auth.Register("token", auth.InitFunc(newAccessController))
+	if err := auth.Register("token", auth.InitFunc(newAccessController)); err != nil {
+		logrus.Errorf("tailed to register token auth: %v", err)
+	}
 }

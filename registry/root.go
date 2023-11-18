@@ -31,6 +31,7 @@ var RootCmd = &cobra.Command{
 			version.PrintVersion()
 			return
 		}
+		// nolint:errcheck
 		cmd.Usage()
 	},
 }
@@ -49,6 +50,7 @@ var GCCmd = &cobra.Command{
 		config, err := resolveConfiguration(args)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "configuration error: %v\n", err)
+			// nolint:errcheck
 			cmd.Usage()
 			os.Exit(1)
 		}

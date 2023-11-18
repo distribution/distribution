@@ -11,7 +11,6 @@ linters:
     - misspell
     - bodyclose
     - prealloc
-  disable:
     - errcheck
 
 linters-settings:

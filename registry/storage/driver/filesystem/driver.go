@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -140,7 +141,9 @@ func (d *driver) PutContent(ctx context.Context, subPath string, contents []byte
 	defer writer.Close()
 	_, err = io.Copy(writer, bytes.NewReader(contents))
 	if err != nil {
-		writer.Cancel(ctx)
+		if cErr := writer.Cancel(ctx); cErr != nil {
+			return errors.Join(err, cErr)
+		}
 		return err
 	}
 	return writer.Commit(ctx)

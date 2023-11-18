@@ -224,10 +224,12 @@ func TestDeleteManifestIfTagNotFound(t *testing.T) {
 	}
 
 	manifestEnumerator, _ := manifestService.(distribution.ManifestEnumerator)
-	manifestEnumerator.Enumerate(ctx, func(dgst digest.Digest) error {
-		repo.Tags(ctx).Tag(ctx, "test", distribution.Descriptor{Digest: dgst})
-		return nil
+	err = manifestEnumerator.Enumerate(ctx, func(dgst digest.Digest) error {
+		return repo.Tags(ctx).Tag(ctx, "test", distribution.Descriptor{Digest: dgst})
 	})
+	if err != nil {
+		t.Fatalf("manifest enumeration failed: %v", err)
+	}
 
 	before1 := allBlobs(t, registry)
 	before2 := allManifests(t, manifestService)
@@ -314,8 +316,13 @@ func TestDeletionHasEffect(t *testing.T) {
 	image2 := uploadRandomSchema2Image(t, repo)
 	image3 := uploadRandomSchema2Image(t, repo)
 
-	manifests.Delete(ctx, image2.manifestDigest)
-	manifests.Delete(ctx, image3.manifestDigest)
+	if err := manifests.Delete(ctx, image2.manifestDigest); err != nil {
+		t.Fatalf("failed deleting manifest digest: %v", err)
+	}
+
+	if err := manifests.Delete(ctx, image3.manifestDigest); err != nil {
+		t.Fatalf("failed deleting manifest digest: %v", err)
+	}
 
 	// Run GC
 	err := MarkAndSweep(dcontext.Background(), inmemoryDriver, registry, GCOpts{

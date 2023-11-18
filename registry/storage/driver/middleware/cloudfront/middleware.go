@@ -17,6 +17,7 @@ import (
 	"github.com/distribution/distribution/v3/internal/dcontext"
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	storagemiddleware "github.com/distribution/distribution/v3/registry/storage/driver/middleware"
+	"github.com/sirupsen/logrus"
 )
 
 // cloudFrontStorageMiddleware provides a simple implementation of layerHandler that
@@ -226,5 +227,7 @@ func (lh *cloudFrontStorageMiddleware) RedirectURL(r *http.Request, path string)
 
 // init registers the cloudfront layerHandler backend.
 func init() {
-	storagemiddleware.Register("cloudfront", newCloudFrontStorageMiddleware)
+	if err := storagemiddleware.Register("cloudfront", newCloudFrontStorageMiddleware); err != nil {
+		logrus.Errorf("failed to register cloudfront middleware: %v", err)
+	}
 }

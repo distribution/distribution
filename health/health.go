@@ -265,6 +265,9 @@ func Handler(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		checks := CheckStatus()
 		if len(checks) != 0 {
+			// NOTE(milosgajdos): disable errcheck as the error is
+			// accessible via /debug/health
+			// nolint:errcheck
 			errcode.ServeJSON(w, errcode.ErrorCodeUnavailable.
 				WithDetail("health check failed: please see /debug/health"))
 			return

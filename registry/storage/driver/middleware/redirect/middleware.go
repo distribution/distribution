@@ -9,6 +9,7 @@ import (
 
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	storagemiddleware "github.com/distribution/distribution/v3/registry/storage/driver/middleware"
+	"github.com/sirupsen/logrus"
 )
 
 type redirectStorageMiddleware struct {
@@ -52,5 +53,7 @@ func (r *redirectStorageMiddleware) RedirectURL(_ *http.Request, urlPath string)
 }
 
 func init() {
-	storagemiddleware.Register("redirect", newRedirectStorageMiddleware)
+	if err := storagemiddleware.Register("redirect", newRedirectStorageMiddleware); err != nil {
+		logrus.Errorf("tailed to register redirect storage middleware: %v", err)
+	}
 }

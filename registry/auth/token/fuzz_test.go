@@ -22,7 +22,10 @@ func FuzzToken1(f *testing.F) {
 		if err != nil {
 			return
 		}
-		token.Verify(verifyOps)
+		_, err = token.Verify(verifyOps)
+		if err != nil {
+			return
+		}
 		_, _ = token.VerifySigningKey(verifyOps)
 	})
 }
@@ -40,7 +43,10 @@ func FuzzToken2(f *testing.F) {
 		if err != nil {
 			return
 		}
-		token.Verify(verifyOps)
+		_, err = token.Verify(verifyOps)
+		if err != nil {
+			return
+		}
 		_, _ = token.VerifySigningKey(verifyOps)
 	})
 }

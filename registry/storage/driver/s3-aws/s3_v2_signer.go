@@ -105,6 +105,9 @@ func Sign(req *request.Request) {
 		Time:        req.Time,
 		Credentials: req.Config.Credentials,
 	}
+	// TODO(milosgajdos): figure this out; if Sign returns error which we should check,
+	// we should modify the codepath related to svc.Handlers.Sign.PushBack etc.
+	// nolint:errcheck
 	v2.Sign()
 }
 

@@ -39,7 +39,9 @@ func TestWriteSeek(t *testing.T) {
 		t.Fatalf("unexpected error starting layer upload: %s", err)
 	}
 	contents := []byte{1, 2, 3}
-	blobUpload.Write(contents)
+	if _, err := blobUpload.Write(contents); err != nil {
+		t.Fatalf("unexpected error writing contets: %v", err)
+	}
 	blobUpload.Close()
 	offset := blobUpload.Size()
 	if offset != int64(len(contents)) {
@@ -596,6 +598,7 @@ func addBlob(ctx context.Context, bs distribution.BlobIngester, desc distributio
 	if err != nil {
 		return distribution.Descriptor{}, err
 	}
+	// nolint:errcheck
 	defer wr.Cancel(ctx)
 
 	if nn, err := io.Copy(wr, rd); err != nil {

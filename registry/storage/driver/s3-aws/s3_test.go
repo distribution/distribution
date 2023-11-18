@@ -186,6 +186,7 @@ func TestEmptyRootList(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error creating content: %v", err)
 	}
+	// nolint:errcheck
 	defer rootedDriver.Delete(ctx, filename)
 
 	keys, _ := emptyRootDriver.List(ctx, "/")
@@ -230,6 +231,7 @@ func TestStorageClass(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error creating content with storage class %v: %v", storageClass, err)
 		}
+		// nolint:errcheck
 		defer s3Driver.Delete(ctx, filename)
 
 		driverUnwrapped := s3Driver.Base.StorageDriver.(*driver)
@@ -751,17 +753,21 @@ func TestMoveWithMultipartCopy(t *testing.T) {
 	sourcePath := "/source"
 	destPath := "/dest"
 
+	// nolint:errcheck
 	defer d.Delete(ctx, sourcePath)
+	// nolint:errcheck
 	defer d.Delete(ctx, destPath)
 
 	// An object larger than d's MultipartCopyThresholdSize will cause d.Move() to perform a multipart copy.
 	multipartCopyThresholdSize := d.baseEmbed.Base.StorageDriver.(*driver).MultipartCopyThresholdSize
 	contents := make([]byte, 2*multipartCopyThresholdSize)
-	rand.Read(contents)
+	if _, err := rand.Read(contents); err != nil {
+		t.Fatalf("unexpected error creating content: %v", err)
+	}
 
 	err = d.PutContent(ctx, sourcePath, contents)
 	if err != nil {
-		t.Fatalf("unexpected error creating content: %v", err)
+		t.Fatalf("unexpected error writing content: %v", err)
 	}
 
 	err = d.Move(ctx, sourcePath, destPath)
