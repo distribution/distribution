@@ -329,6 +329,90 @@ func TestProxyStoreServeBig(t *testing.T) {
 	testProxyStoreServe(t, te, numClients)
 }
 
+func TestProxyStoreServeMetrics(t *testing.T) {
+	te := makeTestEnv(t, "foo/bar")
+
+	blobSize := 200
+	blobCount := 10
+	numUnique := 10
+	populate(t, te, blobCount, blobSize, numUnique)
+
+	numClients := 1
+	proxyMetrics = &proxyMetricsCollector{}
+	testProxyStoreServe(t, te, numClients)
+
+	expected := &proxyMetricsCollector{
+		blobMetrics: Metrics{
+			Requests:    uint64(blobCount*numClients + blobCount),
+			Hits:        uint64(blobCount),
+			Misses:      uint64(blobCount),
+			BytesPushed: uint64(blobSize*blobCount*numClients + blobSize*blobCount),
+			BytesPulled: uint64(blobSize * blobCount),
+		},
+	}
+
+	if proxyMetrics.blobMetrics.Requests != expected.blobMetrics.Requests {
+		t.Errorf("Expected blobMetrics.Requests %d but got %d", expected.blobMetrics.Requests, proxyMetrics.blobMetrics.Requests)
+	}
+	if proxyMetrics.blobMetrics.Hits != expected.blobMetrics.Hits {
+		t.Errorf("Expected blobMetrics.Hits %d but got %d", expected.blobMetrics.Hits, proxyMetrics.blobMetrics.Hits)
+	}
+	if proxyMetrics.blobMetrics.Misses != expected.blobMetrics.Misses {
+		t.Errorf("Expected blobMetrics.Misses %d but got %d", expected.blobMetrics.Misses, proxyMetrics.blobMetrics.Misses)
+	}
+	if proxyMetrics.blobMetrics.BytesPushed != expected.blobMetrics.BytesPushed {
+		t.Errorf("Expected blobMetrics.BytesPushed %d but got %d", expected.blobMetrics.BytesPushed, proxyMetrics.blobMetrics.BytesPushed)
+	}
+	if proxyMetrics.blobMetrics.BytesPulled != expected.blobMetrics.BytesPulled {
+		t.Errorf("Expected blobMetrics.BytesPulled %d but got %d", expected.blobMetrics.BytesPulled, proxyMetrics.blobMetrics.BytesPulled)
+	}
+}
+
+func TestProxyStoreServeMetricsConcurrent(t *testing.T) {
+	te := makeTestEnv(t, "foo/bar")
+
+	blobSize := 200
+	blobCount := 10
+	numUnique := 10
+	populate(t, te, blobCount, blobSize, numUnique)
+
+	numClients := 4
+	proxyMetrics = &proxyMetricsCollector{}
+	testProxyStoreServe(t, te, numClients)
+
+	expected := &proxyMetricsCollector{
+		blobMetrics: Metrics{
+			Requests:    uint64(blobCount*numClients + blobCount),
+			Hits:        uint64(blobCount),
+			Misses:      uint64(blobCount),
+			BytesPushed: uint64(blobSize*blobCount*numClients + blobSize*blobCount),
+			BytesPulled: uint64(blobSize * blobCount),
+		},
+	}
+
+	if proxyMetrics.blobMetrics.Requests != expected.blobMetrics.Requests {
+		t.Errorf("Expected blobMetrics.Requests %d but got %d", expected.blobMetrics.Requests, proxyMetrics.blobMetrics.Requests)
+	}
+	if proxyMetrics.blobMetrics.Hits+proxyMetrics.blobMetrics.Misses != expected.blobMetrics.Requests {
+		t.Errorf("Expected blobMetrics.Hits + blobMetrics.Misses %d but got %d", expected.blobMetrics.Requests, proxyMetrics.blobMetrics.Hits+proxyMetrics.blobMetrics.Misses)
+	}
+	if proxyMetrics.blobMetrics.Hits < expected.blobMetrics.Hits {
+		t.Errorf("Expect blobMetrics.Hits %d to be >= %d", proxyMetrics.blobMetrics.Hits, expected.blobMetrics.Hits)
+	}
+	if proxyMetrics.blobMetrics.Misses < expected.blobMetrics.Misses {
+		t.Errorf("Expect blobMetrics.Misses %d to be >= %d", proxyMetrics.blobMetrics.Misses, expected.blobMetrics.Misses)
+	}
+	if proxyMetrics.blobMetrics.BytesPushed != expected.blobMetrics.BytesPushed {
+		t.Errorf("Expected blobMetrics.BytesPushed %d but got %d", expected.blobMetrics.BytesPushed, proxyMetrics.blobMetrics.BytesPushed)
+	}
+	if proxyMetrics.blobMetrics.BytesPulled < expected.blobMetrics.BytesPulled {
+		t.Errorf("Expect blobMetrics.BytesPulled %d to be >= %d", proxyMetrics.blobMetrics.BytesPulled, expected.blobMetrics.BytesPulled)
+	}
+	if proxyMetrics.blobMetrics.BytesPulled > expected.blobMetrics.BytesPushed-expected.blobMetrics.BytesPulled {
+		t.Errorf("Expect blobMetrics.BytesPulled %d to be <= %d", proxyMetrics.blobMetrics.BytesPulled, expected.blobMetrics.BytesPushed-expected.blobMetrics.BytesPulled)
+	}
+}
+
 // testProxyStoreServe will create clients to consume all blobs
 // populated in the truth store
 func testProxyStoreServe(t *testing.T, te *testEnv, numClients int) {
