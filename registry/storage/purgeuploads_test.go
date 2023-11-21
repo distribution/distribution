@@ -35,7 +35,7 @@ func addUploads(ctx context.Context, t *testing.T, d driver.StorageDriver, uploa
 		t.Fatalf("Unable to resolve path")
 	}
 
-	if d.PutContent(ctx, startedAtPath, []byte(startedAt.Format(time.RFC3339))); err != nil {
+	if err := d.PutContent(ctx, startedAtPath, []byte(startedAt.Format(time.RFC3339))); err != nil {
 		t.Fatalf("Unable to write startedAt file")
 	}
 }

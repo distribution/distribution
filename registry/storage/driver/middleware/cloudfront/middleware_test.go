@@ -45,7 +45,9 @@ pZeMRablbPQdp8/1NyIwimq1VlG0ohQ4P6qhW7E09ZMC
 	if err != nil {
 		t.Fatal("File cannot be created")
 	}
-	file.WriteString(privk)
+	if _, err := file.WriteString(privk); err != nil {
+		t.Fatal(err)
+	}
 	defer os.Remove(file.Name())
 	options["privatekey"] = file.Name()
 	options["keypairid"] = "test"

@@ -33,7 +33,9 @@ func (htpasswd *htpasswd) authenticateUser(username string, password string) err
 	credentials, ok := htpasswd.entries[username]
 	if !ok {
 		// timing attack paranoia
-		bcrypt.CompareHashAndPassword([]byte{}, []byte(password))
+		if err := bcrypt.CompareHashAndPassword([]byte{}, []byte(password)); err != nil {
+			return auth.ErrAuthenticationFailure
+		}
 
 		return auth.ErrAuthenticationFailure
 	}

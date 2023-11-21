@@ -139,7 +139,10 @@ func (pbs *proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter,
 	}
 
 	if pbs.scheduler != nil && pbs.ttl != nil {
-		pbs.scheduler.AddBlob(blobRef, *pbs.ttl)
+		if err := pbs.scheduler.AddBlob(blobRef, *pbs.ttl); err != nil {
+			dcontext.GetLogger(ctx).Errorf("Error adding blob: %s", err)
+			return err
+		}
 	}
 
 	return nil

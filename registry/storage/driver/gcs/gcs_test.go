@@ -119,6 +119,7 @@ func TestCommitEmpty(t *testing.T) {
 	ctx := dcontext.Background()
 
 	writer, err := driver.Writer(ctx, filename, false)
+	// nolint:errcheck
 	defer driver.Delete(ctx, filename)
 	if err != nil {
 		t.Fatalf("driver.Writer: unexpected error: %v", err)
@@ -162,6 +163,7 @@ func TestCommit(t *testing.T) {
 
 	contents := make([]byte, defaultChunkSize)
 	writer, err := driver.Writer(ctx, filename, false)
+	// nolint:errcheck
 	defer driver.Delete(ctx, filename)
 	if err != nil {
 		t.Fatalf("driver.Writer: unexpected error: %v", err)

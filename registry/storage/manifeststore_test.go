@@ -137,7 +137,9 @@ func testManifestStorage(t *testing.T, options ...RegistryOption) {
 		if _, err := wr.Commit(env.ctx, distribution.Descriptor{Digest: dgst}); err != nil {
 			t.Fatalf("unexpected error finishing upload: %v", err)
 		}
-		builder.AppendReference(distribution.Descriptor{Digest: dgst})
+		if err := builder.AppendReference(distribution.Descriptor{Digest: dgst, MediaType: schema2.MediaTypeLayer}); err != nil {
+			t.Fatalf("unexpected error appending references: %v", err)
+		}
 	}
 
 	sm, err := builder.Build(ctx)
@@ -349,7 +351,9 @@ func testOCIManifestStorage(t *testing.T, testname string, includeMediaTypes boo
 			t.Fatalf("%s: unexpected error finishing upload: %v", testname, err)
 		}
 
-		builder.AppendReference(distribution.Descriptor{Digest: dgst})
+		if err := builder.AppendReference(distribution.Descriptor{Digest: dgst, MediaType: v1.MediaTypeImageLayer}); err != nil {
+			t.Fatalf("%s unexpected error appending references: %v", testname, err)
+		}
 	}
 
 	mfst, err := builder.Build(ctx)

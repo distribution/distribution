@@ -107,7 +107,9 @@ func TestCommitAfterMove(t *testing.T) {
 	destPath := "/dest/file"
 	ctx := context.Background()
 
+	// nolint:errcheck
 	defer driver.Delete(ctx, sourcePath)
+	// nolint:errcheck
 	defer driver.Delete(ctx, destPath)
 
 	writer, err := driver.Writer(ctx, sourcePath, false)

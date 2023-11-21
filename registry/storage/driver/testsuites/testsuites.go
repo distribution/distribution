@@ -302,7 +302,9 @@ func (suite *DriverSuite) TestWriteReadLargeStreams(c *check.C) {
 	defer reader.Close()
 
 	writtenChecksum := sha256.New()
-	io.Copy(writtenChecksum, reader)
+	if _, err := io.Copy(writtenChecksum, reader); err != nil {
+		c.Assert(err, check.IsNil)
+	}
 
 	c.Assert(writtenChecksum.Sum(nil), check.DeepEquals, checksum.Sum(nil))
 }
@@ -1108,6 +1110,7 @@ func (suite *DriverSuite) benchmarkPutGetFiles(c *check.C, size int64) {
 	parentDir := randomPath(8)
 	defer func() {
 		c.StopTimer()
+		// nolint:errcheck
 		suite.StorageDriver.Delete(suite.ctx, firstPart(parentDir))
 	}()
 
@@ -1146,6 +1149,7 @@ func (suite *DriverSuite) benchmarkStreamFiles(c *check.C, size int64) {
 	parentDir := randomPath(8)
 	defer func() {
 		c.StopTimer()
+		// nolint:errcheck
 		suite.StorageDriver.Delete(suite.ctx, firstPart(parentDir))
 	}()
 
@@ -1182,6 +1186,7 @@ func (suite *DriverSuite) benchmarkListFiles(c *check.C, numFiles int64) {
 	parentDir := randomPath(8)
 	defer func() {
 		c.StopTimer()
+		// nolint:errcheck
 		suite.StorageDriver.Delete(suite.ctx, firstPart(parentDir))
 	}()
 
@@ -1240,8 +1245,10 @@ func (suite *DriverSuite) testFileStreams(c *check.C, size int64) {
 	_, err = tf.Write(contents)
 	c.Assert(err, check.IsNil)
 
-	tf.Sync()
-	tf.Seek(0, io.SeekStart)
+	err = tf.Sync()
+	c.Assert(err, check.IsNil)
+	_, err = tf.Seek(0, io.SeekStart)
+	c.Assert(err, check.IsNil)
 
 	writer, err := suite.StorageDriver.Writer(suite.ctx, filename, false)
 	c.Assert(err, check.IsNil)

@@ -50,7 +50,9 @@ func MakeSchema2Manifest(repository distribution.Repository, digests []digest.Di
 	}
 	builder := schema2.NewManifestBuilder(d, configJSON)
 	for _, digest := range digests {
-		builder.AppendReference(distribution.Descriptor{Digest: digest})
+		if err := builder.AppendReference(distribution.Descriptor{Digest: digest}); err != nil {
+			return nil, fmt.Errorf("unexpected error building manifest: %v", err)
+		}
 	}
 
 	mfst, err := builder.Build(ctx)

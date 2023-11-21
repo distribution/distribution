@@ -77,7 +77,10 @@ func (pms proxyManifestStore) Get(ctx context.Context, dgst digest.Digest, optio
 		}
 
 		if pms.scheduler != nil && pms.ttl != nil {
-			pms.scheduler.AddManifest(repoBlob, *pms.ttl)
+			if err := pms.scheduler.AddManifest(repoBlob, *pms.ttl); err != nil {
+				dcontext.GetLogger(ctx).Errorf("Error adding manifest: %s", err)
+				return nil, err
+			}
 		}
 
 		// Ensure the manifest blob is cleaned up

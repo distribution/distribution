@@ -339,6 +339,7 @@ func TestCatalogAPI(t *testing.T) {
 	defer resp.Body.Close()
 
 	checkResponse(t, "issuing catalog api check", resp, http.StatusBadRequest)
+	// nolint:errcheck
 	checkBodyHasErrorCodes(t, "invalid number of results requested", resp, errcode.ErrorCodePaginationNumberInvalid)
 
 	// -----------------------------------
@@ -360,6 +361,7 @@ func TestCatalogAPI(t *testing.T) {
 	defer resp.Body.Close()
 
 	checkResponse(t, "issuing catalog api check", resp, http.StatusBadRequest)
+	// nolint:errcheck
 	checkBodyHasErrorCodes(t, "invalid number of results requested", resp, errcode.ErrorCodePaginationNumberInvalid)
 
 	// -----------------------------------
@@ -409,6 +411,7 @@ func TestCatalogAPI(t *testing.T) {
 	defer resp.Body.Close()
 
 	checkResponse(t, "issuing catalog api check", resp, http.StatusBadRequest)
+	// nolint:errcheck
 	checkBodyHasErrorCodes(t, "invalid number of results requested", resp, errcode.ErrorCodePaginationNumberInvalid)
 
 	// -----------------------------------
@@ -584,6 +587,7 @@ func TestTagsAPI(t *testing.T) {
 			}
 
 			if test.expectedBodyErr != nil {
+				// nolint:errcheck
 				checkBodyHasErrorCodes(t, "invalid number of results requested", resp, *test.expectedBodyErr)
 			} else {
 				var body tagsAPIResponse
@@ -900,6 +904,7 @@ func testBlobAPI(t *testing.T, env *testEnv, args blobArgs) *testEnv {
 	defer resp.Body.Close()
 
 	checkResponse(t, "bad layer push", resp, http.StatusBadRequest)
+	// nolint:errcheck
 	checkBodyHasErrorCodes(t, "bad layer push", resp, errcode.ErrorCodeDigestInvalid)
 
 	// -----------------------------------------
@@ -927,15 +932,22 @@ func testBlobAPI(t *testing.T, env *testEnv, args blobArgs) *testEnv {
 
 	// ------------------------------------------
 	// Now, actually do successful upload.
-	layerLength, _ := layerFile.Seek(0, io.SeekEnd)
-	layerFile.Seek(0, io.SeekStart)
+	layerLength, err := layerFile.Seek(0, io.SeekEnd)
+	if err != nil {
+		t.Fatalf("unexpected error seeking layer: %v", err)
+	}
+	if _, err := layerFile.Seek(0, io.SeekStart); err != nil {
+		t.Fatalf("unexpected error seeking layer: %v", err)
+	}
 
 	uploadURLBase, _ = startPushLayer(t, env, imageName)
 	pushLayer(t, env.builder, imageName, layerDigest, uploadURLBase, layerFile)
 
 	// ------------------------------------------
 	// Now, push just a chunk
-	layerFile.Seek(0, 0)
+	if _, err := layerFile.Seek(0, io.SeekStart); err != nil {
+		t.Fatalf("unexpected error seeking layer: %v", err)
+	}
 
 	canonicalDigester := digest.Canonical.Digester()
 	if _, err := io.Copy(canonicalDigester.Hash(), layerFile); err != nil {
@@ -943,7 +955,9 @@ func testBlobAPI(t *testing.T, env *testEnv, args blobArgs) *testEnv {
 	}
 	canonicalDigest := canonicalDigester.Digest()
 
-	layerFile.Seek(0, 0)
+	if _, err := layerFile.Seek(0, io.SeekStart); err != nil {
+		t.Fatalf("unexpected error seeking layer: %v", err)
+	}
 	uploadURLBase, _ = startPushLayer(t, env, imageName)
 	uploadURLBase, dgst := pushChunk(t, env.builder, imageName, uploadURLBase, layerFile, layerLength)
 
@@ -961,7 +975,10 @@ func testBlobAPI(t *testing.T, env *testEnv, args blobArgs) *testEnv {
 
 	// -----------------------------------------
 	// Do layer push with invalid content range
-	layerFile.Seek(0, io.SeekStart)
+	if _, err := layerFile.Seek(0, io.SeekStart); err != nil {
+		t.Fatalf("unexpected error seeking layer: %v", err)
+	}
+
 	uploadURLBase, _ = startPushLayer(t, env, imageName)
 	sizeInvalid := chunkOptions{
 		contentRange: "0-20",
@@ -973,7 +990,9 @@ func testBlobAPI(t *testing.T, env *testEnv, args blobArgs) *testEnv {
 	defer resp.Body.Close()
 	checkResponse(t, "putting size invalid chunk", resp, http.StatusBadRequest)
 
-	layerFile.Seek(0, io.SeekStart)
+	if _, err := layerFile.Seek(0, io.SeekStart); err != nil {
+		t.Fatalf("unexpected error seeking layer: %v", err)
+	}
 	uploadURLBase, _ = startPushLayer(t, env, imageName)
 	outOfOrder := chunkOptions{
 		contentRange: "3-22",
@@ -1013,7 +1032,9 @@ func testBlobAPI(t *testing.T, env *testEnv, args blobArgs) *testEnv {
 
 	// Verify the body
 	verifier := layerDigest.Verifier()
-	io.Copy(verifier, resp.Body)
+	if _, err := io.Copy(verifier, resp.Body); err != nil {
+		t.Fatalf("unexpected error reading response body: %v", err)
+	}
 
 	if !verifier.Verified() {
 		t.Fatalf("response body did not pass verification")
@@ -1134,12 +1155,16 @@ func testBlobDelete(t *testing.T, env *testEnv, args blobArgs) {
 
 	// ----------------
 	// Reupload previously deleted blob
-	layerFile.Seek(0, io.SeekStart)
+	if _, err := layerFile.Seek(0, io.SeekStart); err != nil {
+		t.Fatalf("unexpected error seeking layer: %v", err)
+	}
 
 	uploadURLBase, _ := startPushLayer(t, env, imageName)
 	pushLayer(t, env.builder, imageName, layerDigest, uploadURLBase, layerFile)
 
-	layerFile.Seek(0, io.SeekStart)
+	if _, err := layerFile.Seek(0, io.SeekStart); err != nil {
+		t.Fatalf("unexpected error seeking layer: %v", err)
+	}
 	canonicalDigester := digest.Canonical.Digester()
 	if _, err := io.Copy(canonicalDigester.Hash(), layerFile); err != nil {
 		t.Fatalf("error copying to digest: %v", err)
@@ -1342,6 +1367,7 @@ func TestManifestAPI_DeleteTag_Unknown(t *testing.T) {
 	defer resp.Body.Close()
 
 	checkResponse(t, msg, resp, http.StatusNotFound)
+	// nolint:errcheck
 	checkBodyHasErrorCodes(t, msg, resp, errcode.ErrorCodeManifestUnknown)
 }
 
@@ -1504,6 +1530,7 @@ func testManifestWithStorageError(t *testing.T, env *testEnv, imageName referenc
 	}
 	defer resp.Body.Close()
 	checkResponse(t, "getting non-existent manifest", resp, expectedStatusCode)
+	// nolint:errcheck
 	checkBodyHasErrorCodes(t, "getting non-existent manifest", resp, expectedErrorCode)
 }
 
@@ -1528,6 +1555,7 @@ func testManifestAPISchema2(t *testing.T, env *testEnv, imageName reference.Name
 	defer resp.Body.Close()
 
 	checkResponse(t, "getting non-existent manifest", resp, http.StatusNotFound)
+	// nolint:errcheck
 	checkBodyHasErrorCodes(t, "getting non-existent manifest", resp, errcode.ErrorCodeManifestUnknown)
 
 	tagsURL, err := env.builder.BuildTagsURL(imageName)
@@ -1543,6 +1571,7 @@ func testManifestAPISchema2(t *testing.T, env *testEnv, imageName reference.Name
 
 	// Check that we get an unknown repository error when asking for tags
 	checkResponse(t, "getting unknown manifest tags", resp, http.StatusNotFound)
+	// nolint:errcheck
 	checkBodyHasErrorCodes(t, "getting unknown manifest tags", resp, errcode.ErrorCodeNameUnknown)
 
 	// --------------------------------

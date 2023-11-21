@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/distribution/distribution/v3/registry/auth"
+	"github.com/sirupsen/logrus"
 )
 
 // accessController provides a simple implementation of auth.AccessController
@@ -87,5 +88,7 @@ func (ch challenge) Error() string {
 
 // init registers the silly auth backend.
 func init() {
-	auth.Register("silly", auth.InitFunc(newAccessController))
+	if err := auth.Register("silly", auth.InitFunc(newAccessController)); err != nil {
+		logrus.Errorf("failed to register silly auth: %v", err)
+	}
 }

@@ -97,7 +97,9 @@ func (d *driver) PutContent(ctx context.Context, p string, contents []byte) erro
 	}
 
 	f.truncate()
-	f.WriteAt(contents, 0)
+	if _, err := f.WriteAt(contents, 0); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -301,7 +303,10 @@ func (w *writer) Close() error {
 		return fmt.Errorf("already closed")
 	}
 	w.closed = true
-	w.flush()
+
+	if err := w.flush(); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -329,16 +334,23 @@ func (w *writer) Commit(ctx context.Context) error {
 		return fmt.Errorf("already cancelled")
 	}
 	w.committed = true
-	w.flush()
+
+	if err := w.flush(); err != nil {
+		return err
+	}
 
 	return nil
 }
 
-func (w *writer) flush() {
+func (w *writer) flush() error {
 	w.d.mutex.Lock()
 	defer w.d.mutex.Unlock()
 
-	w.f.WriteAt(w.buffer, int64(len(w.f.data)))
+	if _, err := w.f.WriteAt(w.buffer, int64(len(w.f.data))); err != nil {
+		return err
+	}
 	w.buffer = []byte{}
 	w.buffSize = 0
+
+	return nil
 }

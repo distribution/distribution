@@ -42,7 +42,9 @@ func TestSimpleRead(t *testing.T) {
 	}
 
 	verifier := dgst.Verifier()
-	io.Copy(verifier, fr)
+	if _, err := io.Copy(verifier, fr); err != nil {
+		t.Fatalf("failed writing verification data: %v", err)
+	}
 
 	if !verifier.Verified() {
 		t.Fatalf("unable to verify read data")

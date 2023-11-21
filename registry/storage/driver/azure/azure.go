@@ -319,7 +319,9 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 	copyStatus := *resp.CopyStatus
 
 	if d.copyStatusPollMaxRetry == -1 && copyStatus == blob.CopyStatusTypePending {
-		destBlobRef.AbortCopyFromURL(ctx, *resp.CopyID, nil)
+		if _, err := destBlobRef.AbortCopyFromURL(ctx, *resp.CopyID, nil); err != nil {
+			return err
+		}
 		return nil
 	}
 
@@ -331,7 +333,9 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 		}
 
 		if retryCount >= d.copyStatusPollMaxRetry {
-			destBlobRef.AbortCopyFromURL(ctx, *props.CopyID, nil)
+			if _, err := destBlobRef.AbortCopyFromURL(ctx, *props.CopyID, nil); err != nil {
+				return err
+			}
 			return fmt.Errorf("max retries for copy polling reached, aborting copy")
 		}
 
