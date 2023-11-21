@@ -8,7 +8,7 @@ title: Registry as a pull through cache
 
 If you have multiple consumers of containers running in your environment, such as
 multiple physical or virtual machines using containers, or a Kubernetes cluster,
-each cunsumer fetches an images it doesn't have locally, from the external registry.
+each consumer fetches an images it doesn't have locally, from the external registry.
 You can run a local registry mirror and point all your consumers
 there, to avoid this extra internet traffic.
 
