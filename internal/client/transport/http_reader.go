@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -240,6 +241,9 @@ func (hrs *HTTPReadSeeker) reader() (io.Reader, error) {
 					return nil, fmt.Errorf("range in Content-Range stops before the end of the content: %s", contentRange)
 				}
 
+				if size > math.MaxInt64 {
+					return nil, fmt.Errorf("Content-Range size: %d exceeds max allowed size", size)
+				}
 				hrs.size = int64(size)
 			}
 		} else if resp.StatusCode == http.StatusOK {
