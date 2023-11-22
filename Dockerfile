@@ -23,7 +23,7 @@ FROM base AS build
 ARG TARGETPLATFORM
 ARG LDFLAGS="-s -w"
 ARG BUILDTAGS="include_gcs"
-RUN --mount=type=bind,target=/src,rw \
+RUN --mount=type=bind,target=/src \
     --mount=type=cache,target=/root/.cache/go-build \
     --mount=target=/go/pkg/mod,type=cache \
     --mount=type=bind,source=/tmp/.ldflags,target=/tmp/.ldflags,from=version \
