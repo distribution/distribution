@@ -507,6 +507,7 @@ Use the `cache` structure to enable caching of data accessed in the storage
 backend. Currently, the only available cache provides fast access to layer
 metadata, which uses the `blobdescriptor` field if configured.
 
+Currently the only two available cache implementations are `redis` and `inmemory`.
 You can set `blobdescriptor` field to `redis` or `inmemory`. If set to `redis`,a
 Redis pool caches layer metadata. If set to `inmemory`, an in-memory map caches
 layer metadata.
