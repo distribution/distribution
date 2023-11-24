@@ -50,6 +50,12 @@ func NewRedisBlobDescriptorCacheProvider(pool *redis.Client) cache.BlobDescripto
 // RepositoryScoped returns the scoped cache.
 func (rbds *redisBlobDescriptorService) RepositoryScoped(repo string) (distribution.BlobDescriptorService, error) {
 	if _, err := reference.ParseNormalizedNamed(repo); err != nil {
+		if err == reference.ErrNameTooLong {
+			return nil, distribution.ErrRepositoryNameInvalid{
+				Name:   repo,
+				Reason: reference.ErrNameTooLong,
+			}
+		}
 		return nil, err
 	}
 

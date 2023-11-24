@@ -47,6 +47,12 @@ func NewInMemoryBlobDescriptorCacheProvider(size int) cache.BlobDescriptorCacheP
 
 func (imbdcp *inMemoryBlobDescriptorCacheProvider) RepositoryScoped(repo string) (distribution.BlobDescriptorService, error) {
 	if _, err := reference.ParseNormalizedNamed(repo); err != nil {
+		if err == reference.ErrNameTooLong {
+			return nil, distribution.ErrRepositoryNameInvalid{
+				Name:   repo,
+				Reason: reference.ErrNameTooLong,
+			}
+		}
 		return nil, err
 	}
 
