@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -48,7 +49,7 @@ func TestFileHealthCheck(t *testing.T) {
 	// Wait for health check to happen
 	<-time.After(2 * interval)
 
-	status := healthRegistry.CheckStatus()
+	status := healthRegistry.CheckStatus(ctx)
 	if len(status) != 1 {
 		t.Fatal("expected 1 item in health check results")
 	}
@@ -59,7 +60,7 @@ func TestFileHealthCheck(t *testing.T) {
 	os.Remove(tmpfile.Name())
 
 	<-time.After(2 * interval)
-	if len(healthRegistry.CheckStatus()) != 0 {
+	if len(healthRegistry.CheckStatus(ctx)) != 0 {
 		t.Fatal("expected 0 items in health check results")
 	}
 }
@@ -112,7 +113,7 @@ func TestTCPHealthCheck(t *testing.T) {
 	// Wait for health check to happen
 	<-time.After(2 * interval)
 
-	if len(healthRegistry.CheckStatus()) != 0 {
+	if len(healthRegistry.CheckStatus(ctx)) != 0 {
 		t.Fatal("expected 0 items in health check results")
 	}
 
@@ -120,11 +121,11 @@ func TestTCPHealthCheck(t *testing.T) {
 	<-time.After(2 * interval)
 
 	// Health check should now fail
-	status := healthRegistry.CheckStatus()
+	status := healthRegistry.CheckStatus(ctx)
 	if len(status) != 1 {
 		t.Fatal("expected 1 item in health check results")
 	}
-	if status[addrStr] != "connection to "+addrStr+" failed" {
+	if !strings.Contains(status[addrStr], "connection failed") {
 		t.Fatal(`did not get "connection failed" result for health check`)
 	}
 }
@@ -174,7 +175,7 @@ func TestHTTPHealthCheck(t *testing.T) {
 	for i := 0; ; i++ {
 		<-time.After(interval)
 
-		status := healthRegistry.CheckStatus()
+		status := healthRegistry.CheckStatus(ctx)
 
 		if i < threshold-1 {
 			// definitely shouldn't have hit the threshold yet
@@ -191,7 +192,7 @@ func TestHTTPHealthCheck(t *testing.T) {
 		if len(status) != 1 {
 			t.Fatal("expected 1 item in health check results")
 		}
-		if status[checkedServer.URL] != "downstream service returned unexpected status: 500" {
+		if !strings.Contains(status[checkedServer.URL], "downstream service returned unexpected status: 500") {
 			t.Fatal("did not get expected result for health check")
 		}
 
@@ -203,7 +204,7 @@ func TestHTTPHealthCheck(t *testing.T) {
 
 	<-time.After(2 * interval)
 
-	if len(healthRegistry.CheckStatus()) != 0 {
+	if len(healthRegistry.CheckStatus(ctx)) != 0 {
 		t.Fatal("expected 0 items in health check results")
 	}
 }
