@@ -24,6 +24,14 @@ import (
 // Test hooks up gocheck into the "go test" runner.
 func Test(t *testing.T) { check.TestingT(t) }
 
+// randomBytes pre-allocates all of the memory sizes needed for the test. If
+// anything panics while accessing randomBytes, just make this number bigger.
+var randomBytes = make([]byte, 128<<20)
+
+func init() {
+	_, _ = crand.Read(randomBytes) // always returns len(randomBytes) and nil error
+}
+
 // RegisterSuite registers an in-process storage driver test suite with
 // the go test runner.
 func RegisterSuite(driverConstructor DriverConstructor, skipCheck SkipCheck) {
@@ -1341,14 +1349,6 @@ func randomFilename(length int64) string {
 		}
 	}
 	return string(b)
-}
-
-// randomBytes pre-allocates all of the memory sizes needed for the test. If
-// anything panics while accessing randomBytes, just make this number bigger.
-var randomBytes = make([]byte, 128<<20)
-
-func init() {
-	_, _ = crand.Read(randomBytes) // always returns len(randomBytes) and nil error
 }
 
 func randomContents(length int64) []byte {

@@ -20,12 +20,18 @@ import (
 	"github.com/opencontainers/go-digest"
 )
 
-var sbsMu sync.Mutex
-var randSource rand.Rand
+var (
+	sbsMu      sync.Mutex
+	randSource rand.Rand
+)
 
 type statsBlobStore struct {
 	stats map[string]int
 	blobs distribution.BlobStore
+}
+
+func init() {
+	randSource = *rand.New(rand.NewSource(42))
 }
 
 func (sbs statsBlobStore) Put(ctx context.Context, mediaType string, p []byte) (distribution.Descriptor, error) {
@@ -193,10 +199,6 @@ func makeBlob(size int) []byte {
 		blob[i] = byte('A' + randSource.Int()%48)
 	}
 	return blob
-}
-
-func init() {
-	randSource = *rand.New(rand.NewSource(42))
 }
 
 func populate(t *testing.T, te *testEnv, blobCount, size, numUnique int) {

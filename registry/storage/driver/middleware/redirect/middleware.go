@@ -12,6 +12,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+func init() {
+	if err := storagemiddleware.Register("redirect", newRedirectStorageMiddleware); err != nil {
+		logrus.Errorf("tailed to register redirect storage middleware: %v", err)
+	}
+}
+
 type redirectStorageMiddleware struct {
 	storagedriver.StorageDriver
 	scheme   string
@@ -50,10 +56,4 @@ func (r *redirectStorageMiddleware) RedirectURL(_ *http.Request, urlPath string)
 	}
 	u := &url.URL{Scheme: r.scheme, Host: r.host, Path: urlPath}
 	return u.String(), nil
-}
-
-func init() {
-	if err := storagemiddleware.Register("redirect", newRedirectStorageMiddleware); err != nil {
-		logrus.Errorf("tailed to register redirect storage middleware: %v", err)
-	}
 }
