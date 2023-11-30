@@ -34,7 +34,7 @@ func TestWithTrace(t *testing.T) {
 	}
 
 	ctx, done := WithTrace(Background())
-	defer done("this will be emitted at end of test")
+	t.Cleanup(func() { done("this will be emitted at end of test") })
 
 	tests := append(base, valueTestCase{
 		key:      "trace.func",

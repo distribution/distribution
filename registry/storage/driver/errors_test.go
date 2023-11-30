@@ -33,6 +33,7 @@ func TestErrorFormat(t *testing.T) {
 }
 
 func TestErrors(t *testing.T) {
+	t.Parallel()
 	drvName := "foo"
 
 	testCases := []struct {

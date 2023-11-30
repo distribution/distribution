@@ -12,6 +12,7 @@ linters:
     - bodyclose
     - prealloc
     - errcheck
+    - tparallel
 
 linters-settings:
   revive:
