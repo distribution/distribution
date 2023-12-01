@@ -25,7 +25,7 @@ require (
 	github.com/opencontainers/image-spec v1.0.2
 	github.com/redis/go-redis/extra/redisotel/v9 v9.0.5
 	github.com/redis/go-redis/v9 v9.1.0
-	github.com/sirupsen/logrus v1.8.1
+	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.6.1
 	golang.org/x/crypto v0.14.0
 	golang.org/x/oauth2 v0.7.0
