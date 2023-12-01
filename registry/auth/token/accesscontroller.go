@@ -17,6 +17,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// init handles registering the token auth backend.
+func init() {
+	if err := auth.Register("token", auth.InitFunc(newAccessController)); err != nil {
+		logrus.Errorf("tailed to register token auth: %v", err)
+	}
+}
+
 // accessSet maps a typed, named resource to
 // a set of actions requested or authorized.
 type accessSet map[auth.Resource]actionSet
@@ -336,11 +343,4 @@ func (ac *accessController) Authorized(req *http.Request, accessItems ...auth.Ac
 		User:      auth.UserInfo{Name: claims.Subject},
 		Resources: claims.resources(),
 	}, nil
-}
-
-// init handles registering the token auth backend.
-func init() {
-	if err := auth.Register("token", auth.InitFunc(newAccessController)); err != nil {
-		logrus.Errorf("tailed to register token auth: %v", err)
-	}
 }

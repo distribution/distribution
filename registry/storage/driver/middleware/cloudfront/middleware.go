@@ -20,6 +20,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// init registers the cloudfront layerHandler backend.
+func init() {
+	if err := storagemiddleware.Register("cloudfront", newCloudFrontStorageMiddleware); err != nil {
+		logrus.Errorf("failed to register cloudfront middleware: %v", err)
+	}
+}
+
 // cloudFrontStorageMiddleware provides a simple implementation of layerHandler that
 // constructs temporary signed CloudFront URLs from the storagedriver layer URL,
 // then issues HTTP Temporary Redirects to this CloudFront content URL.
@@ -223,11 +230,4 @@ func (lh *cloudFrontStorageMiddleware) RedirectURL(r *http.Request, path string)
 		return "", err
 	}
 	return cfURL, nil
-}
-
-// init registers the cloudfront layerHandler backend.
-func init() {
-	if err := storagemiddleware.Register("cloudfront", newCloudFrontStorageMiddleware); err != nil {
-		logrus.Errorf("failed to register cloudfront middleware: %v", err)
-	}
 }

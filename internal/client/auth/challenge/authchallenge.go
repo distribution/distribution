@@ -8,6 +8,48 @@ import (
 	"sync"
 )
 
+// Octet types from RFC 2616.
+type octetType byte
+
+var octetTypes [256]octetType
+
+const (
+	isToken octetType = 1 << iota
+	isSpace
+)
+
+func init() {
+	// OCTET      = <any 8-bit sequence of data>
+	// CHAR       = <any US-ASCII character (octets 0 - 127)>
+	// CTL        = <any US-ASCII control character (octets 0 - 31) and DEL (127)>
+	// CR         = <US-ASCII CR, carriage return (13)>
+	// LF         = <US-ASCII LF, linefeed (10)>
+	// SP         = <US-ASCII SP, space (32)>
+	// HT         = <US-ASCII HT, horizontal-tab (9)>
+	// <">        = <US-ASCII double-quote mark (34)>
+	// CRLF       = CR LF
+	// LWS        = [CRLF] 1*( SP | HT )
+	// TEXT       = <any OCTET except CTLs, but including LWS>
+	// separators = "(" | ")" | "<" | ">" | "@" | "," | ";" | ":" | "\" | <">
+	//              | "/" | "[" | "]" | "?" | "=" | "{" | "}" | SP | HT
+	// token      = 1*<any CHAR except CTLs or separators>
+	// qdtext     = <any TEXT except <">>
+
+	for c := 0; c < 256; c++ {
+		var t octetType
+		isCtl := c <= 31 || c == 127
+		isChar := 0 <= c && c <= 127
+		isSeparator := strings.ContainsRune(" \t\"(),/:;<=>?@[]\\{}", rune(c))
+		if strings.ContainsRune(" \t\r\n", rune(c)) {
+			t |= isSpace
+		}
+		if isChar && !isCtl && !isSeparator {
+			t |= isToken
+		}
+		octetTypes[c] = t
+	}
+}
+
 // Challenge carries information from a WWW-Authenticate response header.
 // See RFC 2617.
 type Challenge struct {
@@ -84,48 +126,6 @@ func (m *simpleManager) AddResponse(resp *http.Response) error {
 	defer m.Unlock()
 	m.Challenges[urlCopy.String()] = challenges
 	return nil
-}
-
-// Octet types from RFC 2616.
-type octetType byte
-
-var octetTypes [256]octetType
-
-const (
-	isToken octetType = 1 << iota
-	isSpace
-)
-
-func init() {
-	// OCTET      = <any 8-bit sequence of data>
-	// CHAR       = <any US-ASCII character (octets 0 - 127)>
-	// CTL        = <any US-ASCII control character (octets 0 - 31) and DEL (127)>
-	// CR         = <US-ASCII CR, carriage return (13)>
-	// LF         = <US-ASCII LF, linefeed (10)>
-	// SP         = <US-ASCII SP, space (32)>
-	// HT         = <US-ASCII HT, horizontal-tab (9)>
-	// <">        = <US-ASCII double-quote mark (34)>
-	// CRLF       = CR LF
-	// LWS        = [CRLF] 1*( SP | HT )
-	// TEXT       = <any OCTET except CTLs, but including LWS>
-	// separators = "(" | ")" | "<" | ">" | "@" | "," | ";" | ":" | "\" | <">
-	//              | "/" | "[" | "]" | "?" | "=" | "{" | "}" | SP | HT
-	// token      = 1*<any CHAR except CTLs or separators>
-	// qdtext     = <any TEXT except <">>
-
-	for c := 0; c < 256; c++ {
-		var t octetType
-		isCtl := c <= 31 || c == 127
-		isChar := 0 <= c && c <= 127
-		isSeparator := strings.ContainsRune(" \t\"(),/:;<=>?@[]\\{}", rune(c))
-		if strings.ContainsRune(" \t\r\n", rune(c)) {
-			t |= isSpace
-		}
-		if isChar && !isCtl && !isSeparator {
-			t |= isToken
-		}
-		octetTypes[c] = t
-	}
 }
 
 // ResponseChallenges returns a list of authorization challenges

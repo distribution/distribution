@@ -9,6 +9,16 @@ import (
 	"github.com/opencontainers/go-digest"
 )
 
+var routeDescriptorsMap map[string]RouteDescriptor
+
+func init() {
+	routeDescriptorsMap = make(map[string]RouteDescriptor, len(routeDescriptors))
+
+	for _, descriptor := range routeDescriptors {
+		routeDescriptorsMap[descriptor.Name] = descriptor
+	}
+}
+
 var (
 	nameParameterDescriptor = ParameterDescriptor{
 		Name:        "name",
@@ -1599,14 +1609,4 @@ var routeDescriptors = []RouteDescriptor{
 			},
 		},
 	},
-}
-
-var routeDescriptorsMap map[string]RouteDescriptor
-
-func init() {
-	routeDescriptorsMap = make(map[string]RouteDescriptor, len(routeDescriptors))
-
-	for _, descriptor := range routeDescriptors {
-		routeDescriptorsMap[descriptor.Name] = descriptor
-	}
 }

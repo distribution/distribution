@@ -13,6 +13,12 @@ import (
 	"github.com/distribution/distribution/v3/registry/api/errcode"
 )
 
+// Registers global /debug/health api endpoint, creates default registry
+func init() {
+	DefaultRegistry = NewRegistry()
+	http.HandleFunc("/debug/health", StatusHandler)
+}
+
 // A Registry is a collection of checks. Most applications will use the global
 // registry defined in DefaultRegistry. However, unit tests may need to create
 // separate registries to isolate themselves from other tests.
@@ -277,10 +283,4 @@ func statusResponse(w http.ResponseWriter, r *http.Request, status int, checks m
 	if _, err := w.Write(p); err != nil {
 		dcontext.GetLogger(r.Context()).Errorf("error writing health status response body: %v", err)
 	}
-}
-
-// Registers global /debug/health api endpoint, creates default registry
-func init() {
-	DefaultRegistry = NewRegistry()
-	http.HandleFunc("/debug/health", StatusHandler)
 }
