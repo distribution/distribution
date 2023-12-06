@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"expvar"
 	"fmt"
 	"math"
