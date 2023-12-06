@@ -36,6 +36,7 @@ jobs:
     - name: Build
       working-directory: ./src/github.com/docker/distribution
       run: |
+        go env
         DCO_VERBOSITY=-q script/validate/dco
         GO111MODULE=on script/setup/install-dev-tools
         script/validate/vendor
