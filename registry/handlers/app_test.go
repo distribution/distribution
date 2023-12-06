@@ -140,7 +140,7 @@ func TestAppDispatcher(t *testing.T) {
 // TestNewApp covers the creation of an application via NewApp with a
 // configuration.
 func TestNewApp(t *testing.T) {
-	ctx := context.Background()
+
 	config := configuration.Configuration{
 		Storage: configuration.Storage{
 			"testdriver": nil,
@@ -157,7 +157,60 @@ func TestNewApp(t *testing.T) {
 			},
 		},
 	}
+	runAppWithConfig(t, config)
+}
 
+// TestNewApp covers the creation of an application via NewApp with a
+// configuration(with redis).
+func TestNewAppWithRedis(t *testing.T) {
+	config := configuration.Configuration{
+		Storage: configuration.Storage{
+			"testdriver": nil,
+			"maintenance": configuration.Parameters{"uploadpurging": map[interface{}]interface{}{
+				"enabled": false,
+			}},
+		},
+		Auth: configuration.Auth{
+			// For now, we simply test that new auth results in a viable
+			// application.
+			"silly": {
+				"realm":   "realm-test",
+				"service": "service-test",
+			},
+		},
+	}
+	config.Redis.Addr = "127.0.0.1:6379"
+	config.Redis.DB = 0
+	runAppWithConfig(t, config)
+}
+
+// TestNewApp covers the creation of an application via NewApp with a
+// configuration(with redis sentinel cluster).
+func TestNewAppWithRedisSentinelCluster(t *testing.T) {
+	config := configuration.Configuration{
+		Storage: configuration.Storage{
+			"testdriver": nil,
+			"maintenance": configuration.Parameters{"uploadpurging": map[interface{}]interface{}{
+				"enabled": false,
+			}},
+		},
+		Auth: configuration.Auth{
+			// For now, we simply test that new auth results in a viable
+			// application.
+			"silly": {
+				"realm":   "realm-test",
+				"service": "service-test",
+			},
+		},
+	}
+	config.Redis.Addr = "192.168.0.11:26379,192.168.0.12:26379"
+	config.Redis.DB = 0
+	config.Redis.SentinelMasterSet = "mymaster"
+	runAppWithConfig(t, config)
+}
+
+func runAppWithConfig(t *testing.T, config configuration.Configuration) {
+	ctx := context.Background()
 	// Mostly, with this test, given a sane configuration, we are simply
 	// ensuring that NewApp doesn't panic. We might want to tweak this
 	// behavior.

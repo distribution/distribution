@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/FZambia/sentinel"
 	"github.com/distribution/reference"
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/configuration"
@@ -37,7 +38,6 @@ import (
 	"github.com/docker/distribution/registry/storage/driver/factory"
 	storagemiddleware "github.com/docker/distribution/registry/storage/driver/middleware"
 	"github.com/docker/distribution/version"
-	"github.com/docker/go-metrics"
 	"github.com/docker/libtrust"
 	"github.com/garyburd/redigo/redis"
 	"github.com/gorilla/mux"
@@ -497,6 +497,45 @@ func (app *App) configureRedis(configuration *configuration.Configuration) {
 	if configuration.Redis.Addr == "" {
 		dcontext.GetLogger(app).Infof("redis not configured")
 		return
+	}
+
+	var getRedisAddr func() (string, error)
+	var testOnBorrow func(c redis.Conn, t time.Time) error
+	if configuration.Redis.SentinelMasterSet != "" {
+		sntnl := &sentinel.Sentinel{
+			Addrs:      strings.Split(configuration.Redis.Addr, ","),
+			MasterName: configuration.Redis.SentinelMasterSet,
+			Dial: func(addr string) (redis.Conn, error) {
+				c, err := redis.DialTimeout("tcp", addr,
+					configuration.Redis.DialTimeout,
+					configuration.Redis.ReadTimeout,
+					configuration.Redis.WriteTimeout)
+				if err != nil {
+					return nil, err
+				}
+				return c, nil
+			},
+		}
+		getRedisAddr = func() (string, error) {
+			return sntnl.MasterAddr()
+		}
+		testOnBorrow = func(c redis.Conn, t time.Time) error {
+			if !sentinel.TestRole(c, "master") {
+				return errors.New("role check failed")
+			}
+			return nil
+		}
+
+	} else {
+		getRedisAddr = func() (string, error) {
+			return configuration.Redis.Addr, nil
+		}
+		testOnBorrow = func(c redis.Conn, t time.Time) error {
+			// TODO(stevvooe): We can probably do something more interesting
+			// here with the health package.
+			_, err := c.Do("PING")
+			return err
+		}
 	}
 
 	pool := &redis.Pool{
