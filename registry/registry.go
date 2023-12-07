@@ -116,6 +116,9 @@ var ServeCmd = &cobra.Command{
 		if err = registry.ListenAndServe(); err != nil {
 			logrus.Fatalln(err)
 		}
+
+		// close trace
+		registry.app.TraceShutdown()
 	},
 }
 

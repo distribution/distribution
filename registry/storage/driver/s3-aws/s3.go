@@ -35,11 +35,14 @@ import (
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/distribution/distribution/v3/internal/dcontext"
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/distribution/v3/registry/storage/driver/base"
 	"github.com/distribution/distribution/v3/registry/storage/driver/factory"
+	"github.com/distribution/distribution/v3/tracing"
 )
 
 const driverName = "s3aws"
@@ -638,7 +641,12 @@ func (d *driver) Name() string {
 
 // GetContent retrieves the content stored at "path" as a []byte.
 func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
-	reader, err := d.Reader(ctx, path, 0)
+	span, spanCtx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "GetContent"),
+		trace.WithAttributes(attribute.String("Path", path)))
+	defer tracing.StopSpan(span)
+
+	reader, err := d.Reader(spanCtx, path, 0)
+
 	if err != nil {
 		return nil, err
 	}
@@ -647,7 +655,12 @@ func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
 
 // PutContent stores the []byte content at a location designated by "path".
 func (d *driver) PutContent(ctx context.Context, path string, contents []byte) error {
-	_, err := d.S3.PutObjectWithContext(ctx, &s3.PutObjectInput{
+	span, spanCtx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "PutContent"),
+		trace.WithAttributes(attribute.String("path", path),
+			attribute.Int("contentsLen", len(contents))))
+	defer tracing.StopSpan(span)
+
+	_, err := d.S3.PutObjectWithContext(spanCtx, &s3.PutObjectInput{
 		Bucket:               aws.String(d.Bucket),
 		Key:                  aws.String(d.s3Path(path)),
 		ContentType:          d.getContentType(),
@@ -663,7 +676,14 @@ func (d *driver) PutContent(ctx context.Context, path string, contents []byte) e
 // Reader retrieves an io.ReadCloser for the content stored at "path" with a
 // given byte offset.
 func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.ReadCloser, error) {
-	resp, err := d.S3.GetObjectWithContext(ctx, &s3.GetObjectInput{
+	span, spanCtx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "Reader"),
+		trace.WithAttributes(attribute.String("path", path),
+			attribute.String("key", *aws.String(d.s3Path(path))),
+			attribute.String("bucket", *aws.String(d.Bucket)),
+			attribute.String("range", *aws.String("bytes=" + strconv.FormatInt(offset, 10) + "-"))))
+	defer tracing.StopSpan(span)
+
+	resp, err := d.S3.GetObjectWithContext(spanCtx, &s3.GetObjectInput{
 		Bucket: aws.String(d.Bucket),
 		Key:    aws.String(d.s3Path(path)),
 		Range:  aws.String("bytes=" + strconv.FormatInt(offset, 10) + "-"),
@@ -681,10 +701,18 @@ func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.Read
 // Writer returns a FileWriter which will store the content written to it
 // at the location designated by "path" after the call to Commit.
 func (d *driver) Writer(ctx context.Context, path string, appendMode bool) (storagedriver.FileWriter, error) {
+	span, spanCtx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "Writer"),
+		trace.WithAttributes(attribute.String("path", path),
+			attribute.Bool("appendMode", appendMode),
+			attribute.String("key", d.s3Path(path)),
+			attribute.String("bucket", d.Bucket)),
+	)
+	defer tracing.StopSpan(span)
+
 	key := d.s3Path(path)
 	if !appendMode {
 		// TODO (brianbland): cancel other uploads at this path
-		resp, err := d.S3.CreateMultipartUploadWithContext(ctx, &s3.CreateMultipartUploadInput{
+		resp, err := d.S3.CreateMultipartUploadWithContext(spanCtx, &s3.CreateMultipartUploadInput{
 			Bucket:               aws.String(d.Bucket),
 			Key:                  aws.String(key),
 			ContentType:          d.getContentType(),
@@ -704,7 +732,7 @@ func (d *driver) Writer(ctx context.Context, path string, appendMode bool) (stor
 		Prefix: aws.String(key),
 	}
 	for {
-		resp, err := d.S3.ListMultipartUploadsWithContext(ctx, listMultipartUploadsInput)
+		resp, err := d.S3.ListMultipartUploadsWithContext(spanCtx, listMultipartUploadsInput)
 		if err != nil {
 			return nil, parseError(path, err)
 		}
@@ -722,7 +750,7 @@ func (d *driver) Writer(ctx context.Context, path string, appendMode bool) (stor
 				continue
 			}
 
-			partsList, err := d.S3.ListPartsWithContext(ctx, &s3.ListPartsInput{
+			partsList, err := d.S3.ListPartsWithContext(spanCtx, &s3.ListPartsInput{
 				Bucket:   aws.String(d.Bucket),
 				Key:      aws.String(key),
 				UploadId: multi.UploadId,
@@ -731,8 +759,8 @@ func (d *driver) Writer(ctx context.Context, path string, appendMode bool) (stor
 				return nil, parseError(path, err)
 			}
 			allParts = append(allParts, partsList.Parts...)
-			for *partsList.IsTruncated {
-				partsList, err = d.S3.ListPartsWithContext(ctx, &s3.ListPartsInput{
+			for *resp.IsTruncated {
+				partsList, err = d.S3.ListPartsWithContext(spanCtx, &s3.ListPartsInput{
 					Bucket:           aws.String(d.Bucket),
 					Key:              aws.String(key),
 					UploadId:         multi.UploadId,
@@ -761,7 +789,11 @@ func (d *driver) Writer(ctx context.Context, path string, appendMode bool) (stor
 // Stat retrieves the FileInfo for the given path, including the current size
 // in bytes and the creation time.
 func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo, error) {
-	resp, err := d.S3.ListObjectsV2WithContext(ctx, &s3.ListObjectsV2Input{
+	span, spanCtx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "Stat"),
+		trace.WithAttributes(attribute.String("path", d.s3Path(path))))
+	defer tracing.StopSpan(span)
+
+	resp, err := d.S3.ListObjectsV2WithContext(spanCtx, &s3.ListObjectsV2Input{
 		Bucket:  aws.String(d.Bucket),
 		Prefix:  aws.String(d.s3Path(path)),
 		MaxKeys: aws.Int64(1),
@@ -793,6 +825,10 @@ func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo,
 
 // List returns a list of the objects that are direct descendants of the given path.
 func (d *driver) List(ctx context.Context, opath string) ([]string, error) {
+	span, spanCtx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "List"),
+		trace.WithAttributes(attribute.String("opath", opath)))
+	defer tracing.StopSpan(span)
+
 	path := opath
 	if path != "/" && path[len(path)-1] != '/' {
 		path = path + "/"
@@ -806,7 +842,7 @@ func (d *driver) List(ctx context.Context, opath string) ([]string, error) {
 		prefix = "/"
 	}
 
-	resp, err := d.S3.ListObjectsV2WithContext(ctx, &s3.ListObjectsV2Input{
+	resp, err := d.S3.ListObjectsV2WithContext(spanCtx, &s3.ListObjectsV2Input{
 		Bucket:    aws.String(d.Bucket),
 		Prefix:    aws.String(d.s3Path(path)),
 		Delimiter: aws.String("/"),
@@ -830,7 +866,7 @@ func (d *driver) List(ctx context.Context, opath string) ([]string, error) {
 		}
 
 		if *resp.IsTruncated {
-			resp, err = d.S3.ListObjectsV2WithContext(ctx, &s3.ListObjectsV2Input{
+			resp, err = d.S3.ListObjectsV2WithContext(spanCtx, &s3.ListObjectsV2Input{
 				Bucket:            aws.String(d.Bucket),
 				Prefix:            aws.String(d.s3Path(path)),
 				Delimiter:         aws.String("/"),
@@ -859,11 +895,16 @@ func (d *driver) List(ctx context.Context, opath string) ([]string, error) {
 // Move moves an object stored at sourcePath to destPath, removing the original
 // object.
 func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) error {
+	span, spanCtx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "Move"),
+		trace.WithAttributes(attribute.String("sourcePath", sourcePath),
+			attribute.String("destPath", destPath)))
+	defer tracing.StopSpan(span)
+
 	/* This is terrible, but aws doesn't have an actual move. */
-	if err := d.copy(ctx, sourcePath, destPath); err != nil {
+	if err := d.copy(spanCtx, sourcePath, destPath); err != nil {
 		return err
 	}
-	return d.Delete(ctx, sourcePath)
+	return d.Delete(spanCtx, sourcePath)
 }
 
 // copy copies an object stored at sourcePath to destPath.
@@ -916,14 +957,14 @@ func (d *driver) copy(ctx context.Context, sourcePath string, destPath string) e
 
 	for i := range completedParts {
 		i := int64(i)
-		go func() {
+		go func(goCtx context.Context) {
 			limiter <- struct{}{}
 			firstByte := i * d.MultipartCopyChunkSize
 			lastByte := firstByte + d.MultipartCopyChunkSize - 1
 			if lastByte >= fileInfo.Size() {
 				lastByte = fileInfo.Size() - 1
 			}
-			uploadResp, err := d.S3.UploadPartCopyWithContext(ctx, &s3.UploadPartCopyInput{
+			uploadResp, err := d.S3.UploadPartCopyWithContext(goCtx, &s3.UploadPartCopyInput{
 				Bucket:          aws.String(d.Bucket),
 				CopySource:      aws.String(d.Bucket + "/" + d.s3Path(sourcePath)),
 				Key:             aws.String(d.s3Path(destPath)),
@@ -939,7 +980,7 @@ func (d *driver) copy(ctx context.Context, sourcePath string, destPath string) e
 			}
 			errChan <- err
 			<-limiter
-		}()
+		}(ctx)
 	}
 
 	for range completedParts {
@@ -961,6 +1002,10 @@ func (d *driver) copy(ctx context.Context, sourcePath string, destPath string) e
 // Delete recursively deletes all objects stored at "path" and its subpaths.
 // We must be careful since S3 does not guarantee read after delete consistency
 func (d *driver) Delete(ctx context.Context, path string) error {
+	span, spanCtx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "Delete"),
+		trace.WithAttributes(attribute.String("path", path)))
+	defer tracing.StopSpan(span)
+
 	s3Objects := make([]*s3.ObjectIdentifier, 0, listMax)
 	s3Path := d.s3Path(path)
 	listObjectsInput := &s3.ListObjectsV2Input{
@@ -970,7 +1015,7 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 
 	for {
 		// list all the objects
-		resp, err := d.S3.ListObjectsV2WithContext(ctx, listObjectsInput)
+		resp, err := d.S3.ListObjectsV2WithContext(spanCtx, listObjectsInput)
 
 		// resp.Contents can only be empty on the first call
 		// if there were no more results to return after the first call, resp.IsTruncated would have been false
@@ -1063,13 +1108,17 @@ func (d *driver) RedirectURL(r *http.Request, path string) (string, error) {
 // Walk traverses a filesystem defined within driver, starting
 // from the given path, calling f on each file
 func (d *driver) Walk(ctx context.Context, from string, f storagedriver.WalkFn, options ...func(*storagedriver.WalkOptions)) error {
+	span, spanCtx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "Walk"),
+		trace.WithAttributes(attribute.String("from", from)))
+	defer tracing.StopSpan(span)
+
 	walkOptions := &storagedriver.WalkOptions{}
 	for _, o := range options {
 		o(walkOptions)
 	}
 
 	var objectCount int64
-	if err := d.doWalk(ctx, &objectCount, from, walkOptions.StartAfterHint, f); err != nil {
+	if err := d.doWalk(spanCtx, &objectCount, from, walkOptions.StartAfterHint, f); err != nil {
 		return err
 	}
 

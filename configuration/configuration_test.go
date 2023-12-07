@@ -144,6 +144,14 @@ var configStruct = Configuration{
 		ReadTimeout:  time.Millisecond * 10,
 		WriteTimeout: time.Millisecond * 10,
 	},
+	OpenTelemetry: &OpenTelemetryConfig{
+		ServiceName: "distribution",
+		Exporter: ExporterConfig{
+			Name:     "otlp",
+			Endpoint: "127.0.0.1:4317",
+		},
+		TraceSamplingRatio: 0.5,
+	},
 }
 
 // configYamlV0_1 is a Version 0.1 yaml document representing configStruct
@@ -197,6 +205,12 @@ redis:
   dialtimeout: 10ms
   readtimeout: 10ms
   writetimeout: 10ms
+otel:
+  serviceName: distribution
+  exporter:
+    name: otlp
+    endpoint: 127.0.0.1:4317
+  traceSamplingRatio: 0.5  
 `
 
 // inmemoryConfigYamlV0_1 is a Version 0.1 yaml document specifying an inmemory
@@ -264,6 +278,7 @@ func (suite *ConfigSuite) TestParseInmemory(c *check.C) {
 	suite.expectedConfig.Storage = Storage{"inmemory": Parameters{}}
 	suite.expectedConfig.Log.Fields = nil
 	suite.expectedConfig.Redis = Redis{}
+	suite.expectedConfig.OpenTelemetry = nil
 
 	config, err := Parse(bytes.NewReader([]byte(inmemoryConfigYamlV0_1)))
 	c.Assert(err, check.IsNil)
@@ -284,6 +299,7 @@ func (suite *ConfigSuite) TestParseIncomplete(c *check.C) {
 	suite.expectedConfig.Notifications = Notifications{}
 	suite.expectedConfig.HTTP.Headers = nil
 	suite.expectedConfig.Redis = Redis{}
+	suite.expectedConfig.OpenTelemetry = nil
 
 	// Note: this also tests that REGISTRY_STORAGE and
 	// REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY can be used together
@@ -478,6 +494,20 @@ func (suite *ConfigSuite) TestParseEnvMany(c *check.C) {
 	c.Assert(err, check.IsNil)
 }
 
+func (suite *ConfigSuite) TestOpenTelemetry(c *check.C) {
+	config, err := Parse(bytes.NewReader([]byte(configYamlV0_1)))
+	c.Assert(err, check.IsNil)
+	c.Assert(config.OpenTelemetry, check.NotNil)
+	c.Assert(config, check.DeepEquals, suite.expectedConfig)
+
+	err = config.OpenTelemetry.Validate()
+	c.Assert(err, check.IsNil)
+
+	config.OpenTelemetry.Exporter.Name = "test"
+	err = config.OpenTelemetry.Validate()
+	c.Assert(err, check.NotNil)
+}
+
 func checkStructs(c *check.C, t reflect.Type, structsChecked map[string]struct{}) {
 	for t.Kind() == reflect.Ptr || t.Kind() == reflect.Map || t.Kind() == reflect.Slice {
 		t = t.Elem()
@@ -550,6 +580,7 @@ func copyConfig(config Configuration) *Configuration {
 	}
 
 	configCopy.Redis = config.Redis
+	configCopy.OpenTelemetry = config.OpenTelemetry
 
 	return configCopy
 }
