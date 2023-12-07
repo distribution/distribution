@@ -15,17 +15,17 @@ var cacheProviders map[string]InitFunc
 
 // Register is used to register an InitFunc for
 // a CacheProvider backend with the given name.
-func Register(name string, initFunc InitFunc) error {
+// It's meant to be called from init() function
+// of the cache provider.
+func Register(name string, initFunc InitFunc) {
 	if cacheProviders == nil {
 		cacheProviders = make(map[string]InitFunc)
 	}
 	if _, exists := cacheProviders[name]; exists {
-		return fmt.Errorf("name already registered: %s", name)
+		panic(fmt.Sprintf("name already registered: %s", name))
 	}
 
 	cacheProviders[name] = initFunc
-
-	return nil
 }
 
 // Get constructs a CacheProvider with the given options using the named backend.
