@@ -4,20 +4,14 @@ import (
 	"context"
 	"os"
 	"testing"
-
-	"gopkg.in/check.v1"
 )
 
-func Test(t *testing.T) { check.TestingT(t) }
-
-type MiddlewareSuite struct{}
-
-var _ = check.Suite(&MiddlewareSuite{})
-
-func (s *MiddlewareSuite) TestNoConfig(c *check.C) {
+func TestNoConfig(t *testing.T) {
 	options := make(map[string]interface{})
 	_, err := newCloudFrontStorageMiddleware(context.Background(), nil, options)
-	c.Assert(err, check.ErrorMatches, "no baseurl provided")
+	if err == nil || err.Error() != "no baseurl provided" {
+		t.Fatalf(`expected error "no baseurl provided", got: %v`, err)
+	}
 }
 
 func TestCloudFrontStorageMiddlewareGenerateKey(t *testing.T) {

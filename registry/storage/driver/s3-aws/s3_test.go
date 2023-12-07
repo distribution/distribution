@@ -16,6 +16,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/stretchr/testify/suite"
 
 	"github.com/distribution/distribution/v3/internal/dcontext"
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
@@ -48,12 +49,7 @@ func init() {
 		logLevel         = os.Getenv("S3_LOGLEVEL")
 	)
 
-	root, err := os.MkdirTemp("", "driver-")
-	if err != nil {
-		panic(err)
-	}
-	defer os.Remove(root)
-
+	var err error
 	s3DriverConstructor = func(rootDirectory, storageClass string) (*Driver, error) {
 		encryptBool := false
 		if encrypt != "" {
@@ -152,10 +148,37 @@ func init() {
 		}
 		return ""
 	}
+}
 
-	testsuites.RegisterSuite(func() (storagedriver.StorageDriver, error) {
+func newDriverSuite(tb testing.TB) *testsuites.DriverSuite {
+	root := tb.TempDir()
+
+	return testsuites.NewDriverSuite(func() (storagedriver.StorageDriver, error) {
 		return s3DriverConstructor(root, s3.StorageClassStandard)
 	}, skipS3)
+}
+
+func TestS3DriverSuite(t *testing.T) {
+	suite.Run(t, newDriverSuite(t))
+}
+
+func BenchmarkS3DriverSuite(b *testing.B) {
+	benchsuite := testsuites.NewDriverBenchmarkSuite(newDriverSuite(b))
+	benchsuite.Suite.SetupSuite()
+	b.Cleanup(benchsuite.Suite.TearDownSuite)
+
+	b.Run("PutGetEmptyFiles", benchsuite.BenchmarkPutGetEmptyFiles)
+	b.Run("PutGet1KBFiles", benchsuite.BenchmarkPutGet1KBFiles)
+	b.Run("PutGet1MBFiles", benchsuite.BenchmarkPutGet1MBFiles)
+	b.Run("PutGet1GBFiles", benchsuite.BenchmarkPutGet1GBFiles)
+	b.Run("StreamEmptyFiles", benchsuite.BenchmarkStreamEmptyFiles)
+	b.Run("Stream1KBFiles", benchsuite.BenchmarkStream1KBFiles)
+	b.Run("Stream1MBFiles", benchsuite.BenchmarkStream1MBFiles)
+	b.Run("Stream1GBFiles", benchsuite.BenchmarkStream1GBFiles)
+	b.Run("List5Files", benchsuite.BenchmarkList5Files)
+	b.Run("List50Files", benchsuite.BenchmarkList50Files)
+	b.Run("Delete5Files", benchsuite.BenchmarkDelete5Files)
+	b.Run("Delete50Files", benchsuite.BenchmarkDelete50Files)
 }
 
 func TestEmptyRootList(t *testing.T) {

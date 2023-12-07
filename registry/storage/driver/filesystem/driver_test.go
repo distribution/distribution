@@ -1,24 +1,16 @@
 package filesystem
 
 import (
-	"os"
 	"reflect"
 	"testing"
 
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/distribution/v3/registry/storage/driver/testsuites"
-	"gopkg.in/check.v1"
+	"github.com/stretchr/testify/suite"
 )
 
-// Hook up gocheck into the "go test" runner.
-func Test(t *testing.T) { check.TestingT(t) }
-
-func init() {
-	root, err := os.MkdirTemp("", "driver-")
-	if err != nil {
-		panic(err)
-	}
-	defer os.Remove(root)
+func newDriverSuite(tb testing.TB) *testsuites.DriverSuite {
+	root := tb.TempDir()
 
 	drvr, err := FromParameters(map[string]interface{}{
 		"rootdirectory": root,
@@ -27,9 +19,32 @@ func init() {
 		panic(err)
 	}
 
-	testsuites.RegisterSuite(func() (storagedriver.StorageDriver, error) {
+	return testsuites.NewDriverSuite(func() (storagedriver.StorageDriver, error) {
 		return drvr, nil
 	}, testsuites.NeverSkip)
+}
+
+func TestFilesystemDriverSuite(t *testing.T) {
+	suite.Run(t, newDriverSuite(t))
+}
+
+func BenchmarkFilesystemDriverSuite(b *testing.B) {
+	benchsuite := testsuites.NewDriverBenchmarkSuite(newDriverSuite(b))
+	benchsuite.Suite.SetupSuite()
+	b.Cleanup(benchsuite.Suite.TearDownSuite)
+
+	b.Run("PutGetEmptyFiles", benchsuite.BenchmarkPutGetEmptyFiles)
+	b.Run("PutGet1KBFiles", benchsuite.BenchmarkPutGet1KBFiles)
+	b.Run("PutGet1MBFiles", benchsuite.BenchmarkPutGet1MBFiles)
+	b.Run("PutGet1GBFiles", benchsuite.BenchmarkPutGet1GBFiles)
+	b.Run("StreamEmptyFiles", benchsuite.BenchmarkStreamEmptyFiles)
+	b.Run("Stream1KBFiles", benchsuite.BenchmarkStream1KBFiles)
+	b.Run("Stream1MBFiles", benchsuite.BenchmarkStream1MBFiles)
+	b.Run("Stream1GBFiles", benchsuite.BenchmarkStream1GBFiles)
+	b.Run("List5Files", benchsuite.BenchmarkList5Files)
+	b.Run("List50Files", benchsuite.BenchmarkList50Files)
+	b.Run("Delete5Files", benchsuite.BenchmarkDelete5Files)
+	b.Run("Delete50Files", benchsuite.BenchmarkDelete50Files)
 }
 
 func TestFromParametersImpl(t *testing.T) {
