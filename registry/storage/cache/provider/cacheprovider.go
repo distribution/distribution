@@ -30,10 +30,8 @@ func Register(name string, initFunc InitFunc) error {
 
 // Get constructs a CacheProvider with the given options using the named backend.
 func Get(ctx context.Context, name string, options map[string]interface{}) (cache.BlobDescriptorCacheProvider, error) {
-	if cacheProviders != nil {
-		if initFunc, exists := cacheProviders[name]; exists {
-			return initFunc(ctx, options)
-		}
+	if initFunc, exists := cacheProviders[name]; exists {
+		return initFunc(ctx, options)
 	}
 	return nil, fmt.Errorf("no cache Provider registered with name: %s", name)
 }
