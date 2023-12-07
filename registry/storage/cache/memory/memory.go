@@ -106,7 +106,7 @@ func (imbdcp *inMemoryBlobDescriptorCacheProvider) SetDescriptor(ctx context.Con
 	defer tracing.StopSpan(span)
 
 	_, err := imbdcp.Stat(spanCtx, dgst)
-	
+
 	if err == distribution.ErrBlobUnknown {
 		if dgst.Algorithm() != desc.Digest.Algorithm() && dgst != desc.Digest {
 			// if the digests differ, set the other canonical mapping
