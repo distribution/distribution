@@ -49,7 +49,7 @@ func Register(name string, initFunc InitFunc) {
 		cacheProviders = make(map[string]InitFunc)
 	}
 	if _, exists := cacheProviders[name]; exists {
-		panic(fmt.Sprintf("name already registered: %s", name))
+		panic(fmt.Sprintf("cache provider already registered with the name %q", name))
 	}
 
 	cacheProviders[name] = initFunc
