@@ -44,6 +44,25 @@ var configStruct = Configuration{
 			"path1":   "/some-path",
 		},
 	},
+	Cache: Cache{
+		"blobdescriptor": Parameters{
+			"provider": "redis",
+			"params": map[interface{}]interface{}{
+				"addr":     "localhost:6379",
+				"username": "alice",
+				"password": "123456",
+				"db":       1,
+				"pool": map[interface{}]interface{}{
+					"maxidle":     16,
+					"maxactive":   64,
+					"idletimeout": "300s",
+				},
+				"dialtimeout":  "10ms",
+				"readtimeout":  "10ms",
+				"writetimeout": "10ms",
+			},
+		},
+	},
 	Auth: Auth{
 		"silly": Parameters{
 			"realm":   "silly",
@@ -126,24 +145,6 @@ var configStruct = Configuration{
 			Disabled: false,
 		},
 	},
-	Redis: Redis{
-		Addr:     "localhost:6379",
-		Username: "alice",
-		Password: "123456",
-		DB:       1,
-		Pool: struct {
-			MaxIdle     int           `yaml:"maxidle,omitempty"`
-			MaxActive   int           `yaml:"maxactive,omitempty"`
-			IdleTimeout time.Duration `yaml:"idletimeout,omitempty"`
-		}{
-			MaxIdle:     16,
-			MaxActive:   64,
-			IdleTimeout: time.Second * 300,
-		},
-		DialTimeout:  time.Millisecond * 10,
-		ReadTimeout:  time.Millisecond * 10,
-		WriteTimeout: time.Millisecond * 10,
-	},
 }
 
 // configYamlV0_1 is a Version 0.1 yaml document representing configStruct
@@ -163,6 +164,21 @@ storage:
     int1: 42
     url1: "https://foo.example.com"
     path1: "/some-path"
+cache:
+  blobdescriptor:
+    provider: redis
+    params:
+      addr: localhost:6379
+      username: alice
+      password: "123456"
+      db: 1
+      pool:
+        maxidle: 16
+        maxactive: 64
+        idletimeout: 300s
+      dialtimeout: 10ms
+      readtimeout: 10ms
+      writetimeout: 10ms
 auth:
   silly:
     realm: silly
@@ -185,18 +201,6 @@ http:
     - /path/to/ca.pem
   headers:
     X-Content-Type-Options: [nosniff]
-redis:
-  addr: localhost:6379
-  username: alice
-  password: 123456
-  db: 1
-  pool:
-    maxidle: 16
-    maxactive: 64
-    idletimeout: 300s
-  dialtimeout: 10ms
-  readtimeout: 10ms
-  writetimeout: 10ms
 `
 
 // inmemoryConfigYamlV0_1 is a Version 0.1 yaml document specifying an inmemory
@@ -206,6 +210,21 @@ version: 0.1
 log:
   level: info
 storage: inmemory
+cache:
+  blobdescriptor:
+    provider: redis
+    params:
+      addr: localhost:6379
+      username: alice
+      password: "123456"
+      db: 1
+      pool:
+        maxidle: 16
+        maxactive: 64
+        idletimeout: 300s
+      dialtimeout: 10ms
+      readtimeout: 10ms
+      writetimeout: 10ms
 auth:
   silly:
     realm: silly
@@ -263,7 +282,6 @@ func (suite *ConfigSuite) TestParseSimple(c *check.C) {
 func (suite *ConfigSuite) TestParseInmemory(c *check.C) {
 	suite.expectedConfig.Storage = Storage{"inmemory": Parameters{}}
 	suite.expectedConfig.Log.Fields = nil
-	suite.expectedConfig.Redis = Redis{}
 
 	config, err := Parse(bytes.NewReader([]byte(inmemoryConfigYamlV0_1)))
 	c.Assert(err, check.IsNil)
@@ -283,7 +301,7 @@ func (suite *ConfigSuite) TestParseIncomplete(c *check.C) {
 	suite.expectedConfig.Auth = Auth{"silly": Parameters{"realm": "silly"}}
 	suite.expectedConfig.Notifications = Notifications{}
 	suite.expectedConfig.HTTP.Headers = nil
-	suite.expectedConfig.Redis = Redis{}
+	suite.expectedConfig.Cache = nil
 
 	// Note: this also tests that REGISTRY_STORAGE and
 	// REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY can be used together
@@ -536,6 +554,11 @@ func copyConfig(config Configuration) *Configuration {
 		configCopy.Storage.setParameter(k, v)
 	}
 
+	configCopy.Cache = Cache{config.Cache.Type(): Parameters{}}
+	for k, v := range config.Cache.Parameters() {
+		configCopy.Cache.setParameter(k, v)
+	}
+
 	configCopy.Auth = Auth{config.Auth.Type(): Parameters{}}
 	for k, v := range config.Auth.Parameters() {
 		configCopy.Auth.setParameter(k, v)
@@ -548,8 +571,6 @@ func copyConfig(config Configuration) *Configuration {
 	for k, v := range config.HTTP.Headers {
 		configCopy.HTTP.Headers[k] = v
 	}
-
-	configCopy.Redis = config.Redis
 
 	return configCopy
 }

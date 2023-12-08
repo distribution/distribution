@@ -2,15 +2,33 @@ package redis
 
 import (
 	"context"
+	"errors"
+	"expvar"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/distribution/distribution/v3"
+	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/distribution/distribution/v3/registry/storage/cache"
 	"github.com/distribution/distribution/v3/registry/storage/cache/metrics"
 	"github.com/distribution/reference"
+	"github.com/mitchellh/mapstructure"
 	"github.com/opencontainers/go-digest"
+	"github.com/redis/go-redis/extra/redisotel/v9"
 	"github.com/redis/go-redis/v9"
+)
+
+// init registers the redis cacheprovider.
+func init() {
+	cache.Register("redis", NewBlobDescriptorCacheProvider)
+}
+
+var (
+	// ErrMissingConfig is returned when redis config is missing.
+	ErrMissingConfig = errors.New("missing configuration")
+	// ErrMissingAddr is returned when redis congig misses address.
+	ErrMissingAddr = errors.New("missing address")
 )
 
 // redisBlobDescriptorService provides an implementation of
@@ -35,16 +53,63 @@ type redisBlobDescriptorService struct {
 
 var _ distribution.BlobDescriptorService = &redisBlobDescriptorService{}
 
-// NewRedisBlobDescriptorCacheProvider returns a new redis-based
+// NewBlobDescriptorCacheProvider returns a new redis-based
 // BlobDescriptorCacheProvider using the provided redis connection pool.
-func NewRedisBlobDescriptorCacheProvider(pool *redis.Client) cache.BlobDescriptorCacheProvider {
+func NewBlobDescriptorCacheProvider(ctx context.Context, options map[string]interface{}) (cache.BlobDescriptorCacheProvider, error) {
+	params, ok := options["params"]
+	if !ok {
+		return nil, ErrMissingConfig
+	}
+
+	var c Redis
+
+	// NOTE(milosgajdos): mapstructure does not decode time types such as duration
+	// which we need in the timeout configuration values out of the box
+	// but it provides a way to do this via DecodeHook functions.
+	dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+		DecodeHook:       mapstructure.StringToTimeDurationHookFunc(),
+		WeaklyTypedInput: true,
+		Result:           &c,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if err := dec.Decode(params); err != nil {
+		return nil, err
+	}
+
+	if c.Addr == "" {
+		return nil, ErrMissingAddr
+	}
+
+	pool := createPool(c)
+
+	// Enable metrics instrumentation.
+	if err := redisotel.InstrumentMetrics(pool); err != nil {
+		dcontext.GetLogger(ctx).Errorf("failed to instrument metrics on redis: %v", err)
+	}
+
+	// setup expvar
+	registry := expvar.Get("registry")
+	if registry == nil {
+		registry = expvar.NewMap("registry")
+	}
+
+	registry.(*expvar.Map).Set("redis", expvar.Func(func() interface{} {
+		stats := pool.PoolStats()
+		return map[string]interface{}{
+			"Config": c,
+			"Active": stats.TotalConns - stats.IdleConns,
+		}
+	}))
+
 	return metrics.NewPrometheusCacheProvider(
 		&redisBlobDescriptorService{
 			pool: pool,
 		},
 		"cache_redis",
 		"Number of seconds taken by redis",
-	)
+	), nil
 }
 
 // RepositoryScoped returns the scoped cache.
@@ -271,4 +336,63 @@ func (rsrbds *repositoryScopedRedisBlobDescriptorService) blobDescriptorHashKey(
 
 func (rsrbds *repositoryScopedRedisBlobDescriptorService) repositoryBlobSetKey(repo string) string {
 	return "repository::" + rsrbds.repo + "::blobs"
+}
+
+// Redis configures the redis pool available to the registry.
+type Redis struct {
+	// Addr specifies the the redis instance available to the application.
+	Addr string `yaml:"addr,omitempty"`
+
+	// Usernames can be used as a finer-grained permission control since the introduction of the redis 6.0.
+	Username string `yaml:"username,omitempty"`
+
+	// Password string to use when making a connection.
+	Password string `yaml:"password,omitempty"`
+
+	// DB specifies the database to connect to on the redis instance.
+	DB int `yaml:"db,omitempty"`
+
+	// TLS configures settings for redis in-transit encryption
+	TLS struct {
+		Enabled bool `yaml:"enabled,omitempty"`
+	} `yaml:"tls,omitempty"`
+
+	DialTimeout  time.Duration `yaml:"dialtimeout,omitempty"`  // timeout for connect
+	ReadTimeout  time.Duration `yaml:"readtimeout,omitempty"`  // timeout for reads of data
+	WriteTimeout time.Duration `yaml:"writetimeout,omitempty"` // timeout for writes of data
+
+	// Pool configures the behavior of the redis connection pool.
+	Pool struct {
+		// MaxIdle sets the maximum number of idle connections.
+		MaxIdle int `yaml:"maxidle,omitempty"`
+
+		// MaxActive sets the maximum number of connections that should be
+		// opened before blocking a connection request.
+		MaxActive int `yaml:"maxactive,omitempty"`
+
+		// IdleTimeout sets the amount time to wait before closing
+		// inactive connections.
+		IdleTimeout time.Duration `yaml:"idletimeout,omitempty"`
+	} `yaml:"pool,omitempty"`
+}
+
+func createPool(cfg Redis) *redis.Client {
+	return redis.NewClient(&redis.Options{
+		Addr: cfg.Addr,
+		OnConnect: func(ctx context.Context, cn *redis.Conn) error {
+			res := cn.Ping(ctx)
+			return res.Err()
+		},
+		Username:        cfg.Username,
+		Password:        cfg.Password,
+		DB:              cfg.DB,
+		MaxRetries:      3,
+		DialTimeout:     cfg.DialTimeout,
+		ReadTimeout:     cfg.ReadTimeout,
+		WriteTimeout:    cfg.WriteTimeout,
+		PoolFIFO:        false,
+		MaxIdleConns:    cfg.Pool.MaxIdle,
+		PoolSize:        cfg.Pool.MaxActive,
+		ConnMaxIdleTime: cfg.Pool.IdleTimeout,
+	})
 }

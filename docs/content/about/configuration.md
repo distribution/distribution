@@ -145,9 +145,6 @@ storage:
     enabled: false
   redirect:
     disable: false
-  cache:
-    blobdescriptor: redis
-    blobdescriptorsize: 10000
   maintenance:
     uploadpurging:
       enabled: true
@@ -156,6 +153,22 @@ storage:
       dryrun: false
     readonly:
       enabled: false
+cache:
+  blobdescriptor:
+    provider: redis
+    params:
+      addr: localhost:6379
+      password: asecret
+      db: 0
+      dialtimeout: 10ms
+      readtimeout: 10ms
+      writetimeout: 10ms
+      pool:
+        maxidle: 16
+        maxactive: 64
+        idletimeout: 300s
+      tls:
+        enabled: false
 auth:
   silly:
     realm: silly-realm
@@ -238,19 +251,6 @@ notifications:
            - application/octet-stream
         actions:
            - pull
-redis:
-  addr: localhost:6379
-  password: asecret
-  db: 0
-  dialtimeout: 10ms
-  readtimeout: 10ms
-  writetimeout: 10ms
-  pool:
-    maxidle: 16
-    maxactive: 64
-    idletimeout: 300s
-  tls:
-    enabled: false
 health:
   storagedriver:
     enabled: true
@@ -415,9 +415,6 @@ storage:
   inmemory:
   delete:
     enabled: false
-  cache:
-    blobdescriptor: inmemory
-    blobdescriptorsize: 10000
   maintenance:
     uploadpurging:
       enabled: true
@@ -428,6 +425,11 @@ storage:
       enabled: false
   redirect:
     disable: false
+cache:
+  blobdescriptor:
+    provider: inmemory
+    params:
+      size: 10000
 ```
 
 The `storage` option is **required** and defines which storage backend is in
@@ -501,25 +503,6 @@ delete:
   enabled: true
 ```
 
-### `cache`
-
-Use the `cache` structure to enable caching of data accessed in the storage
-backend. Currently, the only available cache provides fast access to layer
-metadata, which uses the `blobdescriptor` field if configured.
-
-Currently the only two available cache implementations are `redis` and `inmemory`.
-You can set `blobdescriptor` field to `redis` or `inmemory`. If set to `redis`,a
-Redis pool caches layer metadata. If set to `inmemory`, an in-memory map caches
-layer metadata.
-
-> **NOTE**: Formerly, `blobdescriptor` was known as `layerinfo`. While these
-> are equivalent, `layerinfo` has been deprecated.
-
-If `blobdescriptor` is set to `inmemory`, the optional `blobdescriptorsize`
-parameter sets a limit on the number of descriptors to store in the cache.
-The default value is 10000. If this parameter is set to 0, the cache is allowed
-to grow with no size limit.
-
 ### `redirect`
 
 The `redirect` subsection provides configuration for managing redirects from
@@ -536,6 +519,102 @@ under the `redirect` section:
 redirect:
   disable: true
 ```
+
+## `cache`
+
+Use the `cache` structure to enable caching of data accessed in the storage
+backend. Currently, the only avalable cache provides fast access to layer
+metadata, which uses the `blobdescriptor`field if configured.
+
+> **NOTE**: Formerly, `blobdescriptor` was known as `layerinfo`. While these
+> are equivalent, `layerinfo` has been deprecated.
+
+There are curretly two available cache provider implementations: `redis` and `inmemory`.
+You can specify the name of the cache provider via the `provider` field and configure
+it via the `params` field.
+
+### `memory`
+
+If `provider` is set to `inmemory`, the optional `size` parameter sets a limit
+ on the number of descriptors to store in the cache.  The default value is 10000.
+If this parameter is set to 0, the cache is allowed to grow with no size limit.
+
+```yaml
+cache:
+  provider: inmemory
+  params:
+    size: 1000
+```
+
+### `redis`
+
+If `provider` is set to `redis`, a Redis pool caches layer metadata.
+layer metadata. See the redis configuration options below for all available options.
+
+```yaml
+redis:
+  addr: localhost:6379
+  password: asecret
+  db: 0
+  dialtimeout: 10ms
+  readtimeout: 10ms
+  writetimeout: 10ms
+  pool:
+    maxidle: 16
+    maxactive: 64
+    idletimeout: 300s
+  tls:
+    enabled: false
+```
+
+Declare parameters for constructing the `redis` connections. Registry instances
+may use the Redis instance for several applications. Currently, it caches
+information about immutable blobs. Most of the `redis` options control
+how the registry connects to the `redis` instance. You can control the pool's
+behavior with the [pool](#pool) subsection. Additionally, you can control
+TLS connection settings with the [tls](#tls) subsection (in-transit encryption).
+
+You should configure Redis with the **allkeys-lru** eviction policy, because the
+registry does not set an expiration value on keys.
+
+| Parameter | Required | Description                                           |
+|-----------|----------|-------------------------------------------------------|
+| `addr`    | yes      | The address (host and port) of the Redis instance.    |
+| `password`| no       | A password used to authenticate to the Redis instance.|
+| `db`      | no       | The name of the database to use for each connection.  |
+| `dialtimeout` | no   | The timeout for connecting to the Redis instance.     |
+| `readtimeout` | no   | The timeout for reading from the Redis instance.      |
+| `writetimeout` | no  | The timeout for writing to the Redis instance.        |
+
+#### `pool`
+
+```yaml
+pool:
+  maxidle: 16
+  maxactive: 64
+  idletimeout: 300s
+```
+
+Use these settings to configure the behavior of the Redis connection pool.
+
+| Parameter | Required | Description                                           |
+|-----------|----------|-------------------------------------------------------|
+| `maxidle` | no       | The maximum number of idle connections in the pool.   |
+| `maxactive`| no      | The maximum number of connections which can be open before blocking a connection request. |
+| `idletimeout`| no    | How long to wait before closing inactive connections. |
+
+#### `tls`
+
+```yaml
+tls:
+  enabled: false
+```
+
+Use these settings to configure Redis TLS.
+
+| Parameter | Required | Description                           |
+|-----------|----------|-------------------------------------- |
+| `enabled` | no       | Whether or not to use TLS in-transit. |
 
 ## `auth`
 
@@ -935,74 +1014,6 @@ The `events` structure configures the information provided in event notification
 | Parameter | Required | Description                                           |
 |-----------|----------|-------------------------------------------------------|
 | `includereferences` | no | If `true`, include reference information in manifest events. |
-
-## `redis`
-
-```yaml
-redis:
-  addr: localhost:6379
-  password: asecret
-  db: 0
-  dialtimeout: 10ms
-  readtimeout: 10ms
-  writetimeout: 10ms
-  pool:
-    maxidle: 16
-    maxactive: 64
-    idletimeout: 300s
-  tls:
-    enabled: false
-```
-
-Declare parameters for constructing the `redis` connections. Registry instances
-may use the Redis instance for several applications. Currently, it caches
-information about immutable blobs. Most of the `redis` options control
-how the registry connects to the `redis` instance. You can control the pool's
-behavior with the [pool](#pool) subsection. Additionally, you can control
-TLS connection settings with the [tls](#tls) subsection (in-transit encryption).
-
-You should configure Redis with the **allkeys-lru** eviction policy, because the
-registry does not set an expiration value on keys.
-
-| Parameter | Required | Description                                           |
-|-----------|----------|-------------------------------------------------------|
-| `addr`    | yes      | The address (host and port) of the Redis instance.    |
-| `password`| no       | A password used to authenticate to the Redis instance.|
-| `db`      | no       | The name of the database to use for each connection.  |
-| `dialtimeout` | no   | The timeout for connecting to the Redis instance.     |
-| `readtimeout` | no   | The timeout for reading from the Redis instance.      |
-| `writetimeout` | no  | The timeout for writing to the Redis instance.        |
-
-### `pool`
-
-```yaml
-pool:
-  maxidle: 16
-  maxactive: 64
-  idletimeout: 300s
-```
-
-Use these settings to configure the behavior of the Redis connection pool.
-
-| Parameter | Required | Description                                           |
-|-----------|----------|-------------------------------------------------------|
-| `maxidle` | no       | The maximum number of idle connections in the pool.   |
-| `maxactive`| no      | The maximum number of connections which can be open before blocking a connection request. |
-| `idletimeout`| no    | How long to wait before closing inactive connections. |
-
-### `tls`
-
-```yaml
-tls:
-  enabled: false
-```
-
-Use these settings to configure Redis TLS.
-
-| Parameter | Required | Description                           |
-|-----------|----------|-------------------------------------- |
-| `enabled` | no       | Whether or not to use TLS in-transit. |
-
 
 ## `health`
 

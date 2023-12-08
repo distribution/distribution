@@ -8,8 +8,14 @@ import (
 	"github.com/distribution/distribution/v3/registry/storage/cache"
 	"github.com/distribution/reference"
 	"github.com/hashicorp/golang-lru/arc/v2"
+	"github.com/mitchellh/mapstructure"
 	"github.com/opencontainers/go-digest"
 )
+
+// init registers the inmemory cacheprovider.
+func init() {
+	cache.Register("inmemory", NewBlobDescriptorCacheProvider)
+}
 
 const (
 	// DefaultSize is the default cache size to use if no size is explicitly
@@ -29,20 +35,27 @@ type inMemoryBlobDescriptorCacheProvider struct {
 	lru *arc.ARCCache[descriptorCacheKey, distribution.Descriptor]
 }
 
-// NewInMemoryBlobDescriptorCacheProvider returns a new mapped-based cache for
+// NewBlobDescriptorCacheProvider returns a new mapped-based cache for
 // storing blob descriptor data.
-func NewInMemoryBlobDescriptorCacheProvider(size int) cache.BlobDescriptorCacheProvider {
-	if size <= 0 {
+func NewBlobDescriptorCacheProvider(ctx context.Context, options map[string]interface{}) (cache.BlobDescriptorCacheProvider, error) {
+	var c Memory
+	if err := mapstructure.Decode(options["params"], &c); err != nil {
+		return nil, err
+	}
+
+	size := DefaultSize
+	if c.Size <= 0 {
 		size = math.MaxInt
 	}
+
 	lruCache, err := arc.NewARC[descriptorCacheKey, distribution.Descriptor](size)
 	if err != nil {
 		// NewARC can only fail if size is <= 0, so this unreachable
-		panic(err)
+		return nil, err
 	}
 	return &inMemoryBlobDescriptorCacheProvider{
 		lru: lruCache,
-	}
+	}, nil
 }
 
 func (imbdcp *inMemoryBlobDescriptorCacheProvider) RepositoryScoped(repo string) (distribution.BlobDescriptorService, error) {
@@ -155,4 +168,18 @@ func (rsimbdcp *repositoryScopedInMemoryBlobDescriptorCache) SetDescriptor(ctx c
 	}
 	rsimbdcp.parent.lru.Add(key, desc)
 	return rsimbdcp.parent.SetDescriptor(ctx, dgst, desc)
+}
+
+// Memory configures inmemory cache
+type Memory struct {
+	Size int `yaml:"size,omitempty"`
+}
+
+// NewCacheOptions returns new memory cache options.
+func NewCacheOptions(size int) map[string]interface{} {
+	return map[string]interface{}{
+		"params": map[interface{}]interface{}{
+			"size": size,
+		},
+	}
 }

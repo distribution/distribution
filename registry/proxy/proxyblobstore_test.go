@@ -123,6 +123,7 @@ func makeTestEnv(t *testing.T, name string) *testEnv {
 	}
 
 	ctx := context.Background()
+	cacheOpts := memory.NewCacheOptions(memory.UnlimitedSize)
 
 	truthDir := t.TempDir()
 	cacheDir := t.TempDir()
@@ -134,8 +135,12 @@ func makeTestEnv(t *testing.T, name string) *testEnv {
 		t.Fatalf("unable to create filesystem driver: %s", err)
 	}
 
+	localCache, err := memory.NewBlobDescriptorCacheProvider(ctx, cacheOpts)
+	if err != nil {
+		t.Fatalf("memory cache: %v", err)
+	}
 	// todo: create a tempfile area here
-	localRegistry, err := storage.NewRegistry(ctx, localDriver, storage.BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), storage.EnableRedirect, storage.DisableDigestResumption)
+	localRegistry, err := storage.NewRegistry(ctx, localDriver, storage.BlobDescriptorCacheProvider(localCache), storage.EnableRedirect, storage.DisableDigestResumption)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -151,7 +156,12 @@ func makeTestEnv(t *testing.T, name string) *testEnv {
 		t.Fatalf("unable to create filesystem driver: %s", err)
 	}
 
-	truthRegistry, err := storage.NewRegistry(ctx, cacheDriver, storage.BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)))
+	truthCache, err := memory.NewBlobDescriptorCacheProvider(ctx, cacheOpts)
+	if err != nil {
+		t.Fatalf("memory cache: %v", err)
+	}
+
+	truthRegistry, err := storage.NewRegistry(ctx, cacheDriver, storage.BlobDescriptorCacheProvider(truthCache))
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}

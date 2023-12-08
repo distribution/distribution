@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"crypto/rand"
-	"expvar"
 	"fmt"
 	"math"
 	"math/big"
@@ -13,7 +12,6 @@ import (
 	"os"
 	"regexp"
 	"runtime"
-	"strconv"
 	"strings"
 	"time"
 
@@ -31,9 +29,7 @@ import (
 	repositorymiddleware "github.com/distribution/distribution/v3/registry/middleware/repository"
 	"github.com/distribution/distribution/v3/registry/proxy"
 	"github.com/distribution/distribution/v3/registry/storage"
-	memorycache "github.com/distribution/distribution/v3/registry/storage/cache/memory"
-	cacheprovider "github.com/distribution/distribution/v3/registry/storage/cache/provider"
-	rediscache "github.com/distribution/distribution/v3/registry/storage/cache/redis"
+	"github.com/distribution/distribution/v3/registry/storage/cache"
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/distribution/v3/registry/storage/driver/factory"
 	storagemiddleware "github.com/distribution/distribution/v3/registry/storage/driver/middleware"
@@ -42,8 +38,6 @@ import (
 	events "github.com/docker/go-events"
 	"github.com/docker/go-metrics"
 	"github.com/gorilla/mux"
-	"github.com/redis/go-redis/extra/redisotel/v9"
-	"github.com/redis/go-redis/v9"
 	"github.com/sirupsen/logrus"
 )
 
@@ -77,8 +71,6 @@ type App struct {
 		sink   events.Sink
 		source notifications.SourceRecord
 	}
-
-	redis *redis.Client
 
 	// isCache is true if this registry is configured as a pull through cache
 	isCache bool
@@ -156,7 +148,6 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 
 	app.configureSecret(config)
 	app.configureEvents(config)
-	app.configureRedis(config)
 	app.configureLogHook(config)
 
 	options := registrymiddleware.GetRegistryOptions()
@@ -238,62 +229,33 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 	}
 
 	// configure storage caches
-	if cc, ok := config.Storage["cache"]; ok {
-		v, ok := cc["blobdescriptor"]
-		if !ok {
-			// Backwards compatible: "layerinfo" == "blobdescriptor"
-			v = cc["layerinfo"]
+	// NOTE(milosgajdos): we only provide blobdescriptor cache
+	// Any other cache configuration is ignored
+	if bd, ok := config.Cache["blobdescriptor"]; ok {
+		var (
+			err           error
+			cacheProvider cache.BlobDescriptorCacheProvider
+		)
+		if p, ok := bd["provider"]; ok {
+			name, ok := p.(string)
+			if !ok {
+				panic(fmt.Sprintf("unexpected type of value %T for cache provider name, expected string", p))
+			}
+			cacheParams := config.Cache.Parameters()
+			if cacheParams == nil {
+				cacheParams = make(configuration.Parameters)
+			}
+			cacheProvider, err = cache.Get(ctx, name, cacheParams)
+			if err != nil {
+				dcontext.GetLogger(app).Infof("failed to initialize %s cache: %v", name, err)
+			}
 		}
 
-		switch v {
-		case "redis":
-			if app.redis == nil {
-				panic("redis configuration required to use for layerinfo cache")
-			}
-			if _, ok := cc["blobdescriptorsize"]; ok {
-				dcontext.GetLogger(app).Warnf("blobdescriptorsize parameter is not supported with redis cache")
-			}
-			cacheProvider := rediscache.NewRedisBlobDescriptorCacheProvider(app.redis)
+		if cacheProvider != nil {
 			localOptions := append(options, storage.BlobDescriptorCacheProvider(cacheProvider))
 			app.registry, err = storage.NewRegistry(app, app.driver, localOptions...)
 			if err != nil {
 				panic("could not create registry: " + err.Error())
-			}
-			dcontext.GetLogger(app).Infof("using redis blob descriptor cache")
-		case "inmemory":
-			blobDescriptorSize := memorycache.DefaultSize
-			configuredSize, ok := cc["blobdescriptorsize"]
-			if ok {
-				// Since Parameters is not strongly typed, render to a string and convert back
-				blobDescriptorSize, err = strconv.Atoi(fmt.Sprint(configuredSize))
-				if err != nil {
-					panic(fmt.Sprintf("invalid blobdescriptorsize value %s: %s", configuredSize, err))
-				}
-			}
-
-			cacheProvider := memorycache.NewInMemoryBlobDescriptorCacheProvider(blobDescriptorSize)
-			localOptions := append(options, storage.BlobDescriptorCacheProvider(cacheProvider))
-			app.registry, err = storage.NewRegistry(app, app.driver, localOptions...)
-			if err != nil {
-				panic("could not create registry: " + err.Error())
-			}
-			dcontext.GetLogger(app).Infof("using inmemory blob descriptor cache")
-		default:
-			if v != "" {
-				name, ok := v.(string)
-				if !ok {
-					panic(fmt.Sprintf("unexpected type of value %T (string expected)", v))
-				}
-				cacheProvider, err := cacheprovider.Get(app, name, cc)
-				if err != nil {
-					panic("unable to initialize cache provider: " + err.Error())
-				}
-				localOptions := append(options, storage.BlobDescriptorCacheProvider(cacheProvider))
-				app.registry, err = storage.NewRegistry(app, app.driver, localOptions...)
-				if err != nil {
-					panic("could not create registry: " + err.Error())
-				}
-				dcontext.GetLogger(app).Infof("using %s blob descriptor cache", name)
 			}
 		}
 	}
@@ -502,55 +464,6 @@ func (app *App) configureEvents(configuration *configuration.Configuration) {
 		Addr:       hostname,
 		InstanceID: dcontext.GetStringValue(app, "instance.id"),
 	}
-}
-
-func (app *App) configureRedis(cfg *configuration.Configuration) {
-	if cfg.Redis.Addr == "" {
-		dcontext.GetLogger(app).Infof("redis not configured")
-		return
-	}
-
-	app.redis = app.createPool(cfg.Redis)
-
-	// Enable metrics instrumentation.
-	if err := redisotel.InstrumentMetrics(app.redis); err != nil {
-		dcontext.GetLogger(app).Errorf("failed to instrument metrics on redis: %v", err)
-	}
-
-	// setup expvar
-	registry := expvar.Get("registry")
-	if registry == nil {
-		registry = expvar.NewMap("registry")
-	}
-
-	registry.(*expvar.Map).Set("redis", expvar.Func(func() interface{} {
-		stats := app.redis.PoolStats()
-		return map[string]interface{}{
-			"Config": cfg,
-			"Active": stats.TotalConns - stats.IdleConns,
-		}
-	}))
-}
-
-func (app *App) createPool(cfg configuration.Redis) *redis.Client {
-	return redis.NewClient(&redis.Options{
-		Addr: cfg.Addr,
-		OnConnect: func(ctx context.Context, cn *redis.Conn) error {
-			res := cn.Ping(ctx)
-			return res.Err()
-		},
-		Username:        cfg.Username,
-		Password:        cfg.Password,
-		DB:              cfg.DB,
-		MaxRetries:      3,
-		DialTimeout:     cfg.DialTimeout,
-		ReadTimeout:     cfg.ReadTimeout,
-		WriteTimeout:    cfg.WriteTimeout,
-		PoolFIFO:        false,
-		MaxIdleConns:    cfg.Pool.MaxIdle,
-		PoolSize:        cfg.Pool.MaxActive,
-		ConnMaxIdleTime: cfg.Pool.IdleTimeout,
-	})
 }
 
 // configureLogHook prepares logging hook parameters.

@@ -19,8 +19,14 @@ import (
 func TestListener(t *testing.T) {
 	ctx := dcontext.Background()
 
+	cacheOpts := memory.NewCacheOptions(memory.UnlimitedSize)
+	cache, err := memory.NewBlobDescriptorCacheProvider(ctx, cacheOpts)
+	if err != nil {
+		t.Fatalf("memory cache: %v", err)
+	}
+
 	registry, err := storage.NewRegistry(ctx, inmemory.New(),
-		storage.BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)),
+		storage.BlobDescriptorCacheProvider(cache),
 		storage.EnableDelete, storage.EnableRedirect)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)

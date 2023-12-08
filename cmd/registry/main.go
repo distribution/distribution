@@ -8,6 +8,8 @@ import (
 	_ "github.com/distribution/distribution/v3/registry/auth/silly"
 	_ "github.com/distribution/distribution/v3/registry/auth/token"
 	_ "github.com/distribution/distribution/v3/registry/proxy"
+	_ "github.com/distribution/distribution/v3/registry/storage/cache/memory"
+	_ "github.com/distribution/distribution/v3/registry/storage/cache/redis"
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/azure"
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/filesystem"
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/gcs"

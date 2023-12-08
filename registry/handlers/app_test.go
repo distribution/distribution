@@ -26,7 +26,13 @@ import (
 func TestAppDispatcher(t *testing.T) {
 	driver := inmemory.New()
 	ctx := dcontext.Background()
-	registry, err := storage.NewRegistry(ctx, driver, storage.BlobDescriptorCacheProvider(memorycache.NewInMemoryBlobDescriptorCacheProvider(0)), storage.EnableDelete, storage.EnableRedirect)
+	cacheOpts := memorycache.NewCacheOptions(0)
+	cache, err := memorycache.NewBlobDescriptorCacheProvider(ctx, cacheOpts)
+	if err != nil {
+		t.Fatalf("memory cache: %v", err)
+	}
+
+	registry, err := storage.NewRegistry(ctx, driver, storage.BlobDescriptorCacheProvider(cache), storage.EnableDelete, storage.EnableRedirect)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
