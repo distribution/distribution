@@ -96,7 +96,7 @@ func TestGCSDriverSuite(t *testing.T) {
 	testsuites.Driver(t, newDriverConstructor(t))
 }
 
-func BenchmarkGcsDriverSuite(b *testing.B) {
+func BenchmarkGCSDriverSuite(b *testing.B) {
 	skipCheck(b)
 	testsuites.BenchDriver(b, newDriverConstructor(b))
 }
