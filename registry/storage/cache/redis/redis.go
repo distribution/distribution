@@ -26,9 +26,9 @@ func init() {
 
 var (
 	// ErrMissingConfig is returned when redis config is missing.
-	ErrMissingConfig = errors.New("missing configuration")
-	// ErrMissingAddr is returned when redis congig misses address.
-	ErrMissingAddr = errors.New("missing address")
+	ErrMissingConfig = errors.New("redis: missing configuration")
+	// ErrMissingAddr is returned when address is missing from redis config.
+	ErrMissingAddr = errors.New("redis: missing address")
 )
 
 // redisBlobDescriptorService provides an implementation of
