@@ -4,14 +4,14 @@ import (
 	"context"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestNoConfig(t *testing.T) {
 	options := make(map[string]interface{})
 	_, err := newCloudFrontStorageMiddleware(context.Background(), nil, options)
-	if err == nil || err.Error() != "no baseurl provided" {
-		t.Fatalf(`expected error "no baseurl provided", got: %v`, err)
-	}
+	require.ErrorContains(t, err, "no baseurl provided")
 }
 
 func TestCloudFrontStorageMiddlewareGenerateKey(t *testing.T) {

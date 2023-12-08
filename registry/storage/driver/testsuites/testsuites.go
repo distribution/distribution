@@ -28,14 +28,6 @@ func init() {
 	_, _ = crand.Read(randomBytes) // always returns len(randomBytes) and nil error
 }
 
-// SkipCheck is a function used to determine if a test suite should be skipped.
-// If a SkipCheck returns a non-empty skip reason, the suite is skipped with
-// the given reason.
-type SkipCheck func() (reason string)
-
-// NeverSkip is a default SkipCheck which never skips the suite.
-var NeverSkip SkipCheck = func() string { return "" }
-
 // DriverConstructor is a function which returns a new
 // storagedriver.StorageDriver.
 type DriverConstructor func() (storagedriver.StorageDriver, error)
@@ -45,30 +37,25 @@ type DriverConstructor func() (storagedriver.StorageDriver, error)
 type DriverTeardown func() error
 
 // DriverSuite is a [suite.Suite] test suite designed to test a
-// storagedriver.StorageDriver. The intended way to create a DriverSuite is
-// with [NewDriverSuite].
+// storagedriver.StorageDriver.
 type DriverSuite struct {
 	suite.Suite
 	Constructor DriverConstructor
 	Teardown    DriverTeardown
-	SkipCheck
 	storagedriver.StorageDriver
 	ctx context.Context
 }
 
-func NewDriverSuite(driverConstructor DriverConstructor, skipCheck SkipCheck) *DriverSuite {
-	return &DriverSuite{
+// Driver runs [DriverSuite] for the given [DriverConstructor].
+func Driver(t *testing.T, driverConstructor DriverConstructor) {
+	suite.Run(t, &DriverSuite{
 		Constructor: driverConstructor,
-		SkipCheck:   skipCheck,
 		ctx:         context.Background(),
-	}
+	})
 }
 
 // SetupSuite implements [suite.SetupAllSuite] interface.
 func (suite *DriverSuite) SetupSuite() {
-	if reason := suite.SkipCheck(); reason != "" {
-		suite.T().Skip(reason)
-	}
 	d, err := suite.Constructor()
 	suite.Require().NoError(err)
 	suite.StorageDriver = d
@@ -479,6 +466,11 @@ func (suite *DriverSuite) TestReadNonexistentStream() {
 
 // TestWriteZeroByteStreamThenAppend tests if zero byte file handling works for append to a Stream
 func (suite *DriverSuite) TestWriteZeroByteStreamThenAppend() {
+	if suite.StorageDriver.Name() == "s3aws" {
+		// See https://github.com/distribution/distribution/pull/4185#discussion_r1419721968
+		suite.T().Skip("S3 multipart uploads require at least 1 chunk (>0B)")
+	}
+
 	filename := randomPath(32)
 	defer suite.deletePath(firstPart(filename))
 	chunkSize := int64(32)
@@ -537,6 +529,11 @@ func (suite *DriverSuite) TestWriteZeroByteStreamThenAppend() {
 
 // TestWriteZeroByteContentThenAppend tests if zero byte file handling works for append to PutContent
 func (suite *DriverSuite) TestWriteZeroByteContentThenAppend() {
+	if suite.StorageDriver.Name() == "s3aws" {
+		// See https://github.com/distribution/distribution/pull/4185#discussion_r1419721968
+		suite.T().Skip("S3 multipart uploads require at least 1 chunk (>0B)")
+	}
+
 	filename := randomPath(32)
 	defer suite.deletePath(firstPart(filename))
 	chunkSize := int64(32)
@@ -1086,6 +1083,184 @@ func (suite *DriverSuite) TestConcurrentFileStreams() {
 //
 // 	c.Assert(misswrites, check.Not(check.Equals), 1024)
 // }
+
+type DriverBenchmarkSuite struct {
+	Suite *DriverSuite
+}
+
+func BenchDriver(b *testing.B, driverConstructor DriverConstructor) {
+	benchsuite := &DriverBenchmarkSuite{
+		Suite: &DriverSuite{
+			Constructor: driverConstructor,
+			ctx:         context.Background(),
+		},
+	}
+	benchsuite.Suite.SetupSuite()
+	b.Cleanup(benchsuite.Suite.TearDownSuite)
+
+	b.Run("PutGetEmptyFiles", benchsuite.BenchmarkPutGetEmptyFiles)
+	b.Run("PutGet1KBFiles", benchsuite.BenchmarkPutGet1KBFiles)
+	b.Run("PutGet1MBFiles", benchsuite.BenchmarkPutGet1MBFiles)
+	b.Run("PutGet1GBFiles", benchsuite.BenchmarkPutGet1GBFiles)
+	b.Run("StreamEmptyFiles", benchsuite.BenchmarkStreamEmptyFiles)
+	b.Run("Stream1KBFiles", benchsuite.BenchmarkStream1KBFiles)
+	b.Run("Stream1MBFiles", benchsuite.BenchmarkStream1MBFiles)
+	b.Run("Stream1GBFiles", benchsuite.BenchmarkStream1GBFiles)
+	b.Run("List5Files", benchsuite.BenchmarkList5Files)
+	b.Run("List50Files", benchsuite.BenchmarkList50Files)
+	b.Run("Delete5Files", benchsuite.BenchmarkDelete5Files)
+	b.Run("Delete50Files", benchsuite.BenchmarkDelete50Files)
+}
+
+func NewDriverBenchmarkSuite(ds *DriverSuite) *DriverBenchmarkSuite {
+	return &DriverBenchmarkSuite{Suite: ds}
+}
+
+// BenchmarkPutGetEmptyFiles benchmarks PutContent/GetContent for 0B files
+func (s *DriverBenchmarkSuite) BenchmarkPutGetEmptyFiles(b *testing.B) {
+	s.benchmarkPutGetFiles(b, 0)
+}
+
+// BenchmarkPutGet1KBFiles benchmarks PutContent/GetContent for 1KB files
+func (s *DriverBenchmarkSuite) BenchmarkPutGet1KBFiles(b *testing.B) {
+	s.benchmarkPutGetFiles(b, 1024)
+}
+
+// BenchmarkPutGet1MBFiles benchmarks PutContent/GetContent for 1MB files
+func (s *DriverBenchmarkSuite) BenchmarkPutGet1MBFiles(b *testing.B) {
+	s.benchmarkPutGetFiles(b, 1024*1024)
+}
+
+// BenchmarkPutGet1GBFiles benchmarks PutContent/GetContent for 1GB files
+func (s *DriverBenchmarkSuite) BenchmarkPutGet1GBFiles(b *testing.B) {
+	s.benchmarkPutGetFiles(b, 1024*1024*1024)
+}
+
+func (s *DriverBenchmarkSuite) benchmarkPutGetFiles(b *testing.B, size int64) {
+	b.SetBytes(size)
+	parentDir := randomPath(8)
+	defer func() {
+		b.StopTimer()
+		// nolint:errcheck
+		s.Suite.StorageDriver.Delete(s.Suite.ctx, firstPart(parentDir))
+	}()
+
+	for i := 0; i < b.N; i++ {
+		filename := path.Join(parentDir, randomPath(32))
+		err := s.Suite.StorageDriver.PutContent(s.Suite.ctx, filename, randomContents(size))
+		s.Suite.Require().NoError(err)
+
+		_, err = s.Suite.StorageDriver.GetContent(s.Suite.ctx, filename)
+		s.Suite.Require().NoError(err)
+	}
+}
+
+// BenchmarkStreamEmptyFiles benchmarks Writer/Reader for 0B files
+func (s *DriverBenchmarkSuite) BenchmarkStreamEmptyFiles(b *testing.B) {
+	s.benchmarkStreamFiles(b, 0)
+}
+
+// BenchmarkStream1KBFiles benchmarks Writer/Reader for 1KB files
+func (s *DriverBenchmarkSuite) BenchmarkStream1KBFiles(b *testing.B) {
+	s.benchmarkStreamFiles(b, 1024)
+}
+
+// BenchmarkStream1MBFiles benchmarks Writer/Reader for 1MB files
+func (s *DriverBenchmarkSuite) BenchmarkStream1MBFiles(b *testing.B) {
+	s.benchmarkStreamFiles(b, 1024*1024)
+}
+
+// BenchmarkStream1GBFiles benchmarks Writer/Reader for 1GB files
+func (s *DriverBenchmarkSuite) BenchmarkStream1GBFiles(b *testing.B) {
+	s.benchmarkStreamFiles(b, 1024*1024*1024)
+}
+
+func (s *DriverBenchmarkSuite) benchmarkStreamFiles(b *testing.B, size int64) {
+	b.SetBytes(size)
+	parentDir := randomPath(8)
+	defer func() {
+		b.StopTimer()
+		// nolint:errcheck
+		s.Suite.StorageDriver.Delete(s.Suite.ctx, firstPart(parentDir))
+	}()
+
+	for i := 0; i < b.N; i++ {
+		filename := path.Join(parentDir, randomPath(32))
+		writer, err := s.Suite.StorageDriver.Writer(s.Suite.ctx, filename, false)
+		s.Suite.Require().NoError(err)
+		written, err := io.Copy(writer, bytes.NewReader(randomContents(size)))
+		s.Suite.Require().NoError(err)
+		s.Suite.Require().Equal(size, written)
+
+		err = writer.Commit(context.Background())
+		s.Suite.Require().NoError(err)
+		err = writer.Close()
+		s.Suite.Require().NoError(err)
+
+		rc, err := s.Suite.StorageDriver.Reader(s.Suite.ctx, filename, 0)
+		s.Suite.Require().NoError(err)
+		rc.Close()
+	}
+}
+
+// BenchmarkList5Files benchmarks List for 5 small files
+func (s *DriverBenchmarkSuite) BenchmarkList5Files(b *testing.B) {
+	s.benchmarkListFiles(b, 5)
+}
+
+// BenchmarkList50Files benchmarks List for 50 small files
+func (s *DriverBenchmarkSuite) BenchmarkList50Files(b *testing.B) {
+	s.benchmarkListFiles(b, 50)
+}
+
+func (s *DriverBenchmarkSuite) benchmarkListFiles(b *testing.B, numFiles int64) {
+	parentDir := randomPath(8)
+	defer func() {
+		b.StopTimer()
+		// nolint:errcheck
+		s.Suite.StorageDriver.Delete(s.Suite.ctx, firstPart(parentDir))
+	}()
+
+	for i := int64(0); i < numFiles; i++ {
+		err := s.Suite.StorageDriver.PutContent(s.Suite.ctx, path.Join(parentDir, randomPath(32)), nil)
+		s.Suite.Require().NoError(err)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		files, err := s.Suite.StorageDriver.List(s.Suite.ctx, parentDir)
+		s.Suite.Require().NoError(err)
+		s.Suite.Require().Equal(numFiles, int64(len(files)))
+	}
+}
+
+// BenchmarkDelete5Files benchmarks Delete for 5 small files
+func (s *DriverBenchmarkSuite) BenchmarkDelete5Files(b *testing.B) {
+	s.benchmarkDeleteFiles(b, 5)
+}
+
+// BenchmarkDelete50Files benchmarks Delete for 50 small files
+func (s *DriverBenchmarkSuite) BenchmarkDelete50Files(b *testing.B) {
+	s.benchmarkDeleteFiles(b, 50)
+}
+
+func (s *DriverBenchmarkSuite) benchmarkDeleteFiles(b *testing.B, numFiles int64) {
+	for i := 0; i < b.N; i++ {
+		parentDir := randomPath(8)
+		defer s.Suite.deletePath(firstPart(parentDir))
+
+		b.StopTimer()
+		for j := int64(0); j < numFiles; j++ {
+			err := s.Suite.StorageDriver.PutContent(s.Suite.ctx, path.Join(parentDir, randomPath(32)), nil)
+			s.Suite.Require().NoError(err)
+		}
+		b.StartTimer()
+
+		// This is the operation we're benchmarking
+		err := s.Suite.StorageDriver.Delete(s.Suite.ctx, firstPart(parentDir))
+		s.Suite.Require().NoError(err)
+	}
+}
 
 func (suite *DriverSuite) testFileStreams(size int64) {
 	tf, err := os.CreateTemp("", "tf")

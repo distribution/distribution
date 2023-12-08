@@ -10,7 +10,6 @@ import (
 	"github.com/distribution/distribution/v3/internal/dcontext"
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/distribution/v3/registry/storage/driver/testsuites"
-	"github.com/stretchr/testify/suite"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/googleapi"
@@ -19,7 +18,7 @@ import (
 
 var (
 	gcsDriverConstructor func(rootDirectory string) (storagedriver.StorageDriver, error)
-	skipGCS              func() string
+	skipCheck            func(tb testing.TB)
 )
 
 func init() {
@@ -27,15 +26,12 @@ func init() {
 	credentials := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
 
 	// Skip GCS storage driver tests if environment variable parameters are not provided
-	skipGCS = func() string {
-		if bucket == "" || credentials == "" {
-			return "The following environment variables must be set to enable these tests: REGISTRY_STORAGE_GCS_BUCKET, GOOGLE_APPLICATION_CREDENTIALS"
-		}
-		return ""
-	}
+	skipCheck = func(tb testing.TB) {
+		tb.Helper()
 
-	if skipGCS() != "" {
-		return
+		if bucket == "" || credentials == "" {
+			tb.Skip("The following environment variables must be set to enable these tests: REGISTRY_STORAGE_GCS_BUCKET, GOOGLE_APPLICATION_CREDENTIALS")
+		}
 	}
 
 	jsonKey, err := os.ReadFile(credentials)
@@ -87,42 +83,27 @@ func init() {
 	}
 }
 
-func newDriverSuite(tb testing.TB) *testsuites.DriverSuite {
+func newDriverConstructor(tb testing.TB) testsuites.DriverConstructor {
 	root := tb.TempDir()
 
-	return testsuites.NewDriverSuite(func() (storagedriver.StorageDriver, error) {
+	return func() (storagedriver.StorageDriver, error) {
 		return gcsDriverConstructor(root)
-	}, skipGCS)
+	}
 }
 
-func TestGcsDriverSuite(t *testing.T) {
-	suite.Run(t, newDriverSuite(t))
+func TestGCSDriverSuite(t *testing.T) {
+	skipCheck(t)
+	testsuites.Driver(t, newDriverConstructor(t))
 }
 
 func BenchmarkGcsDriverSuite(b *testing.B) {
-	benchsuite := testsuites.NewDriverBenchmarkSuite(newDriverSuite(b))
-	benchsuite.Suite.SetupSuite()
-	b.Cleanup(benchsuite.Suite.TearDownSuite)
-
-	b.Run("PutGetEmptyFiles", benchsuite.BenchmarkPutGetEmptyFiles)
-	b.Run("PutGet1KBFiles", benchsuite.BenchmarkPutGet1KBFiles)
-	b.Run("PutGet1MBFiles", benchsuite.BenchmarkPutGet1MBFiles)
-	b.Run("PutGet1GBFiles", benchsuite.BenchmarkPutGet1GBFiles)
-	b.Run("StreamEmptyFiles", benchsuite.BenchmarkStreamEmptyFiles)
-	b.Run("Stream1KBFiles", benchsuite.BenchmarkStream1KBFiles)
-	b.Run("Stream1MBFiles", benchsuite.BenchmarkStream1MBFiles)
-	b.Run("Stream1GBFiles", benchsuite.BenchmarkStream1GBFiles)
-	b.Run("List5Files", benchsuite.BenchmarkList5Files)
-	b.Run("List50Files", benchsuite.BenchmarkList50Files)
-	b.Run("Delete5Files", benchsuite.BenchmarkDelete5Files)
-	b.Run("Delete50Files", benchsuite.BenchmarkDelete50Files)
+	skipCheck(b)
+	testsuites.BenchDriver(b, newDriverConstructor(b))
 }
 
 // Test Committing a FileWriter without having called Write
 func TestCommitEmpty(t *testing.T) {
-	if skipGCS() != "" {
-		t.Skip(skipGCS())
-	}
+	skipCheck(t)
 
 	validRoot := t.TempDir()
 
@@ -163,9 +144,7 @@ func TestCommitEmpty(t *testing.T) {
 // Test Committing a FileWriter after having written exactly
 // defaultChunksize bytes.
 func TestCommit(t *testing.T) {
-	if skipGCS() != "" {
-		t.Skip(skipGCS())
-	}
+	skipCheck(t)
 
 	validRoot := t.TempDir()
 
@@ -209,9 +188,7 @@ func TestCommit(t *testing.T) {
 }
 
 func TestRetry(t *testing.T) {
-	if skipGCS() != "" {
-		t.Skip(skipGCS())
-	}
+	skipCheck(t)
 
 	assertError := func(expected string, observed error) {
 		observedMsg := "<nil>"
@@ -246,9 +223,7 @@ func TestRetry(t *testing.T) {
 }
 
 func TestEmptyRootList(t *testing.T) {
-	if skipGCS() != "" {
-		t.Skip(skipGCS())
-	}
+	skipCheck(t)
 
 	validRoot := t.TempDir()
 
@@ -303,9 +278,7 @@ func TestEmptyRootList(t *testing.T) {
 
 // TestMoveDirectory checks that moving a directory returns an error.
 func TestMoveDirectory(t *testing.T) {
-	if skipGCS() != "" {
-		t.Skip(skipGCS())
-	}
+	skipCheck(t)
 
 	validRoot := t.TempDir()
 
