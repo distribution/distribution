@@ -1,6 +1,3 @@
-//go:build include_gcs
-// +build include_gcs
-
 // Package gcs provides a storagedriver.StorageDriver implementation to
 // store blobs in Google cloud storage.
 //
