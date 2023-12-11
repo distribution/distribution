@@ -151,7 +151,7 @@ Review the [requirements](../#requirements), then follow these steps.
 3. Create a password file `auth/nginx.htpasswd` for "testuser" and "testpassword".
 
    ```console
-   $ docker run --rm --entrypoint htpasswd registry:2 -Bbn testuser testpassword > auth/nginx.htpasswd
+   $ docker run --rm --entrypoint htpasswd httpd -Bbn testuser testpassword > auth/nginx.htpasswd
    ```
 
    > **Note**: If you do not want to use `bcrypt`, you can omit the `-B` parameter.
