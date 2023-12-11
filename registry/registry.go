@@ -17,6 +17,7 @@ import (
 	gorhandlers "github.com/gorilla/handlers"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"golang.org/x/crypto/acme"
 	"golang.org/x/crypto/acme/autocert"
 
@@ -25,6 +26,7 @@ import (
 	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/distribution/distribution/v3/registry/handlers"
 	"github.com/distribution/distribution/v3/registry/listener"
+	"github.com/distribution/distribution/v3/tracing"
 	"github.com/distribution/distribution/v3/version"
 )
 
@@ -152,6 +154,12 @@ func NewRegistry(ctx context.Context, config *configuration.Configuration) (*Reg
 		handler = applyHandlerMiddleware(config, handler)
 	}
 
+	err = tracing.InitOpenTelemetry(app.Context)
+	if err != nil {
+		return nil, fmt.Errorf("error during open telemetry initialization: %v", err)
+	}
+	handler = otelHandler(handler)
+
 	server := &http.Server{
 		Handler: handler,
 	}
@@ -161,6 +169,13 @@ func NewRegistry(ctx context.Context, config *configuration.Configuration) (*Reg
 		config: config,
 		server: server,
 	}, nil
+}
+
+// otelHandler returns an http.Handler that wraps the provided `next` handler with OpenTelemetry instrumentation.
+// This instrumentation tracks each HTTP request, creating spans with names derived from the request method and URL path.
+func otelHandler(next http.Handler) http.Handler {
+	return otelhttp.NewHandler(next, "",
+		otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string { return r.Method + " " + r.URL.Path }))
 }
 
 // takes a list of cipher suites and converts it to a list of respective tls constants
