@@ -1,6 +1,3 @@
-//go:build include_gcs
-// +build include_gcs
-
 package gcs
 
 import (

@@ -100,8 +100,6 @@ the environment variable `BUILDTAGS`.
 <dl>
 <dt>noresumabledigest</dt>
 <dd>Compiles without resumable digest support</dd>
-<dt>include_gcs</dt>
-<dd>Adds support for <a href="https://cloud.google.com/storage">Google Cloud Storage</a></dd>
 </dl>
 
 ### Local cloud storage environment

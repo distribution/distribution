@@ -22,7 +22,7 @@ RUN --mount=target=. \
 FROM base AS build
 ARG TARGETPLATFORM
 ARG LDFLAGS="-s -w"
-ARG BUILDTAGS="include_gcs"
+ARG BUILDTAGS=""
 RUN --mount=type=bind,target=/src \
     --mount=type=cache,target=/root/.cache/go-build \
     --mount=target=/go/pkg/mod,type=cache \
