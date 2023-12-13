@@ -680,6 +680,10 @@ func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.Read
 
 // Writer returns a FileWriter which will store the content written to it
 // at the location designated by "path" after the call to Commit.
+// It only allows appending to paths with zero size committed content,
+// in which the existing content is overridden with the new content.
+// It returns storagedriver.Error when appending to paths
+// with non-zero committed content.
 func (d *driver) Writer(ctx context.Context, path string, appendMode bool) (storagedriver.FileWriter, error) {
 	key := d.s3Path(path)
 	if !appendMode {
@@ -713,7 +717,30 @@ func (d *driver) Writer(ctx context.Context, path string, appendMode bool) (stor
 		// if there were no more results to return after the first call, resp.IsTruncated would have been false
 		// and the loop would be exited without recalling ListMultipartUploads
 		if len(resp.Uploads) == 0 {
-			break
+			fi, err := d.Stat(ctx, path)
+			if err != nil {
+				return nil, parseError(path, err)
+			}
+
+			if fi.Size() == 0 {
+				resp, err := d.S3.CreateMultipartUploadWithContext(ctx, &s3.CreateMultipartUploadInput{
+					Bucket:               aws.String(d.Bucket),
+					Key:                  aws.String(key),
+					ContentType:          d.getContentType(),
+					ACL:                  d.getACL(),
+					ServerSideEncryption: d.getEncryptionMode(),
+					SSEKMSKeyId:          d.getSSEKMSKeyID(),
+					StorageClass:         d.getStorageClass(),
+				})
+				if err != nil {
+					return nil, err
+				}
+				return d.newWriter(ctx, key, *resp.UploadId, nil), nil
+			}
+			return nil, storagedriver.Error{
+				DriverName: driverName,
+				Detail:     fmt.Errorf("append to zero-size path %s unsupported", path),
+			}
 		}
 
 		var allParts []*s3.Part

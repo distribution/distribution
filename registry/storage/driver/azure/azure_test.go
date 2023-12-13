@@ -2,7 +2,6 @@ package azure
 
 import (
 	"context"
-	"fmt"
 	"math/rand"
 	"os"
 	"strings"
@@ -10,7 +9,6 @@ import (
 
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/distribution/v3/registry/storage/driver/testsuites"
-	"gopkg.in/check.v1"
 )
 
 const (
@@ -22,10 +20,7 @@ const (
 )
 
 var azureDriverConstructor func() (storagedriver.StorageDriver, error)
-var skipCheck func() string
-
-// Hook up gocheck into the "go test" runner.
-func Test(t *testing.T) { check.TestingT(t) }
+var skipCheck func(tb testing.TB)
 
 func init() {
 	var (
@@ -72,14 +67,23 @@ func init() {
 	}
 
 	// Skip Azure storage driver tests if environment variable parameters are not provided
-	skipCheck = func() string {
-		if len(missing) > 0 {
-			return fmt.Sprintf("Must set %s environment variables to run Azure tests", strings.Join(missing, ", "))
-		}
-		return ""
-	}
+	skipCheck = func(tb testing.TB) {
+		tb.Helper()
 
-	testsuites.RegisterSuite(azureDriverConstructor, skipCheck)
+		if len(missing) > 0 {
+			tb.Skipf("Must set %s environment variables to run Azure tests", strings.Join(missing, ", "))
+		}
+	}
+}
+
+func TestAzureDriverSuite(t *testing.T) {
+	skipCheck(t)
+	testsuites.Driver(t, azureDriverConstructor)
+}
+
+func BenchmarkAzureDriverSuite(b *testing.B) {
+	skipCheck(b)
+	testsuites.BenchDriver(b, azureDriverConstructor)
 }
 
 var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
@@ -93,9 +97,7 @@ func randStringRunes(n int) string {
 }
 
 func TestCommitAfterMove(t *testing.T) {
-	if skipCheck() != "" {
-		t.Skip(skipCheck())
-	}
+	skipCheck(t)
 
 	driver, err := azureDriverConstructor()
 	if err != nil {

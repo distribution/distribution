@@ -74,6 +74,11 @@ type StorageDriver interface {
 
 	// Writer returns a FileWriter which will store the content written to it
 	// at the location designated by "path" after the call to Commit.
+	// A path may be appended to if it has not been committed, or if the
+	// existing committed content is zero length.
+	//
+	// The behaviour of appending to paths with non-empty committed content is
+	// undefined. Specific implementations may document their own behavior.
 	Writer(ctx context.Context, path string, append bool) (FileWriter, error)
 
 	// Stat retrieves the FileInfo for the given path, including the current

@@ -14,15 +14,11 @@ import (
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
-	"gopkg.in/check.v1"
 )
-
-// Hook up gocheck into the "go test" runner.
-func Test(t *testing.T) { check.TestingT(t) }
 
 var (
 	gcsDriverConstructor func(rootDirectory string) (storagedriver.StorageDriver, error)
-	skipGCS              func() string
+	skipCheck            func(tb testing.TB)
 )
 
 func init() {
@@ -30,15 +26,12 @@ func init() {
 	credentials := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
 
 	// Skip GCS storage driver tests if environment variable parameters are not provided
-	skipGCS = func() string {
-		if bucket == "" || credentials == "" {
-			return "The following environment variables must be set to enable these tests: REGISTRY_STORAGE_GCS_BUCKET, GOOGLE_APPLICATION_CREDENTIALS"
-		}
-		return ""
-	}
+	skipCheck = func(tb testing.TB) {
+		tb.Helper()
 
-	if skipGCS() != "" {
-		return
+		if bucket == "" || credentials == "" {
+			tb.Skip("The following environment variables must be set to enable these tests: REGISTRY_STORAGE_GCS_BUCKET, GOOGLE_APPLICATION_CREDENTIALS")
+		}
 	}
 
 	jsonKey, err := os.ReadFile(credentials)
@@ -46,11 +39,6 @@ func init() {
 		panic(fmt.Sprintf("Error reading JSON key : %v", err))
 	}
 
-	root, err := os.MkdirTemp("", "driver-")
-	if err != nil {
-		panic(err)
-	}
-	defer os.Remove(root)
 	var ts oauth2.TokenSource
 	var email string
 	var privateKey []byte
@@ -82,7 +70,7 @@ func init() {
 	gcsDriverConstructor = func(rootDirectory string) (storagedriver.StorageDriver, error) {
 		parameters := driverParameters{
 			bucket:         bucket,
-			rootDirectory:  root,
+			rootDirectory:  rootDirectory,
 			email:          email,
 			privateKey:     privateKey,
 			client:         oauth2.NewClient(dcontext.Background(), ts),
@@ -93,17 +81,29 @@ func init() {
 
 		return New(context.Background(), parameters)
 	}
+}
 
-	testsuites.RegisterSuite(func() (storagedriver.StorageDriver, error) {
+func newDriverConstructor(tb testing.TB) testsuites.DriverConstructor {
+	root := tb.TempDir()
+
+	return func() (storagedriver.StorageDriver, error) {
 		return gcsDriverConstructor(root)
-	}, skipGCS)
+	}
+}
+
+func TestGCSDriverSuite(t *testing.T) {
+	skipCheck(t)
+	testsuites.Driver(t, newDriverConstructor(t))
+}
+
+func BenchmarkGCSDriverSuite(b *testing.B) {
+	skipCheck(b)
+	testsuites.BenchDriver(b, newDriverConstructor(b))
 }
 
 // Test Committing a FileWriter without having called Write
 func TestCommitEmpty(t *testing.T) {
-	if skipGCS() != "" {
-		t.Skip(skipGCS())
-	}
+	skipCheck(t)
 
 	validRoot := t.TempDir()
 
@@ -144,9 +144,7 @@ func TestCommitEmpty(t *testing.T) {
 // Test Committing a FileWriter after having written exactly
 // defaultChunksize bytes.
 func TestCommit(t *testing.T) {
-	if skipGCS() != "" {
-		t.Skip(skipGCS())
-	}
+	skipCheck(t)
 
 	validRoot := t.TempDir()
 
@@ -190,9 +188,7 @@ func TestCommit(t *testing.T) {
 }
 
 func TestRetry(t *testing.T) {
-	if skipGCS() != "" {
-		t.Skip(skipGCS())
-	}
+	skipCheck(t)
 
 	assertError := func(expected string, observed error) {
 		observedMsg := "<nil>"
@@ -227,9 +223,7 @@ func TestRetry(t *testing.T) {
 }
 
 func TestEmptyRootList(t *testing.T) {
-	if skipGCS() != "" {
-		t.Skip(skipGCS())
-	}
+	skipCheck(t)
 
 	validRoot := t.TempDir()
 
@@ -284,9 +278,7 @@ func TestEmptyRootList(t *testing.T) {
 
 // TestMoveDirectory checks that moving a directory returns an error.
 func TestMoveDirectory(t *testing.T) {
-	if skipGCS() != "" {
-		t.Skip(skipGCS())
-	}
+	skipCheck(t)
 
 	validRoot := t.TempDir()
 

@@ -1,10 +1,10 @@
 package configuration
 
 import (
-	"os"
 	"reflect"
+	"testing"
 
-	"gopkg.in/check.v1"
+	"github.com/stretchr/testify/require"
 )
 
 type localConfiguration struct {
@@ -41,15 +41,10 @@ notifications:
   - name: "bar"
   - name: "car"`
 
-type ParserSuite struct{}
-
-var _ = check.Suite(new(ParserSuite))
-
-func (suite *ParserSuite) TestParserOverwriteIninitializedPoiner(c *check.C) {
+func TestParserOverwriteIninitializedPoiner(t *testing.T) {
 	config := localConfiguration{}
 
-	os.Setenv("REGISTRY_LOG_FORMATTER", "json")
-	defer os.Unsetenv("REGISTRY_LOG_FORMATTER")
+	t.Setenv("REGISTRY_LOG_FORMATTER", "json")
 
 	p := NewParser("registry", []VersionedParseInfo{
 		{
@@ -62,8 +57,8 @@ func (suite *ParserSuite) TestParserOverwriteIninitializedPoiner(c *check.C) {
 	})
 
 	err := p.Parse([]byte(testConfig), &config)
-	c.Assert(err, check.IsNil)
-	c.Assert(config, check.DeepEquals, expectedConfig)
+	require.NoError(t, err)
+	require.Equal(t, expectedConfig, config)
 }
 
 const testConfig2 = `version: "0.1"
@@ -74,18 +69,15 @@ notifications:
   - name: "val2"
   - name: "car"`
 
-func (suite *ParserSuite) TestParseOverwriteUnininitializedPoiner(c *check.C) {
+func TestParseOverwriteUnininitializedPoiner(t *testing.T) {
 	config := localConfiguration{}
 
-	os.Setenv("REGISTRY_LOG_FORMATTER", "json")
-	defer os.Unsetenv("REGISTRY_LOG_FORMATTER")
+	t.Setenv("REGISTRY_LOG_FORMATTER", "json")
 
 	// override only first two notificationsvalues
 	// in the tetConfig: leave the last value unchanged.
-	os.Setenv("REGISTRY_NOTIFICATIONS_0_NAME", "foo")
-	defer os.Unsetenv("REGISTRY_NOTIFICATIONS_0_NAME")
-	os.Setenv("REGISTRY_NOTIFICATIONS_1_NAME", "bar")
-	defer os.Unsetenv("REGISTRY_NOTIFICATIONS_1_NAME")
+	t.Setenv("REGISTRY_NOTIFICATIONS_0_NAME", "foo")
+	t.Setenv("REGISTRY_NOTIFICATIONS_1_NAME", "bar")
 
 	p := NewParser("registry", []VersionedParseInfo{
 		{
@@ -98,6 +90,6 @@ func (suite *ParserSuite) TestParseOverwriteUnininitializedPoiner(c *check.C) {
 	})
 
 	err := p.Parse([]byte(testConfig2), &config)
-	c.Assert(err, check.IsNil)
-	c.Assert(config, check.DeepEquals, expectedConfig)
+	require.NoError(t, err)
+	require.Equal(t, expectedConfig, config)
 }

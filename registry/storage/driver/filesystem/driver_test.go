@@ -1,35 +1,29 @@
 package filesystem
 
 import (
-	"os"
 	"reflect"
 	"testing"
 
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/distribution/v3/registry/storage/driver/testsuites"
-	"gopkg.in/check.v1"
 )
 
-// Hook up gocheck into the "go test" runner.
-func Test(t *testing.T) { check.TestingT(t) }
+func newDriverConstructor(tb testing.TB) testsuites.DriverConstructor {
+	root := tb.TempDir()
 
-func init() {
-	root, err := os.MkdirTemp("", "driver-")
-	if err != nil {
-		panic(err)
+	return func() (storagedriver.StorageDriver, error) {
+		return FromParameters(map[string]interface{}{
+			"rootdirectory": root,
+		})
 	}
-	defer os.Remove(root)
+}
 
-	drvr, err := FromParameters(map[string]interface{}{
-		"rootdirectory": root,
-	})
-	if err != nil {
-		panic(err)
-	}
+func TestFilesystemDriverSuite(t *testing.T) {
+	testsuites.Driver(t, newDriverConstructor(t))
+}
 
-	testsuites.RegisterSuite(func() (storagedriver.StorageDriver, error) {
-		return drvr, nil
-	}, testsuites.NeverSkip)
+func BenchmarkFilesystemDriverSuite(b *testing.B) {
+	testsuites.BenchDriver(b, newDriverConstructor(b))
 }
 
 func TestFromParametersImpl(t *testing.T) {

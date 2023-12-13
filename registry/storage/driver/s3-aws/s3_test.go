@@ -16,7 +16,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
-
 	"github.com/distribution/distribution/v3/internal/dcontext"
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/distribution/v3/registry/storage/driver/testsuites"
@@ -24,7 +23,7 @@ import (
 
 var (
 	s3DriverConstructor func(rootDirectory, storageClass string) (*Driver, error)
-	skipS3              func() string
+	skipCheck           func(tb testing.TB)
 )
 
 func init() {
@@ -48,12 +47,7 @@ func init() {
 		logLevel         = os.Getenv("S3_LOGLEVEL")
 	)
 
-	root, err := os.MkdirTemp("", "driver-")
-	if err != nil {
-		panic(err)
-	}
-	defer os.Remove(root)
-
+	var err error
 	s3DriverConstructor = func(rootDirectory, storageClass string) (*Driver, error) {
 		encryptBool := false
 		if encrypt != "" {
@@ -146,22 +140,35 @@ func init() {
 	}
 
 	// Skip S3 storage driver tests if environment variable parameters are not provided
-	skipS3 = func() string {
-		if accessKey == "" || secretKey == "" || region == "" || bucket == "" || encrypt == "" {
-			return "Must set AWS_ACCESS_KEY, AWS_SECRET_KEY, AWS_REGION, S3_BUCKET, and S3_ENCRYPT to run S3 tests"
-		}
-		return ""
-	}
+	skipCheck = func(tb testing.TB) {
+		tb.Helper()
 
-	testsuites.RegisterSuite(func() (storagedriver.StorageDriver, error) {
+		if accessKey == "" || secretKey == "" || region == "" || bucket == "" || encrypt == "" {
+			tb.Skip("Must set AWS_ACCESS_KEY, AWS_SECRET_KEY, AWS_REGION, S3_BUCKET, and S3_ENCRYPT to run S3 tests")
+		}
+	}
+}
+
+func newDriverConstructor(tb testing.TB) testsuites.DriverConstructor {
+	root := tb.TempDir()
+
+	return func() (storagedriver.StorageDriver, error) {
 		return s3DriverConstructor(root, s3.StorageClassStandard)
-	}, skipS3)
+	}
+}
+
+func TestS3DriverSuite(t *testing.T) {
+	skipCheck(t)
+	testsuites.Driver(t, newDriverConstructor(t))
+}
+
+func BenchmarkS3DriverSuite(b *testing.B) {
+	skipCheck(b)
+	testsuites.BenchDriver(b, newDriverConstructor(b))
 }
 
 func TestEmptyRootList(t *testing.T) {
-	if skipS3() != "" {
-		t.Skip(skipS3())
-	}
+	skipCheck(t)
 
 	validRoot := t.TempDir()
 	rootedDriver, err := s3DriverConstructor(validRoot, s3.StorageClassStandard)
@@ -205,9 +212,7 @@ func TestEmptyRootList(t *testing.T) {
 }
 
 func TestStorageClass(t *testing.T) {
-	if skipS3() != "" {
-		t.Skip(skipS3())
-	}
+	skipCheck(t)
 
 	rootDir := t.TempDir()
 	contents := []byte("contents")
@@ -269,9 +274,7 @@ func TestStorageClass(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	if skipS3() != "" {
-		t.Skip(skipS3())
-	}
+	skipCheck(t)
 
 	rootDir := t.TempDir()
 
@@ -470,9 +473,7 @@ func TestDelete(t *testing.T) {
 }
 
 func TestWalk(t *testing.T) {
-	if skipS3() != "" {
-		t.Skip(skipS3())
-	}
+	skipCheck(t)
 
 	rootDir := t.TempDir()
 
@@ -711,9 +712,7 @@ func TestWalk(t *testing.T) {
 }
 
 func TestOverThousandBlobs(t *testing.T) {
-	if skipS3() != "" {
-		t.Skip(skipS3())
-	}
+	skipCheck(t)
 
 	rootDir := t.TempDir()
 	standardDriver, err := s3DriverConstructor(rootDir, s3.StorageClassStandard)
@@ -739,9 +738,7 @@ func TestOverThousandBlobs(t *testing.T) {
 }
 
 func TestMoveWithMultipartCopy(t *testing.T) {
-	if skipS3() != "" {
-		t.Skip(skipS3())
-	}
+	skipCheck(t)
 
 	rootDir := t.TempDir()
 	d, err := s3DriverConstructor(rootDir, s3.StorageClassStandard)
@@ -792,9 +789,7 @@ func TestMoveWithMultipartCopy(t *testing.T) {
 }
 
 func TestListObjectsV2(t *testing.T) {
-	if skipS3() != "" {
-		t.Skip(skipS3())
-	}
+	skipCheck(t)
 
 	rootDir := t.TempDir()
 	d, err := s3DriverConstructor(rootDir, s3.StorageClassStandard)

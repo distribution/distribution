@@ -3,18 +3,14 @@ package configuration
 import (
 	"bytes"
 	"net/http"
-	"os"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
 
-	"gopkg.in/check.v1"
+	"github.com/stretchr/testify/suite"
 	"gopkg.in/yaml.v2"
 )
-
-// Hook up gocheck into the "go test" runner
-func Test(t *testing.T) { check.TestingT(t) }
 
 // configStruct is a canonical example configuration, which should map to configYamlV0_1
 var configStruct = Configuration{
@@ -147,7 +143,7 @@ var configStruct = Configuration{
 }
 
 // configYamlV0_1 is a Version 0.1 yaml document representing configStruct
-var configYamlV0_1 = `
+const configYamlV0_1 = `
 version: 0.1
 log:
   level: info
@@ -201,7 +197,7 @@ redis:
 
 // inmemoryConfigYamlV0_1 is a Version 0.1 yaml document specifying an inmemory
 // storage driver with no parameters
-var inmemoryConfigYamlV0_1 = `
+const inmemoryConfigYamlV0_1 = `
 version: 0.1
 log:
   level: info
@@ -229,54 +225,56 @@ http:
 `
 
 type ConfigSuite struct {
+	suite.Suite
 	expectedConfig *Configuration
 }
 
-var _ = check.Suite(new(ConfigSuite))
+func TestConfigSuite(t *testing.T) {
+	suite.Run(t, new(ConfigSuite))
+}
 
-func (suite *ConfigSuite) SetUpTest(c *check.C) {
-	os.Clearenv()
+func (suite *ConfigSuite) SetupTest() {
 	suite.expectedConfig = copyConfig(configStruct)
 }
 
 // TestMarshalRoundtrip validates that configStruct can be marshaled and
 // unmarshaled without changing any parameters
-func (suite *ConfigSuite) TestMarshalRoundtrip(c *check.C) {
+func (suite *ConfigSuite) TestMarshalRoundtrip() {
 	configBytes, err := yaml.Marshal(suite.expectedConfig)
-	c.Assert(err, check.IsNil)
+	suite.Require().NoError(err)
 	config, err := Parse(bytes.NewReader(configBytes))
-	c.Log(string(configBytes))
-	c.Assert(err, check.IsNil)
-	c.Assert(config, check.DeepEquals, suite.expectedConfig)
+	suite.T().Log(string(configBytes))
+	suite.Require().NoError(err)
+	suite.Require().Equal(suite.expectedConfig, config)
 }
 
 // TestParseSimple validates that configYamlV0_1 can be parsed into a struct
 // matching configStruct
-func (suite *ConfigSuite) TestParseSimple(c *check.C) {
+func (suite *ConfigSuite) TestParseSimple() {
 	config, err := Parse(bytes.NewReader([]byte(configYamlV0_1)))
-	c.Assert(err, check.IsNil)
-	c.Assert(config, check.DeepEquals, suite.expectedConfig)
+	suite.Require().NoError(err)
+	suite.Require().Equal(suite.expectedConfig, config)
 }
 
 // TestParseInmemory validates that configuration yaml with storage provided as
 // a string can be parsed into a Configuration struct with no storage parameters
-func (suite *ConfigSuite) TestParseInmemory(c *check.C) {
+func (suite *ConfigSuite) TestParseInmemory() {
 	suite.expectedConfig.Storage = Storage{"inmemory": Parameters{}}
 	suite.expectedConfig.Log.Fields = nil
 	suite.expectedConfig.Redis = Redis{}
 
 	config, err := Parse(bytes.NewReader([]byte(inmemoryConfigYamlV0_1)))
-	c.Assert(err, check.IsNil)
-	c.Assert(config, check.DeepEquals, suite.expectedConfig)
+	suite.Require().NoError(err)
+	suite.Require().Equal(suite.expectedConfig, config)
 }
 
 // TestParseIncomplete validates that an incomplete yaml configuration cannot
 // be parsed without providing environment variables to fill in the missing
 // components.
-func (suite *ConfigSuite) TestParseIncomplete(c *check.C) {
+func (suite *ConfigSuite) TestParseIncomplete() {
 	incompleteConfigYaml := "version: 0.1"
 	_, err := Parse(bytes.NewReader([]byte(incompleteConfigYaml)))
-	c.Assert(err, check.NotNil)
+	suite.Require().Error(err)
 
 	suite.expectedConfig.Log.Fields = nil
 	suite.expectedConfig.Storage = Storage{"filesystem": Parameters{"rootdirectory": "/tmp/testroot"}}
@@ -287,135 +285,134 @@ func (suite *ConfigSuite) TestParseIncomplete(c *check.C) {
 
 	// Note: this also tests that REGISTRY_STORAGE and
 	// REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY can be used together
-	os.Setenv("REGISTRY_STORAGE", "filesystem")
-	os.Setenv("REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY", "/tmp/testroot")
-	os.Setenv("REGISTRY_AUTH", "silly")
-	os.Setenv("REGISTRY_AUTH_SILLY_REALM", "silly")
+	suite.T().Setenv("REGISTRY_STORAGE", "filesystem")
+	suite.T().Setenv("REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY", "/tmp/testroot")
+	suite.T().Setenv("REGISTRY_AUTH", "silly")
+	suite.T().Setenv("REGISTRY_AUTH_SILLY_REALM", "silly")
 
 	config, err := Parse(bytes.NewReader([]byte(incompleteConfigYaml)))
-	c.Assert(err, check.IsNil)
-	c.Assert(config, check.DeepEquals, suite.expectedConfig)
+	suite.Require().NoError(err)
+	suite.Require().Equal(suite.expectedConfig, config)
 }
 
 // TestParseWithSameEnvStorage validates that providing environment variables
 // that match the given storage type will only include environment-defined
 // parameters and remove yaml-defined parameters
-func (suite *ConfigSuite) TestParseWithSameEnvStorage(c *check.C) {
+func (suite *ConfigSuite) TestParseWithSameEnvStorage() {
 	suite.expectedConfig.Storage = Storage{"somedriver": Parameters{"region": "us-east-1"}}
 
-	os.Setenv("REGISTRY_STORAGE", "somedriver")
-	os.Setenv("REGISTRY_STORAGE_SOMEDRIVER_REGION", "us-east-1")
+	suite.T().Setenv("REGISTRY_STORAGE", "somedriver")
+	suite.T().Setenv("REGISTRY_STORAGE_SOMEDRIVER_REGION", "us-east-1")
 
 	config, err := Parse(bytes.NewReader([]byte(configYamlV0_1)))
-	c.Assert(err, check.IsNil)
-	c.Assert(config, check.DeepEquals, suite.expectedConfig)
+	suite.Require().NoError(err)
+	suite.Require().Equal(suite.expectedConfig, config)
 }
 
 // TestParseWithDifferentEnvStorageParams validates that providing environment variables that change
 // and add to the given storage parameters will change and add parameters to the parsed
 // Configuration struct
-func (suite *ConfigSuite) TestParseWithDifferentEnvStorageParams(c *check.C) {
+func (suite *ConfigSuite) TestParseWithDifferentEnvStorageParams() {
 	suite.expectedConfig.Storage.setParameter("string1", "us-west-1")
 	suite.expectedConfig.Storage.setParameter("bool1", true)
 	suite.expectedConfig.Storage.setParameter("newparam", "some Value")
 
-	os.Setenv("REGISTRY_STORAGE_SOMEDRIVER_STRING1", "us-west-1")
-	os.Setenv("REGISTRY_STORAGE_SOMEDRIVER_BOOL1", "true")
-	os.Setenv("REGISTRY_STORAGE_SOMEDRIVER_NEWPARAM", "some Value")
+	suite.T().Setenv("REGISTRY_STORAGE_SOMEDRIVER_STRING1", "us-west-1")
+	suite.T().Setenv("REGISTRY_STORAGE_SOMEDRIVER_BOOL1", "true")
+	suite.T().Setenv("REGISTRY_STORAGE_SOMEDRIVER_NEWPARAM", "some Value")
 
 	config, err := Parse(bytes.NewReader([]byte(configYamlV0_1)))
-	c.Assert(err, check.IsNil)
-	c.Assert(config, check.DeepEquals, suite.expectedConfig)
+	suite.Require().NoError(err)
+	suite.Require().Equal(suite.expectedConfig, config)
 }
 
 // TestParseWithDifferentEnvStorageType validates that providing an environment variable that
 // changes the storage type will be reflected in the parsed Configuration struct
-func (suite *ConfigSuite) TestParseWithDifferentEnvStorageType(c *check.C) {
+func (suite *ConfigSuite) TestParseWithDifferentEnvStorageType() {
 	suite.expectedConfig.Storage = Storage{"inmemory": Parameters{}}
 
-	os.Setenv("REGISTRY_STORAGE", "inmemory")
+	suite.T().Setenv("REGISTRY_STORAGE", "inmemory")
 
 	config, err := Parse(bytes.NewReader([]byte(configYamlV0_1)))
-	c.Assert(err, check.IsNil)
-	c.Assert(config, check.DeepEquals, suite.expectedConfig)
+	suite.Require().NoError(err)
+	suite.Require().Equal(suite.expectedConfig, config)
 }
 
 // TestParseWithDifferentEnvStorageTypeAndParams validates that providing an environment variable
 // that changes the storage type will be reflected in the parsed Configuration struct and that
 // environment storage parameters will also be included
-func (suite *ConfigSuite) TestParseWithDifferentEnvStorageTypeAndParams(c *check.C) {
+func (suite *ConfigSuite) TestParseWithDifferentEnvStorageTypeAndParams() {
 	suite.expectedConfig.Storage = Storage{"filesystem": Parameters{}}
 	suite.expectedConfig.Storage.setParameter("rootdirectory", "/tmp/testroot")
 
-	os.Setenv("REGISTRY_STORAGE", "filesystem")
-	os.Setenv("REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY", "/tmp/testroot")
+	suite.T().Setenv("REGISTRY_STORAGE", "filesystem")
+	suite.T().Setenv("REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY", "/tmp/testroot")
 
 	config, err := Parse(bytes.NewReader([]byte(configYamlV0_1)))
-	c.Assert(err, check.IsNil)
-	c.Assert(config, check.DeepEquals, suite.expectedConfig)
+	suite.Require().NoError(err)
+	suite.Require().Equal(suite.expectedConfig, config)
 }
 
 // TestParseWithSameEnvLoglevel validates that providing an environment variable defining the log
 // level to the same as the one provided in the yaml will not change the parsed Configuration struct
-func (suite *ConfigSuite) TestParseWithSameEnvLoglevel(c *check.C) {
-	os.Setenv("REGISTRY_LOGLEVEL", "info")
+func (suite *ConfigSuite) TestParseWithSameEnvLoglevel() {
+	suite.T().Setenv("REGISTRY_LOGLEVEL", "info")
 
 	config, err := Parse(bytes.NewReader([]byte(configYamlV0_1)))
-	c.Assert(err, check.IsNil)
-	c.Assert(config, check.DeepEquals, suite.expectedConfig)
+	suite.Require().NoError(err)
+	suite.Require().Equal(suite.expectedConfig, config)
 }
 
 // TestParseWithDifferentEnvLoglevel validates that providing an environment variable defining the
 // log level will override the value provided in the yaml document
-func (suite *ConfigSuite) TestParseWithDifferentEnvLoglevel(c *check.C) {
+func (suite *ConfigSuite) TestParseWithDifferentEnvLoglevel() {
 	suite.expectedConfig.Log.Level = "error"
 
-	os.Setenv("REGISTRY_LOG_LEVEL", "error")
+	suite.T().Setenv("REGISTRY_LOG_LEVEL", "error")
 
 	config, err := Parse(bytes.NewReader([]byte(configYamlV0_1)))
-	c.Assert(err, check.IsNil)
-	c.Assert(config, check.DeepEquals, suite.expectedConfig)
+	suite.Require().NoError(err)
+	suite.Require().Equal(suite.expectedConfig, config)
 }
 
 // TestParseInvalidLoglevel validates that the parser will fail to parse a
 // configuration if the loglevel is malformed
-func (suite *ConfigSuite) TestParseInvalidLoglevel(c *check.C) {
+func (suite *ConfigSuite) TestParseInvalidLoglevel() {
 	invalidConfigYaml := "version: 0.1\nloglevel: derp\nstorage: inmemory"
 	_, err := Parse(bytes.NewReader([]byte(invalidConfigYaml)))
-	c.Assert(err, check.NotNil)
+	suite.Require().Error(err)
 
-	os.Setenv("REGISTRY_LOGLEVEL", "derp")
+	suite.T().Setenv("REGISTRY_LOGLEVEL", "derp")
 
 	_, err = Parse(bytes.NewReader([]byte(configYamlV0_1)))
-	c.Assert(err, check.NotNil)
+	suite.Require().Error(err)
 }
 
 // TestParseInvalidVersion validates that the parser will fail to parse a newer configuration
 // version than the CurrentVersion
-func (suite *ConfigSuite) TestParseInvalidVersion(c *check.C) {
+func (suite *ConfigSuite) TestParseInvalidVersion() {
 	suite.expectedConfig.Version = MajorMinorVersion(CurrentVersion.Major(), CurrentVersion.Minor()+1)
 	configBytes, err := yaml.Marshal(suite.expectedConfig)
-	c.Assert(err, check.IsNil)
+	suite.Require().NoError(err)
 	_, err = Parse(bytes.NewReader(configBytes))
-	c.Assert(err, check.NotNil)
+	suite.Require().Error(err)
 }
 
 // TestParseExtraneousVars validates that environment variables referring to
 // nonexistent variables don't cause side effects.
-func (suite *ConfigSuite) TestParseExtraneousVars(c *check.C) {
-
+func (suite *ConfigSuite) TestParseExtraneousVars() {
 	// Environment variables which shouldn't set config items
-	os.Setenv("REGISTRY_DUCKS", "quack")
-	os.Setenv("REGISTRY_REPORTING_ASDF", "ghjk")
+	suite.T().Setenv("REGISTRY_DUCKS", "quack")
+	suite.T().Setenv("REGISTRY_REPORTING_ASDF", "ghjk")
 
 	config, err := Parse(bytes.NewReader([]byte(configYamlV0_1)))
-	c.Assert(err, check.IsNil)
-	c.Assert(config, check.DeepEquals, suite.expectedConfig)
+	suite.Require().NoError(err)
+	suite.Require().Equal(suite.expectedConfig, config)
 }
 
 // TestParseEnvVarImplicitMaps validates that environment variables can set
 // values in maps that don't already exist.
-func (suite *ConfigSuite) TestParseEnvVarImplicitMaps(c *check.C) {
+func (suite *ConfigSuite) TestParseEnvVarImplicitMaps() {
 	readonly := make(map[string]interface{})
 	readonly["enabled"] = true
 
@@ -424,61 +421,63 @@ func (suite *ConfigSuite) TestParseEnvVarImplicitMaps(c *check.C) {
 
 	suite.expectedConfig.Storage["maintenance"] = maintenance
 
-	os.Setenv("REGISTRY_STORAGE_MAINTENANCE_READONLY_ENABLED", "true")
+	suite.T().Setenv("REGISTRY_STORAGE_MAINTENANCE_READONLY_ENABLED", "true")
 
 	config, err := Parse(bytes.NewReader([]byte(configYamlV0_1)))
-	c.Assert(err, check.IsNil)
-	c.Assert(config, check.DeepEquals, suite.expectedConfig)
+	suite.Require().NoError(err)
+	suite.Require().Equal(suite.expectedConfig, config)
 }
 
 // TestParseEnvWrongTypeMap validates that incorrectly attempting to unmarshal a
 // string over existing map fails.
-func (suite *ConfigSuite) TestParseEnvWrongTypeMap(c *check.C) {
-	os.Setenv("REGISTRY_STORAGE_SOMEDRIVER", "somestring")
+func (suite *ConfigSuite) TestParseEnvWrongTypeMap() {
+	suite.T().Setenv("REGISTRY_STORAGE_SOMEDRIVER", "somestring")
 
 	_, err := Parse(bytes.NewReader([]byte(configYamlV0_1)))
-	c.Assert(err, check.NotNil)
+	suite.Require().Error(err)
 }
 
 // TestParseEnvWrongTypeStruct validates that incorrectly attempting to
 // unmarshal a string into a struct fails.
-func (suite *ConfigSuite) TestParseEnvWrongTypeStruct(c *check.C) {
-	os.Setenv("REGISTRY_STORAGE_LOG", "somestring")
+func (suite *ConfigSuite) TestParseEnvWrongTypeStruct() {
+	suite.T().Setenv("REGISTRY_STORAGE_LOG", "somestring")
 
 	_, err := Parse(bytes.NewReader([]byte(configYamlV0_1)))
-	c.Assert(err, check.NotNil)
+	suite.Require().Error(err)
 }
 
 // TestParseEnvWrongTypeSlice validates that incorrectly attempting to
 // unmarshal a string into a slice fails.
-func (suite *ConfigSuite) TestParseEnvWrongTypeSlice(c *check.C) {
-	os.Setenv("REGISTRY_LOG_HOOKS", "somestring")
+func (suite *ConfigSuite) TestParseEnvWrongTypeSlice() {
+	suite.T().Setenv("REGISTRY_LOG_HOOKS", "somestring")
 
 	_, err := Parse(bytes.NewReader([]byte(configYamlV0_1)))
-	c.Assert(err, check.NotNil)
+	suite.Require().Error(err)
 }
 
 // TestParseEnvMany tests several environment variable overrides.
 // The result is not checked - the goal of this test is to detect panics
 // from misuse of reflection.
-func (suite *ConfigSuite) TestParseEnvMany(c *check.C) {
-	os.Setenv("REGISTRY_VERSION", "0.1")
-	os.Setenv("REGISTRY_LOG_LEVEL", "debug")
-	os.Setenv("REGISTRY_LOG_FORMATTER", "json")
-	os.Setenv("REGISTRY_LOG_HOOKS", "json")
-	os.Setenv("REGISTRY_LOG_FIELDS", "abc: xyz")
-	os.Setenv("REGISTRY_LOG_HOOKS", "- type: asdf")
-	os.Setenv("REGISTRY_LOGLEVEL", "debug")
-	os.Setenv("REGISTRY_STORAGE", "somedriver")
-	os.Setenv("REGISTRY_AUTH_PARAMS", "param1: value1")
-	os.Setenv("REGISTRY_AUTH_PARAMS_VALUE2", "value2")
-	os.Setenv("REGISTRY_AUTH_PARAMS_VALUE2", "value2")
+func (suite *ConfigSuite) TestParseEnvMany() {
+	suite.T().Setenv("REGISTRY_VERSION", "0.1")
+	suite.T().Setenv("REGISTRY_LOG_LEVEL", "debug")
+	suite.T().Setenv("REGISTRY_LOG_FORMATTER", "json")
+	suite.T().Setenv("REGISTRY_LOG_HOOKS", "json")
+	suite.T().Setenv("REGISTRY_LOG_FIELDS", "abc: xyz")
+	suite.T().Setenv("REGISTRY_LOG_HOOKS", "- type: asdf")
+	suite.T().Setenv("REGISTRY_LOGLEVEL", "debug")
+	suite.T().Setenv("REGISTRY_STORAGE", "somedriver")
+	suite.T().Setenv("REGISTRY_AUTH_PARAMS", "param1: value1")
+	suite.T().Setenv("REGISTRY_AUTH_PARAMS_VALUE2", "value2")
+	suite.T().Setenv("REGISTRY_AUTH_PARAMS_VALUE2", "value2")
 
 	_, err := Parse(bytes.NewReader([]byte(configYamlV0_1)))
-	c.Assert(err, check.IsNil)
+	suite.Require().NoError(err)
 }
 
-func checkStructs(c *check.C, t reflect.Type, structsChecked map[string]struct{}) {
+func checkStructs(tt *testing.T, t reflect.Type, structsChecked map[string]struct{}) {
+	tt.Helper()
+
 	for t.Kind() == reflect.Ptr || t.Kind() == reflect.Map || t.Kind() == reflect.Slice {
 		t = t.Elem()
 	}
@@ -500,23 +499,23 @@ func checkStructs(c *check.C, t reflect.Type, structsChecked map[string]struct{}
 		// Check that the yaml tag does not contain an _.
 		yamlTag := sf.Tag.Get("yaml")
 		if strings.Contains(yamlTag, "_") {
-			c.Fatalf("yaml field name includes _ character: %s", yamlTag)
+			tt.Fatalf("yaml field name includes _ character: %s", yamlTag)
 		}
 		upper := strings.ToUpper(sf.Name)
 		if _, present := byUpperCase[upper]; present {
-			c.Fatalf("field name collision in configuration object: %s", sf.Name)
+			tt.Fatalf("field name collision in configuration object: %s", sf.Name)
 		}
 		byUpperCase[upper] = i
 
-		checkStructs(c, sf.Type, structsChecked)
+		checkStructs(tt, sf.Type, structsChecked)
 	}
 }
 
 // TestValidateConfigStruct makes sure that the config struct has no members
 // with yaml tags that would be ambiguous to the environment variable parser.
-func (suite *ConfigSuite) TestValidateConfigStruct(c *check.C) {
+func (suite *ConfigSuite) TestValidateConfigStruct() {
 	structsChecked := make(map[string]struct{})
-	checkStructs(c, reflect.TypeOf(Configuration{}), structsChecked)
+	checkStructs(suite.T(), reflect.TypeOf(Configuration{}), structsChecked)
 }
 
 func copyConfig(config Configuration) *Configuration {
