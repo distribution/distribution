@@ -682,7 +682,7 @@ func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.Read
 // at the location designated by "path" after the call to Commit.
 // It only allows appending to paths with zero size committed content,
 // in which the existing content is overridden with the new content.
-// It returns storagedriver.ErrUnsupportedMethod when appending to paths
+// It returns storagedriver.Error when appending to paths
 // with non-zero committed content.
 func (d *driver) Writer(ctx context.Context, path string, appendMode bool) (storagedriver.FileWriter, error) {
 	key := d.s3Path(path)
