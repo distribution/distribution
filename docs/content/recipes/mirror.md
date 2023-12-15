@@ -22,8 +22,7 @@ relying entirely on your local registry is the simplest scenario.
 
 ### Gotcha
 
-It's currently not possible to mirror another private registry. Only the central
-Hub can be mirrored.
+It's currently possible to mirror only one upstream registry at a time.
 
 The URL of a pull-through registry mirror must be the root of a domain.
 No path components other than an optional trailing slash (`/`) are allowed.
@@ -125,6 +124,11 @@ and add the `registry-mirrors` key and value, to make the change persistent.
 > **Note**
 >
 > The mirror URL must be the root of the domain.
+
+> **Note**
+>
+> Currently Docker daemon supports only mirrors of Docker Hub.
+> It is not possible to run the Docker daemon against a pull through cache with another upstream registry.
 
 Save the file and reload Docker for the change to take effect.
 
