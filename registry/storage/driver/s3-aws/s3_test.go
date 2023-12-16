@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"path"
 	"reflect"
@@ -208,6 +209,55 @@ func TestEmptyRootList(t *testing.T) {
 		if !storagedriver.PathRegexp.MatchString(p) {
 			t.Fatalf("unexpected string in path: %q != %q", p, storagedriver.PathRegexp)
 		}
+	}
+}
+
+func TestClientTransport(t *testing.T) {
+	testCases := []struct {
+		skipverify bool
+	}{
+		{true},
+		{false},
+	}
+
+	for _, tc := range testCases {
+		// NOTE(milosgajdos): we cannot simply reuse s3DriverConstructor
+		// because s3DriverConstructor is initialized in init() using the process
+		// env vars: we can not override S3_SKIP_VERIFY env var with t.Setenv
+		params := map[string]interface{}{
+			"region":     os.Getenv("AWS_REGION"),
+			"bucket":     os.Getenv("S3_BUCKET"),
+			"skipverify": tc.skipverify,
+		}
+		t.Run(fmt.Sprintf("SkipVerify %v", tc.skipverify), func(t *testing.T) {
+			drv, err := FromParameters(context.TODO(), params)
+			if err != nil {
+				t.Fatalf("failed to create driver: %v", err)
+			}
+
+			s3drv := drv.baseEmbed.Base.StorageDriver.(*driver)
+			if tc.skipverify {
+				tr, ok := s3drv.S3.Client.Config.HTTPClient.Transport.(*http.Transport)
+				if !ok {
+					t.Fatal("unexpected driver transport")
+				}
+				if !tr.TLSClientConfig.InsecureSkipVerify {
+					t.Errorf("unexpected TLS Config. Expected InsecureSkipVerify: %v, got %v",
+						tc.skipverify,
+						tr.TLSClientConfig.InsecureSkipVerify)
+				}
+				// make sure the proxy is always set
+				if tr.Proxy == nil {
+					t.Fatal("missing HTTP transport proxy config")
+				}
+				return
+			}
+			// if tc.skipverify is false we do not override the driver
+			// HTTP clien transport and leave it to the AWS SDK.
+			if s3drv.S3.Client.Config.HTTPClient.Transport != nil {
+				t.Errorf("unexpected S3 driver client transport")
+			}
+		})
 	}
 }
 
