@@ -113,7 +113,9 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 	if storageParams == nil {
 		storageParams = make(configuration.Parameters)
 	}
-	storageParams["useragent"] = fmt.Sprintf("distribution/%s %s", version.Version, runtime.Version())
+	if storageParams["useragent"] == "" {
+		storageParams["useragent"] = fmt.Sprintf("distribution/%s %s", version.Version, runtime.Version())
+	}
 
 	var err error
 	app.driver, err = factory.Create(app, config.Storage.Type(), storageParams)
