@@ -560,9 +560,8 @@ func New(ctx context.Context, params DriverParameters) (*Driver, error) {
 	}
 
 	if params.SkipVerify {
-		httpTransport := &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		}
+		httpTransport := http.DefaultTransport.(*http.Transport).Clone()
+		httpTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 		awsConfig.WithHTTPClient(&http.Client{
 			Transport: httpTransport,
 		})
