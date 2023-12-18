@@ -111,7 +111,6 @@ type DriverParameters struct {
 	MultipartCopyChunkSize      int64
 	MultipartCopyMaxConcurrency int64
 	MultipartCopyThresholdSize  int64
-	MultipartCombineSmallPart   bool
 	RootDirectory               string
 	StorageClass                string
 	UserAgent                   string
@@ -165,7 +164,6 @@ type driver struct {
 	MultipartCopyChunkSize      int64
 	MultipartCopyMaxConcurrency int64
 	MultipartCopyThresholdSize  int64
-	MultipartCombineSmallPart   bool
 	RootDirectory               string
 	StorageClass                string
 	ObjectACL                   string
@@ -405,23 +403,6 @@ func FromParameters(ctx context.Context, parameters map[string]interface{}) (*Dr
 		return nil, fmt.Errorf("the useDualStack parameter should be a boolean")
 	}
 
-	mutlipartCombineSmallPart := true
-	combine := parameters["multipartcombinesmallpart"]
-	switch combine := combine.(type) {
-	case string:
-		b, err := strconv.ParseBool(combine)
-		if err != nil {
-			return nil, fmt.Errorf("the multipartcombinesmallpart parameter should be a boolean")
-		}
-		mutlipartCombineSmallPart = b
-	case bool:
-		mutlipartCombineSmallPart = combine
-	case nil:
-		// do nothing
-	default:
-		return nil, fmt.Errorf("the multipartcombinesmallpart parameter should be a boolean")
-	}
-
 	sessionToken := ""
 
 	accelerateBool := false
@@ -457,7 +438,6 @@ func FromParameters(ctx context.Context, parameters map[string]interface{}) (*Dr
 		multipartCopyChunkSize,
 		multipartCopyMaxConcurrency,
 		multipartCopyThresholdSize,
-		mutlipartCombineSmallPart,
 		fmt.Sprint(rootDirectory),
 		storageClass,
 		fmt.Sprint(userAgent),
@@ -608,7 +588,6 @@ func New(ctx context.Context, params DriverParameters) (*Driver, error) {
 		MultipartCopyChunkSize:      params.MultipartCopyChunkSize,
 		MultipartCopyMaxConcurrency: params.MultipartCopyMaxConcurrency,
 		MultipartCopyThresholdSize:  params.MultipartCopyThresholdSize,
-		MultipartCombineSmallPart:   params.MultipartCombineSmallPart,
 		RootDirectory:               params.RootDirectory,
 		StorageClass:                params.StorageClass,
 		ObjectACL:                   params.ObjectACL,
@@ -1636,7 +1615,7 @@ func (w *writer) flush() error {
 	}
 
 	buf := bytes.NewBuffer(w.ready.data)
-	if w.driver.MultipartCombineSmallPart && (w.pending.Len() > 0 && w.pending.Len() < int(w.driver.ChunkSize)) {
+	if w.pending.Len() > 0 && w.pending.Len() < int(w.driver.ChunkSize) {
 		if _, err := buf.Write(w.pending.data); err != nil {
 			return err
 		}
