@@ -46,11 +46,19 @@ import (
 	"github.com/distribution/distribution/v3/internal/dcontext"
 	prometheus "github.com/distribution/distribution/v3/metrics"
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
+	"github.com/distribution/distribution/v3/tracing"
 	"github.com/docker/go-metrics"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // storageAction is the metrics of blob related operations
 var storageAction = prometheus.StorageNamespace.NewLabeledTimer("action", "The number of seconds that the storage action takes", "driver", "action")
+
+// tracer is the OpenTelemetry tracer utilized for tracing operations within
+// this package's code.
+var tracer = otel.Tracer("github.com/distribution/distribution/v3/registry/storage/driver/base")
 
 func init() {
 	metrics.Register(prometheus.StorageNamespace)
@@ -89,8 +97,16 @@ func (base *Base) setDriverName(e error) error {
 
 // GetContent wraps GetContent of underlying storage driver.
 func (base *Base) GetContent(ctx context.Context, path string) ([]byte, error) {
-	ctx, done := dcontext.WithTrace(ctx)
-	defer done("%s.GetContent(%q)", base.Name(), path)
+	attrs := []attribute.KeyValue{
+		attribute.String(tracing.AttributePrefix+"storage.driver.name", base.Name()),
+		attribute.String(tracing.AttributePrefix+"storage.path", path),
+	}
+	ctx, span := tracer.Start(
+		ctx,
+		"GetContent",
+		trace.WithAttributes(attrs...))
+
+	defer span.End()
 
 	if !storagedriver.PathRegexp.MatchString(path) {
 		return nil, storagedriver.InvalidPathError{Path: path, DriverName: base.StorageDriver.Name()}
@@ -104,8 +120,17 @@ func (base *Base) GetContent(ctx context.Context, path string) ([]byte, error) {
 
 // PutContent wraps PutContent of underlying storage driver.
 func (base *Base) PutContent(ctx context.Context, path string, content []byte) error {
-	ctx, done := dcontext.WithTrace(ctx)
-	defer done("%s.PutContent(%q)", base.Name(), path)
+	attrs := []attribute.KeyValue{
+		attribute.String(tracing.AttributePrefix+"storage.driver.name", base.Name()),
+		attribute.String(tracing.AttributePrefix+"storage.path", path),
+		attribute.Int(tracing.AttributePrefix+"storage.content.length", len(content)),
+	}
+	ctx, span := tracer.Start(
+		ctx,
+		"PutContent",
+		trace.WithAttributes(attrs...))
+
+	defer span.End()
 
 	if !storagedriver.PathRegexp.MatchString(path) {
 		return storagedriver.InvalidPathError{Path: path, DriverName: base.StorageDriver.Name()}
@@ -119,8 +144,17 @@ func (base *Base) PutContent(ctx context.Context, path string, content []byte) e
 
 // Reader wraps Reader of underlying storage driver.
 func (base *Base) Reader(ctx context.Context, path string, offset int64) (io.ReadCloser, error) {
-	ctx, done := dcontext.WithTrace(ctx)
-	defer done("%s.Reader(%q, %d)", base.Name(), path, offset)
+	attrs := []attribute.KeyValue{
+		attribute.String(tracing.AttributePrefix+"storage.driver.name", base.Name()),
+		attribute.String(tracing.AttributePrefix+"storage.path", path),
+		attribute.Int64(tracing.AttributePrefix+"storage.offset", offset),
+	}
+	ctx, span := tracer.Start(
+		ctx,
+		"Reader",
+		trace.WithAttributes(attrs...))
+
+	defer span.End()
 
 	if offset < 0 {
 		return nil, storagedriver.InvalidOffsetError{Path: path, Offset: offset, DriverName: base.StorageDriver.Name()}
@@ -136,8 +170,17 @@ func (base *Base) Reader(ctx context.Context, path string, offset int64) (io.Rea
 
 // Writer wraps Writer of underlying storage driver.
 func (base *Base) Writer(ctx context.Context, path string, append bool) (storagedriver.FileWriter, error) {
-	ctx, done := dcontext.WithTrace(ctx)
-	defer done("%s.Writer(%q, %v)", base.Name(), path, append)
+	attrs := []attribute.KeyValue{
+		attribute.String(tracing.AttributePrefix+"storage.driver.name", base.Name()),
+		attribute.String(tracing.AttributePrefix+"storage.path", path),
+		attribute.Bool(tracing.AttributePrefix+"storage.append", append),
+	}
+	ctx, span := tracer.Start(
+		ctx,
+		"Writer",
+		trace.WithAttributes(attrs...))
+
+	defer span.End()
 
 	if !storagedriver.PathRegexp.MatchString(path) {
 		return nil, storagedriver.InvalidPathError{Path: path, DriverName: base.StorageDriver.Name()}
@@ -149,8 +192,16 @@ func (base *Base) Writer(ctx context.Context, path string, append bool) (storage
 
 // Stat wraps Stat of underlying storage driver.
 func (base *Base) Stat(ctx context.Context, path string) (storagedriver.FileInfo, error) {
-	ctx, done := dcontext.WithTrace(ctx)
-	defer done("%s.Stat(%q)", base.Name(), path)
+	attrs := []attribute.KeyValue{
+		attribute.String(tracing.AttributePrefix+"storage.driver.name", base.Name()),
+		attribute.String(tracing.AttributePrefix+"storage.path", path),
+	}
+	ctx, span := tracer.Start(
+		ctx,
+		"Stat",
+		trace.WithAttributes(attrs...))
+
+	defer span.End()
 
 	if !storagedriver.PathRegexp.MatchString(path) && path != "/" {
 		return nil, storagedriver.InvalidPathError{Path: path, DriverName: base.StorageDriver.Name()}
@@ -164,8 +215,16 @@ func (base *Base) Stat(ctx context.Context, path string) (storagedriver.FileInfo
 
 // List wraps List of underlying storage driver.
 func (base *Base) List(ctx context.Context, path string) ([]string, error) {
-	ctx, done := dcontext.WithTrace(ctx)
-	defer done("%s.List(%q)", base.Name(), path)
+	attrs := []attribute.KeyValue{
+		attribute.String(tracing.AttributePrefix+"storage.driver.name", base.Name()),
+		attribute.String(tracing.AttributePrefix+"storage.path", path),
+	}
+	ctx, span := tracer.Start(
+		ctx,
+		"List",
+		trace.WithAttributes(attrs...))
+
+	defer span.End()
 
 	if !storagedriver.PathRegexp.MatchString(path) && path != "/" {
 		return nil, storagedriver.InvalidPathError{Path: path, DriverName: base.StorageDriver.Name()}
@@ -179,6 +238,18 @@ func (base *Base) List(ctx context.Context, path string) ([]string, error) {
 
 // Move wraps Move of underlying storage driver.
 func (base *Base) Move(ctx context.Context, sourcePath string, destPath string) error {
+	attrs := []attribute.KeyValue{
+		attribute.String(tracing.AttributePrefix+"storage.driver.name", base.Name()),
+		attribute.String(tracing.AttributePrefix+"storage.source.path", sourcePath),
+		attribute.String(tracing.AttributePrefix+"storage.dest.path", destPath),
+	}
+	ctx, span := tracer.Start(
+		ctx,
+		"Move",
+		trace.WithAttributes(attrs...))
+
+	defer span.End()
+
 	ctx, done := dcontext.WithTrace(ctx)
 	defer done("%s.Move(%q, %q", base.Name(), sourcePath, destPath)
 
@@ -196,8 +267,16 @@ func (base *Base) Move(ctx context.Context, sourcePath string, destPath string) 
 
 // Delete wraps Delete of underlying storage driver.
 func (base *Base) Delete(ctx context.Context, path string) error {
-	ctx, done := dcontext.WithTrace(ctx)
-	defer done("%s.Delete(%q)", base.Name(), path)
+	attrs := []attribute.KeyValue{
+		attribute.String(tracing.AttributePrefix+"storage.driver.name", base.Name()),
+		attribute.String(tracing.AttributePrefix+"storage.path", path),
+	}
+	ctx, span := tracer.Start(
+		ctx,
+		"Delete",
+		trace.WithAttributes(attrs...))
+
+	defer span.End()
 
 	if !storagedriver.PathRegexp.MatchString(path) {
 		return storagedriver.InvalidPathError{Path: path, DriverName: base.StorageDriver.Name()}
@@ -211,8 +290,16 @@ func (base *Base) Delete(ctx context.Context, path string) error {
 
 // RedirectURL wraps RedirectURL of the underlying storage driver.
 func (base *Base) RedirectURL(r *http.Request, path string) (string, error) {
-	ctx, done := dcontext.WithTrace(r.Context())
-	defer done("%s.RedirectURL(%q)", base.Name(), path)
+	attrs := []attribute.KeyValue{
+		attribute.String(tracing.AttributePrefix+"storage.driver.name", base.Name()),
+		attribute.String(tracing.AttributePrefix+"storage.path", path),
+	}
+	ctx, span := tracer.Start(
+		r.Context(),
+		"RedirectURL",
+		trace.WithAttributes(attrs...))
+
+	defer span.End()
 
 	if !storagedriver.PathRegexp.MatchString(path) {
 		return "", storagedriver.InvalidPathError{Path: path, DriverName: base.StorageDriver.Name()}
@@ -226,8 +313,16 @@ func (base *Base) RedirectURL(r *http.Request, path string) (string, error) {
 
 // Walk wraps Walk of underlying storage driver.
 func (base *Base) Walk(ctx context.Context, path string, f storagedriver.WalkFn, options ...func(*storagedriver.WalkOptions)) error {
-	ctx, done := dcontext.WithTrace(ctx)
-	defer done("%s.Walk(%q)", base.Name(), path)
+	attrs := []attribute.KeyValue{
+		attribute.String(tracing.AttributePrefix+"storage.driver.name", base.Name()),
+		attribute.String(tracing.AttributePrefix+"storage.path", path),
+	}
+	ctx, span := tracer.Start(
+		ctx,
+		"Walk",
+		trace.WithAttributes(attrs...))
+
+	defer span.End()
 
 	if !storagedriver.PathRegexp.MatchString(path) && path != "/" {
 		return storagedriver.InvalidPathError{Path: path, DriverName: base.StorageDriver.Name()}
