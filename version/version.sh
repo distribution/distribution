@@ -12,7 +12,7 @@ package version
 
 // Package is the overall, canonical project import path under which the
 // package was built.
-var Package = "$(go list)"
+var Package = "$(go list -m)"
 
 // Version indicates which version of the binary is running. This is set to
 // the latest release tag by hand, always suffixed by "+unknown". During
