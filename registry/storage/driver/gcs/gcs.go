@@ -155,6 +155,7 @@ func FromParameters(ctx context.Context, parameters map[string]interface{}) (sto
 	jwtConf := new(jwt.Config)
 	var err error
 	var gcs *storage.Client
+	var options []option.ClientOption
 	if keyfile, ok := parameters["keyfile"]; ok {
 		jsonKey, err := os.ReadFile(fmt.Sprint(keyfile))
 		if err != nil {
@@ -165,10 +166,7 @@ func FromParameters(ctx context.Context, parameters map[string]interface{}) (sto
 			return nil, err
 		}
 		ts = jwtConf.TokenSource(ctx)
-		gcs, err = storage.NewClient(ctx, option.WithCredentialsFile(fmt.Sprint(keyfile)))
-		if err != nil {
-			return nil, err
-		}
+		options = append(options, option.WithCredentialsFile(fmt.Sprint(keyfile)))
 	} else if credentials, ok := parameters["credentials"]; ok {
 		credentialMap, ok := credentials.(map[interface{}]interface{})
 		if !ok {
@@ -194,10 +192,7 @@ func FromParameters(ctx context.Context, parameters map[string]interface{}) (sto
 			return nil, err
 		}
 		ts = jwtConf.TokenSource(ctx)
-		gcs, err = storage.NewClient(ctx, option.WithCredentialsJSON(data))
-		if err != nil {
-			return nil, err
-		}
+		options = append(options, option.WithCredentialsJSON(data))
 	} else {
 		var err error
 		// DefaultTokenSource is a convenience method. It first calls FindDefaultCredentials,
@@ -207,10 +202,17 @@ func FromParameters(ctx context.Context, parameters map[string]interface{}) (sto
 		if err != nil {
 			return nil, err
 		}
-		gcs, err = storage.NewClient(ctx)
-		if err != nil {
-			return nil, err
+	}
+
+	if userAgent, ok := parameters["useragent"]; ok {
+		if ua, ok := userAgent.(string); ok && ua != "" {
+			options = append(options, option.WithUserAgent(ua))
 		}
+	}
+
+	gcs, err = storage.NewClient(ctx, options...)
+	if err != nil {
+		return nil, err
 	}
 
 	maxConcurrency, err := base.GetLimitFromParameter(parameters["maxconcurrency"], minConcurrency, defaultMaxConcurrency)
