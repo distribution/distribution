@@ -26,7 +26,7 @@ func InitOpenTelemetry(ctx context.Context) error {
 	res := resource.NewWithAttributes(
 		semconv.SchemaURL,
 		semconv.ServiceNameKey.String(serviceName),
-		semconv.ServiceVersionKey.String(version.Version),
+		semconv.ServiceVersionKey.String(version.Version()),
 	)
 
 	exp, err := autoexport.NewSpanExporter(ctx)

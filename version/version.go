@@ -1,15 +1,15 @@
 package version
 
-// Package is the overall, canonical project import path under which the
+// mainpkg is the overall, canonical project import path under which the
 // package was built.
-var Package = "github.com/distribution/distribution/v3"
+var mainpkg = "github.com/distribution/distribution/v3"
 
-// Version indicates which version of the binary is running. This is set to
+// version indicates which version of the binary is running. This is set to
 // the latest release tag by hand, always suffixed by "+unknown". During
 // build, it will be replaced by the actual version. The value here will be
 // used if the registry is run after a go get based install.
-var Version = "v3.0.0-alpha.1"
+var version = "v3.0.0-alpha.1.m+unknown"
 
-// Revision is filled with the VCS (e.g. git) revision being used to build
+// revision is filled with the VCS (e.g. git) revision being used to build
 // the program at linking time.
-var Revision = ""
+var revision = ""

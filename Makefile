@@ -37,7 +37,7 @@ WHALE = "+"
 TESTFLAGS_RACE=
 GOFILES=$(shell find . -type f -name '*.go')
 GO_TAGS=$(if $(BUILDTAGS),-tags "$(BUILDTAGS)",)
-GO_LDFLAGS=-ldflags '-extldflags "-Wl,-z,now" -s -w -X $(PKG)/version.Version=$(VERSION) -X $(PKG)/version.Revision=$(REVISION) -X $(PKG)/version.Package=$(PKG) $(EXTRA_LDFLAGS)'
+GO_LDFLAGS=-ldflags '-extldflags "-Wl,-z,now" -s -w -X $(PKG)/version.version=$(VERSION) -X $(PKG)/version.revision=$(REVISION) -X $(PKG)/version.mainpkg=$(PKG) $(EXTRA_LDFLAGS)'
 
 BINARIES=$(addprefix bin/,$(COMMANDS))
 
