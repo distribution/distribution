@@ -114,7 +114,7 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 		storageParams = make(configuration.Parameters)
 	}
 	if storageParams["useragent"] == "" {
-		storageParams["useragent"] = fmt.Sprintf("distribution/%s %s", version.Version, runtime.Version())
+		storageParams["useragent"] = fmt.Sprintf("distribution/%s %s", version.Version(), runtime.Version())
 	}
 
 	var err error
