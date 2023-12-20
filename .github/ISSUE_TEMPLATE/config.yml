@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security and Vulnerabilities
+    url: https://github.com/distribution/distribution/blob/main/SECURITY.md
+    about: Please report any security issues or vulnerabilities responsibly to the distribution maintainers team. Please do not use the public issue tracker.
+  - name: Questions and Discussions
+    url: https://github.com/distribution/distribution/discussions/new/choose
+    about: Use Github Discussions to ask questions and/or open discussion topics.
