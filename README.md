@@ -27,7 +27,7 @@ This repository contains the following components:
 |--------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **registry**       | An implementation of the [OCI Distribution Specification](https://github.com/opencontainers/distribution-spec).                                                                                                 |
 | **libraries**      | A rich set of libraries for interacting with distribution components. Please see [godoc](https://pkg.go.dev/github.com/distribution/distribution) for details. **Note**: The interfaces for these libraries are **unstable**. |
-| **documentation**  | Docker's full documentation set is available at [docs.docker.com](https://docs.docker.com). This repository [contains the subset](docs/) related just to the registry.                                                                                                                                          |
+| **documentation**  | Full documentation is available at [https://distribution.github.io/distribution](https://distribution.github.io/distribution/).
 
 ### How does this integrate with Docker, containerd, and other OCI client?
 
