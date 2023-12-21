@@ -38,7 +38,7 @@ The following table shows examples of allowed and disallowed mirror URLs.
 
 > **Note**
 >
-> Mirrors of Docker Hub are still subject to Docker's [fair usage policy](https://www.docker.com/pricing/resource-consumption-updates){: target="blank" rel="noopener" class=“”}.
+> Mirrors of Docker Hub are still subject to Docker's [fair usage policy](https://www.docker.com/pricing/resource-consumption-updates).
 
 ### Solution
 
