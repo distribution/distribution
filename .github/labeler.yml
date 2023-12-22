@@ -1,0 +1,50 @@
+area/ci:
+  - .github/**/*
+
+area/config:
+  - charts/registry/config/**/*
+
+area/docs:
+  - README.md
+  - docs/**/*.md
+
+area/build:
+  - Makefile
+  - Dockerfile
+  - docker-bake.hcl
+  - dockerfiles/**/*
+
+area/ci:
+  - .github/**/*
+  - tests
+  - testutil
+
+dependencies:
+  - vendor/**/*
+  - go.mod
+  - go.sum
+
+area/storage:
+  - registry/storage
+
+area/storage/s3:
+  - registry/storage/s3-aws
+
+area/storage/gcs:
+  - registry/storage/gcs
+
+area/storage/azure:
+  - registry/storage/azure
+
+area/auth:
+  - registry/auth
+
+area/proxy:
+  - registry/proxy
+
+area/config:
+  - configuration
+
+area/api:
+  - registry/api
+  - registry/handlers
