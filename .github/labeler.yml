@@ -36,6 +36,9 @@ area/storage/gcs:
 area/storage/azure:
   - registry/storage/azure
 
+area/cache:
+  - registry/storage/cache
+
 area/auth:
   - registry/auth
 
