@@ -243,8 +243,8 @@ github.com/googleapis/gax-go/v2
 github.com/googleapis/gax-go/v2/apierror
 github.com/googleapis/gax-go/v2/apierror/internal/proto
 github.com/googleapis/gax-go/v2/internal
-# github.com/gorilla/handlers v1.5.1
-## explicit; go 1.14
+# github.com/gorilla/handlers v1.5.2
+## explicit; go 1.20
 github.com/gorilla/handlers
 # github.com/gorilla/mux v1.8.1
 ## explicit; go 1.20

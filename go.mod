@@ -16,7 +16,7 @@ require (
 	github.com/docker/go-metrics v0.0.1
 	github.com/go-jose/go-jose/v3 v3.0.1
 	github.com/google/uuid v1.3.1
-	github.com/gorilla/handlers v1.5.1
+	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
 	github.com/hashicorp/golang-lru/arc/v2 v2.0.5
 	github.com/klauspost/compress v1.17.4
