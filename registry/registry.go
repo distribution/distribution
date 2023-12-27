@@ -147,7 +147,11 @@ func NewRegistry(ctx context.Context, config *configuration.Configuration) (*Reg
 	handler = health.Handler(handler)
 	handler = panicHandler(handler)
 	if !config.Log.AccessLog.Disabled {
-		handler = gorhandlers.CombinedLoggingHandler(os.Stdout, handler)
+		if config.Log.Formatter == "json" || config.Log.Formatter == "logstash" {
+			handler = JSONLoggingHandler(os.Stderr, handler)
+		} else {
+			handler = gorhandlers.CombinedLoggingHandler(os.Stderr, handler)
+		}
 	}
 
 	for _, applyHandlerMiddleware := range handlerMiddlewares {
