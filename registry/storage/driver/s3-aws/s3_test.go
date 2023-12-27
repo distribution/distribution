@@ -203,6 +203,8 @@ func TestEmptyRootList(t *testing.T) {
 }
 
 func TestClientTransport(t *testing.T) {
+	skipCheck(t)
+
 	testCases := []struct {
 		skipverify bool
 	}{
@@ -243,7 +245,7 @@ func TestClientTransport(t *testing.T) {
 				return
 			}
 			// if tc.skipverify is false we do not override the driver
-			// HTTP clien transport and leave it to the AWS SDK.
+			// HTTP client transport and leave it to the AWS SDK.
 			if s3drv.S3.Client.Config.HTTPClient.Transport != nil {
 				t.Errorf("unexpected S3 driver client transport")
 			}
