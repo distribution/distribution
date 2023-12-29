@@ -158,17 +158,22 @@ func (ttles *TTLExpirationScheduler) Start() error {
 	return nil
 }
 
-func (ttles *TTLExpirationScheduler) add(r reference.Reference, ttl time.Duration, eType int) {
+func (ttles *TTLExpirationScheduler) add(r reference.Canonical, ttl time.Duration, eType int) {
+	// Use the raw digest as the scheduler entry key so that common blob TTLs can be properly extended as they are
+	// pulled with other manifests. Note that schedulerEntry.Key remains as the full reference format to avoid info loss
+	// when recovering the schedule from disk.
+	entryKey := r.Digest().String()
 	entry := &schedulerEntry{
 		Key:       r.String(),
 		Expiry:    time.Now().Add(ttl),
 		EntryType: eType,
 	}
 	dcontext.GetLogger(ttles.ctx).Infof("Adding new scheduler entry for %s with ttl=%s", entry.Key, time.Until(entry.Expiry))
-	if oldEntry, present := ttles.entries[entry.Key]; present && oldEntry.timer != nil {
+	if oldEntry, present := ttles.entries[entryKey]; present && oldEntry.timer != nil {
 		oldEntry.timer.Stop()
+		dcontext.GetLogger(ttles.ctx).Infof("Replacing existing scheduler entry for common blob %s", entryKey)
 	}
-	ttles.entries[entry.Key] = entry
+	ttles.entries[entryKey] = entry
 	entry.timer = ttles.startTimer(entry, ttl)
 	ttles.indexDirty = true
 }
