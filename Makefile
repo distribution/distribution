@@ -45,7 +45,7 @@ BINARIES=$(addprefix bin/,$(COMMANDS))
 TESTFLAGS ?= -v $(TESTFLAGS_RACE)
 TESTFLAGS_PARALLEL ?= 8
 
-.PHONY: all build binaries clean test test-race test-full integration test-coverage validate lint validate-git validate-vendor vendor mod-outdated image
+.PHONY: all build binaries clean test test-race test-full integration test-coverage validate lint validate-git validate-vendor vendor mod-outdated image validate-authors authors
 .DEFAULT: all
 
 .PHONY: FORCE
@@ -84,6 +84,9 @@ vendor: ## update vendor
 	rm -rf $($@_TMP_OUT)/*
 
 mod-outdated: ## check outdated dependencies
+	docker buildx bake $@
+
+authors: ## generate authors
 	docker buildx bake $@
 
 ##@ Test
@@ -170,6 +173,9 @@ validate-git: ## validate git
 	docker buildx bake $@
 
 validate-vendor: ## validate vendor
+	docker buildx bake $@
+
+validate-authors: ## validate authors
 	docker buildx bake $@
 
 .PHONY: help

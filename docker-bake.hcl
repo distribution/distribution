@@ -124,3 +124,15 @@ target "docs-test" {
   target = "test"
   output = ["type=cacheonly"]
 }
+
+target "authors" {
+  dockerfile = "./dockerfiles/authors.Dockerfile"
+  target = "update"
+  output = ["."]
+}
+
+target "validate-authors" {
+  dockerfile = "./dockerfiles/authors.Dockerfile"
+  target = "validate"
+  output = ["type=cacheonly"]
+}
