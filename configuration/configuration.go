@@ -271,10 +271,22 @@ type FileChecker struct {
 	Threshold int `yaml:"threshold,omitempty"`
 }
 
+type RedisSentinel struct {
+	// MasterName specifies the name of the master sentinel.
+	MasterName string `yaml:"masterName,omitempty"`
+
+	// Addresses specifies the addresses of the sentinels.
+	Addresses []string `yaml:"addresses,omitempty"`
+}
+
 // Redis configures the redis pool available to the registry webapp.
 type Redis struct {
 	// Addr specifies the the redis instance available to the application.
 	Addr string `yaml:"addr,omitempty"`
+
+	// Sentinel specifies the sentinel instance available to the application.
+	// If this is set, the Addr field is ignored.
+	Sentinel RedisSentinel `yaml:"sentinel,omitempty"`
 
 	// Usernames can be used as a finer-grained permission control since the introduction of the redis 6.0.
 	Username string `yaml:"username,omitempty"`

@@ -487,12 +487,12 @@ func (app *App) configureEvents(configuration *configuration.Configuration) {
 }
 
 func (app *App) configureRedis(cfg *configuration.Configuration) {
-	if cfg.Redis.Addr == "" {
+	if cfg.Redis.Addr == "" && (len(cfg.Redis.Sentinel.Addresses) == 0 || cfg.Redis.Sentinel.MasterName == "") {
 		dcontext.GetLogger(app).Infof("redis not configured")
 		return
 	}
 
-	app.redis = app.createPool(cfg.Redis)
+	app.redis = app.createRedisClient(cfg.Redis)
 
 	// Enable metrics instrumentation.
 	if err := redisotel.InstrumentMetrics(app.redis); err != nil {
@@ -514,25 +514,45 @@ func (app *App) configureRedis(cfg *configuration.Configuration) {
 	}))
 }
 
-func (app *App) createPool(cfg configuration.Redis) *redis.Client {
-	return redis.NewClient(&redis.Options{
-		Addr: cfg.Addr,
-		OnConnect: func(ctx context.Context, cn *redis.Conn) error {
-			res := cn.Ping(ctx)
-			return res.Err()
-		},
-		Username:        cfg.Username,
-		Password:        cfg.Password,
-		DB:              cfg.DB,
-		MaxRetries:      3,
-		DialTimeout:     cfg.DialTimeout,
-		ReadTimeout:     cfg.ReadTimeout,
-		WriteTimeout:    cfg.WriteTimeout,
-		PoolFIFO:        false,
-		MaxIdleConns:    cfg.Pool.MaxIdle,
-		PoolSize:        cfg.Pool.MaxActive,
-		ConnMaxIdleTime: cfg.Pool.IdleTimeout,
-	})
+func (app *App) createRedisClient(cfg configuration.Redis) *redis.Client {
+	// This function assumes that cfg.Addresses is not empty, which is checked by the caller.
+	if len(cfg.Sentinel.Addresses) > 0 && cfg.Sentinel.MasterName != "" {
+		return redis.NewFailoverClient(&redis.FailoverOptions{
+			MasterName:      cfg.Sentinel.MasterName,
+			SentinelAddrs:   cfg.Sentinel.Addresses,
+			OnConnect:       nil,
+			Username:        cfg.Username,
+			Password:        cfg.Password,
+			DB:              cfg.DB,
+			MaxRetries:      3,
+			DialTimeout:     cfg.DialTimeout,
+			ReadTimeout:     cfg.ReadTimeout,
+			WriteTimeout:    cfg.WriteTimeout,
+			PoolFIFO:        false,
+			MaxIdleConns:    cfg.Pool.MaxIdle,
+			PoolSize:        cfg.Pool.MaxActive,
+			ConnMaxIdleTime: cfg.Pool.IdleTimeout,
+		})
+	} else {
+		return redis.NewClient(&redis.Options{
+			Addr: cfg.Addr,
+			OnConnect: func(ctx context.Context, cn *redis.Conn) error {
+				res := cn.Ping(ctx)
+				return res.Err()
+			},
+			Username:        cfg.Username,
+			Password:        cfg.Password,
+			DB:              cfg.DB,
+			MaxRetries:      3,
+			DialTimeout:     cfg.DialTimeout,
+			ReadTimeout:     cfg.ReadTimeout,
+			WriteTimeout:    cfg.WriteTimeout,
+			PoolFIFO:        false,
+			MaxIdleConns:    cfg.Pool.MaxIdle,
+			PoolSize:        cfg.Pool.MaxActive,
+			ConnMaxIdleTime: cfg.Pool.IdleTimeout,
+		})
+	}
 }
 
 // configureLogHook prepares logging hook parameters.
