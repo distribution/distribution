@@ -15,6 +15,9 @@ import (
 
 	"rsc.io/letsencrypt"
 
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
+
 	logrus_bugsnag "github.com/Shopify/logrus-bugsnag"
 
 	logstash "github.com/bshuster-repo/logrus-logstash-hook"
@@ -171,7 +174,7 @@ func NewRegistry(ctx context.Context, config *configuration.Configuration) (*Reg
 	}
 
 	server := &http.Server{
-		Handler: handler,
+		Handler: h2c.NewHandler(handler, &http2.Server{}),
 	}
 
 	return &Registry{
