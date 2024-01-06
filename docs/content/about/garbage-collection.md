@@ -28,8 +28,8 @@ to the layer. As long as a layer is referenced by one manifest, it cannot be gar
 collected.
 
 Manifests and layers can be `deleted` with the registry API (refer to the API
-documentation [here](/spec/api#deleting-a-layer) and
-[here](/spec/api#deleting-an-image) for details). This API removes references
+documentation [here]({{< ref "/spec/api#deleting-a-layer" >}})/ and
+[here]({{< ref "/spec/api#deleting-an-image" >}})/ for details). This API removes references
 to the target and makes them eligible for garbage collection. It also makes them
 unable to be read via the API.
 

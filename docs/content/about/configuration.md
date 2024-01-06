@@ -436,15 +436,15 @@ returns an error. You can choose any of these backend storage drivers:
 
 | Storage driver      | Description                                                                                                                                                                                                                                                                              |
 |---------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `filesystem`        | Uses the local disk to store registry files. It is ideal for development and may be appropriate for some small-scale production applications. See the [driver's reference documentation](/storage-drivers/filesystem). |
-| `azure`             | Uses Microsoft Azure Blob Storage. See the [driver's reference documentation](/storage-drivers/azure).                                                                                                               |
-| `gcs`               | Uses Google Cloud Storage. See the [driver's reference documentation](/storage-drivers/gcs).                                                                                                                           |
-| `s3`                | Uses Amazon Simple Storage Service (S3) and compatible Storage Services. See the [driver's reference documentation](/storage-drivers/s3).                                                                            |
+| `filesystem`        | Uses the local disk to store registry files. It is ideal for development and may be appropriate for some small-scale production applications. See the [driver's reference documentation]({{< ref "/storage-drivers/filesystem" >}})/. |
+| `azure`             | Uses Microsoft Azure Blob Storage. See the [driver's reference documentation]({{< ref "/storage-drivers/azure" >}})/.                                                                                                               |
+| `gcs`               | Uses Google Cloud Storage. See the [driver's reference documentation]({{< ref "/storage-drivers/gcs" >}})/.                                                                                                                           |
+| `s3`                | Uses Amazon Simple Storage Service (S3) and compatible Storage Services. See the [driver's reference documentation]({{< ref "/storage-drivers/s3" >}})/.                                                                            |
 
 For testing only, you can use the [`inmemory` storage
-driver](/storage-drivers/inmemory).
+driver]({{< ref "/storage-drivers/inmemory" >}})/.
 If you would like to run a registry from volatile memory, use the
-[`filesystem` driver](/storage-drivers/filesystem)
+[`filesystem` driver]({{< ref "/storage-drivers/filesystem" >}})/
 on a ramdisk.
 
 If you are deploying a registry on Windows, a Windows volume mounted from the
@@ -593,7 +593,7 @@ security.
 
 
 For more information about Token based authentication configuration, see the
-[specification](/spec/auth/token).
+[specification]({{< ref "/spec/auth/token" >}})/.
 
 ### `htpasswd`
 
@@ -1100,7 +1100,7 @@ proxy:
 
 The `proxy` structure allows a registry to be configured as a pull-through cache
 to Docker Hub. See
-[mirror](/recipes/mirror)
+[mirror]({{< ref "/recipes/mirror" >}})/
 for more information. Pushing to a registry configured as a pull-through cache
 is unsupported.
 

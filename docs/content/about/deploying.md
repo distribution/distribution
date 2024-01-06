@@ -166,7 +166,7 @@ $ docker run -d \
 By default, the registry stores its data on the local filesystem, whether you
 use a bind mount or a volume. You can store the registry data in an Amazon S3
 bucket, Google Cloud Platform, or on another storage back-end by using
-[storage drivers](/storage-drivers). For more information, see
+[storage drivers]({{< ref "/storage-drivers" >}})/. For more information, see
 [storage configuration options](../configuration#storage).
 
 ## Run an externally-accessible registry
@@ -468,13 +468,13 @@ See [run an insecure registry](../insecure).
 ### More advanced authentication
 
 You may want to leverage more advanced basic auth implementations by using a
-proxy in front of the registry. See the [recipes list](/recipes/).
+proxy in front of the registry. See the [recipes list]({{< ref "/recipes/" >}})/.
 
 The registry also supports delegated authentication which redirects users to a
 specific trusted token server. This approach is more complicated to set up, and
 only makes sense if you need to fully configure ACLs and need more control over
 the registry's integration into your global authorization and authentication
-systems. Refer to the following [background information](/spec/auth/token) and
+systems. Refer to the following [background information]({{< ref "/spec/auth/token" >}})/ and
 [configuration information here](../configuration#auth).
 
 This approach requires you to implement your own authentication system or
@@ -574,7 +574,7 @@ More specific and advanced information is available in the following sections:
 
 - [Configuration reference](../configuration)
 - [Working with notifications](../notifications)
-- [Advanced "recipes"](/recipes)
-- [Registry API](/spec/api)
-- [Storage driver model](/storage-drivers)
-- [Token authentication](/spec/auth/token)
+- [Advanced "recipes"]({{< ref "/recipes" >}})/
+- [Registry API]({{< ref "/spec/api" >}})/
+- [Storage driver model]({{< ref "/storage-drivers" >}})/
+- [Token authentication]({{< ref "/spec/auth/token" >}})/

@@ -1088,7 +1088,7 @@ response will be issued instead.
 
     Accept: application/vnd.docker.distribution.manifest.v2+json
 
-> for more details, see: [compatibility](/about/compatibility#content-addressable-storage-cas)
+> for more details, see: [compatibility]({{< ref "/about/compatibility#content-addressable-storage-cas" >}})/
 
 ## Detail
 
