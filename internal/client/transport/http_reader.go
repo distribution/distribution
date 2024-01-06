@@ -26,11 +26,6 @@ var (
 	ErrWrongCodeForByteRange = errors.New("expected HTTP 206 from byte range request")
 )
 
-// ReadSeekCloser combines io.ReadSeeker with io.Closer.
-//
-// Deprecated: use [io.ReadSeekCloser].
-type ReadSeekCloser = io.ReadSeekCloser
-
 // NewHTTPReadSeeker handles reading from an HTTP endpoint using a GET
 // request. When seeking and starting a read from a non-zero offset
 // the a "Range" header will be added which sets the offset.
