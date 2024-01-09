@@ -16,9 +16,8 @@ COPY --from=hugo $GOPATH/bin/hugo /bin/hugo
 WORKDIR /src
 
 FROM build-base AS build
-ARG DOCS_BASEURL=/
 RUN --mount=type=bind,rw,source=docs,target=. \
-    hugo --gc --minify --destination /out -b $DOCS_BASEURL
+    hugo --gc --minify --destination /out
 
 FROM build-base AS server
 COPY docs .
@@ -29,8 +28,12 @@ FROM scratch AS out
 COPY --from=build /out /
 
 FROM wjdp/htmltest:v0.17.0 AS test
+# Copy the site to a public/distribution subdirectory
+# This is a workaround for a limitation in htmltest, see:
+# https://github.com/wjdp/htmltest/issues/45
+WORKDIR /test/public/distribution
+COPY --from=build /out .
 WORKDIR /test
-COPY --from=build /out ./public
 ADD docs/.htmltest.yml .htmltest.yml
 RUN --mount=type=cache,target=tmp/.htmltest \
     htmltest

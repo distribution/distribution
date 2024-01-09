@@ -144,7 +144,7 @@ Each JWT access token may only have a single subject and audience but multiple
 resource scopes. The subject and audience are put into standard JWT fields
 `sub` and `aud`. The resource scope is put into the `access` field. The
 structure of the access field can be seen in the
-[jwt documentation](../jwt).
+[jwt documentation](jwt.md).
 
 ## Refresh Tokens
 

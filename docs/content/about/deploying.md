@@ -9,7 +9,7 @@ A registry is an instance of the `registry` image, and runs within Docker.
 
 This topic provides basic information about deploying and configuring a
 registry. For an exhaustive list of configuration options, see the
-[configuration reference](../configuration).
+[configuration reference](configuration.md).
 
 If you have an air-gapped datacenter, see
 [Considerations for air-gapped registries](#considerations-for-air-gapped-registries).
@@ -27,7 +27,7 @@ The registry is now ready to use.
 > **Warning**: These first few examples show registry configurations that are
 > only appropriate for testing. A production-ready registry must be protected by
 > TLS and should ideally use an access-control mechanism. Keep reading and then
-> continue to the [configuration guide](../configuration) to deploy a
+> continue to the [configuration guide](configuration.md) to deploy a
 > production-ready registry.
 
 ## Copy an image from Docker Hub to your registry
@@ -94,7 +94,7 @@ To configure the container, you can pass additional or modified options to the
 `docker run` command.
 
 The following sections provide basic guidelines for configuring your registry.
-For more details, see the [registry configuration reference](../configuration).
+For more details, see the [registry configuration reference](configuration.md).
 
 ### Start the registry automatically
 
@@ -166,8 +166,8 @@ $ docker run -d \
 By default, the registry stores its data on the local filesystem, whether you
 use a bind mount or a volume. You can store the registry data in an Amazon S3
 bucket, Google Cloud Platform, or on another storage back-end by using
-[storage drivers](/storage-drivers). For more information, see
-[storage configuration options](../configuration#storage).
+[storage drivers](../storage-drivers/_index.md). For more information, see
+[storage configuration options](configuration.md#storage).
 
 ## Run an externally-accessible registry
 
@@ -252,13 +252,13 @@ The registry supports using Let's Encrypt to automatically obtain a
 browser-trusted certificate. For more information on Let's Encrypt, see
 [https://letsencrypt.org/how-it-works/](https://letsencrypt.org/how-it-works/)
 and the relevant section of the
-[registry configuration](../configuration#letsencrypt).
+[registry configuration](configuration.md#letsencrypt).
 
 ### Use an insecure registry (testing only)
 
 It is possible to use a self-signed certificate, or to use our registry
 insecurely. Unless you have set up verification for your self-signed
-certificate, this is for testing only. See [run an insecure registry](../insecure).
+certificate, this is for testing only. See [run an insecure registry](insecure.md).
 
 ## Run the registry as a service
 
@@ -462,20 +462,20 @@ using htpasswd, all authentication attempts will fail.
 {{< hint type=note title="X509 errors" >}}
 X509 errors usually indicate that you are attempting to use
 a self-signed certificate without configuring the Docker daemon correctly.
-See [run an insecure registry](../insecure).
+See [run an insecure registry](insecure.md).
 {{< /hint >}}
 
 ### More advanced authentication
 
 You may want to leverage more advanced basic auth implementations by using a
-proxy in front of the registry. See the [recipes list](/recipes/).
+proxy in front of the registry. See the [recipes list](../recipes/_index.md).
 
 The registry also supports delegated authentication which redirects users to a
 specific trusted token server. This approach is more complicated to set up, and
 only makes sense if you need to fully configure ACLs and need more control over
 the registry's integration into your global authorization and authentication
-systems. Refer to the following [background information](/spec/auth/token) and
-[configuration information here](../configuration#auth).
+systems. Refer to the following [background information](../spec/auth/token.md) and
+[configuration information here](configuration.md#auth).
 
 This approach requires you to implement your own authentication system or
 leverage a third-party implementation.
@@ -572,9 +572,9 @@ artifacts.
 
 More specific and advanced information is available in the following sections:
 
-- [Configuration reference](../configuration)
-- [Working with notifications](../notifications)
-- [Advanced "recipes"](/recipes)
-- [Registry API](/spec/api)
-- [Storage driver model](/storage-drivers)
-- [Token authentication](/spec/auth/token)
+- [Configuration reference](configuration.md)
+- [Working with notifications](notifications.md)
+- [Advanced "recipes"](../recipes/_index.md)
+- [Registry API](../spec/api.md)
+- [Storage driver model](../storage-drivers/_index.md)
+- [Token authentication](../spec/auth/token.md)

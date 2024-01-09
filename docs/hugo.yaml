@@ -1,4 +1,4 @@
-baseURL: /
+baseURL: https://distribution.github.io/distribution
 languageCode: en-us
 title: CNCF Distribution
 theme: hugo-geekdoc
@@ -22,3 +22,4 @@ disablePathToLower: true
 params:
   geekdocRepo: "https://github.com/distribution/distribution"
   geekdocEditPath: edit/main/docs
+  geekdocOverwriteHTMLBase: true

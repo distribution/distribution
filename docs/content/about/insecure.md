@@ -72,7 +72,7 @@ This is more secure than the insecure registry solution.
 
    Be sure to use the name `myregistry.domain.com` as a CN.
 
-2. Use the result to [start your registry with TLS enabled](../deploying#get-a-certificate).
+2. Use the result to [start your registry with TLS enabled](deploying.md#get-a-certificate).
 
 3. Instruct every Docker daemon to trust that certificate. The way to do this
    depends on your OS.

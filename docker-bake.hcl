@@ -91,15 +91,8 @@ target "image-all" {
   ]
 }
 
-variable "DOCS_BASEURL" {
-  default = null
-}
-
 target "_common_docs" {
   dockerfile = "./dockerfiles/docs.Dockerfile"
-  args = {
-    DOCS_BASEURL = DOCS_BASEURL
-  }
 }
 
 target "docs-export" {

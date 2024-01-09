@@ -12,7 +12,7 @@ reference for the protocol and HTTP endpoints described here.
 
 **Note**: Not all token servers implement oauth2. If the request to the endpoint
 returns `404` using the HTTP `POST` method, refer to
-[Token Documentation](../token) for using the HTTP `GET` method supported by all
+[Token Documentation](token.md) for using the HTTP `GET` method supported by all
 token servers.
 
 ## Refresh token format
