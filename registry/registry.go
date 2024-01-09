@@ -173,8 +173,13 @@ func NewRegistry(ctx context.Context, config *configuration.Configuration) (*Reg
 		handler = gorhandlers.CombinedLoggingHandler(os.Stdout, handler)
 	}
 
+	httpHandler := handler
+	if config.HTTP.H2C.Enabled {
+		httpHandler = h2c.NewHandler(handler, &http2.Server{})
+	}
+
 	server := &http.Server{
-		Handler: h2c.NewHandler(handler, &http2.Server{}),
+		Handler: httpHandler,
 	}
 
 	return &Registry{
