@@ -34,6 +34,10 @@ func init() {
 		}
 	}
 
+	if bucket == "" || credentials == "" {
+		return
+	}
+
 	jsonKey, err := os.ReadFile(credentials)
 	if err != nil {
 		panic(fmt.Sprintf("Error reading JSON key : %v", err))
