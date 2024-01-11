@@ -159,7 +159,7 @@ type Configuration struct {
 		} `yaml:"http2,omitempty"`
 
 		H2C struct {
-			// Enabled H2C (unencrypted HTTP2). Enable to support HTTP2 without needing to configure TLS
+			// Enables H2C (unencrypted HTTP2). Enable to support HTTP2 without needing to configure TLS
 			// Useful when deploying the registry behind a load balancer (e.g. Cloud Run)
 			Enabled bool `yaml:"enabled,omitempty"`
 		} `yaml:"h2c,omitempty"`
