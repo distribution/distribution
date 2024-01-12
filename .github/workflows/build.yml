@@ -114,7 +114,7 @@ jobs:
 
       -
         name: Build artifacts
-        uses: docker/bake-action@v2
+        uses: docker/bake-action@v4
         with:
           targets: artifact-all
       -
@@ -130,7 +130,7 @@ jobs:
           if-no-files-found: error
       -
         name: Build image
-        uses: docker/bake-action@v2
+        uses: docker/bake-action@v4
         with:
           files: |
             ./docker-bake.hcl
