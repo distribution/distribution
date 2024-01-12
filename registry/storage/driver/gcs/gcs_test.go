@@ -34,40 +34,40 @@ func init() {
 		}
 	}
 
-	jsonKey, err := os.ReadFile(credentials)
-	if err != nil {
-		panic(fmt.Sprintf("Error reading JSON key : %v", err))
-	}
-
-	var ts oauth2.TokenSource
-	var email string
-	var privateKey []byte
-
-	ts, err = google.DefaultTokenSource(dcontext.Background(), storage.ScopeFullControl)
-	if err != nil {
-		// Assume that the file contents are within the environment variable since it exists
-		// but does not contain a valid file path
-		jwtConfig, err := google.JWTConfigFromJSON(jsonKey, storage.ScopeFullControl)
-		if err != nil {
-			panic(fmt.Sprintf("Error reading JWT config : %s", err))
-		}
-		email = jwtConfig.Email
-		privateKey = jwtConfig.PrivateKey
-		if len(privateKey) == 0 {
-			panic("Error reading JWT config : missing private_key property")
-		}
-		if email == "" {
-			panic("Error reading JWT config : missing client_email property")
-		}
-		ts = jwtConfig.TokenSource(dcontext.Background())
-	}
-
-	gcs, err := storage.NewClient(dcontext.Background(), option.WithCredentialsJSON(jsonKey))
-	if err != nil {
-		panic(fmt.Sprintf("Error initializing gcs client : %v", err))
-	}
-
 	gcsDriverConstructor = func(rootDirectory string) (storagedriver.StorageDriver, error) {
+		jsonKey, err := os.ReadFile(credentials)
+		if err != nil {
+			panic(fmt.Sprintf("Error reading JSON key : %v", err))
+		}
+
+		var ts oauth2.TokenSource
+		var email string
+		var privateKey []byte
+
+		ts, err = google.DefaultTokenSource(dcontext.Background(), storage.ScopeFullControl)
+		if err != nil {
+			// Assume that the file contents are within the environment variable since it exists
+			// but does not contain a valid file path
+			jwtConfig, err := google.JWTConfigFromJSON(jsonKey, storage.ScopeFullControl)
+			if err != nil {
+				panic(fmt.Sprintf("Error reading JWT config : %s", err))
+			}
+			email = jwtConfig.Email
+			privateKey = jwtConfig.PrivateKey
+			if len(privateKey) == 0 {
+				panic("Error reading JWT config : missing private_key property")
+			}
+			if email == "" {
+				panic("Error reading JWT config : missing client_email property")
+			}
+			ts = jwtConfig.TokenSource(dcontext.Background())
+		}
+
+		gcs, err := storage.NewClient(dcontext.Background(), option.WithCredentialsJSON(jsonKey))
+		if err != nil {
+			panic(fmt.Sprintf("Error initializing gcs client : %v", err))
+		}
+
 		parameters := driverParameters{
 			bucket:         bucket,
 			rootDirectory:  rootDirectory,
