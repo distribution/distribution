@@ -102,7 +102,6 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
       -
         name: Log in to GitHub Container registry
         if: github.event_name != 'pull_request'
@@ -111,16 +110,27 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
       -
         name: Build artifacts
         uses: docker/bake-action@v4
         with:
           targets: artifact-all
       -
-        name: Move artifacts
+        name: Rename provenance
+        run: |
+          for pdir in ./bin/*/; do
+            (
+              cd "$pdir"
+              binname=$(find . -name '*.tar.gz')
+              filename=$(basename "${binname%.tar.gz}")
+              mv "provenance.json" "${filename}.provenance.json"
+            )
+          done
+      -
+        name: Move and list artifacts
         run: |
           mv ./bin/**/* ./bin/
+          tree -nh ./bin
       -
         name: Upload artifacts
         uses: actions/upload-artifact@v3
@@ -145,6 +155,7 @@ jobs:
           draft: true
           files: |
             bin/*.tar.gz
+            bin/*.provenance.json
             bin/*.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
