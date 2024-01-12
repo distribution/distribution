@@ -35,6 +35,7 @@ jobs:
           files: |
             docker-bake.hcl
           targets: docs-export
+          provenance: false
           set: |
             *.cache-from=type=gha,scope=docs
             *.cache-to=type=gha,scope=docs,mode=max
