@@ -140,12 +140,6 @@ type BlobDescriptorServiceFactory interface {
 	BlobAccessController(svc BlobDescriptorService) BlobDescriptorService
 }
 
-// ReadSeekCloser is the primary reader type for blob data, combining
-// io.ReadSeeker with io.Closer.
-//
-// Deprecated: use [io.ReadSeekCloser].
-type ReadSeekCloser = io.ReadSeekCloser
-
 // BlobProvider describes operations for getting blob data.
 type BlobProvider interface {
 	// Get returns the entire blob identified by digest along with the descriptor.
