@@ -1,47 +1,35 @@
-area/config:
-  - configuration
-
-area/docs:
-  - README.md
-  - docs/**/*.md
-
+area/api:
+  - registry/api
+  - registry/handlers
+area/auth:
+  - registry/auth
 area/build:
   - Makefile
   - Dockerfile
   - docker-bake.hcl
   - dockerfiles/**/*
-
+area/cache:
+  - registry/storage/cache
 area/ci:
   - .github/**/*
   - tests
   - testutil
-
+area/config:
+  - configuration
+area/docs:
+  - README.md
+  - docs/**/*.md
+area/proxy:
+  - registry/proxy
+area/storage:
+  - registry/storage
+area/storage/azure:
+  - registry/storage/azure
+area/storage/gcs:
+  - registry/storage/gcs
+area/storage/s3:
+  - registry/storage/s3-aws
 dependencies:
   - vendor/**/*
   - go.mod
   - go.sum
-
-area/storage:
-  - registry/storage
-
-area/storage/s3:
-  - registry/storage/s3-aws
-
-area/storage/gcs:
-  - registry/storage/gcs
-
-area/storage/azure:
-  - registry/storage/azure
-
-area/cache:
-  - registry/storage/cache
-
-area/auth:
-  - registry/auth
-
-area/proxy:
-  - registry/proxy
-
-area/api:
-  - registry/api
-  - registry/handlers
