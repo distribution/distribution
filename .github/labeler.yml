@@ -1,5 +1,5 @@
 area/config:
-  - charts/registry/config/**/*
+  - configuration
 
 area/docs:
   - README.md
@@ -41,9 +41,6 @@ area/auth:
 
 area/proxy:
   - registry/proxy
-
-area/config:
-  - configuration
 
 area/api:
   - registry/api
