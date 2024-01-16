@@ -1,6 +1,3 @@
-area/ci:
-  - .github/**/*
-
 area/config:
   - charts/registry/config/**/*
 
