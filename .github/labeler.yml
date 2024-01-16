@@ -1,7 +1,7 @@
 area/api:
   - changed-files:
     - any-glob-to-any-file:
-      - registry/api/**/*
+      - registry/api/**
       - registry/handlers/**/*
 area/auth:
   - changed-files:
