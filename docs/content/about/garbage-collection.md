@@ -21,15 +21,15 @@ that certain layers no longer exist on the filesystem.
 
 Filesystem layers are stored by their content address in the Registry. This
 has many advantages, one of which is that data is stored once and referred to by manifests.
-See [here](../compatibility#content-addressable-storage-cas) for more details.
+See [here](compatibility.md#content-addressable-storage-cas) for more details.
 
 Layers are therefore shared amongst manifests; each manifest maintains a reference
 to the layer. As long as a layer is referenced by one manifest, it cannot be garbage
 collected.
 
 Manifests and layers can be `deleted` with the registry API (refer to the API
-documentation [here](/spec/api#deleting-a-layer) and
-[here](/spec/api#deleting-an-image) for details). This API removes references
+documentation [here](../spec/api.md#deleting-a-layer) and
+[here](../spec/api.md#deleting-an-image) for details). This API removes references
 to the target and makes them eligible for garbage collection. It also makes them
 unable to be read via the API.
 

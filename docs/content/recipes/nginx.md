@@ -17,7 +17,7 @@ mechanism fronting their internal http portal.
 
 If you just want authentication for your registry, and are happy maintaining
 users access separately, you should really consider sticking with the native
-[basic auth registry feature](/about/deploying#native-basic-auth).
+[basic auth registry feature](../about/deploying.md#native-basic-auth).
 
 ### Solution
 

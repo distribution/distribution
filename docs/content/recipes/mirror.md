@@ -107,7 +107,7 @@ proxy:
 
 > **Warning**: For the scheduler to clean up old entries, `delete` must
 > be enabled in the registry configuration. See
-> [Registry Configuration](/about/configuration) for more details.
+> [Registry Configuration](../about/configuration.md) for more details.
 
 ### Configure the Docker daemon
 

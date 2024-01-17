@@ -416,7 +416,7 @@ reference may include a tag or digest.
 
 The client should include an Accept header indicating which manifest content
 types it supports. For more details on the manifest format and content types,
-see [Image Manifest Version 2, Schema 2](../manifest-v2-2).
+see [Image Manifest Version 2, Schema 2](manifest-v2-2.md).
 In a successful response, the Content-Type header will indicate which manifest type is being returned.
 
 A `404 Not Found` response will be returned if the image is unknown to the
@@ -840,7 +840,7 @@ Content-Type: <manifest media type>
 The `name` and `reference` fields of the response body must match those
 specified in the URL. The `reference` field may be a "tag" or a "digest". The
 content type should match the type of the manifest being uploaded, as specified
-in [Image Manifest Version 2, Schema 2](../manifest-v2-2).
+in [Image Manifest Version 2, Schema 2](manifest-v2-2.md).
 
 If there is a problem with pushing the manifest, a relevant 4xx response will
 be returned with a JSON error message. Please see the
@@ -1088,7 +1088,7 @@ response will be issued instead.
 
     Accept: application/vnd.docker.distribution.manifest.v2+json
 
-> for more details, see: [compatibility](/about/compatibility#content-addressable-storage-cas)
+> for more details, see: [compatibility](../about/compatibility.md#content-addressable-storage-cas)
 
 ## Detail
 

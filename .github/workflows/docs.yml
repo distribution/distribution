@@ -39,8 +39,6 @@ jobs:
           set: |
             *.cache-from=type=gha,scope=docs
             *.cache-to=type=gha,scope=docs,mode=max
-        env:
-          DOCS_BASEURL: ${{ steps.pages.outputs.base_path }}
       - name: Fix permissions
         run: |
           chmod -c -R +rX "./build/docs" | while read line; do

@@ -12,7 +12,7 @@ Usually, that includes enterprise setups using LDAP/AD on the backend and a SSO 
 
 ### Alternatives
 
-If you just want authentication for your registry, and are happy maintaining users access separately, you should really consider sticking with the native [basic auth registry feature](/about/deploying#native-basic-auth).
+If you just want authentication for your registry, and are happy maintaining users access separately, you should really consider sticking with the native [basic auth registry feature](../about/deploying.md#native-basic-auth).
 
 ### Solution
 
