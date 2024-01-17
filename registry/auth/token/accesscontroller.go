@@ -57,6 +57,11 @@ func (s accessSet) contains(access auth.Access) bool {
 	if ok {
 		return actionSet.contains(access.Action)
 	}
+	for authResource, actionSet := range s {
+		if authResource.Name == "*" {
+			return actionSet.contains(access.Action)
+		}
+	}
 
 	return false
 }
