@@ -97,6 +97,9 @@ var configStruct = Configuration{
 		HTTP2 struct {
 			Disabled bool `yaml:"disabled,omitempty"`
 		} `yaml:"http2,omitempty"`
+		H2C struct {
+			Enabled bool `yaml:"enabled,omitempty"`
+		} `yaml:"h2c,omitempty"`
 	}{
 		TLS: struct {
 			Certificate  string   `yaml:"certificate,omitempty"`
@@ -120,6 +123,11 @@ var configStruct = Configuration{
 			Disabled bool `yaml:"disabled,omitempty"`
 		}{
 			Disabled: false,
+		},
+		H2C: struct {
+			Enabled bool `yaml:"enabled,omitempty"`
+		}{
+			Enabled: true,
 		},
 	},
 	Redis: Redis{

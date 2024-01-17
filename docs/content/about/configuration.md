@@ -220,6 +220,8 @@ http:
     X-Content-Type-Options: [nosniff]
   http2:
     disabled: false
+  h2c:
+    enabled: false
 notifications:
   events:
     includereferences: true
@@ -724,6 +726,8 @@ http:
     X-Content-Type-Options: [nosniff]
   http2:
     disabled: false
+  h2c:
+    enabled: false
 ```
 
 The `http` option details the configuration for the HTTP server that hosts the
@@ -870,12 +874,23 @@ registry. This header is included in the example configuration file.
 
 ### `http2`
 
-The `http2` structure within `http` is **optional**. Use this to control http2
+The `http2` structure within `http` is **optional**. Use this to control HTTP/2 over TLS
 settings for the registry.
+If `tls` is not configured this option is ignored. To enable HTTP/2 over non TLS connections use `h2c` instead.
 
 | Parameter | Required | Description                                           |
 |-----------|----------|-------------------------------------------------------|
 | `disabled` | no      | If `true`, then `http2` support is disabled.          |
+
+### `h2c`
+
+The `h2c` structure within `http` is **optional**. Use this to control H2C (HTTP/2 Cleartext)
+settings for the registry.
+Useful when deploying the registry behind a load balancer (e.g. Google Cloud Run)
+
+| Parameter | Required | Description                                           |
+|-----------|----------|-------------------------------------------------------|
+| `enabled` | no      | If `true`, then `h2c` support is enabled.              |
 
 ## `notifications`
 

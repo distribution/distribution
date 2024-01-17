@@ -20,6 +20,8 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"golang.org/x/crypto/acme"
 	"golang.org/x/crypto/acme/autocert"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 
 	"github.com/distribution/distribution/v3/configuration"
 	"github.com/distribution/distribution/v3/health"
@@ -157,6 +159,9 @@ func NewRegistry(ctx context.Context, config *configuration.Configuration) (*Reg
 	err = tracing.InitOpenTelemetry(app.Context)
 	if err != nil {
 		return nil, fmt.Errorf("error during open telemetry initialization: %v", err)
+	}
+	if config.HTTP.H2C.Enabled {
+		handler = h2c.NewHandler(handler, &http2.Server{})
 	}
 	handler = otelHandler(handler)
 
