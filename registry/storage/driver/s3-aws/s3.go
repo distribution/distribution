@@ -1128,16 +1128,14 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, from stri
 
 			// get a list of all inferred directories between the previous directory and this file
 			dirs := directoryDiff(prevDir, filePath)
-			if len(dirs) > 0 {
-				for _, dir := range dirs {
-					walkInfos = append(walkInfos, storagedriver.FileInfoInternal{
-						FileInfoFields: storagedriver.FileInfoFields{
-							IsDir: true,
-							Path:  dir,
-						},
-					})
-					prevDir = dir
-				}
+			for _, dir := range dirs {
+				walkInfos = append(walkInfos, storagedriver.FileInfoInternal{
+					FileInfoFields: storagedriver.FileInfoFields{
+						IsDir: true,
+						Path:  dir,
+					},
+				})
+				prevDir = dir
 			}
 
 			walkInfos = append(walkInfos, storagedriver.FileInfoInternal{
