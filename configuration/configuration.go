@@ -157,9 +157,15 @@ type Configuration struct {
 		// HTTP2 configuration options
 		HTTP2 struct {
 			// Specifies whether the registry should disallow clients attempting
-			// to connect via http2. If set to true, only http/1.1 is supported.
+			// to connect via HTTP/2. If set to true, only HTTP/1.1 is supported.
 			Disabled bool `yaml:"disabled,omitempty"`
 		} `yaml:"http2,omitempty"`
+
+		H2C struct {
+			// Enables H2C (HTTP/2 Cleartext). Enable to support HTTP/2 without needing to configure TLS
+			// Useful when deploying the registry behind a load balancer (e.g. Cloud Run)
+			Enabled bool `yaml:"enabled,omitempty"`
+		} `yaml:"h2c,omitempty"`
 	} `yaml:"http,omitempty"`
 
 	// Notifications specifies configuration about various endpoint to which
