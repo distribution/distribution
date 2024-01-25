@@ -7,7 +7,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/internal/dcontext"
+	"github.com/distribution/distribution/v3/registry/storage"
 	"github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/reference"
 )
@@ -18,7 +20,8 @@ type expiryFunc func(reference.Reference) error
 const (
 	entryTypeBlob = iota
 	entryTypeManifest
-	indexSaveFrequency = 5 * time.Second
+	indexSaveFrequency      = 5 * time.Second
+	garbageCollectFrequency = 5 * time.Second
 )
 
 // schedulerEntry represents an entry in the scheduler
@@ -31,16 +34,23 @@ type schedulerEntry struct {
 	timer *time.Timer
 }
 
+func (se schedulerEntry) String() string {
+	return fmt.Sprintf("Expiry: %s, EntryType: %d", se.Expiry, se.EntryType)
+}
+
 // New returns a new instance of the scheduler
-func New(ctx context.Context, driver driver.StorageDriver, path string) *TTLExpirationScheduler {
+func New(ctx context.Context, driver driver.StorageDriver, path string, registry distribution.Namespace, opts storage.GCOpts) *TTLExpirationScheduler {
 	return &TTLExpirationScheduler{
-		entries:         make(map[string]*schedulerEntry),
-		driver:          driver,
-		pathToStateFile: path,
-		ctx:             ctx,
-		stopped:         true,
-		doneChan:        make(chan struct{}),
-		saveTimer:       time.NewTicker(indexSaveFrequency),
+		entries:             make(map[string]*schedulerEntry),
+		driver:              driver,
+		pathToStateFile:     path,
+		registry:            registry,
+		opts:                opts,
+		ctx:                 ctx,
+		stopped:             true,
+		doneChan:            make(chan struct{}),
+		saveTimer:           time.NewTicker(indexSaveFrequency),
+		garbageCollectTimer: time.NewTicker(garbageCollectFrequency),
 	}
 }
 
@@ -54,15 +64,18 @@ type TTLExpirationScheduler struct {
 	driver          driver.StorageDriver
 	ctx             context.Context
 	pathToStateFile string
+	registry        distribution.Namespace
+	opts            storage.GCOpts
 
 	stopped bool
 
 	onBlobExpire     expiryFunc
 	onManifestExpire expiryFunc
 
-	indexDirty bool
-	saveTimer  *time.Ticker
-	doneChan   chan struct{}
+	indexDirty          bool
+	saveTimer           *time.Ticker
+	garbageCollectTimer *time.Ticker
+	doneChan            chan struct{}
 }
 
 // OnBlobExpire is called when a scheduled blob's TTL expires
@@ -121,7 +134,7 @@ func (ttles *TTLExpirationScheduler) Start() error {
 		return fmt.Errorf("scheduler already started")
 	}
 
-	dcontext.GetLogger(ttles.ctx).Infof("Starting cached object TTL expiration scheduler...")
+	dcontext.GetLogger(ttles.ctx).Infof("Starting cached object TTL (cameron changed) expiration scheduler...")
 	ttles.stopped = false
 
 	// Start timer for each deserialized entry
@@ -140,6 +153,7 @@ func (ttles *TTLExpirationScheduler) Start() error {
 					ttles.Unlock()
 					continue
 				}
+				dcontext.GetLogger(ttles.ctx).Debugf("Current state: \n %+v", ttles.entries)
 
 				err := ttles.writeState()
 				if err != nil {
@@ -155,7 +169,23 @@ func (ttles *TTLExpirationScheduler) Start() error {
 		}
 	}()
 
+	// You could paraallize this, but you'd want to make sure work was not overlapping
+	go ttles.GarbageCollect()
+
 	return nil
+}
+
+func (ttles *TTLExpirationScheduler) GarbageCollect() {
+	for {
+		select {
+		case <-ttles.garbageCollectTimer.C:
+
+			storage.MarkAndSweep(ttles.ctx, ttles.driver, ttles.registry, ttles.opts)
+
+		case <-ttles.doneChan:
+			return
+		}
+	}
 }
 
 func (ttles *TTLExpirationScheduler) add(r reference.Reference, ttl time.Duration, eType int) {
@@ -256,5 +286,7 @@ func (ttles *TTLExpirationScheduler) readState() error {
 	if err != nil {
 		return err
 	}
+	dcontext.GetLogger(ttles.ctx).Infof("Start state: \n %+v", ttles.entries)
+
 	return nil
 }

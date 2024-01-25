@@ -26,6 +26,9 @@ redis:
      idletimeout: 60s
      maxactive: 64
      maxidle: 16
+proxy:
+  remoteurl: "https://registry-1.docker.io"
+  ttl: 1m
 storage:
   redirect:
     disable: true

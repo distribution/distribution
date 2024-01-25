@@ -55,7 +55,7 @@ services:
       minio-init:
         condition: service_completed_successfully
     ports:
-      - "5000:5000"
-      - "5001:5001"
+      - "5004:5000"
+      - "5005:5001"
     volumes:
       - ./conf-e2e-cloud-storage.yml:/etc/docker/registry/config-test.yml

@@ -132,18 +132,18 @@ func (pbs *proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter,
 		return err
 	}
 
-	blobRef, err := reference.WithDigest(pbs.repositoryName, dgst)
-	if err != nil {
-		dcontext.GetLogger(ctx).Errorf("Error creating reference: %s", err)
-		return err
-	}
+	// blobRef, err := reference.WithDigest(pbs.repositoryName, dgst)
+	// if err != nil {
+	// 	dcontext.GetLogger(ctx).Errorf("Error creating reference: %s", err)
+	// 	return err
+	// }
 
-	if pbs.scheduler != nil && pbs.ttl != nil {
-		if err := pbs.scheduler.AddBlob(blobRef, *pbs.ttl); err != nil {
-			dcontext.GetLogger(ctx).Errorf("Error adding blob: %s", err)
-			return err
-		}
-	}
+	// if pbs.scheduler != nil && pbs.ttl != nil {
+	// 	if err := pbs.scheduler.AddBlob(blobRef, *pbs.ttl); err != nil {
+	// 		dcontext.GetLogger(ctx).Errorf("Error adding blob: %s", err)
+	// 		return err
+	// 	}
+	// }
 
 	return nil
 }
