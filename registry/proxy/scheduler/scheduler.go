@@ -12,6 +12,7 @@ import (
 	"github.com/distribution/distribution/v3/registry/storage"
 	"github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/reference"
+	"github.com/opencontainers/go-digest"
 )
 
 // onTTLExpiryFunc is called when a repository's TTL expires
@@ -21,7 +22,7 @@ const (
 	entryTypeBlob = iota
 	entryTypeManifest
 	indexSaveFrequency      = 5 * time.Second
-	garbageCollectFrequency = 5 * time.Second
+	garbageCollectFrequency = 1 * time.Minute
 )
 
 // schedulerEntry represents an entry in the scheduler
@@ -39,11 +40,12 @@ func (se schedulerEntry) String() string {
 }
 
 // New returns a new instance of the scheduler
-func New(ctx context.Context, driver driver.StorageDriver, path string, registry distribution.Namespace, opts storage.GCOpts) *TTLExpirationScheduler {
+func New(ctx context.Context, driver driver.StorageDriver, path string, ttl *time.Duration, registry distribution.Namespace, opts storage.GCOpts) *TTLExpirationScheduler {
 	return &TTLExpirationScheduler{
 		entries:             make(map[string]*schedulerEntry),
 		driver:              driver,
 		pathToStateFile:     path,
+		ttl:                 ttl,
 		registry:            registry,
 		opts:                opts,
 		ctx:                 ctx,
@@ -64,6 +66,7 @@ type TTLExpirationScheduler struct {
 	driver          driver.StorageDriver
 	ctx             context.Context
 	pathToStateFile string
+	ttl             *time.Duration
 	registry        distribution.Namespace
 	opts            storage.GCOpts
 
@@ -140,6 +143,11 @@ func (ttles *TTLExpirationScheduler) Start() error {
 	// Start timer for each deserialized entry
 	for _, entry := range ttles.entries {
 		entry.timer = ttles.startTimer(entry, time.Until(entry.Expiry))
+	}
+
+	err = ttles.BackfillManifests()
+	if err != nil {
+		return fmt.Errorf("failed to backfill manifests: %w", err)
 	}
 
 	// Start a ticker to periodically save the entries index
@@ -289,4 +297,73 @@ func (ttles *TTLExpirationScheduler) readState() error {
 	dcontext.GetLogger(ttles.ctx).Infof("Start state: \n %+v", ttles.entries)
 
 	return nil
+}
+
+func (ttles *TTLExpirationScheduler) BackfillManifests() error {
+	repositoryEnumerator, ok := ttles.registry.(distribution.RepositoryEnumerator)
+	if !ok {
+		return fmt.Errorf("unable to convert Namespace to RepositoryEnumerator")
+	}
+	emit("backfilling manifests")
+
+	// mark
+	err := repositoryEnumerator.Enumerate(ttles.ctx, func(repoName string) error {
+		emit("backfill for " + repoName)
+
+		var err error
+		named, err := reference.WithName(repoName)
+		if err != nil {
+			return fmt.Errorf("failed to parse repo name %s: %v", repoName, err)
+		}
+		repository, err := ttles.registry.Repository(ttles.ctx, named)
+		if err != nil {
+			return fmt.Errorf("failed to construct repository: %v", err)
+		}
+
+		manifestService, err := repository.Manifests(ttles.ctx)
+		if err != nil {
+			return fmt.Errorf("failed to construct manifest service: %v", err)
+		}
+
+		manifestEnumerator, ok := manifestService.(distribution.ManifestEnumerator)
+		if !ok {
+			return fmt.Errorf("unable to convert ManifestService into ManifestEnumerator")
+		}
+
+		err = manifestEnumerator.Enumerate(ttles.ctx, func(dgst digest.Digest) error {
+			// Mark the manifest's blob
+			emit("backfill for %s: adding ttl manifest %s ", repoName, dgst)
+
+			// Skip if TTL exists for manifest
+			key := dgst.String()
+			if _, ok := ttles.entries[key]; !ok {
+				ttles.entries[key] = &schedulerEntry{
+					Key: key,
+
+					// TODO file created at is probably better
+					Expiry:    time.Now().Add(*ttles.ttl),
+					EntryType: entryTypeManifest,
+				}
+			}
+
+			return nil
+		})
+
+		// In certain situations such as unfinished uploads, deleting all
+		// tags in S3 or removing the _manifests folder manually, this
+		// error may be of type PathNotFound.
+		//
+		// In these cases we can continue marking other manifests safely.
+		if _, ok := err.(driver.PathNotFoundError); ok {
+			return nil
+		}
+
+		return err
+	})
+
+	return err
+}
+
+func emit(format string, a ...interface{}) {
+	fmt.Printf(format+"\n", a...)
 }
