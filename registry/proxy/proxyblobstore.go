@@ -33,22 +33,20 @@ var inflight = make(map[digest.Digest]struct{})
 // mu protects inflight
 var mu sync.Mutex
 
-func setResponseHeaders(w http.ResponseWriter, length int64, mediaType string, digest digest.Digest) {
-	w.Header().Set("Content-Length", strconv.FormatInt(length, 10))
-	w.Header().Set("Content-Type", mediaType)
-	w.Header().Set("Docker-Content-Digest", digest.String())
-	w.Header().Set("Etag", digest.String())
+func setResponseHeaders(h http.Header, length int64, mediaType string, digest digest.Digest) {
+	h.Set("Content-Length", strconv.FormatInt(length, 10))
+	h.Set("Content-Type", mediaType)
+	h.Set("Docker-Content-Digest", digest.String())
+	h.Set("Etag", digest.String())
 }
 
-func (pbs *proxyBlobStore) copyContent(ctx context.Context, dgst digest.Digest, writer io.Writer) (distribution.Descriptor, error) {
+func (pbs *proxyBlobStore) copyContent(ctx context.Context, dgst digest.Digest, writer io.Writer, h http.Header) (distribution.Descriptor, error) {
 	desc, err := pbs.remoteStore.Stat(ctx, dgst)
 	if err != nil {
 		return distribution.Descriptor{}, err
 	}
 
-	if w, ok := writer.(http.ResponseWriter); ok {
-		setResponseHeaders(w, desc.Size, desc.MediaType, dgst)
-	}
+	setResponseHeaders(h, desc.Size, desc.MediaType, dgst)
 
 	remoteReader, err := pbs.remoteStore.Open(ctx, dgst)
 	if err != nil {
@@ -102,7 +100,7 @@ func (pbs *proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter,
 		// Will return the blob from the remote store directly.
 		// TODO Maybe we could reuse the these blobs are serving remotely and caching locally.
 		mu.Unlock()
-		_, err := pbs.copyContent(ctx, dgst, w)
+		_, err := pbs.copyContent(ctx, dgst, w, w.Header())
 		return err
 	}
 	inflight[dgst] = struct{}{}
@@ -122,7 +120,7 @@ func (pbs *proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter,
 	// Serving client and storing locally over same fetching request.
 	// This can prevent a redundant blob fetching.
 	multiWriter := io.MultiWriter(w, bw)
-	desc, err := pbs.copyContent(ctx, dgst, multiWriter)
+	desc, err := pbs.copyContent(ctx, dgst, multiWriter, w.Header())
 	if err != nil {
 		return err
 	}
