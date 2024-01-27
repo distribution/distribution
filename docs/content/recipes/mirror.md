@@ -22,14 +22,15 @@ relying entirely on your local registry is the simplest scenario.
 
 ### Gotcha
 
-It's currently possible to mirror only one upstream registry at a time.
+It's currently possible to mirror only one upstream registry at a time, 
+unless you enable namespace support.
 
 The URL of a pull-through registry mirror must be the root of a domain.
 No path components other than an optional trailing slash (`/`) are allowed.
 The following table shows examples of allowed and disallowed mirror URLs.
 
 | URL                                    | Allowed |
-| -------------------------------------- | ------- |
+|----------------------------------------|---------|
 | `https://mirror.company.example`       | Yes     |
 | `https://mirror.company.example/`      | Yes     |
 | `https://mirror.company.example/foo`   | No      |
@@ -48,13 +49,13 @@ responds to all normal docker pull requests but stores all content locally.
 ## How does it work?
 
 The first time you request an image from your local registry mirror, it pulls
-the image from the public Docker registry and stores it locally before handing
+the image from the public container registry and stores it locally before handing
 it back to you. On subsequent requests, the local registry mirror is able to
 serve the image from its own storage.
 
-### What if the content changes on the Hub?
+### What if the content changes on the remote registry?
 
-When a pull is attempted with a tag, the Registry checks the remote to
+When a pull is attempted with a tag, the registry checks the remote to
 ensure if it has the latest version of the requested content. Otherwise, it
 fetches and caches the latest content.
 
@@ -68,12 +69,15 @@ remote fetch and local re-caching.
 To ensure best performance and guarantee correctness the Registry cache should
 be configured to use the `filesystem` driver for storage.
 
-## Run a Registry as a pull-through cache
+## Run a registry as a pull-through cache
 
 The easiest way to run a registry as a pull through cache is to run the official
-Registry image.
-At least, you need to specify `proxy.remoteurl` within `/etc/distribution/config.yml`
+registry image.
+
+To enable proxying to a single registry, you need to specify `proxy.remoteurl` within `/etc/distribution/config.yml`
 as described in the following subsection.
+
+To enable proxying to any registry, you need to enable namespace support with `proxy.enablenamespaces`.
 
 Multiple registry caches can be deployed over the same back-end. A single
 registry cache ensures that concurrent requests do not pull duplicate data,
@@ -89,27 +93,47 @@ but this property does not hold true for a registry cache cluster.
 To configure a Registry to run as a pull through cache, the addition of a
 `proxy` section is required to the config file.
 
-To access private images on the Docker Hub, a username and password can
+To access private images on the remote registry, a username and password can
 be supplied.
 
-```yaml
-proxy:
-  remoteurl: https://registry-1.docker.io
-  username: [username]
-  password: [password]
-  ttl: 168h
-```
-
-> **Warning**: If you specify a username and password, it's very important to
-> understand that private resources that this user has access to Docker Hub is
-> made available on your mirror. **You must secure your mirror** by
+> **Warning**: If you specify credentials, it's very important to
+> understand that private resources that this user has access to the remote registry
+> is made available on your mirror. **You must secure your mirror** by
 > implementing authentication if you expect these resources to stay private!
 
 > **Warning**: For the scheduler to clean up old entries, `delete` must
 > be enabled in the registry configuration. See
 > [Registry Configuration](../about/configuration.md) for more details.
 
-### Configure the Docker daemon
+#### Cache a single registry
+
+```yaml
+proxy:
+  remoteurl: https://registry-1.docker.io
+  username: <username>
+  password: <password>
+  ttl: 168h
+```
+
+#### Cache any registry (using namespaces)
+
+With namespaces enabled, any remote registry will be proxied. 
+To specify credentials for specific registries, add an entry for the registry URL to `credentials`.
+
+```yaml
+proxy:
+  ttl: 168h
+  enablenamespaces: true
+  credentials:
+    'https://registry-1.docker.io':
+      username: <username>
+      password: <password>
+```
+
+
+### Configure the container runtime
+
+#### Docker Daemon
 
 Either pass the `--registry-mirror` option when starting `dockerd` manually,
 or edit [`/etc/docker/daemon.json`](https://docs.docker.com/engine/reference/commandline/dockerd/#daemon-configuration-file)
@@ -144,3 +168,17 @@ Save the file and reload Docker for the change to take effect.
 >
 > It's telling you that the file doesn't exist yet in the local cache and is
 > being pulled from upstream.
+
+#### containerd
+
+containerd already supports namespaces, allowing you to use a single registry proxy for all registries.
+
+When the registry is configured with namespace support enabled,
+you can make containerd use it by adding the following to `/etc/containerd/config.toml`. 
+For more details, refer to the [containerd documentation](https://github.com/containerd/containerd/blob/main/docs/cri/registry.md).
+
+```toml
+[plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+  [plugins."io.containerd.grpc.v1.cri".registry.mirrors."*"]
+    endpoint = ["https://mirror.company.example"]
+```

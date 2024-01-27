@@ -311,12 +311,17 @@ health:
       threshold: 3
 proxy:
   remoteurl: https://registry-1.docker.io
-  username: [username]
-  password: [password]
+  username: <username>
+  password: <password>
   exec:
     command: docker-credential-helper
     lifetime: 1h
   ttl: 168h
+  enablenamespaces: true
+  credentials:
+    'registry-1.docker.io':
+      username: <username>
+      password: <password>
 validation:
   manifests:
     urls:
@@ -363,11 +368,11 @@ log:
     environment: staging
 ```
 
-| Parameter   | Required | Description |
-|-------------|----------|-------------|
-| `level`     | no       | Sets the sensitivity of logging output. Permitted values are `error`, `warn`, `info`, and `debug`. The default is `info`. |
+| Parameter   | Required | Description                                                                                                                                                                                 |
+|-------------|----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `level`     | no       | Sets the sensitivity of logging output. Permitted values are `error`, `warn`, `info`, and `debug`. The default is `info`.                                                                   |
 | `formatter` | no       | This selects the format of logging output. The format primarily affects how keyed attributes for a log line are encoded. Options are `text`, `json`, and `logstash`. The default is `text`. |
-| `fields`    | no       | A map of field names to values. These are added to every log line for the context. This is useful for identifying log messages source after being mixed in other systems. |
+| `fields`    | no       | A map of field names to values. These are added to every log line for the context. This is useful for identifying log messages source after being mixed in other systems.                   |
 
 ### `accesslog`
 
@@ -481,7 +486,7 @@ use. You must configure exactly one backend. If you configure more, the registry
 returns an error. You can choose any of these backend storage drivers:
 
 | Storage driver | Description                                                                                                                                                                                                                 |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|----------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `filesystem`   | Uses the local disk to store registry files. It is ideal for development and may be appropriate for some small-scale production applications. See the [driver's reference documentation](../storage-drivers/filesystem.md). |
 | `azure`        | Uses Microsoft Azure Blob Storage. See the [driver's reference documentation](../storage-drivers/azure.md).                                                                                                                 |
 | `gcs`          | Uses Google Cloud Storage. See the [driver's reference documentation](../storage-drivers/gcs.md).                                                                                                                           |
@@ -516,12 +521,12 @@ default. To configure upload directory purging, the following parameters must
 be set.
 
 
-| Parameter  | Required | Description                                                                                        |
-|------------|----------|----------------------------------------------------------------------------------------------------|
-| `enabled`  | yes      | Set to `true` to enable upload purging. Defaults to `true`.                                        |
-| `age`      | yes      | Upload directories which are older than this age will be deleted.Defaults to `168h` (1 week).      |
-| `interval` | yes      | The interval between upload directory purging. Defaults to `24h`.                                  |
-| `dryrun`   | yes      | Set `dryrun` to `true` to obtain a summary of what directories will be deleted. Defaults to `false`.|
+| Parameter  | Required | Description                                                                                          |
+|------------|----------|------------------------------------------------------------------------------------------------------|
+| `enabled`  | yes      | Set to `true` to enable upload purging. Defaults to `true`.                                          |
+| `age`      | yes      | Upload directories which are older than this age will be deleted.Defaults to `168h` (1 week).        |
+| `interval` | yes      | The interval between upload directory purging. Defaults to `24h`.                                    |
+| `dryrun`   | yes      | Set `dryrun` to `true` to obtain a summary of what directories will be deleted. Defaults to `false`. |
 
 > **Note**: `age` and `interval` are strings containing a number with optional
 fraction and a unit suffix. Some examples: `45m`, `2h10m`, `168h`.
@@ -654,16 +659,16 @@ Token-based authentication allows you to decouple the authentication system from
 the registry. It is an established authentication paradigm with a high degree of
 security.
 
-| Parameter            | Required | Description                                           |
-|----------------------|----------|-------------------------------------------------------|
-| `realm`              | yes      | The realm in which the registry server authenticates. |
-| `service`            | yes      | The service being authenticated.                      |
-| `issuer`             | yes      | The name of the token issuer. The issuer inserts this into the token so it must match the value configured for the issuer. |
-| `rootcertbundle`     | yes      | The absolute path to the root certificate bundle. This bundle contains the public part of the certificates used to sign authentication tokens. |
-| `autoredirect`       | no       | When set to `true`, `realm` will be set to the Host header of the request as the domain and a path of `/auth/token/`(or specified by `autoredirectpath`), the `realm` URL Scheme will use `X-Forwarded-Proto` header if set, otherwise it will be set to `https`. |
-| `autoredirectpath`   | no       | The path to redirect to if `autoredirect` is set to `true`, default: `/auth/token/`. |
-| `signingalgorithms`  | no       | A list of token signing algorithms to use for verifying token signatures. If left empty the default list of signing algorithms is used. Please see below for allowed values and default. |
-| `jwks`               | no       | The absolute path to the JSON Web Key Set (JWKS) file. The JWKS file contains the trusted keys used to verify the signature of authentication tokens. |
+| Parameter           | Required | Description                                                                                                                                                                                                                                                       |
+|---------------------|----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `realm`             | yes      | The realm in which the registry server authenticates.                                                                                                                                                                                                             |
+| `service`           | yes      | The service being authenticated.                                                                                                                                                                                                                                  |
+| `issuer`            | yes      | The name of the token issuer. The issuer inserts this into the token so it must match the value configured for the issuer.                                                                                                                                        |
+| `rootcertbundle`    | yes      | The absolute path to the root certificate bundle. This bundle contains the public part of the certificates used to sign authentication tokens.                                                                                                                    |
+| `autoredirect`      | no       | When set to `true`, `realm` will be set to the Host header of the request as the domain and a path of `/auth/token/`(or specified by `autoredirectpath`), the `realm` URL Scheme will use `X-Forwarded-Proto` header if set, otherwise it will be set to `https`. |
+| `autoredirectpath`  | no       | The path to redirect to if `autoredirect` is set to `true`, default: `/auth/token/`.                                                                                                                                                                              |
+| `signingalgorithms` | no       | A list of token signing algorithms to use for verifying token signatures. If left empty the default list of signing algorithms is used. Please see below for allowed values and default.                                                                          |
+| `jwks`              | no       | The absolute path to the JSON Web Key Set (JWKS) file. The JWKS file contains the trusted keys used to verify the signature of authentication tokens.                                                                                                             |
 
 Available `signingalgorithms`:
 - EdDSA
@@ -771,24 +776,24 @@ interpretation of the options.
 ### `cloudfront`
 
 
-| Parameter | Required | Description                                           |
-|-----------|----------|-------------------------------------------------------|
-| `baseurl` | yes      | The `SCHEME://HOST[/PATH]` at which Cloudfront is served. |
-| `privatekey` | yes   | The private key for Cloudfront, provided by AWS.        |
-| `keypairid` | yes    | The key pair ID provided by AWS.                         |
-| `duration` | no      | An integer and unit for the duration of the Cloudfront session. Valid time units are `ns`, `us` (or `µs`), `ms`, `s`, `m`, or `h`. For example, `3000s` is valid, but `3000 s` is not. If you do not specify a `duration` or you specify an integer without a time unit, the duration defaults to `20m` (20 minutes). |
-| `ipfilteredby` | no     | A string with the following value `none`, `aws` or `awsregion`. |
-| `awsregion` | no        | A comma separated string of AWS regions, only available when `ipfilteredby` is `awsregion`. For example, `us-east-1, us-west-2` |
-| `updatefrequency`  | no | The frequency to update AWS IP regions, default: `12h` |
-| `iprangesurl` | no      | The URL contains the AWS IP ranges information, default: `https://ip-ranges.amazonaws.com/ip-ranges.json` |
+| Parameter         | Required | Description                                                                                                                                                                                                                                                                                                           |
+|-------------------|----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `baseurl`         | yes      | The `SCHEME://HOST[/PATH]` at which Cloudfront is served.                                                                                                                                                                                                                                                             |
+| `privatekey`      | yes      | The private key for Cloudfront, provided by AWS.                                                                                                                                                                                                                                                                      |
+| `keypairid`       | yes      | The key pair ID provided by AWS.                                                                                                                                                                                                                                                                                      |
+| `duration`        | no       | An integer and unit for the duration of the Cloudfront session. Valid time units are `ns`, `us` (or `µs`), `ms`, `s`, `m`, or `h`. For example, `3000s` is valid, but `3000 s` is not. If you do not specify a `duration` or you specify an integer without a time unit, the duration defaults to `20m` (20 minutes). |
+| `ipfilteredby`    | no       | A string with the following value `none`, `aws` or `awsregion`.                                                                                                                                                                                                                                                       |
+| `awsregion`       | no       | A comma separated string of AWS regions, only available when `ipfilteredby` is `awsregion`. For example, `us-east-1, us-west-2`                                                                                                                                                                                       |
+| `updatefrequency` | no       | The frequency to update AWS IP regions, default: `12h`                                                                                                                                                                                                                                                                |
+| `iprangesurl`     | no       | The URL contains the AWS IP ranges information, default: `https://ip-ranges.amazonaws.com/ip-ranges.json`                                                                                                                                                                                                             |
 
 
 Value of `ipfilteredby` can be:
 
-| Value       | Description                        |
-|-------------|------------------------------------|
-| `none`      | default, do not filter by IP       |
-| `aws`       | IP from AWS goes to S3 directly    |
+| Value       | Description                                                                     |
+|-------------|---------------------------------------------------------------------------------|
+| `none`      | default, do not filter by IP                                                    |
+| `aws`       | IP from AWS goes to S3 directly                                                 |
 | `awsregion` | IP from certain AWS regions goes to S3 directly, use together with `awsregion`. |
 
 ### `redirect`
@@ -840,15 +845,15 @@ http:
 The `http` option details the configuration for the HTTP server that hosts the
 registry.
 
-| Parameter | Required | Description                                           |
-|-----------|----------|-------------------------------------------------------|
-| `addr`    | no       | The address for which the server should accept connections. The form depends on a network type (see the `net` option). Use `HOST:PORT` for TCP and `FILE` for a UNIX socket. The `addr` field is only optional if socket-activation is used (in which case `addr` and `net` are ignored regardless of if they are specified). |
-| `net`     | no       | The network used to create a listening socket. Known networks are `unix` and `tcp`. |
-| `prefix`  | no       | If the server does not run at the root path, set this to the value of the prefix. The root path is the section before `v2`. It requires both preceding and trailing slashes, such as in the example `/path/`. |
-| `host`    | no       | A fully-qualified URL for an externally-reachable address for the registry. If present, it is used when creating generated URLs. Otherwise, these URLs are derived from client requests. |
-| `secret`  | no       | A random piece of data used to sign state that may be stored with the client to protect against tampering. For production environments you should generate a random piece of data using a cryptographically secure random generator. If you omit the secret, the registry will automatically generate a secret when it starts. **If you are building a cluster of registries behind a load balancer, you MUST ensure the secret is the same for all registries.**|
-| `relativeurls`| no    | If `true`,  the registry returns relative URLs in Location headers. The client is responsible for resolving the correct URL. **This option is not compatible with Docker 1.7 and earlier.**|
-| `draintimeout`| no    | Amount of time to wait for HTTP connections to drain before shutting down after registry receives SIGTERM signal|
+| Parameter      | Required | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+|----------------|----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `addr`         | no       | The address for which the server should accept connections. The form depends on a network type (see the `net` option). Use `HOST:PORT` for TCP and `FILE` for a UNIX socket. The `addr` field is only optional if socket-activation is used (in which case `addr` and `net` are ignored regardless of if they are specified).                                                                                                                                     |
+| `net`          | no       | The network used to create a listening socket. Known networks are `unix` and `tcp`.                                                                                                                                                                                                                                                                                                                                                                               |
+| `prefix`       | no       | If the server does not run at the root path, set this to the value of the prefix. The root path is the section before `v2`. It requires both preceding and trailing slashes, such as in the example `/path/`.                                                                                                                                                                                                                                                     |
+| `host`         | no       | A fully-qualified URL for an externally-reachable address for the registry. If present, it is used when creating generated URLs. Otherwise, these URLs are derived from client requests.                                                                                                                                                                                                                                                                          |
+| `secret`       | no       | A random piece of data used to sign state that may be stored with the client to protect against tampering. For production environments you should generate a random piece of data using a cryptographically secure random generator. If you omit the secret, the registry will automatically generate a secret when it starts. **If you are building a cluster of registries behind a load balancer, you MUST ensure the secret is the same for all registries.** |
+| `relativeurls` | no       | If `true`,  the registry returns relative URLs in Location headers. The client is responsible for resolving the correct URL. **This option is not compatible with Docker 1.7 and earlier.**                                                                                                                                                                                                                                                                       |
+| `draintimeout` | no       | Amount of time to wait for HTTP connections to drain before shutting down after registry receives SIGTERM signal                                                                                                                                                                                                                                                                                                                                                  |
 
 
 ### `tls`
@@ -860,12 +865,12 @@ and proxy connections to the registry server.
 
 | Parameter      | Required | Description                                                                                                                                                                                                                                                                                                                                                                                        |
 |----------------|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `certificate`  | yes  | Absolute path to the x509 certificate file.                                                                                                                                                                                                                                                                                                                                                        |
-| `key`          | yes  | Absolute path to the x509 private key file.                                                                                                                                                                                                                                                                                                                                                        |
-| `clientcas`    | no   | An array of absolute paths to x509 CA files.                                                                                                                                                                                                                                                                                                                                                       |
-| `clientauth`   | no   | Client certificate authentication mode. This setting determines how the server handles client certificates during the TLS handshake. If clientcas is not provided, TLS Client Authentication is disabled, and the mode is ignored. Allowed (request-client-cert, require-any-client-cert, verify-client-cert-if-given, require-and-verify-client-cert). Defaults to require-and-verify-client-cert |
-| `minimumtls`   | no   | Minimum TLS version allowed (tls1.0, tls1.1, tls1.2, tls1.3). Defaults to tls1.2                                                                                                                                                                                                                                                                                                                   |
-| `ciphersuites` | no   | Cipher suites allowed. Please see below for allowed values and default.                                                                                                                                                                                                                                                                                                                            |
+| `certificate`  | yes      | Absolute path to the x509 certificate file.                                                                                                                                                                                                                                                                                                                                                        |
+| `key`          | yes      | Absolute path to the x509 private key file.                                                                                                                                                                                                                                                                                                                                                        |
+| `clientcas`    | no       | An array of absolute paths to x509 CA files.                                                                                                                                                                                                                                                                                                                                                       |
+| `clientauth`   | no       | Client certificate authentication mode. This setting determines how the server handles client certificates during the TLS handshake. If clientcas is not provided, TLS Client Authentication is disabled, and the mode is ignored. Allowed (request-client-cert, require-any-client-cert, verify-client-cert-if-given, require-and-verify-client-cert). Defaults to require-and-verify-client-cert |
+| `minimumtls`   | no       | Minimum TLS version allowed (tls1.0, tls1.1, tls1.2, tls1.3). Defaults to tls1.2                                                                                                                                                                                                                                                                                                                   |
+| `ciphersuites` | no       | Cipher suites allowed. Please see below for allowed values and default.                                                                                                                                                                                                                                                                                                                            |
 
 Available cipher suites:
 - TLS_RSA_WITH_RC4_128_SHA
@@ -986,9 +991,9 @@ The `http2` structure within `http` is **optional**. Use this to control HTTP/2 
 settings for the registry.
 If `tls` is not configured this option is ignored. To enable HTTP/2 over non TLS connections use `h2c` instead.
 
-| Parameter | Required | Description                                           |
-|-----------|----------|-------------------------------------------------------|
-| `disabled` | no      | If `true`, then `http2` support is disabled.          |
+| Parameter  | Required | Description                                  |
+|------------|----------|----------------------------------------------|
+| `disabled` | no       | If `true`, then `http2` support is disabled. |
 
 ### `h2c`
 
@@ -996,9 +1001,9 @@ The `h2c` structure within `http` is **optional**. Use this to control H2C (HTTP
 settings for the registry.
 Useful when deploying the registry behind a load balancer (e.g. Google Cloud Run)
 
-| Parameter | Required | Description                                           |
-|-----------|----------|-------------------------------------------------------|
-| `enabled` | no      | If `true`, then `h2c` support is enabled.              |
+| Parameter | Required | Description                               |
+|-----------|----------|-------------------------------------------|
+| `enabled` | no       | If `true`, then `h2c` support is enabled. |
 
 ## `notifications`
 
@@ -1031,32 +1036,32 @@ option, `endpoints`.
 The `endpoints` structure contains a list of named services (URLs) that can
 accept event notifications.
 
-| Parameter | Required | Description                                           |
-|-----------|----------|-------------------------------------------------------|
-| `name`    | yes      | A human-readable name for the service.                |
-| `disabled` | no      | If `true`, notifications are disabled for the service.|
-| `url`     | yes      | The URL to which events should be published.          |
-| `headers` | yes      | A list of static headers to add to each request. Each header's name is a key beneath `headers`, and each value is a list of payloads for that header name. Values must always be lists. |
-| `timeout` | yes      | A value for the HTTP timeout. A positive integer and an optional suffix indicating the unit of time, which may be `ns`, `us`, `ms`, `s`, `m`, or `h`. If you omit the unit of time, `ns` is used. |
-| `threshold` | yes    | An integer specifying how long to wait before backing off a failure. |
-| `backoff` | yes      | How long the system backs off before retrying after a failure. A positive integer and an optional suffix indicating the unit of time, which may be `ns`, `us`, `ms`, `s`, `m`, or `h`. If you omit the unit of time, `ns` is used. |
-| `ignoredmediatypes`|no| A list of target media types to ignore. Events with these target media types are not published to the endpoint. |
-| `ignore`  |no| Events with these mediatypes or actions are not published to the endpoint. |
+| Parameter           | Required | Description                                                                                                                                                                                                                        |
+|---------------------|----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `name`              | yes      | A human-readable name for the service.                                                                                                                                                                                             |
+| `disabled`          | no       | If `true`, notifications are disabled for the service.                                                                                                                                                                             |
+| `url`               | yes      | The URL to which events should be published.                                                                                                                                                                                       |
+| `headers`           | yes      | A list of static headers to add to each request. Each header's name is a key beneath `headers`, and each value is a list of payloads for that header name. Values must always be lists.                                            |
+| `timeout`           | yes      | A value for the HTTP timeout. A positive integer and an optional suffix indicating the unit of time, which may be `ns`, `us`, `ms`, `s`, `m`, or `h`. If you omit the unit of time, `ns` is used.                                  |
+| `threshold`         | yes      | An integer specifying how long to wait before backing off a failure.                                                                                                                                                               |
+| `backoff`           | yes      | How long the system backs off before retrying after a failure. A positive integer and an optional suffix indicating the unit of time, which may be `ns`, `us`, `ms`, `s`, `m`, or `h`. If you omit the unit of time, `ns` is used. |
+| `ignoredmediatypes` | no       | A list of target media types to ignore. Events with these target media types are not published to the endpoint.                                                                                                                    |
+| `ignore`            | no       | Events with these mediatypes or actions are not published to the endpoint.                                                                                                                                                         |
 
 #### `ignore`
 
-| Parameter | Required | Description                                           |
-|-----------|----------|-------------------------------------------------------|
-| `mediatypes`|no| A list of target media types to ignore. Events with these target media types are not published to the endpoint. |
-| `actions`   |no| A list of actions to ignore. Events with these actions are not published to the endpoint. |
+| Parameter    | Required | Description                                                                                                     |
+|--------------|----------|-----------------------------------------------------------------------------------------------------------------|
+| `mediatypes` | no       | A list of target media types to ignore. Events with these target media types are not published to the endpoint. |
+| `actions`    | no       | A list of actions to ignore. Events with these actions are not published to the endpoint.                       |
 
 ### `events`
 
 The `events` structure configures the information provided in event notifications.
 
-| Parameter | Required | Description                                           |
-|-----------|----------|-------------------------------------------------------|
-| `includereferences` | no | If `true`, include reference information in manifest events. |
+| Parameter           | Required | Description                                                  |
+|---------------------|----------|--------------------------------------------------------------|
+| `includereferences` | no       | If `true`, include reference information in manifest events. |
 
 ## `redis`
 
@@ -1076,11 +1081,11 @@ You can optionally specify TLS configuration on top of the `UniversalOptions` se
 
 Use these settings to configure Redis TLS:
 
-| Parameter | Required | Description                                           |
-|-----------|----------|-------------------------------------------------------|
-| `certificate`  | yes  | Absolute path to the x509 certificate file.           |
-| `key`          | yes  | Absolute path to the x509 private key file.           |
-| `rootcas`      | no   | An array of absolute paths to x509 CA files.          |
+| Parameter     | Required | Description                                  |
+|---------------|----------|----------------------------------------------|
+| `certificate` | yes      | Absolute path to the x509 certificate file.  |
+| `key`         | yes      | Absolute path to the x509 private key file.  |
+| `rootcas`     | no       | An array of absolute paths to x509 CA files. |
 
 ```yaml
 redis:
@@ -1138,11 +1143,11 @@ The `storagedriver` structure contains options for a health check on the
 configured storage driver's backend storage. The health check is only active
 when `enabled` is set to `true`.
 
-| Parameter | Required | Description                                           |
-|-----------|----------|-------------------------------------------------------|
-| `enabled` | yes      | Set to `true` to enable storage driver health checks or `false` to disable them. |
-| `interval`| no       | How long to wait between repetitions of the storage driver health check. A positive integer and an optional suffix indicating the unit of time. The suffix is one of `ns`, `us`, `ms`, `s`, `m`, or `h`. Defaults to `10s` if the value is omitted. If you specify a value but omit the suffix, the value is interpreted as a number of nanoseconds. |
-| `threshold`| no      | A positive integer which represents the number of times the check must fail before the state is marked as unhealthy. If not specified, a single failure marks the state as unhealthy. |
+| Parameter   | Required | Description                                                                                                                                                                                                                                                                                                                                          |
+|-------------|----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `enabled`   | yes      | Set to `true` to enable storage driver health checks or `false` to disable them.                                                                                                                                                                                                                                                                     |
+| `interval`  | no       | How long to wait between repetitions of the storage driver health check. A positive integer and an optional suffix indicating the unit of time. The suffix is one of `ns`, `us`, `ms`, `s`, `m`, or `h`. Defaults to `10s` if the value is omitted. If you specify a value but omit the suffix, the value is interpreted as a number of nanoseconds. |
+| `threshold` | no       | A positive integer which represents the number of times the check must fail before the state is marked as unhealthy. If not specified, a single failure marks the state as unhealthy.                                                                                                                                                                |
 
 ### `file`
 
@@ -1151,10 +1156,10 @@ existence of a file. If a file exists at the given path, the health check will
 fail. You can use this mechanism to bring a registry out of rotation by creating
 a file.
 
-| Parameter | Required | Description                                           |
-|-----------|----------|-------------------------------------------------------|
-| `file`    | yes      | The path to check for existence of a file.            |
-| `interval`| no       | How long to wait before repeating the check. A positive integer and an optional suffix indicating the unit of time. The suffix is one of `ns`, `us`, `ms`, `s`, `m`, or `h`. Defaults to `10s` if the value is omitted. If you specify a value but omit the suffix, the value is interpreted as a number of nanoseconds. |
+| Parameter  | Required | Description                                                                                                                                                                                                                                                                                                              |
+|------------|----------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `file`     | yes      | The path to check for existence of a file.                                                                                                                                                                                                                                                                               |
+| `interval` | no       | How long to wait before repeating the check. A positive integer and an optional suffix indicating the unit of time. The suffix is one of `ns`, `us`, `ms`, `s`, `m`, or `h`. Defaults to `10s` if the value is omitted. If you specify a value but omit the suffix, the value is interpreted as a number of nanoseconds. |
 
 ### `http`
 
@@ -1162,14 +1167,14 @@ The `http` structure includes a list of HTTP URIs to periodically check with
 `HEAD` requests. If a `HEAD` request does not complete or returns an unexpected
 status code, the health check will fail.
 
-| Parameter | Required | Description                                           |
-|-----------|----------|-------------------------------------------------------|
-| `uri`     | yes      | The URI to check.                                     |
-| `headers` | no       | Static headers to add to each request. Each header's name is a key beneath `headers`, and each value is a list of payloads for that header name. Values must always be lists. |
-| `statuscode` | no    | The expected status code from the HTTP URI. Defaults to `200`. |
-| `timeout` | no       | How long to wait before timing out the HTTP request. A positive integer and an optional suffix indicating the unit of time. The suffix is one of `ns`, `us`, `ms`, `s`, `m`, or `h`. If you specify a value but omit the suffix, the value is interpreted as a number of nanoseconds. |
-| `interval`| no       | How long to wait before repeating the check. A positive integer and an optional suffix indicating the unit of time. The suffix is one of `ns`, `us`, `ms`, `s`, `m`, or `h`. Defaults to `10s` if the value is omitted. If you specify a value but omit the suffix, the value is interpreted as a number of nanoseconds. |
-| `threshold`| no      | The number of times the check must fail before the state is marked as unhealthy. If this field is not specified, a single failure marks the state as unhealthy. |
+| Parameter    | Required | Description                                                                                                                                                                                                                                                                                                              |
+|--------------|----------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `uri`        | yes      | The URI to check.                                                                                                                                                                                                                                                                                                        |
+| `headers`    | no       | Static headers to add to each request. Each header's name is a key beneath `headers`, and each value is a list of payloads for that header name. Values must always be lists.                                                                                                                                            |
+| `statuscode` | no       | The expected status code from the HTTP URI. Defaults to `200`.                                                                                                                                                                                                                                                           |
+| `timeout`    | no       | How long to wait before timing out the HTTP request. A positive integer and an optional suffix indicating the unit of time. The suffix is one of `ns`, `us`, `ms`, `s`, `m`, or `h`. If you specify a value but omit the suffix, the value is interpreted as a number of nanoseconds.                                    |
+| `interval`   | no       | How long to wait before repeating the check. A positive integer and an optional suffix indicating the unit of time. The suffix is one of `ns`, `us`, `ms`, `s`, `m`, or `h`. Defaults to `10s` if the value is omitted. If you specify a value but omit the suffix, the value is interpreted as a number of nanoseconds. |
+| `threshold`  | no       | The number of times the check must fail before the state is marked as unhealthy. If this field is not specified, a single failure marks the state as unhealthy.                                                                                                                                                          |
 
 ### `tcp`
 
@@ -1177,12 +1182,12 @@ The `tcp` structure includes a list of TCP addresses to periodically check using
 TCP connection attempts. Addresses must include port numbers. If a connection
 attempt fails, the health check will fail.
 
-| Parameter | Required | Description                                           |
-|-----------|----------|-------------------------------------------------------|
-| `addr`    | yes      | The TCP address and port to connect to.               |
-| `timeout` | no       | How long to wait before timing out the TCP connection. A positive integer and an optional suffix indicating the unit of time. The suffix is one of `ns`, `us`, `ms`, `s`, `m`, or `h`. If you specify a value but omit the suffix, the value is interpreted as a number of nanoseconds. |
-| `interval`| no       | How long to wait between repetitions of the check. A positive integer and an optional suffix indicating the unit of time. The suffix is one of `ns`, `us`, `ms`, `s`, `m`, or `h`. Defaults to `10s` if the value is omitted. If you specify a value but omit the suffix, the value is interpreted as a number of nanoseconds. |
-| `threshold`| no      | The number of times the check must fail before the state is marked as unhealthy. If this field is not specified, a single failure marks the state as unhealthy. |
+| Parameter   | Required | Description                                                                                                                                                                                                                                                                                                                    |
+|-------------|----------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `addr`      | yes      | The TCP address and port to connect to.                                                                                                                                                                                                                                                                                        |
+| `timeout`   | no       | How long to wait before timing out the TCP connection. A positive integer and an optional suffix indicating the unit of time. The suffix is one of `ns`, `us`, `ms`, `s`, `m`, or `h`. If you specify a value but omit the suffix, the value is interpreted as a number of nanoseconds.                                        |
+| `interval`  | no       | How long to wait between repetitions of the check. A positive integer and an optional suffix indicating the unit of time. The suffix is one of `ns`, `us`, `ms`, `s`, `m`, or `h`. Defaults to `10s` if the value is omitted. If you specify a value but omit the suffix, the value is interpreted as a number of nanoseconds. |
+| `threshold` | no       | The number of times the check must fail before the state is marked as unhealthy. If this field is not specified, a single failure marks the state as unhealthy.                                                                                                                                                                |
 
 
 ## `proxy`
@@ -1190,9 +1195,14 @@ attempt fails, the health check will fail.
 ```yaml
 proxy:
   remoteurl: https://registry-1.docker.io
-  username: [username]
-  password: [password]
+  username: <username>
+  password: <password>
   ttl: 168h
+  enablenamespaces: false
+  credentials:
+    'registry-1.docker.io':
+      username: <username>
+      password: <password>
 ```
 
 The `proxy` structure allows a registry to be configured as a pull-through cache
@@ -1201,34 +1211,61 @@ to an upstream registry such as Docker Hub. See
 for more information. Pushing to a registry configured as a pull-through cache
 is unsupported.
 
-| Parameter | Required | Description                                           |
-|-----------|----------|-------------------------------------------------------|
-| `remoteurl`| yes     | The URL for the repository on Docker Hub.             |
-| `ttl`      | no      | Expire proxy cache configured in "storage" after this time. Cache 168h(7 days) by default, set to 0 to disable cache expiration, The suffix is one of `ns`, `us`, `ms`, `s`, `m`, or `h`. If you specify a value but omit the suffix, the value is interpreted as a number of nanoseconds. |
+| Parameter          | Required | Description                                                                                                                                                                                                                                                                                |
+|--------------------|----------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `remoteurl`        | yes      | The URL for the remote registry. Ignored when namespaces are enabled.                                                                                                                                                                                                                      |
+| `username`         | no       | The username for the registry specified in `remoteurl`. Ignored when namespaces are enabled.                                                                                                                                                                                               |
+| `password`         | no       | The password for the registry specified in `remoteurl`. Ignored when namespaces are enabled.                                                                                                                                                                                               |
+| `exec`             | no       | Use a custom exec-based Docker credential helper, see below.                                                                                                                                                                                                                               |
+| `ttl`              | no       | Expire proxy cache configured in "storage" after this time. Cache 168h(7 days) by default, set to 0 to disable cache expiration, The suffix is one of `ns`, `us`, `ms`, `s`, `m`, or `h`. If you specify a value but omit the suffix, the value is interpreted as a number of nanoseconds. |
+| `enablenamespaces` | no       | Enable namespace support.                                                                                                                                                                                                                                                                  |
+| `credentials`      | no       | A map of credentials to use when namespaces are enabled, otherwise ignored. Not used when `exec` is set.                                                                                                                                                                                   |
 
 To enable pulling private repositories (e.g. `batman/robin`), specify one of the
 following authentication methods for the pull-through cache to authenticate with
 the upstream registry via the [v2 Distribution registry authentication
 scheme](https://distribution.github.io/distribution/spec/auth/token/).]
 
+> **Note**: These private repositories are stored in the proxy cache's storage.
+> Take appropriate measures to protect access to the proxy cache.
+
+When namespace support is enabled, any remote registry will be proxied.
+A client can specify which remote registry it wants to access by setting the `ns`
+query parameter to the domain of the target registry or by prepending the image name with the domain
+(like `docker.io/some/image`).
+For more details, refer to the [specification](https://github.com/opencontainers/distribution-spec/blob/main/spec.md#registry-proxying).
+When `ns` is unset and the image name doesn't contain a valid domain, the request will fail.
+
+Instead of the `username`/`password` fields, the `credentials` map is used to specify credentials.
+
+
 ### `username` and `password`
 
 The username and password used to authenticate with the upstream registry to
-access the private repositories.
+access the private repositories when namespace support is disabled.
 
 ### `exec`
 
 Run a custom exec-based [Docker credential helper](https://github.com/docker/docker-credential-helpers)
 to retrieve the credentials to authenticate with the upstream registry.
 
-| Parameter | Required | Description                                           |
-|-----------|----------|-------------------------------------------------------|
-| `command` | yes      | The command to execute.                               |
-| `lifetime`| no       | The expiry period of the credentials. The credentials returned by the command is reused through the configured lifetime, then the command will be re-executed to retrieve new credentials. If set to zero, the command will be executed for every request. If not set, the command will only be executed once. |
+| Parameter  | Required | Description                                                                                                                                                                                                                                                                                                    |
+|------------|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `command`  | yes      | The command to execute.                                                                                                                                                                                                                                                                                        |
+| `lifetime` | no       | The expiry period of the credentials. The credentials returned by the command is reused through the configured lifetime, then the command will be re-executed to retrieve new credentials. If set to zero, the command will be executed for every request. If not set, the command will only be executed once. |
 
+### `credentials`
 
-> **Note**: These private repositories are stored in the proxy cache's storage.
-> Take appropriate measures to protect access to the proxy cache.
+When namespaces are enabled, credentials for remote registries are specified in the `credentials` map. 
+Note that specifying credentials is only required for private registries, see above.
+
+The key of an entry is the address of the registry, not including the scheme (only `<host>[:<port>]`),
+and it must contain the following fields:
+
+| Parameter  | Required | Description                    |
+|------------|----------|--------------------------------|
+| `username` | yes      | The username for the registry. |
+| `password` | yes      | The password for the registry. |
 
 ## `validation`
 
