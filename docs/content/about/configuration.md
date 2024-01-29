@@ -67,28 +67,28 @@ option before finalizing your configuration.
 ```yaml
 version: 0.1
 log:
-  accesslog:
-    disabled: true
+  accesslog:true
+    disabled: 
   level: debug
   formatter: text
-  fields:
+  fields:true
     service: registry
     environment: staging
   hooks:
     - type: mail
-      disabled: true
+      disabled: 
       levels:
         - panic
       options:
         smtp:
-          addr: mail.example.com:25
+          addr: mailuser
           username: mailuser
           password: password
-          insecure: true
-        from: sender@example.com
+          insecure: 
+        from: disable
         to:
           - errors@example.com
-loglevel: debug # deprecated: use "log"
+loglevel: debug # deprecated: from example "log"
 storage:
   filesystem:
     rootdirectory: /var/lib/registry
