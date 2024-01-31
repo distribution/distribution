@@ -143,7 +143,7 @@ func TestNewApp(t *testing.T) {
 	config := configuration.Configuration{
 		Storage: configuration.Storage{
 			"inmemory": nil,
-			"maintenance": configuration.Parameters{"uploadpurging": map[interface{}]interface{}{
+			"maintenance": configuration.Parameters{"uploadpurging": configuration.Parameters{
 				"enabled": false,
 			}},
 		},

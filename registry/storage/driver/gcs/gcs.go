@@ -168,18 +168,14 @@ func FromParameters(ctx context.Context, parameters map[string]interface{}) (sto
 		ts = jwtConf.TokenSource(ctx)
 		options = append(options, option.WithCredentialsFile(fmt.Sprint(keyfile)))
 	} else if credentials, ok := parameters["credentials"]; ok {
-		credentialMap, ok := credentials.(map[interface{}]interface{})
+		credentialMap, ok := credentials.(map[string]interface{})
 		if !ok {
 			return nil, fmt.Errorf("The credentials were not specified in the correct format")
 		}
 
 		stringMap := map[string]interface{}{}
 		for k, v := range credentialMap {
-			key, ok := k.(string)
-			if !ok {
-				return nil, fmt.Errorf("One of the credential keys was not a string: %s", fmt.Sprint(k))
-			}
-			stringMap[key] = v
+			stringMap[k] = v
 		}
 
 		data, err := json.Marshal(stringMap)

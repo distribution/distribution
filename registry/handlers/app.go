@@ -129,13 +129,13 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 	purgeConfig := uploadPurgeDefaultConfig()
 	if mc, ok := config.Storage["maintenance"]; ok {
 		if v, ok := mc["uploadpurging"]; ok {
-			purgeConfig, ok = v.(map[interface{}]interface{})
+			purgeConfig, ok = v.(configuration.Parameters)
 			if !ok {
 				panic("uploadpurging config key must contain additional keys")
 			}
 		}
 		if v, ok := mc["readonly"]; ok {
-			readOnly, ok := v.(map[interface{}]interface{})
+			readOnly, ok := v.(configuration.Parameters)
 			if !ok {
 				panic("readonly config key must contain additional keys")
 			}
@@ -954,8 +954,8 @@ func applyStorageMiddleware(ctx context.Context, driver storagedriver.StorageDri
 // uploadPurgeDefaultConfig provides a default configuration for upload
 // purging to be used in the absence of configuration in the
 // configuration file
-func uploadPurgeDefaultConfig() map[interface{}]interface{} {
-	config := map[interface{}]interface{}{}
+func uploadPurgeDefaultConfig() map[string]interface{} {
+	config := map[string]interface{}{}
 	config["enabled"] = true
 	config["age"] = "168h"
 	config["interval"] = "24h"
@@ -969,7 +969,7 @@ func badPurgeUploadConfig(reason string) {
 
 // startUploadPurger schedules a goroutine which will periodically
 // check upload directories for old files and delete them
-func startUploadPurger(ctx context.Context, storageDriver storagedriver.StorageDriver, log dcontext.Logger, config map[interface{}]interface{}) {
+func startUploadPurger(ctx context.Context, storageDriver storagedriver.StorageDriver, log dcontext.Logger, config map[string]interface{}) {
 	if config["enabled"] == false {
 		return
 	}
