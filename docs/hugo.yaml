@@ -22,4 +22,8 @@ disablePathToLower: true
 params:
   geekdocRepo: "https://github.com/distribution/distribution"
   geekdocEditPath: edit/main/docs
+  geekdocLegalNotice: "https://www.linuxfoundation.org/legal/trademark-usage"
+  geekdocContentLicense:
+    name: CC BY 4.0
+    link: https://creativecommons.org/licenses/by/4.0/
   geekdocOverwriteHTMLBase: true
