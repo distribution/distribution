@@ -62,6 +62,16 @@ func init() {
 	}))
 
 	metrics.Register(prometheus.ProxyNamespace)
+	initPrometheusMetrics("blob")
+	initPrometheusMetrics("manifest")
+}
+
+func initPrometheusMetrics(value string) {
+	requests.WithValues(value).Inc(0)
+	hits.WithValues(value).Inc(0)
+	misses.WithValues(value).Inc(0)
+	pulledBytes.WithValues(value).Inc(0)
+	pushedBytes.WithValues(value).Inc(0)
 }
 
 // BlobPull tracks metrics about blobs pulled into the cache
