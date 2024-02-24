@@ -7,6 +7,7 @@ import (
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/internal/dcontext"
+	"github.com/distribution/distribution/v3/manifest/ocischema"
 	"github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
 	"github.com/distribution/distribution/v3/testutil"
@@ -117,6 +118,29 @@ func uploadRandomSchema2Image(t *testing.T, repository distribution.Repository) 
 	}
 
 	manifest, err := testutil.MakeSchema2Manifest(repository, digests)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	manifestDigest := uploadImage(t, repository, image{manifest: manifest, layers: randomLayers})
+	return image{
+		manifest:       manifest,
+		manifestDigest: manifestDigest,
+		layers:         randomLayers,
+	}
+}
+
+func uploadRandomOCIImage(t *testing.T, repository distribution.Repository) image {
+	randomLayers, err := testutil.CreateRandomLayers(2)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	digests := []digest.Digest{}
+	for digest := range randomLayers {
+		digests = append(digests, digest)
+	}
+	manifest, err := testutil.MakeOCIManifest(repository, digests)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
@@ -267,6 +291,128 @@ func TestDeleteManifestIfTagNotFound(t *testing.T) {
 	}
 	if len(before2) == len(after2) {
 		t.Fatalf("Garbage collection affected manifest storage: %d == %d", len(before2), len(after2))
+	}
+}
+
+func TestDeleteManifestIndexWithDanglingReferences(t *testing.T) {
+	ctx := dcontext.Background()
+	inmemoryDriver := inmemory.New()
+
+	registry := createRegistry(t, inmemoryDriver)
+	repo := makeRepository(t, registry, "deletemanifests")
+	manifestService, _ := repo.Manifests(ctx)
+
+	image1 := uploadRandomOCIImage(t, repo)
+	image2 := uploadRandomOCIImage(t, repo)
+
+	ii, _ := ocischema.FromDescriptors([]distribution.Descriptor{
+		{Digest: image1.manifestDigest}, {Digest: image2.manifestDigest},
+	}, map[string]string{})
+
+	id, err := manifestService.Put(ctx, ii)
+	if err != nil {
+		t.Fatalf("manifest upload failed: %v", err)
+	}
+
+	err = repo.Tags(ctx).Tag(ctx, "test", distribution.Descriptor{Digest: id})
+	if err != nil {
+		t.Fatalf("Failed to delete tag: %v", err)
+	}
+
+	// delete image2 => ii has a dangling reference
+	err = manifestService.Delete(ctx, image2.manifestDigest)
+	if err != nil {
+		t.Fatalf("Failed to delete image: %v", err)
+	}
+
+	before1 := allBlobs(t, registry)
+	before2 := allManifests(t, manifestService)
+
+	// run GC (should not remove anything because of tag)
+	err = MarkAndSweep(dcontext.Background(), inmemoryDriver, registry, GCOpts{
+		DryRun:         false,
+		RemoveUntagged: true,
+	})
+	if err != nil {
+		t.Fatalf("Failed mark and sweep: %v", err)
+	}
+
+	after1 := allBlobs(t, registry)
+	after2 := allManifests(t, manifestService)
+	if len(before1) == len(after1) {
+		t.Fatalf("Garbage collection did not affect blobs storage: %d == %d", len(before1), len(after1))
+	}
+	if len(before2) != len(after2) {
+		t.Fatalf("Garbage collection affected manifest storage: %d != %d", len(before2), len(after2))
+	}
+}
+
+func TestDeleteManifestIndexIfTagNotFound(t *testing.T) {
+	ctx := dcontext.Background()
+	inmemoryDriver := inmemory.New()
+
+	registry := createRegistry(t, inmemoryDriver)
+	repo := makeRepository(t, registry, "deletemanifests")
+	manifestService, _ := repo.Manifests(ctx)
+
+	image1 := uploadRandomOCIImage(t, repo)
+	image2 := uploadRandomOCIImage(t, repo)
+
+	ii, _ := ocischema.FromDescriptors([]distribution.Descriptor{
+		{Digest: image1.manifestDigest}, {Digest: image2.manifestDigest},
+	}, map[string]string{})
+
+	d4, err := manifestService.Put(ctx, ii)
+	if err != nil {
+		t.Fatalf("manifest upload failed: %v", err)
+	}
+
+	err = repo.Tags(ctx).Tag(ctx, "test", distribution.Descriptor{Digest: d4})
+	if err != nil {
+		t.Fatalf("Failed to delete tag: %v", err)
+	}
+
+	before1 := allBlobs(t, registry)
+	before2 := allManifests(t, manifestService)
+
+	// run GC (should not remove anything because of tag)
+	err = MarkAndSweep(dcontext.Background(), inmemoryDriver, registry, GCOpts{
+		DryRun:         false,
+		RemoveUntagged: true,
+	})
+	if err != nil {
+		t.Fatalf("Failed mark and sweep: %v", err)
+	}
+	beforeUntag1 := allBlobs(t, registry)
+	beforeUntag2 := allManifests(t, manifestService)
+	if len(before1) != len(beforeUntag1) {
+		t.Fatalf("Garbage collection affected blobs storage: %d != %d", len(before1), len(beforeUntag1))
+	}
+	if len(before2) != len(beforeUntag2) {
+		t.Fatalf("Garbage collection affected manifest storage: %d != %d", len(before2), len(beforeUntag2))
+	}
+
+	err = repo.Tags(ctx).Untag(ctx, "test")
+	if err != nil {
+		t.Fatalf("Failed to delete tag: %v", err)
+	}
+
+	// Run GC (removes everything because no manifests with tags exist)
+	err = MarkAndSweep(dcontext.Background(), inmemoryDriver, registry, GCOpts{
+		DryRun:         false,
+		RemoveUntagged: true,
+	})
+	if err != nil {
+		t.Fatalf("Failed mark and sweep: %v", err)
+	}
+
+	after1 := allBlobs(t, registry)
+	after2 := allManifests(t, manifestService)
+	if len(beforeUntag1) == len(after1) {
+		t.Fatalf("Garbage collection did not affect blobs storage: %d == %d", len(beforeUntag1), len(after1))
+	}
+	if len(beforeUntag2) == len(after2) {
+		t.Fatalf("Garbage collection did not affect manifest storage: %d == %d", len(beforeUntag2), len(after2))
 	}
 }
 
@@ -508,7 +654,10 @@ func TestTaggedManifestlistWithUntaggedManifest(t *testing.T) {
 		t.Fatalf("Failed to add manifest list: %v", err)
 	}
 
-	repo.Tags(ctx).Tag(ctx, "test", distribution.Descriptor{Digest: dgst})
+	err = repo.Tags(ctx).Tag(ctx, "test", distribution.Descriptor{Digest: dgst})
+	if err != nil {
+		t.Fatalf("Failed to delete tag: %v", err)
+	}
 
 	before := allBlobs(t, registry)
 
@@ -597,8 +746,15 @@ func TestUnTaggedManifestlistWithTaggedManifest(t *testing.T) {
 	image1 := uploadRandomSchema2Image(t, repo)
 	image2 := uploadRandomSchema2Image(t, repo)
 
-	repo.Tags(ctx).Tag(ctx, "image1", distribution.Descriptor{Digest: image1.manifestDigest})
-	repo.Tags(ctx).Tag(ctx, "image2", distribution.Descriptor{Digest: image2.manifestDigest})
+	err = repo.Tags(ctx).Tag(ctx, "image1", distribution.Descriptor{Digest: image1.manifestDigest})
+	if err != nil {
+		t.Fatalf("Failed to delete tag: %v", err)
+	}
+
+	err = repo.Tags(ctx).Tag(ctx, "image2", distribution.Descriptor{Digest: image2.manifestDigest})
+	if err != nil {
+		t.Fatalf("Failed to delete tag: %v", err)
+	}
 
 	// construct a manifestlist to reference manifests that is tagged.
 	blobstatter := registry.BlobStatter()
@@ -667,8 +823,15 @@ func TestTaggedManifestlistWithDeletedreference(t *testing.T) {
 		t.Fatalf("Failed to add manifest list: %v", err)
 	}
 
-	manifestService.Delete(ctx, image1.manifestDigest)
-	manifestService.Delete(ctx, image2.manifestDigest)
+	err = manifestService.Delete(ctx, image1.manifestDigest)
+	if err != nil {
+		t.Fatalf("Failed to delete image: %v", err)
+	}
+
+	err = manifestService.Delete(ctx, image2.manifestDigest)
+	if err != nil {
+		t.Fatalf("Failed to delete image: %v", err)
+	}
 
 	// Run GC
 	err = MarkAndSweep(dcontext.Background(), inmemoryDriver, registry, GCOpts{
