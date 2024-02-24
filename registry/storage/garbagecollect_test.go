@@ -479,3 +479,208 @@ func TestOrphanBlobDeleted(t *testing.T) {
 		}
 	}
 }
+
+func TestTaggedManifestlistWithUntaggedManifest(t *testing.T) {
+	ctx := dcontext.Background()
+	inmemoryDriver := inmemory.New()
+
+	registry := createRegistry(t, inmemoryDriver)
+	repo := makeRepository(t, registry, "foo/taggedlist/untaggedmanifest")
+	manifestService, err := repo.Manifests(ctx)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	image1 := uploadRandomSchema2Image(t, repo)
+	image2 := uploadRandomSchema2Image(t, repo)
+
+	// construct a manifestlist to reference manifests that is not tagged.
+	blobstatter := registry.BlobStatter()
+	manifestList, err := testutil.MakeManifestList(blobstatter, []digest.Digest{
+		image1.manifestDigest, image2.manifestDigest,
+	})
+	if err != nil {
+		t.Fatalf("Failed to make manifest list: %v", err)
+	}
+
+	dgst, err := manifestService.Put(ctx, manifestList)
+	if err != nil {
+		t.Fatalf("Failed to add manifest list: %v", err)
+	}
+
+	repo.Tags(ctx).Tag(ctx, "test", distribution.Descriptor{Digest: dgst})
+
+	before := allBlobs(t, registry)
+
+	// Run GC
+	err = MarkAndSweep(dcontext.Background(), inmemoryDriver, registry, GCOpts{
+		DryRun:         false,
+		RemoveUntagged: true,
+	})
+	if err != nil {
+		t.Fatalf("Failed mark and sweep: %v", err)
+	}
+
+	after := allBlobs(t, registry)
+	if len(before) != len(after) {
+		t.Fatalf("Garbage collection affected storage: %d != %d", len(before), len(after))
+	}
+
+	if _, ok := after[image1.manifestDigest]; !ok {
+		t.Fatalf("First manifest is missing")
+	}
+
+	if _, ok := after[image2.manifestDigest]; !ok {
+		t.Fatalf("Second manifest is missing")
+	}
+
+	if _, ok := after[dgst]; !ok {
+		t.Fatalf("Manifest list is missing")
+	}
+}
+
+func TestUnTaggedManifestlistWithUntaggedManifest(t *testing.T) {
+	ctx := dcontext.Background()
+	inmemoryDriver := inmemory.New()
+
+	registry := createRegistry(t, inmemoryDriver)
+	repo := makeRepository(t, registry, "foo/untaggedlist/untaggedmanifest")
+	manifestService, err := repo.Manifests(ctx)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	image1 := uploadRandomSchema2Image(t, repo)
+	image2 := uploadRandomSchema2Image(t, repo)
+
+	// construct a manifestlist to reference manifests that is not tagged.
+	blobstatter := registry.BlobStatter()
+	manifestList, err := testutil.MakeManifestList(blobstatter, []digest.Digest{
+		image1.manifestDigest, image2.manifestDigest,
+	})
+	if err != nil {
+		t.Fatalf("Failed to make manifest list: %v", err)
+	}
+
+	_, err = manifestService.Put(ctx, manifestList)
+	if err != nil {
+		t.Fatalf("Failed to add manifest list: %v", err)
+	}
+
+	// Run GC
+	err = MarkAndSweep(dcontext.Background(), inmemoryDriver, registry, GCOpts{
+		DryRun:         false,
+		RemoveUntagged: true,
+	})
+	if err != nil {
+		t.Fatalf("Failed mark and sweep: %v", err)
+	}
+
+	after := allBlobs(t, registry)
+	if len(after) != 0 {
+		t.Fatalf("Garbage collection affected storage: %d != %d", len(after), 0)
+	}
+
+}
+
+func TestUnTaggedManifestlistWithTaggedManifest(t *testing.T) {
+	ctx := dcontext.Background()
+	inmemoryDriver := inmemory.New()
+
+	registry := createRegistry(t, inmemoryDriver)
+	repo := makeRepository(t, registry, "foo/untaggedlist/taggedmanifest")
+	manifestService, err := repo.Manifests(ctx)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	image1 := uploadRandomSchema2Image(t, repo)
+	image2 := uploadRandomSchema2Image(t, repo)
+
+	repo.Tags(ctx).Tag(ctx, "image1", distribution.Descriptor{Digest: image1.manifestDigest})
+	repo.Tags(ctx).Tag(ctx, "image2", distribution.Descriptor{Digest: image2.manifestDigest})
+
+	// construct a manifestlist to reference manifests that is tagged.
+	blobstatter := registry.BlobStatter()
+	manifestList, err := testutil.MakeManifestList(blobstatter, []digest.Digest{
+		image1.manifestDigest, image2.manifestDigest,
+	})
+	if err != nil {
+		t.Fatalf("Failed to make manifest list: %v", err)
+	}
+
+	dgst, err := manifestService.Put(ctx, manifestList)
+	if err != nil {
+		t.Fatalf("Failed to add manifest list: %v", err)
+	}
+
+	// Run GC
+	err = MarkAndSweep(dcontext.Background(), inmemoryDriver, registry, GCOpts{
+		DryRun:         false,
+		RemoveUntagged: true,
+	})
+	if err != nil {
+		t.Fatalf("Failed mark and sweep: %v", err)
+	}
+
+	after := allBlobs(t, registry)
+	afterManifests := allManifests(t, manifestService)
+
+	if _, ok := after[dgst]; ok {
+		t.Fatalf("Untaged manifestlist still exists")
+	}
+
+	if _, ok := afterManifests[image1.manifestDigest]; !ok {
+		t.Fatalf("First manifest is missing")
+	}
+
+	if _, ok := afterManifests[image2.manifestDigest]; !ok {
+		t.Fatalf("Second manifest is missing")
+	}
+}
+
+func TestTaggedManifestlistWithDeletedreference(t *testing.T) {
+	ctx := dcontext.Background()
+	inmemoryDriver := inmemory.New()
+
+	registry := createRegistry(t, inmemoryDriver)
+	repo := makeRepository(t, registry, "foo/untaggedlist/deleteref")
+	manifestService, err := repo.Manifests(ctx)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	image1 := uploadRandomSchema2Image(t, repo)
+	image2 := uploadRandomSchema2Image(t, repo)
+
+	// construct a manifestlist to reference manifests that is deleted.
+	blobstatter := registry.BlobStatter()
+	manifestList, err := testutil.MakeManifestList(blobstatter, []digest.Digest{
+		image1.manifestDigest, image2.manifestDigest,
+	})
+	if err != nil {
+		t.Fatalf("Failed to make manifest list: %v", err)
+	}
+
+	_, err = manifestService.Put(ctx, manifestList)
+	if err != nil {
+		t.Fatalf("Failed to add manifest list: %v", err)
+	}
+
+	manifestService.Delete(ctx, image1.manifestDigest)
+	manifestService.Delete(ctx, image2.manifestDigest)
+
+	// Run GC
+	err = MarkAndSweep(dcontext.Background(), inmemoryDriver, registry, GCOpts{
+		DryRun:         false,
+		RemoveUntagged: true,
+	})
+	if err != nil {
+		t.Fatalf("Failed mark and sweep: %v", err)
+	}
+
+	after := allBlobs(t, registry)
+	if len(after) != 0 {
+		t.Fatalf("Garbage collection affected storage: %d != %d", len(after), 0)
+	}
+}
