@@ -74,7 +74,6 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 					allTags, err := repository.Tags(ctx).All(ctx)
 					if err != nil {
 						if _, ok := err.(distribution.ErrManifestUnknownRevision); !ok {
-							emit("%s: ignore unknown manifest: %s", repoName, dgst)
 							return nil
 						}
 						return fmt.Errorf("failed to retrieve tags %v", err)
@@ -87,9 +86,13 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 			emit("%s: marking manifest %s ", repoName, dgst)
 			markSet[dgst] = struct{}{}
 
-			return markManifestReferences(dgst, manifestService, ctx, func(d digest.Digest) {
-				markSet[d] = struct{}{}
-				emit("%s: marking blob %s", repoName, d)
+			return markManifestReferences(dgst, manifestService, ctx, func(d digest.Digest) bool {
+				_, exists := markSet[d]
+				if !exists {
+					markSet[d] = struct{}{}
+					emit("%s: marking blob %s", repoName, d)
+				}
+				return exists
 			})
 		})
 
@@ -160,7 +163,7 @@ func unmarkReferencedManifest(manifestArr []ManifestDel, markSet map[digest.Dige
 }
 
 // markManifestReferences marks the manifest references
-func markManifestReferences(dgst digest.Digest, manifestService distribution.ManifestService, ctx context.Context, ingester func(digest.Digest)) error {
+func markManifestReferences(dgst digest.Digest, manifestService distribution.ManifestService, ctx context.Context, ingester func(digest.Digest) bool) error {
 	manifest, err := manifestService.Get(ctx, dgst)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve manifest for digest %v: %v", dgst, err)
@@ -168,7 +171,11 @@ func markManifestReferences(dgst digest.Digest, manifestService distribution.Man
 
 	descriptors := manifest.References()
 	for _, descriptor := range descriptors {
-		ingester(descriptor.Digest)
+
+		// do not visit references if already marked
+		if ingester(descriptor.Digest) {
+			continue
+		}
 
 		if ok, _ := manifestService.Exists(ctx, descriptor.Digest); ok {
 			err := markManifestReferences(descriptor.Digest, manifestService, ctx, ingester)
