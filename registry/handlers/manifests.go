@@ -212,6 +212,11 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 	w.Header().Set("Content-Length", fmt.Sprint(len(p)))
 	w.Header().Set("Docker-Content-Digest", imh.Digest.String())
 	w.Header().Set("Etag", fmt.Sprintf(`"%s"`, imh.Digest))
+
+	if r.Method == http.MethodHead {
+		return
+	}
+
 	if _, err := w.Write(p); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 	}

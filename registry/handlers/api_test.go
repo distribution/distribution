@@ -1709,6 +1709,33 @@ func testManifestAPISchema2(t *testing.T, env *testEnv, imageName reference.Name
 
 	// ------------------
 	// Fetch by tag name
+
+	// HEAD requests should not contain a body
+	headReq, err := http.NewRequest(http.MethodHead, manifestURL, nil)
+	if err != nil {
+		t.Fatalf("Error constructing request: %s", err)
+	}
+	headResp, err := http.DefaultClient.Do(headReq)
+	if err != nil {
+		t.Fatalf("unexpected error head manifest: %v", err)
+	}
+	defer headResp.Body.Close()
+
+	checkResponse(t, "head uploaded manifest", headResp, http.StatusOK)
+	checkHeaders(t, headResp, http.Header{
+		"Docker-Content-Digest": []string{dgst.String()},
+		"ETag":                  []string{fmt.Sprintf(`"%s"`, dgst)},
+	})
+
+	headBody, err := io.ReadAll(headResp.Body)
+	if err != nil {
+		t.Fatalf("reading body for head manifest: %v", err)
+	}
+
+	if len(headBody) > 0 {
+		t.Fatalf("unexpected body length for head manifest: %d", len(headBody))
+	}
+
 	req, err := http.NewRequest(http.MethodGet, manifestURL, nil)
 	if err != nil {
 		t.Fatalf("Error constructing request: %s", err)
@@ -1744,6 +1771,32 @@ func testManifestAPISchema2(t *testing.T, env *testEnv, imageName reference.Name
 
 	// ---------------
 	// Fetch by digest
+
+	// HEAD requests should not contain a body
+	headReq, err = http.NewRequest(http.MethodHead, manifestDigestURL, nil)
+	if err != nil {
+		t.Fatalf("Error constructing request: %s", err)
+	}
+	headResp, err = http.DefaultClient.Do(headReq)
+	if err != nil {
+		t.Fatalf("unexpected error head manifest: %v", err)
+	}
+	defer headResp.Body.Close()
+
+	checkResponse(t, "head uploaded manifest by digest", headResp, http.StatusOK)
+	checkHeaders(t, headResp, http.Header{
+		"Docker-Content-Digest": []string{dgst.String()},
+		"ETag":                  []string{fmt.Sprintf(`"%s"`, dgst)},
+	})
+
+	headBody, err = io.ReadAll(headResp.Body)
+	if err != nil {
+		t.Fatalf("reading body for head manifest by digest: %v", err)
+	}
+
+	if len(headBody) > 0 {
+		t.Fatalf("unexpected body length for head manifest: %d", len(headBody))
+	}
 	req, err = http.NewRequest(http.MethodGet, manifestDigestURL, nil)
 	if err != nil {
 		t.Fatalf("Error constructing request: %s", err)
@@ -2543,6 +2596,8 @@ func maybeDumpResponse(t *testing.T, resp *http.Response) {
 // test will fail. If a passed in header value is "*", any non-zero value will
 // suffice as a match.
 func checkHeaders(t *testing.T, resp *http.Response, headers http.Header) {
+	t.Helper()
+
 	for k, vs := range headers {
 		if resp.Header.Get(k) == "" {
 			t.Fatalf("response missing header %q", k)
