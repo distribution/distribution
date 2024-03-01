@@ -24,7 +24,7 @@ order is not guaranteed.
 
 ## Configuration
 
-To setup a registry instance to send notifications to endpoints, one must add
+To set up a registry instance to send notifications to endpoints, one must add
 them to the configuration. A simple example follows:
 
 ```yaml
