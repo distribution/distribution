@@ -26,19 +26,6 @@ const (
 	AttributePrefix = "io.cncf.distribution."
 )
 
-// loggerWriter is a custom writer that implements the io.Writer interface.
-// It is designed to redirect log messages to the Logger interface, specifically
-// for use with OpenTelemetry's stdouttrace exporter.
-type loggerWriter struct {
-	logger dcontext.Logger // Use the Logger interface
-}
-
-// Write logs the data using the Debug level of the provided logger.
-func (lw *loggerWriter) Write(p []byte) (n int, err error) {
-	lw.logger.Debug(string(p))
-	return len(p), nil
-}
-
 // InitOpenTelemetry initializes OpenTelemetry for the application. This function sets up the
 // necessary components for collecting telemetry data, such as traces.
 func InitOpenTelemetry(ctx context.Context) error {
@@ -71,6 +58,7 @@ func InitOpenTelemetry(ctx context.Context) error {
 		sdktrace.WithSpanProcessor(sp),
 	)
 	otel.SetTracerProvider(provider)
+	otel.SetErrorHandler(lw)
 
 	pr := propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{})
 	otel.SetTextMapPropagator(pr)
