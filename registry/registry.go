@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -312,7 +313,7 @@ func (registry *Registry) ListenAndServe() error {
 	}
 
 	// setup channel to get notified on SIGTERM signal
-	signal.Notify(registry.quit, syscall.SIGTERM)
+	signal.Notify(registry.quit, os.Interrupt, syscall.SIGTERM)
 	serveErr := make(chan error)
 
 	// Start serving in goroutine and listen for stop signal in main thread
@@ -332,9 +333,13 @@ func (registry *Registry) ListenAndServe() error {
 	}
 }
 
-// Shutdown gracefully shuts down the registry's HTTP server.
+// Shutdown gracefully shuts down the registry's HTTP server and application object.
 func (registry *Registry) Shutdown(ctx context.Context) error {
-	return registry.server.Shutdown(ctx)
+	err := registry.server.Shutdown(ctx)
+	if appErr := registry.app.Shutdown(); appErr != nil {
+		err = errors.Join(err, appErr)
+	}
+	return err
 }
 
 func configureDebugServer(config *configuration.Configuration) {

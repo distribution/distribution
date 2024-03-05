@@ -136,7 +136,12 @@ func TestRestoreOld(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error starting ttlExpirationScheduler: %s", err)
 	}
-	defer s.Stop()
+	defer func(s *TTLExpirationScheduler) {
+		err := s.Stop()
+		if err != nil {
+			t.Fatalf("Error stopping ttlExpirationScheduler: %s", err)
+		}
+	}(s)
 
 	wg.Wait()
 	mu.Lock()
@@ -177,7 +182,10 @@ func TestStopRestore(t *testing.T) {
 
 	// Start and stop before all operations complete
 	// state will be written to fs
-	s.Stop()
+	err = s.Stop()
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
 	time.Sleep(10 * time.Millisecond)
 
 	// v2 will restore state from fs

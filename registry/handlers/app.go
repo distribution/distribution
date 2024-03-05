@@ -430,6 +430,14 @@ func (app *App) RegisterHealthChecks(healthRegistries ...*health.Registry) {
 	}
 }
 
+// Shutdown close the underlying registry
+func (app *App) Shutdown() error {
+	if r, ok := app.registry.(proxy.Closer); ok {
+		return r.Close()
+	}
+	return nil
+}
+
 // register a handler with the application, by route name. The handler will be
 // passed through the application filters and context will be constructed at
 // request time.
