@@ -785,10 +785,6 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 // RedirectURL returns a URL which may be used to retrieve the content stored at
 // the given path, possibly using the given options.
 func (d *driver) RedirectURL(r *http.Request, path string) (string, error) {
-	if d.privateKey == nil {
-		return "", nil
-	}
-
 	if r.Method != http.MethodGet && r.Method != http.MethodHead {
 		return "", nil
 	}
