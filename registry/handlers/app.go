@@ -412,12 +412,11 @@ func (app *App) RegisterHealthChecks(healthRegistries ...*health.Registry) {
 }
 
 // OnExit close the underlying registry
-func (app *App) OnExit() {
-	if app.isCache {
-		if regProxy, ok := app.registry.(proxy.Closable); ok {
-			regProxy.Close()
-		}
+func (app *App) OnExit() error {
+	if r, ok := app.registry.(proxy.Closer); ok {
+		return r.Close()
 	}
+	return nil
 }
 
 // register a handler with the application, by route name. The handler will be

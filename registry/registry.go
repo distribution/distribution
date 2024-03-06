@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -221,7 +222,7 @@ func setDirectoryURL(directoryurl string) *acme.Client {
 }
 
 // ListenAndServe runs the registry's HTTP server.
-func (registry *Registry) ListenAndServe() error {
+func (registry *Registry) ListenAndServe() (err error) {
 	config := registry.config
 
 	ln, err := listener.NewListener(config.HTTP.Net, config.HTTP.Addr)
@@ -316,7 +317,11 @@ func (registry *Registry) ListenAndServe() error {
 	go func() {
 		serveErr <- registry.server.Serve(ln)
 	}()
-	defer registry.app.OnExit()
+	defer func(app *handlers.App) {
+		if exitErr := app.OnExit(); exitErr != nil {
+			err = errors.Join(err, exitErr)
+		}
+	}(registry.app)
 
 	select {
 	case err := <-serveErr:

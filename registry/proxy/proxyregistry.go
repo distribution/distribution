@@ -211,13 +211,13 @@ func (pr *proxyingRegistry) BlobStatter() distribution.BlobStatter {
 	return pr.embedded.BlobStatter()
 }
 
-type Closable interface {
+type Closer interface {
 	// Close release all resources used by this object
-	Close()
+	Close() error
 }
 
-func (pr *proxyingRegistry) Close() {
-	pr.scheduler.Stop()
+func (pr *proxyingRegistry) Close() error {
+	return pr.scheduler.Stop()
 }
 
 // authChallenger encapsulates a request to the upstream to establish credential challenges
