@@ -269,7 +269,7 @@ type RouteDescriptor struct {
 	// should match.
 	Path string
 
-	// Entity should be a short, human-readalbe description of the object
+	// Entity should be a short, human-readable description of the object
 	// targeted by the endpoint.
 	Entity string
 
