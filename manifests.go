@@ -47,7 +47,7 @@ type ManifestBuilder interface {
 	AppendReference(dependency Describable) error
 }
 
-// ManifestService describes operations on image manifests.
+// ManifestService describes operations on manifests.
 type ManifestService interface {
 	// Exists returns true if the manifest exists.
 	Exists(ctx context.Context, dgst digest.Digest) (bool, error)
