@@ -57,7 +57,7 @@ func (imbdcp *inMemoryBlobDescriptorCacheProvider) RepositoryScoped(repo string)
 	}
 
 	return &repositoryScopedInMemoryBlobDescriptorCache{
-		repo:   repo,
+		repo:   "", // todo: removed repo scope to handle common blob invalidation
 		parent: imbdcp,
 	}, nil
 }
