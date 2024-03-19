@@ -77,7 +77,7 @@ type App struct {
 		source notifications.SourceRecord
 	}
 
-	redis *redis.Client
+	redis redis.UniversalClient
 
 	// isCache is true if this registry is configured as a pull through cache
 	isCache bool
@@ -487,12 +487,12 @@ func (app *App) configureEvents(configuration *configuration.Configuration) {
 }
 
 func (app *App) configureRedis(cfg *configuration.Configuration) {
-	if cfg.Redis.Addr == "" {
+	if len(cfg.Redis.Addrs) == 0 {
 		dcontext.GetLogger(app).Infof("redis not configured")
 		return
 	}
 
-	app.redis = app.createPool(cfg.Redis)
+	app.redis = app.createPool(cfg.Redis.UniversalOptions)
 
 	// Enable metrics instrumentation.
 	if err := redisotel.InstrumentMetrics(app.redis); err != nil {
@@ -514,25 +514,12 @@ func (app *App) configureRedis(cfg *configuration.Configuration) {
 	}))
 }
 
-func (app *App) createPool(cfg configuration.Redis) *redis.Client {
-	return redis.NewClient(&redis.Options{
-		Addr: cfg.Addr,
-		OnConnect: func(ctx context.Context, cn *redis.Conn) error {
-			res := cn.Ping(ctx)
-			return res.Err()
-		},
-		Username:        cfg.Username,
-		Password:        cfg.Password,
-		DB:              cfg.DB,
-		MaxRetries:      3,
-		DialTimeout:     cfg.DialTimeout,
-		ReadTimeout:     cfg.ReadTimeout,
-		WriteTimeout:    cfg.WriteTimeout,
-		PoolFIFO:        false,
-		MaxIdleConns:    cfg.Pool.MaxIdle,
-		PoolSize:        cfg.Pool.MaxActive,
-		ConnMaxIdleTime: cfg.Pool.IdleTimeout,
-	})
+func (app *App) createPool(cfg redis.UniversalOptions) redis.UniversalClient {
+	cfg.OnConnect = func(ctx context.Context, cn *redis.Conn) error {
+		res := cn.Ping(ctx)
+		return res.Err()
+	}
+	return redis.NewUniversalClient(&cfg)
 }
 
 // configureLogHook prepares logging hook parameters.

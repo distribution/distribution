@@ -25,7 +25,7 @@ import (
 // Note that there is no implied relationship between these two caches. The
 // layer may exist in one, both or none and the code must be written this way.
 type redisBlobDescriptorService struct {
-	pool *redis.Client
+	pool redis.UniversalClient
 
 	// TODO(stevvooe): We use a pool because we don't have great control over
 	// the cache lifecycle to manage connections. A new connection if fetched
@@ -37,7 +37,7 @@ var _ distribution.BlobDescriptorService = &redisBlobDescriptorService{}
 
 // NewRedisBlobDescriptorCacheProvider returns a new redis-based
 // BlobDescriptorCacheProvider using the provided redis connection pool.
-func NewRedisBlobDescriptorCacheProvider(pool *redis.Client) cache.BlobDescriptorCacheProvider {
+func NewRedisBlobDescriptorCacheProvider(pool redis.UniversalClient) cache.BlobDescriptorCacheProvider {
 	return metrics.NewPrometheusCacheProvider(
 		&redisBlobDescriptorService{
 			pool: pool,

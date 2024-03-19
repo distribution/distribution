@@ -8,6 +8,8 @@ import (
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/redis/go-redis/v9"
 )
 
 // Configuration is a versioned registry configuration, intended to be provided by a yaml file, and
@@ -275,44 +277,6 @@ type FileChecker struct {
 	// Threshold is the number of times a check must fail to trigger an
 	// unhealthy state
 	Threshold int `yaml:"threshold,omitempty"`
-}
-
-// Redis configures the redis pool available to the registry webapp.
-type Redis struct {
-	// Addr specifies the redis instance available to the application.
-	Addr string `yaml:"addr,omitempty"`
-
-	// Usernames can be used as a finer-grained permission control since the introduction of the redis 6.0.
-	Username string `yaml:"username,omitempty"`
-
-	// Password string to use when making a connection.
-	Password string `yaml:"password,omitempty"`
-
-	// DB specifies the database to connect to on the redis instance.
-	DB int `yaml:"db,omitempty"`
-
-	// TLS configures settings for redis in-transit encryption
-	TLS struct {
-		Enabled bool `yaml:"enabled,omitempty"`
-	} `yaml:"tls,omitempty"`
-
-	DialTimeout  time.Duration `yaml:"dialtimeout,omitempty"`  // timeout for connect
-	ReadTimeout  time.Duration `yaml:"readtimeout,omitempty"`  // timeout for reads of data
-	WriteTimeout time.Duration `yaml:"writetimeout,omitempty"` // timeout for writes of data
-
-	// Pool configures the behavior of the redis connection pool.
-	Pool struct {
-		// MaxIdle sets the maximum number of idle connections.
-		MaxIdle int `yaml:"maxidle,omitempty"`
-
-		// MaxActive sets the maximum number of connections that should be
-		// opened before blocking a connection request.
-		MaxActive int `yaml:"maxactive,omitempty"`
-
-		// IdleTimeout sets the amount time to wait before closing
-		// inactive connections.
-		IdleTimeout time.Duration `yaml:"idletimeout,omitempty"`
-	} `yaml:"pool,omitempty"`
 }
 
 // HTTPChecker is a type of entry in the health section for checking HTTP URIs.
@@ -687,4 +651,125 @@ func Parse(rd io.Reader) (*Configuration, error) {
 	}
 
 	return config, nil
+}
+
+type Redis struct {
+	redis.UniversalOptions
+}
+
+func (c Redis) MarshalYAML() (interface{}, error) {
+	fields := make(map[string]interface{})
+
+	val := reflect.ValueOf(c.UniversalOptions)
+	typ := val.Type()
+
+	for i := 0; i < val.NumField(); i++ {
+		field := typ.Field(i)
+		fieldValue := val.Field(i)
+
+		// ignore imports and funcs
+		if field.PkgPath != "" || fieldValue.Kind() == reflect.Func {
+			continue
+		}
+
+		fields[strings.ToLower(field.Name)] = fieldValue.Interface()
+	}
+
+	return fields, nil
+}
+
+func (c *Redis) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var fields map[string]interface{}
+	err := unmarshal(&fields)
+	if err != nil {
+		return err
+	}
+
+	val := reflect.ValueOf(&c.UniversalOptions).Elem()
+	typ := val.Type()
+
+	for i := 0; i < typ.NumField(); i++ {
+		field := typ.Field(i)
+		fieldName := strings.ToLower(field.Name)
+
+		if value, ok := fields[fieldName]; ok {
+			fieldValue := val.Field(i)
+			if fieldValue.CanSet() {
+				switch field.Type {
+				case reflect.TypeOf(time.Duration(0)):
+					durationStr, ok := value.(string)
+					if !ok {
+						return fmt.Errorf("invalid duration value for field: %s", fieldName)
+					}
+					duration, err := time.ParseDuration(durationStr)
+					if err != nil {
+						return fmt.Errorf("failed to parse duration for field: %s, error: %v", fieldName, err)
+					}
+					fieldValue.Set(reflect.ValueOf(duration))
+				default:
+					if err := setFieldValue(fieldValue, value); err != nil {
+						return fmt.Errorf("failed to set value for field: %s, error: %v", fieldName, err)
+					}
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func setFieldValue(field reflect.Value, value interface{}) error {
+	if value == nil {
+		return nil
+	}
+
+	switch field.Kind() {
+	case reflect.String:
+		stringValue, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("failed to convert value to string")
+		}
+		field.SetString(stringValue)
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		intValue, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("failed to convert value to integer")
+		}
+		field.SetInt(int64(intValue))
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		uintValue, ok := value.(uint)
+		if !ok {
+			return fmt.Errorf("failed to convert value to unsigned integer")
+		}
+		field.SetUint(uint64(uintValue))
+	case reflect.Float32, reflect.Float64:
+		floatValue, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("failed to convert value to float")
+		}
+		field.SetFloat(floatValue)
+	case reflect.Bool:
+		boolValue, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("failed to convert value to boolean")
+		}
+		field.SetBool(boolValue)
+	case reflect.Slice:
+		slice := reflect.MakeSlice(field.Type(), 0, 0)
+		valueSlice, ok := value.([]interface{})
+		if !ok {
+			return fmt.Errorf("failed to convert value to slice")
+		}
+		for _, item := range valueSlice {
+			sliceValue := reflect.New(field.Type().Elem()).Elem()
+			if err := setFieldValue(sliceValue, item); err != nil {
+				return err
+			}
+			slice = reflect.Append(slice, sliceValue)
+		}
+		field.Set(slice)
+	default:
+		return fmt.Errorf("unsupported field type: %v", field.Type())
+	}
+	return nil
 }

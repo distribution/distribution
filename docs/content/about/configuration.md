@@ -241,16 +241,15 @@ notifications:
         actions:
            - pull
 redis:
-  addr: localhost:6379
+  addrs: [localhost:6379]
   password: asecret
   db: 0
   dialtimeout: 10ms
   readtimeout: 10ms
   writetimeout: 10ms
-  pool:
-    maxidle: 16
-    maxactive: 64
-    idletimeout: 300s
+  maxidleconns: 16
+  poolsize: 64
+  connmaxidletime: 300s
   tls:
     enabled: false
 health:
@@ -952,71 +951,30 @@ The `events` structure configures the information provided in event notification
 
 ## `redis`
 
+Declare parameters for constructing the `redis` connections. Registry instances
+may use the Redis instance for several applications. Currently, it caches
+information about immutable blobs. Most of the `redis` options control
+how the registry connects to the `redis` instance.
+
+You should configure Redis with the **allkeys-lru** eviction policy, because the
+registry does not set an expiration value on keys.
+
+Under the hood distribution uses [`go-redis`](https://redis.uptrace.dev/) for
+redis connectivity and its [`UniversalOptions`](https://pkg.go.dev/github.com/redis/go-redis/v9#UniversalOptions)
+struct.
+
 ```yaml
 redis:
-  addr: localhost:6379
+  addrs: [localhost:6379]
   password: asecret
   db: 0
   dialtimeout: 10ms
   readtimeout: 10ms
   writetimeout: 10ms
-  pool:
-    maxidle: 16
-    maxactive: 64
-    idletimeout: 300s
-  tls:
-    enabled: false
+  maxidleconns: 16
+  poolsize: 64
+  connmaxidletime: 300s
 ```
-
-Declare parameters for constructing the `redis` connections. Registry instances
-may use the Redis instance for several applications. Currently, it caches
-information about immutable blobs. Most of the `redis` options control
-how the registry connects to the `redis` instance. You can control the pool's
-behavior with the [pool](#pool) subsection. Additionally, you can control
-TLS connection settings with the [tls](#tls) subsection (in-transit encryption).
-
-You should configure Redis with the **allkeys-lru** eviction policy, because the
-registry does not set an expiration value on keys.
-
-| Parameter | Required | Description                                           |
-|-----------|----------|-------------------------------------------------------|
-| `addr`    | yes      | The address (host and port) of the Redis instance.    |
-| `password`| no       | A password used to authenticate to the Redis instance.|
-| `db`      | no       | The name of the database to use for each connection.  |
-| `dialtimeout` | no   | The timeout for connecting to the Redis instance.     |
-| `readtimeout` | no   | The timeout for reading from the Redis instance.      |
-| `writetimeout` | no  | The timeout for writing to the Redis instance.        |
-
-### `pool`
-
-```yaml
-pool:
-  maxidle: 16
-  maxactive: 64
-  idletimeout: 300s
-```
-
-Use these settings to configure the behavior of the Redis connection pool.
-
-| Parameter | Required | Description                                           |
-|-----------|----------|-------------------------------------------------------|
-| `maxidle` | no       | The maximum number of idle connections in the pool.   |
-| `maxactive`| no      | The maximum number of connections which can be open before blocking a connection request. |
-| `idletimeout`| no    | How long to wait before closing inactive connections. |
-
-### `tls`
-
-```yaml
-tls:
-  enabled: false
-```
-
-Use these settings to configure Redis TLS.
-
-| Parameter | Required | Description                           |
-|-----------|----------|-------------------------------------- |
-| `enabled` | no       | Whether or not to use TLS in-transit. |
-
 
 ## `health`
 
