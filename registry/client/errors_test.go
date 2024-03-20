@@ -46,6 +46,22 @@ func TestHandleErrorResponse401WithInvalidBody(t *testing.T) {
 	}
 }
 
+func TestHandleHTTPResponseError401WithNoBody(t *testing.T) {
+	json := ""
+	response := &http.Response{
+		Status:     "401 Unauthorized",
+		StatusCode: 401,
+		Body:       nopCloser{bytes.NewBufferString(json)},
+		Header:     http.Header{"Content-Type": []string{"application/json; charset=utf-8"}},
+	}
+	err := HandleHTTPResponseError(response)
+
+	expectedMsg := "unauthorized: "
+	if !strings.Contains(err.Error(), expectedMsg) {
+		t.Errorf("Expected %q, got: %q", expectedMsg, err.Error())
+	}
+}
+
 func TestHandleErrorResponseExpectedStatusCode400ValidBody(t *testing.T) {
 	json := `{"errors":[{"code":"DIGEST_INVALID","message":"provided digest does not match"}]}`
 	response := &http.Response{
