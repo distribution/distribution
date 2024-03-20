@@ -46,8 +46,14 @@ func parseHTTPErrorResponse(resp *http.Response) error {
 	}
 
 	statusCode := resp.StatusCode
-	ctHeader := resp.Header.Get("Content-Type")
 
+	// A HEAD request for example validly does not contain any body, while
+	// still returning a JSON content-type.
+	if len(body) == 0 {
+		return makeError(statusCode, "")
+	}
+
+	ctHeader := resp.Header.Get("Content-Type")
 	if ctHeader == "" {
 		return makeError(statusCode, string(body))
 	}
