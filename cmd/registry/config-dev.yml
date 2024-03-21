@@ -7,13 +7,14 @@ log:
 storage:
     delete:
       enabled: true
-    cache:
-        blobdescriptor: inmemory
     filesystem:
         rootdirectory: /var/lib/registry
     maintenance:
         uploadpurging:
             enabled: false
+cache:
+    blobdescriptor:
+      provider: inmemory
 http:
     addr: :5000
     debug:

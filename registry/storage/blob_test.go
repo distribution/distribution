@@ -24,7 +24,13 @@ func TestWriteSeek(t *testing.T) {
 	ctx := context.Background()
 	imageName, _ := reference.WithName("foo/bar")
 	driver := inmemory.New()
-	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableDelete, EnableRedirect)
+	cacheOpts := memory.NewCacheOptions(memory.UnlimitedSize)
+	cache, err := memory.NewBlobDescriptorCacheProvider(ctx, cacheOpts)
+	if err != nil {
+		t.Fatalf("memory cache: %v", err)
+	}
+
+	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(cache), EnableDelete, EnableRedirect)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -60,7 +66,12 @@ func TestSimpleBlobUpload(t *testing.T) {
 	ctx := context.Background()
 	imageName, _ := reference.WithName("foo/bar")
 	driver := inmemory.New()
-	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableDelete, EnableRedirect)
+	cacheOpts := memory.NewCacheOptions(memory.UnlimitedSize)
+	cache, err := memory.NewBlobDescriptorCacheProvider(ctx, cacheOpts)
+	if err != nil {
+		t.Fatalf("memory cache: %v", err)
+	}
+	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(cache), EnableDelete, EnableRedirect)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -232,7 +243,12 @@ func TestSimpleBlobUpload(t *testing.T) {
 	}
 
 	// Reuse state to test delete with a delete-disabled registry
-	registry, err = NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableRedirect)
+	delDisabledCache, err := memory.NewBlobDescriptorCacheProvider(ctx, cacheOpts)
+	if err != nil {
+		t.Fatalf("memory cache: %v", err)
+	}
+
+	registry, err = NewRegistry(ctx, driver, BlobDescriptorCacheProvider(delDisabledCache), EnableRedirect)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -254,7 +270,12 @@ func TestSimpleBlobRead(t *testing.T) {
 	ctx := context.Background()
 	imageName, _ := reference.WithName("foo/bar")
 	driver := inmemory.New()
-	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableDelete, EnableRedirect)
+	cacheOpts := memory.NewCacheOptions(memory.UnlimitedSize)
+	cache, err := memory.NewBlobDescriptorCacheProvider(ctx, cacheOpts)
+	if err != nil {
+		t.Fatalf("memory cache: %v", err)
+	}
+	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(cache), EnableDelete, EnableRedirect)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -366,7 +387,12 @@ func TestBlobMount(t *testing.T) {
 	imageName, _ := reference.WithName("foo/bar")
 	sourceImageName, _ := reference.WithName("foo/source")
 	driver := inmemory.New()
-	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableDelete, EnableRedirect)
+	cacheOpts := memory.NewCacheOptions(memory.UnlimitedSize)
+	cache, err := memory.NewBlobDescriptorCacheProvider(ctx, cacheOpts)
+	if err != nil {
+		t.Fatalf("memory cache: %v", err)
+	}
+	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(cache), EnableDelete, EnableRedirect)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -516,7 +542,12 @@ func TestLayerUploadZeroLength(t *testing.T) {
 	ctx := context.Background()
 	imageName, _ := reference.WithName("foo/bar")
 	driver := inmemory.New()
-	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableDelete, EnableRedirect)
+	cacheOpts := memory.NewCacheOptions(memory.UnlimitedSize)
+	cache, err := memory.NewBlobDescriptorCacheProvider(ctx, cacheOpts)
+	if err != nil {
+		t.Fatalf("memory cache: %v", err)
+	}
+	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(cache), EnableDelete, EnableRedirect)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}

@@ -19,8 +19,6 @@ log:
 storage:
   delete:
     enabled: true
-  cache:
-    blobdescriptor: inmemory
   maintenance:
     uploadpurging:
       enabled: false
@@ -36,3 +34,6 @@ storage:
     chunksize: 33554432
     secure: true
     v4auth: true
+cache:
+  blobdescriptor:
+    provider: inmemory

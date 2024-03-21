@@ -158,11 +158,16 @@ func (r *repository) Named() reference.Named {
 }
 
 func (r *repository) Blobs(ctx context.Context) distribution.BlobStore {
+	cacheOpts := memory.NewCacheOptions(memory.UnlimitedSize)
+	cacheProvider, err := memory.NewBlobDescriptorCacheProvider(ctx, cacheOpts)
+	if err != nil {
+		panic(err)
+	}
 	return &blobs{
 		name:   r.name,
 		ub:     r.ub,
 		client: r.client,
-		statter: cache.NewCachedBlobStatter(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize), &blobStatter{
+		statter: cache.NewCachedBlobStatter(cacheProvider, &blobStatter{
 			name:   r.name,
 			ub:     r.ub,
 			client: r.client,

@@ -87,8 +87,15 @@ func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestE
 	}
 
 	ctx := context.Background()
+	cacheOpts := memory.NewCacheOptions(memory.UnlimitedSize)
+
+	truthCache, err := memory.NewBlobDescriptorCacheProvider(ctx, cacheOpts)
+	if err != nil {
+		t.Fatalf("memory cache: %v", err)
+	}
+
 	truthRegistry, err := storage.NewRegistry(ctx, inmemory.New(),
-		storage.BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)))
+		storage.BlobDescriptorCacheProvider(truthCache))
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -110,8 +117,13 @@ func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestE
 		t.Fatalf(err.Error())
 	}
 
+	localCache, err := memory.NewBlobDescriptorCacheProvider(ctx, cacheOpts)
+	if err != nil {
+		t.Fatalf("memory cache: %v", err)
+	}
+
 	localRegistry, err := storage.NewRegistry(ctx, inmemory.New(),
-		storage.BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), storage.EnableRedirect, storage.DisableDigestResumption)
+		storage.BlobDescriptorCacheProvider(localCache), storage.EnableRedirect, storage.DisableDigestResumption)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}

@@ -7,13 +7,23 @@ import (
 	"testing"
 
 	"github.com/distribution/distribution/v3/registry/storage/cache/cachecheck"
-	"github.com/redis/go-redis/v9"
 )
 
 var redisAddr string
 
 func init() {
 	flag.StringVar(&redisAddr, "test.registry.storage.cache.redis.addr", "", "configure the address of a test instance of redis")
+}
+
+func makeOptions(addr string) map[string]interface{} {
+	return map[string]interface{}{
+		"params": map[interface{}]interface{}{
+			"addr": addr,
+			"pool": map[interface{}]interface{}{
+				"maxactive": 3,
+			},
+		},
+	}
 }
 
 // TestRedisLayerInfoCache exercises a live redis instance using the cache
@@ -29,22 +39,15 @@ func TestRedisBlobDescriptorCacheProvider(t *testing.T) {
 		t.Skip("please set -test.registry.storage.cache.redis.addr to test layer info cache against redis")
 	}
 
-	pool := redis.NewClient(&redis.Options{
-		Addr: redisAddr,
-		OnConnect: func(ctx context.Context, cn *redis.Conn) error {
-			res := cn.Ping(ctx)
-			return res.Err()
-		},
-		MaxRetries: 3,
-		PoolSize:   2,
-	})
-
 	// Clear the database
 	ctx := context.Background()
-	err := pool.FlushDB(ctx).Err()
+
+	opts := makeOptions(redisAddr)
+	cache, err := NewBlobDescriptorCacheProvider(ctx, opts)
 	if err != nil {
-		t.Fatalf("unexpected error flushing redis db: %v", err)
+		t.Fatalf("init redis cache: %v", err)
 	}
 
-	cachecheck.CheckBlobDescriptorCache(t, NewRedisBlobDescriptorCacheProvider(pool))
+	// TODO(milosgajdos): figure out how to flush redis DB before test
+	cachecheck.CheckBlobDescriptorCache(t, cache)
 }

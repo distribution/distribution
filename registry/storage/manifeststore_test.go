@@ -54,7 +54,13 @@ func newManifestStoreTestEnv(t *testing.T, name reference.Named, tag string, opt
 }
 
 func TestManifestStorage(t *testing.T) {
-	testManifestStorage(t, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableDelete, EnableRedirect)
+	cacheOpts := memory.NewCacheOptions(memory.UnlimitedSize)
+	cache, err := memory.NewBlobDescriptorCacheProvider(context.Background(), cacheOpts)
+	if err != nil {
+		t.Fatalf("memory cache: %v", err)
+	}
+
+	testManifestStorage(t, BlobDescriptorCacheProvider(cache), EnableDelete, EnableRedirect)
 }
 
 func testManifestStorage(t *testing.T, options ...RegistryOption) {
@@ -277,7 +283,13 @@ func testManifestStorage(t *testing.T, options ...RegistryOption) {
 		t.Errorf("Deleted manifest get returned non-nil")
 	}
 
-	r, err := NewRegistry(ctx, env.driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableRedirect)
+	cacheOpts := memory.NewCacheOptions(memory.UnlimitedSize)
+	cache, err := memory.NewBlobDescriptorCacheProvider(ctx, cacheOpts)
+	if err != nil {
+		t.Fatalf("memory cache: %v", err)
+	}
+
+	r, err := NewRegistry(ctx, env.driver, BlobDescriptorCacheProvider(cache), EnableRedirect)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -311,12 +323,18 @@ func testOCIManifestStorage(t *testing.T, testname string, includeMediaTypes boo
 		indexMediaType = ""
 	}
 
+	ctx := context.Background()
+	cacheOpts := memory.NewCacheOptions(memory.UnlimitedSize)
+	cache, err := memory.NewBlobDescriptorCacheProvider(ctx, cacheOpts)
+	if err != nil {
+		t.Fatalf("memory cache: %v", err)
+	}
+
 	repoName, _ := reference.WithName("foo/bar")
 	env := newManifestStoreTestEnv(t, repoName, "thetag",
-		BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)),
+		BlobDescriptorCacheProvider(cache),
 		EnableDelete, EnableRedirect)
 
-	ctx := context.Background()
 	ms, err := env.repository.Manifests(ctx)
 	if err != nil {
 		t.Fatal(err)
