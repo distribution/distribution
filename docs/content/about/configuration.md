@@ -276,9 +276,14 @@ health:
       threshold: 3
 proxy:
   remoteurl: https://registry-1.docker.io
-  username: [username]
-  password: [password]
+  username: <username>
+  password: <password>
   ttl: 168h
+  enablenamespaces: true
+  credentials:
+    'https://registry-1.docker.io':
+      username: <username>
+      password: <password>
 validation:
   manifests:
     urls:
@@ -1108,30 +1113,60 @@ attempt fails, the health check will fail.
 ```yaml
 proxy:
   remoteurl: https://registry-1.docker.io
-  username: [username]
-  password: [password]
+  username: <username>
+  password: <password>
   ttl: 168h
+  enablenamespaces: false
+  credentials:
+    'https://registry-1.docker.io':
+      username: <username>
+      password: <password>
 ```
 
 The `proxy` structure allows a registry to be configured as a pull-through cache
-to Docker Hub. See
-[mirror](../recipes/mirror.md)
-for more information. Pushing to a registry configured as a pull-through cache
-is unsupported.
+to other container registries. See [mirror](../recipes/mirror.md) for more information.
+Pushing to a registry configured as a pull-through cache is unsupported.
 
-| Parameter | Required | Description                                           |
-|-----------|----------|-------------------------------------------------------|
-| `remoteurl`| yes     | The URL for the repository on Docker Hub.             |
-| `username` | no      | The username registered with Docker Hub which has access to the repository. |
-| `password` | no      | The password used to authenticate to Docker Hub using the username specified in `username`. |
-| `ttl`      | no      | Expire proxy cache configured in "storage" after this time. Cache 168h(7 days) by default, set to 0 to disable cache expiration, The suffix is one of `ns`, `us`, `ms`, `s`, `m`, or `h`. If you specify a value but omit the suffix, the value is interpreted as a number of nanoseconds. |
-
+| Parameter          | Required | Description                                                                                                                                                                                                                                                                                |
+|--------------------|----------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `remoteurl`        | yes      | The URL for the remote registry. Ignored when namespaces are enabled.                                                                                                                                                                                                                      |
+| `username`         | no       | The username for the registry specified in `remoteurl`. Ignored when namespaces are enabled.                                                                                                                                                                                               |
+| `password`         | no       | The password for the registry specified in `remoteurl`. Ignored when namespaces are enabled.                                                                                                                                                                                               |
+| `ttl`              | no       | Expire proxy cache configured in "storage" after this time. Cache 168h(7 days) by default, set to 0 to disable cache expiration, The suffix is one of `ns`, `us`, `ms`, `s`, `m`, or `h`. If you specify a value but omit the suffix, the value is interpreted as a number of nanoseconds. |
+| `enablenamespaces` | no       | Enable namespace support. This feature is based on an [OCI Distribution Specification proposal](https://github.com/opencontainers/distribution-spec/pull/66), and thus subject to change.                                                                                                  |
+| `credentials`      | no       | A map of credentials to use when namespaces are enabled, otherwise ignored.                                                                                                                                                                                                                |
 
 To enable pulling private repositories (e.g. `batman/robin`) specify the
 username (such as `batman`) and the password for that username.
 
 > **Note**: These private repositories are stored in the proxy cache's storage.
 > Take appropriate measures to protect access to the proxy cache.
+
+When namespace support is enabled, any remote registry will be proxied. 
+A client can specify which remote registry it wants to access by setting the `ns` 
+query parameter to the domain of the target registry or by prepending the image name with the domain
+(like `docker.io/some/image`). 
+For more details, refer to the [specification proposal](https://github.com/opencontainers/distribution-spec/pull/66).
+When `ns` is unset and the image name doesn't contain a valid domain, the request will fail.
+
+Instead of the `username`/`password` fields, the `credentials` map is used to specify credentials.
+
+> **Note**: This feature is based on an 
+> [OCI Distribution Specification proposal](https://github.com/opencontainers/distribution-spec/pull/66),
+> and thus subject to change.
+
+### `credentials`
+
+When namespaces are enabled, credentials for remote registries are specified in the `credentials` map. 
+Note that specifying credentials is only required for private registries, see above.
+
+The key of an entry is the URL of the registry, including the scheme (usually `https://`),
+and it must contain the following fields:
+
+| Parameter  | Required | Description                    |
+|------------|----------|--------------------------------|
+| `username` | yes      | The username for the registry. |
+| `password` | yes      | The password for the registry. |
 
 ## `validation`
 

@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/distribution/distribution/v3/configuration"
 	"github.com/distribution/distribution/v3/internal/client/auth"
 	"github.com/distribution/distribution/v3/internal/client/auth/challenge"
 	"github.com/distribution/distribution/v3/internal/dcontext"
@@ -35,19 +36,21 @@ func (c credentials) SetRefreshToken(u *url.URL, service, token string) {
 }
 
 // configureAuth stores credentials for challenge responses
-func configureAuth(username, password, remoteURL string) (auth.CredentialStore, error) {
+func configureAuth(configCredentials map[string]configuration.ProxyCredential) (auth.CredentialStore, error) {
 	creds := map[string]userpass{}
 
-	authURLs, err := getAuthURLs(remoteURL)
-	if err != nil {
-		return nil, err
-	}
+	for remoteURL, credential := range configCredentials {
+		authURLs, err := getAuthURLs(remoteURL)
+		if err != nil {
+			return nil, err
+		}
 
-	for _, url := range authURLs {
-		dcontext.GetLogger(dcontext.Background()).Infof("Discovered token authentication URL: %s", url)
-		creds[url] = userpass{
-			username: username,
-			password: password,
+		for _, url := range authURLs {
+			dcontext.GetLogger(dcontext.Background()).Infof("Discovered token authentication URL: %s", url)
+			creds[url] = userpass{
+				username: credential.Username,
+				password: credential.Password,
+			}
 		}
 	}
 
