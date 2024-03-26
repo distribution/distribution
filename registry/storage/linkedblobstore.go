@@ -8,12 +8,13 @@ import (
 	"path"
 	"time"
 
-	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/internal/dcontext"
-	"github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/reference"
 	"github.com/google/uuid"
 	"github.com/opencontainers/go-digest"
+
+	"github.com/distribution/distribution/v3"
+	"github.com/distribution/distribution/v3/internal/dcontext"
+	"github.com/distribution/distribution/v3/registry/storage/driver"
 )
 
 // linkPathFunc describes a function that can resolve a link based on the
@@ -396,6 +397,16 @@ func (lbs *linkedBlobStatter) Clear(ctx context.Context, dgst digest.Digest) (er
 	blobLinkPath, err := lbs.linkPath(lbs.repository.Named().Name(), dgst)
 	if err != nil {
 		return err
+	}
+
+	// See https://github.com/docker/distribution/issues/3322 to get more detail
+	repo, ok := lbs.repository.(*repository)
+	if ok {
+		if repo.blobDescriptorCacheProvider != nil {
+			if err = repo.blobDescriptorCacheProvider.Clear(ctx, dgst); err != nil {
+				return err
+			}
+		}
 	}
 
 	return lbs.blobStore.driver.Delete(ctx, blobLinkPath)
