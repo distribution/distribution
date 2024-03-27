@@ -155,7 +155,11 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 		panic(err)
 	}
 
-	app.configureSecret(config)
+	// Do not configure HTTP secret for a proxy registry as HTTP secret
+	// is only used for blob uploads and a proxy registry does not support blob uploads.
+	if !app.isCache {
+		app.configureSecret(config)
+	}
 	app.configureEvents(config)
 	app.configureRedis(config)
 	app.configureLogHook(config)
