@@ -279,7 +279,7 @@ type FileChecker struct {
 
 // Redis configures the redis pool available to the registry webapp.
 type Redis struct {
-	// Addr specifies the the redis instance available to the application.
+	// Addr specifies the redis instance available to the application.
 	Addr string `yaml:"addr,omitempty"`
 
 	// Usernames can be used as a finer-grained permission control since the introduction of the redis 6.0.

@@ -54,7 +54,7 @@ func (ts *tagStore) All(ctx context.Context) ([]string, error) {
 	return tags, nil
 }
 
-// Tag tags the digest with the given tag, updating the the store to point at
+// Tag tags the digest with the given tag, updating the store to point at
 // the current tag. The digest must point to a manifest.
 func (ts *tagStore) Tag(ctx context.Context, tag string, desc distribution.Descriptor) error {
 	currentPath, err := pathFor(manifestTagCurrentPathSpec{
