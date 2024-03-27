@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/distribution/reference"
+
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/configuration"
 	"github.com/distribution/distribution/v3/internal/client"
@@ -18,7 +20,6 @@ import (
 	"github.com/distribution/distribution/v3/registry/proxy/scheduler"
 	"github.com/distribution/distribution/v3/registry/storage"
 	"github.com/distribution/distribution/v3/registry/storage/driver"
-	"github.com/distribution/reference"
 )
 
 var repositoryTTL = 24 * 7 * time.Hour
@@ -30,6 +31,7 @@ type proxyingRegistry struct {
 	ttl            *time.Duration
 	remoteURL      url.URL
 	authChallenger authChallenger
+	basicAuth      auth.CredentialStore
 }
 
 // NewRegistryPullThroughCache creates a registry acting as a pull through cache
@@ -112,7 +114,7 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 		}
 	}
 
-	cs, err := configureAuth(config.Username, config.Password, config.RemoteURL)
+	cs, b, err := configureAuth(config.Username, config.Password, config.RemoteURL)
 	if err != nil {
 		return nil, err
 	}
@@ -127,6 +129,7 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 			cm:        challenge.NewSimpleManager(),
 			cs:        cs,
 		},
+		basicAuth: b,
 	}, nil
 }
 
@@ -155,7 +158,8 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named
 
 	tr := transport.NewTransport(http.DefaultTransport,
 		auth.NewAuthorizer(c.challengeManager(),
-			auth.NewTokenHandlerWithOptions(tkopts)))
+			auth.NewTokenHandlerWithOptions(tkopts),
+			auth.NewBasicHandler(pr.basicAuth)))
 
 	localRepo, err := pr.embedded.Repository(ctx, name)
 	if err != nil {
