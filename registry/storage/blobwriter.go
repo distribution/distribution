@@ -230,7 +230,7 @@ func (bw *blobWriter) validateBlob(ctx context.Context, desc distribution.Descri
 	}
 
 	if fullHash {
-		// a fantastic optimization: if the the written data and the size are
+		// a fantastic optimization: if the written data and the size are
 		// the same, we don't need to read the data from the backend. This is
 		// because we've written the entire file in the lifecycle of the
 		// current instance.
