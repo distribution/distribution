@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -221,7 +222,7 @@ func setDirectoryURL(directoryurl string) *acme.Client {
 }
 
 // ListenAndServe runs the registry's HTTP server.
-func (registry *Registry) ListenAndServe() error {
+func (registry *Registry) ListenAndServe() (err error) {
 	config := registry.config
 
 	ln, err := listener.NewListener(config.HTTP.Net, config.HTTP.Addr)
@@ -308,23 +309,27 @@ func (registry *Registry) ListenAndServe() error {
 		dcontext.GetLogger(registry.app).Infof("listening on %v", ln.Addr())
 	}
 
-	if config.HTTP.DrainTimeout == 0 {
-		return registry.server.Serve(ln)
-	}
-
 	// setup channel to get notified on SIGTERM signal
-	signal.Notify(quit, syscall.SIGTERM)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	serveErr := make(chan error)
 
 	// Start serving in goroutine and listen for stop signal in main thread
 	go func() {
 		serveErr <- registry.server.Serve(ln)
 	}()
+	defer func(app *handlers.App) {
+		if exitErr := app.OnExit(); exitErr != nil {
+			err = errors.Join(err, exitErr)
+		}
+	}(registry.app)
 
 	select {
 	case err := <-serveErr:
 		return err
 	case <-quit:
+		if config.HTTP.DrainTimeout == 0 {
+			return nil
+		}
 		dcontext.GetLogger(registry.app).Info("stopping server gracefully. Draining connections for ", config.HTTP.DrainTimeout)
 		// shutdown the server with a grace period of configured timeout
 		c, cancel := context.WithTimeout(context.Background(), config.HTTP.DrainTimeout)

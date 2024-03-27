@@ -206,12 +206,13 @@ func (ttles *TTLExpirationScheduler) startTimer(entry *schedulerEntry, ttl time.
 }
 
 // Stop stops the scheduler.
-func (ttles *TTLExpirationScheduler) Stop() {
+func (ttles *TTLExpirationScheduler) Stop() error {
 	ttles.Lock()
 	defer ttles.Unlock()
 
-	if err := ttles.writeState(); err != nil {
-		dcontext.GetLogger(ttles.ctx).Errorf("Error writing scheduler state: %s", err)
+	err := ttles.writeState()
+	if err != nil {
+		err = fmt.Errorf("error writing scheduler state: %w", err)
 	}
 
 	for _, entry := range ttles.entries {
@@ -221,6 +222,7 @@ func (ttles *TTLExpirationScheduler) Stop() {
 	close(ttles.doneChan)
 	ttles.saveTimer.Stop()
 	ttles.stopped = true
+	return err
 }
 
 func (ttles *TTLExpirationScheduler) writeState() error {
