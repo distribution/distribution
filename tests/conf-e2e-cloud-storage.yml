@@ -17,15 +17,14 @@ log:
     formatter: text
     level: debug
 redis:
-   addr: redis:6379
+   addrs: [redis:6379]
    db: 0
    dialtimeout: 5s
    readtimeout: 10ms
    writetimeout: 10ms
-   pool:
-     idletimeout: 60s
-     maxactive: 64
-     maxidle: 16
+   maxidleconns: 16
+   poolsize: 64
+   connmaxidletime: 300s
 storage:
   redirect:
     disable: true

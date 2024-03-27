@@ -131,22 +131,16 @@ var configStruct = Configuration{
 		},
 	},
 	Redis: Redis{
-		Addr:     "localhost:6379",
-		Username: "alice",
-		Password: "123456",
-		DB:       1,
-		Pool: struct {
-			MaxIdle     int           `yaml:"maxidle,omitempty"`
-			MaxActive   int           `yaml:"maxactive,omitempty"`
-			IdleTimeout time.Duration `yaml:"idletimeout,omitempty"`
-		}{
-			MaxIdle:     16,
-			MaxActive:   64,
-			IdleTimeout: time.Second * 300,
-		},
-		DialTimeout:  time.Millisecond * 10,
-		ReadTimeout:  time.Millisecond * 10,
-		WriteTimeout: time.Millisecond * 10,
+		Addrs:           []string{"localhost:6379"},
+		Username:        "alice",
+		Password:        "123456",
+		DB:              1,
+		MaxIdleConns:    16,
+		PoolSize:        64,
+		ConnMaxIdleTime: time.Second * 300,
+		DialTimeout:     time.Millisecond * 10,
+		ReadTimeout:     time.Millisecond * 10,
+		WriteTimeout:    time.Millisecond * 10,
 	},
 }
 
@@ -190,14 +184,13 @@ http:
   headers:
     X-Content-Type-Options: [nosniff]
 redis:
-  addr: localhost:6379
+  addrs: [localhost:6379]
   username: alice
   password: 123456
   db: 1
-  pool:
-    maxidle: 16
-    maxactive: 64
-    idletimeout: 300s
+  maxidleconns: 16
+  poolsize: 64
+  connmaxidletime: 300s
   dialtimeout: 10ms
   readtimeout: 10ms
   writetimeout: 10ms

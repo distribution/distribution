@@ -77,7 +77,7 @@ type App struct {
 		source notifications.SourceRecord
 	}
 
-	redis *redis.Client
+	redis redis.UniversalClient
 
 	// isCache is true if this registry is configured as a pull through cache
 	isCache bool
@@ -487,7 +487,7 @@ func (app *App) configureEvents(configuration *configuration.Configuration) {
 }
 
 func (app *App) configureRedis(cfg *configuration.Configuration) {
-	if cfg.Redis.Addr == "" {
+	if len(cfg.Redis.Addrs) == 0 {
 		dcontext.GetLogger(app).Infof("redis not configured")
 		return
 	}
@@ -514,24 +514,50 @@ func (app *App) configureRedis(cfg *configuration.Configuration) {
 	}))
 }
 
-func (app *App) createPool(cfg configuration.Redis) *redis.Client {
-	return redis.NewClient(&redis.Options{
-		Addr: cfg.Addr,
+func (app *App) createPool(cfg configuration.Redis) redis.UniversalClient {
+
+	return redis.NewUniversalClient(&redis.UniversalOptions{
+		Addrs: cfg.Addrs,
 		OnConnect: func(ctx context.Context, cn *redis.Conn) error {
 			res := cn.Ping(ctx)
 			return res.Err()
 		},
-		Username:        cfg.Username,
-		Password:        cfg.Password,
-		DB:              cfg.DB,
-		MaxRetries:      3,
-		DialTimeout:     cfg.DialTimeout,
-		ReadTimeout:     cfg.ReadTimeout,
-		WriteTimeout:    cfg.WriteTimeout,
-		PoolFIFO:        false,
-		MaxIdleConns:    cfg.Pool.MaxIdle,
-		PoolSize:        cfg.Pool.MaxActive,
-		ConnMaxIdleTime: cfg.Pool.IdleTimeout,
+		ClientName: cfg.ClientName,
+
+		DB: cfg.DB,
+
+		Protocol:         cfg.Protocol,
+		Username:         cfg.Username,
+		Password:         cfg.Password,
+		SentinelUsername: cfg.SentinelUsername,
+		SentinelPassword: cfg.SentinelPassword,
+
+		MaxRetries:      cfg.MaxRetries,
+		MinRetryBackoff: cfg.MinRetryBackoff,
+		MaxRetryBackoff: cfg.MaxRetryBackoff,
+
+		DialTimeout:           cfg.DialTimeout,
+		ReadTimeout:           cfg.ReadTimeout,
+		WriteTimeout:          cfg.WriteTimeout,
+		ContextTimeoutEnabled: cfg.ContextTimeoutEnabled,
+
+		PoolFIFO: cfg.PoolFIFO,
+
+		PoolSize:        cfg.PoolSize,
+		PoolTimeout:     cfg.PoolTimeout,
+		MinIdleConns:    cfg.MinIdleConns,
+		MaxIdleConns:    cfg.MaxIdleConns,
+		ConnMaxIdleTime: cfg.ConnMaxIdleTime,
+		ConnMaxLifetime: cfg.ConnMaxLifetime,
+
+		TLSConfig: cfg.TLSConfig,
+
+		MaxRedirects:   cfg.MaxRedirects,
+		ReadOnly:       cfg.ReadOnly,
+		RouteByLatency: cfg.RouteByLatency,
+		RouteRandomly:  cfg.RouteRandomly,
+
+		MasterName: cfg.MasterName,
 	})
 }
 

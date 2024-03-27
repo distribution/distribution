@@ -1,6 +1,7 @@
 package configuration
 
 import (
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
@@ -277,42 +278,56 @@ type FileChecker struct {
 	Threshold int `yaml:"threshold,omitempty"`
 }
 
-// Redis configures the redis pool available to the registry webapp.
 type Redis struct {
-	// Addr specifies the the redis instance available to the application.
-	Addr string `yaml:"addr,omitempty"`
+	// Either a single address or a seed list of host:port addresses
+	// of cluster/sentinel nodes.
+	Addrs []string
 
-	// Usernames can be used as a finer-grained permission control since the introduction of the redis 6.0.
-	Username string `yaml:"username,omitempty"`
+	// ClientName will execute the `CLIENT SETNAME ClientName` command for each conn.
+	ClientName string
 
-	// Password string to use when making a connection.
-	Password string `yaml:"password,omitempty"`
+	// Database to be selected after connecting to the server.
+	// Only single-node and failover clients.
+	DB int
 
-	// DB specifies the database to connect to on the redis instance.
-	DB int `yaml:"db,omitempty"`
+	Protocol         int
+	Username         string
+	Password         string
+	SentinelUsername string
+	SentinelPassword string
 
-	// TLS configures settings for redis in-transit encryption
-	TLS struct {
-		Enabled bool `yaml:"enabled,omitempty"`
-	} `yaml:"tls,omitempty"`
+	MaxRetries      int
+	MinRetryBackoff time.Duration
+	MaxRetryBackoff time.Duration
 
-	DialTimeout  time.Duration `yaml:"dialtimeout,omitempty"`  // timeout for connect
-	ReadTimeout  time.Duration `yaml:"readtimeout,omitempty"`  // timeout for reads of data
-	WriteTimeout time.Duration `yaml:"writetimeout,omitempty"` // timeout for writes of data
+	DialTimeout           time.Duration
+	ReadTimeout           time.Duration
+	WriteTimeout          time.Duration
+	ContextTimeoutEnabled bool
 
-	// Pool configures the behavior of the redis connection pool.
-	Pool struct {
-		// MaxIdle sets the maximum number of idle connections.
-		MaxIdle int `yaml:"maxidle,omitempty"`
+	// PoolFIFO uses FIFO mode for each node connection pool GET/PUT (default LIFO).
+	PoolFIFO bool
 
-		// MaxActive sets the maximum number of connections that should be
-		// opened before blocking a connection request.
-		MaxActive int `yaml:"maxactive,omitempty"`
+	PoolSize        int
+	PoolTimeout     time.Duration
+	MinIdleConns    int
+	MaxIdleConns    int
+	ConnMaxIdleTime time.Duration
+	ConnMaxLifetime time.Duration
 
-		// IdleTimeout sets the amount time to wait before closing
-		// inactive connections.
-		IdleTimeout time.Duration `yaml:"idletimeout,omitempty"`
-	} `yaml:"pool,omitempty"`
+	TLSConfig *tls.Config
+
+	// Only cluster clients.
+
+	MaxRedirects   int
+	ReadOnly       bool
+	RouteByLatency bool
+	RouteRandomly  bool
+
+	// The sentinel master name.
+	// Only failover clients.
+
+	MasterName string
 }
 
 // HTTPChecker is a type of entry in the health section for checking HTTP URIs.
