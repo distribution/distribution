@@ -448,10 +448,20 @@ func testProxyStoreServe(t *testing.T, te *testEnv, numClients int) {
 					return
 				}
 
-				bodyBytes := w.Body.Bytes()
+				resp := w.Result()
+				bodyBytes, err := io.ReadAll(resp.Body)
+				resp.Body.Close()
+				if err != nil {
+					t.Errorf(err.Error())
+					return
+				}
 				localDigest := digest.FromBytes(bodyBytes)
 				if localDigest != remoteBlob.Digest {
 					t.Errorf("Mismatching blob fetch from proxy")
+					return
+				}
+				if resp.Header.Get("Docker-Content-Digest") != localDigest.String() {
+					t.Errorf("Mismatching digest in response header")
 					return
 				}
 
