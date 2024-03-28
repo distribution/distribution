@@ -80,13 +80,6 @@ func init() {
 				return nil, err
 			}
 		}
-		forcePathStyleBool := true
-		if forcePathStyle != "" {
-			forcePathStyleBool, err = strconv.ParseBool(forcePathStyle)
-			if err != nil {
-				return nil, err
-			}
-		}
 
 		useDualStackBool := false
 		if useDualStack != "" {
@@ -107,7 +100,7 @@ func init() {
 			bucket,
 			region,
 			regionEndpoint,
-			forcePathStyleBool,
+			forcePathStyle,
 			encryptBool,
 			keyID,
 			secureBool,
