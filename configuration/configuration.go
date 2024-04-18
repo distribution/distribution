@@ -441,6 +441,8 @@ func (storage Storage) Type() string {
 			// allow configuration of delete
 		case "redirect":
 			// allow configuration of redirect
+		case "tag":
+			// allow configuration of tag
 		default:
 			storageType = append(storageType, k)
 		}
@@ -452,6 +454,19 @@ func (storage Storage) Type() string {
 		return storageType[0]
 	}
 	return ""
+}
+
+// TagParameters returns the Parameters map for a Storage tag configuration
+func (storage Storage) TagParameters() Parameters {
+	return storage["tag"]
+}
+
+// setTagParameter changes the parameter at the provided key to the new value
+func (storage Storage) setTagParameter(key string, value interface{}) {
+	if _, ok := storage["tag"]; !ok {
+		storage["tag"] = make(Parameters)
+	}
+	storage["tag"][key] = value
 }
 
 // Parameters returns the Parameters map for a Storage configuration
@@ -482,6 +497,8 @@ func (storage *Storage) UnmarshalYAML(unmarshal func(interface{}) error) error {
 					// allow configuration of delete
 				case "redirect":
 					// allow configuration of redirect
+				case "tag":
+					// allow configuration of tag
 				default:
 					types = append(types, k)
 				}

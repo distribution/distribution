@@ -6,6 +6,7 @@ import (
 	"mime"
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/internal/dcontext"
@@ -13,11 +14,13 @@ import (
 	"github.com/distribution/distribution/v3/manifest/ocischema"
 	"github.com/distribution/distribution/v3/manifest/schema2"
 	"github.com/distribution/distribution/v3/registry/api/errcode"
+	"github.com/distribution/distribution/v3/registry/storage"
 	"github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/reference"
 	"github.com/gorilla/handlers"
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -481,12 +484,26 @@ func (imh *manifestHandler) DeleteManifest(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	var (
+		errs []error
+		mu   sync.Mutex
+	)
+	g := errgroup.Group{}
+	g.SetLimit(storage.DefaultConcurrencyLimit)
 	for _, tag := range referencedTags {
-		if err := tagService.Untag(imh, tag); err != nil {
-			imh.Errors = append(imh.Errors, err)
-			return
-		}
+		tag := tag
+
+		g.Go(func() error {
+			if err := tagService.Untag(imh, tag); err != nil {
+				mu.Lock()
+				errs = append(errs, err)
+				mu.Unlock()
+			}
+			return nil
+		})
 	}
+	_ = g.Wait() // imh will record all errors, so ignore the error of Wait()
+	imh.Errors = errs
 
 	w.WriteHeader(http.StatusAccepted)
 }

@@ -4,10 +4,13 @@ import (
 	"context"
 	"path"
 	"sort"
+	"sync"
+
+	"github.com/opencontainers/go-digest"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/distribution/distribution/v3"
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
-	"github.com/opencontainers/go-digest"
 )
 
 var _ distribution.TagService = &tagStore{}
@@ -18,8 +21,9 @@ var _ distribution.TagService = &tagStore{}
 // which only makes use of the Digest field of the returned distribution.Descriptor
 // but does not enable full roundtripping of Descriptor objects
 type tagStore struct {
-	repository *repository
-	blobStore  *blobStore
+	repository       *repository
+	blobStore        *blobStore
+	concurrencyLimit int
 }
 
 // All returns all tags
@@ -145,26 +149,48 @@ func (ts *tagStore) Lookup(ctx context.Context, desc distribution.Descriptor) ([
 		return nil, err
 	}
 
-	var tags []string
+	g, ctx := errgroup.WithContext(ctx)
+	g.SetLimit(ts.concurrencyLimit)
+
+	var (
+		tags []string
+		mu   sync.Mutex
+	)
 	for _, tag := range allTags {
-		tagLinkPathSpec := manifestTagCurrentPathSpec{
-			name: ts.repository.Named().Name(),
-			tag:  tag,
+		if ctx.Err() != nil {
+			break
 		}
+		tag := tag
 
-		tagLinkPath, _ := pathFor(tagLinkPathSpec)
-		tagDigest, err := ts.blobStore.readlink(ctx, tagLinkPath)
-		if err != nil {
-			switch err.(type) {
-			case storagedriver.PathNotFoundError:
-				continue
+		g.Go(func() error {
+			tagLinkPathSpec := manifestTagCurrentPathSpec{
+				name: ts.repository.Named().Name(),
+				tag:  tag,
 			}
-			return nil, err
-		}
 
-		if tagDigest == desc.Digest {
-			tags = append(tags, tag)
-		}
+			tagLinkPath, _ := pathFor(tagLinkPathSpec)
+			tagDigest, err := ts.blobStore.readlink(ctx, tagLinkPath)
+			if err != nil {
+				switch err.(type) {
+				case storagedriver.PathNotFoundError:
+					return nil
+				}
+				return err
+			}
+
+			if tagDigest == desc.Digest {
+				mu.Lock()
+				tags = append(tags, tag)
+				mu.Unlock()
+			}
+
+			return nil
+		})
+	}
+
+	err = g.Wait()
+	if err != nil {
+		return nil, err
 	}
 
 	return tags, nil
