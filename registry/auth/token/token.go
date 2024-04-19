@@ -226,7 +226,7 @@ func getCertPubKey(chains [][]*x509.Certificate) crypto.PublicKey {
 
 	// NOTE: we dont have to verify that the public key in the leaf cert
 	// *is* the signing key: if it's not the signing then token claims
-	// verifcation with this key fails
+	// verification with this key fails
 	return cert.PublicKey.(crypto.PublicKey)
 }
 

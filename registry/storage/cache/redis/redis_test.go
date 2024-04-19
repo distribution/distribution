@@ -20,7 +20,7 @@ func init() {
 // implementation.
 func TestRedisBlobDescriptorCacheProvider(t *testing.T) {
 	if redisAddr == "" {
-		// fallback to an environement variable
+		// fallback to an environment variable
 		redisAddr = os.Getenv("TEST_REGISTRY_STORAGE_CACHE_REDIS_ADDR")
 	}
 
