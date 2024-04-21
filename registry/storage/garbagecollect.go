@@ -68,12 +68,14 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 					return fmt.Errorf("failed to retrieve tags for digest %v: %v", dgst, err)
 				}
 				if len(tags) == 0 {
-					emit("manifest eligible for deletion: %s", dgst)
 					// fetch all tags from repository
 					// all of these tags could contain manifest in history
 					// which means that we need check (and delete) those references when deleting manifest
 					allTags, err := repository.Tags(ctx).All(ctx)
 					if err != nil {
+						if _, ok := err.(distribution.ErrManifestUnknownRevision); !ok {
+							return nil
+						}
 						return fmt.Errorf("failed to retrieve tags %v", err)
 					}
 					manifestArr = append(manifestArr, ManifestDel{Name: repoName, Digest: dgst, Tags: allTags})
@@ -84,18 +86,14 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 			emit("%s: marking manifest %s ", repoName, dgst)
 			markSet[dgst] = struct{}{}
 
-			manifest, err := manifestService.Get(ctx, dgst)
-			if err != nil {
-				return fmt.Errorf("failed to retrieve manifest for digest %v: %v", dgst, err)
-			}
-
-			descriptors := manifest.References()
-			for _, descriptor := range descriptors {
-				markSet[descriptor.Digest] = struct{}{}
-				emit("%s: marking blob %s", repoName, descriptor.Digest)
-			}
-
-			return nil
+			return markManifestReferences(dgst, manifestService, ctx, func(d digest.Digest) bool {
+				_, marked := markSet[d]
+				if !marked {
+					markSet[d] = struct{}{}
+					emit("%s: marking blob %s", repoName, d)
+				}
+				return marked
+			})
 		})
 
 		// In certain situations such as unfinished uploads, deleting all
@@ -112,6 +110,8 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 	if err != nil {
 		return fmt.Errorf("failed to mark: %v", err)
 	}
+
+	manifestArr = unmarkReferencedManifest(manifestArr, markSet)
 
 	// sweep
 	vacuum := NewVacuum(ctx, storageDriver)
@@ -148,4 +148,41 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 	}
 
 	return err
+}
+
+// unmarkReferencedManifest filters out manifest present in markSet
+func unmarkReferencedManifest(manifestArr []ManifestDel, markSet map[digest.Digest]struct{}) []ManifestDel {
+	filtered := make([]ManifestDel, 0)
+	for _, obj := range manifestArr {
+		if _, ok := markSet[obj.Digest]; !ok {
+			emit("manifest eligible for deletion: %s", obj)
+			filtered = append(filtered, obj)
+		}
+	}
+	return filtered
+}
+
+// markManifestReferences marks the manifest references
+func markManifestReferences(dgst digest.Digest, manifestService distribution.ManifestService, ctx context.Context, ingester func(digest.Digest) bool) error {
+	manifest, err := manifestService.Get(ctx, dgst)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve manifest for digest %v: %v", dgst, err)
+	}
+
+	descriptors := manifest.References()
+	for _, descriptor := range descriptors {
+
+		// do not visit references if already marked
+		if ingester(descriptor.Digest) {
+			continue
+		}
+
+		if ok, _ := manifestService.Exists(ctx, descriptor.Digest); ok {
+			err := markManifestReferences(descriptor.Digest, manifestService, ctx, ingester)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
