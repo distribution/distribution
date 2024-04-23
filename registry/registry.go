@@ -70,7 +70,10 @@ var defaultCipherSuites = []uint16{
 	tls.TLS_AES_256_GCM_SHA384,
 }
 
-const defaultTLSVersionStr = "tls1.2"
+const (
+	defaultTLSVersionStr = "tls1.2"
+	readHeaderTimeout    = 20 * time.Second
+)
 
 // tlsVersions maps user-specified values to tls version constants.
 var tlsVersions = map[string]uint16{
@@ -159,7 +162,8 @@ func NewRegistry(ctx context.Context, config *configuration.Configuration) (*Reg
 	}
 
 	server := &http.Server{
-		Handler: handler,
+		Handler:           handler,
+		ReadHeaderTimeout: readHeaderTimeout,
 	}
 
 	return &Registry{
