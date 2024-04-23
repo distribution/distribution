@@ -127,7 +127,7 @@ func (ac authChallenge) challengeParams(r *http.Request) string {
 	return str
 }
 
-// SetChallenge sets the WWW-Authenticate value for the response.
+// SetHeaders sets the WWW-Authenticate value for the response.
 func (ac authChallenge) SetHeaders(r *http.Request, w http.ResponseWriter) {
 	w.Header().Add("WWW-Authenticate", ac.challengeParams(r))
 }

@@ -202,7 +202,7 @@ func (ub *URLBuilder) BuildBlobUploadChunkURL(name reference.Named, uuid string,
 	return appendValuesURL(uploadURL, values...).String(), nil
 }
 
-// clondedRoute returns a clone of the named route from the router. Routes
+// cloneRoute returns a clone of the named route from the router. Routes
 // must be cloned to avoid modifying them during url generation.
 func (ub *URLBuilder) cloneRoute(name string) clonedRoute {
 	route := new(mux.Route)
