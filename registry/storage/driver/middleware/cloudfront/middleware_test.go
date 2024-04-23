@@ -50,6 +50,6 @@ pZeMRablbPQdp8/1NyIwimq1VlG0ohQ4P6qhW7E09ZMC
 		t.Fatal(err)
 	}
 	if storageDriver == nil {
-		t.Fatal("Driver couldnt be initialized.")
+		t.Fatal("Driver could not be initialized")
 	}
 }

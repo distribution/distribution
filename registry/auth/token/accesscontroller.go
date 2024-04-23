@@ -143,7 +143,7 @@ type accessController struct {
 }
 
 // tokenAccessOptions is a convenience type for handling
-// options to the contstructor of an accessController.
+// options to the constructor of an accessController.
 type tokenAccessOptions struct {
 	realm          string
 	autoRedirect   bool

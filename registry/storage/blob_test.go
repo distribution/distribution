@@ -40,7 +40,7 @@ func TestWriteSeek(t *testing.T) {
 	}
 	contents := []byte{1, 2, 3}
 	if _, err := blobUpload.Write(contents); err != nil {
-		t.Fatalf("unexpected error writing contets: %v", err)
+		t.Fatalf("unexpected error writing contents: %v", err)
 	}
 	blobUpload.Close()
 	offset := blobUpload.Size()
