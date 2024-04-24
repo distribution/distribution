@@ -80,7 +80,7 @@ func init() {
 				return nil, err
 			}
 		}
-		forcePathStyleBool := true
+		forcePathStyleBool := false
 		if forcePathStyle != "" {
 			forcePathStyleBool, err = strconv.ParseBool(forcePathStyle)
 			if err != nil {
