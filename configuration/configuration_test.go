@@ -39,6 +39,9 @@ var configStruct = Configuration{
 			"url1":    "https://foo.example.com",
 			"path1":   "/some-path",
 		},
+		"tag": Parameters{
+			"concurrencylimit": 10,
+		},
 	},
 	Auth: Auth{
 		"silly": Parameters{
@@ -167,6 +170,8 @@ storage:
     int1: 42
     url1: "https://foo.example.com"
     path1: "/some-path"
+  tag:
+    concurrencylimit: 10
 auth:
   silly:
     realm: silly
@@ -541,6 +546,9 @@ func copyConfig(config Configuration) *Configuration {
 	configCopy.Storage = Storage{config.Storage.Type(): Parameters{}}
 	for k, v := range config.Storage.Parameters() {
 		configCopy.Storage.setParameter(k, v)
+	}
+	for k, v := range config.Storage.TagParameters() {
+		configCopy.Storage.setTagParameter(k, v)
 	}
 
 	configCopy.Auth = Auth{config.Auth.Type(): Parameters{}}

@@ -188,6 +188,21 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 		}
 	}
 
+	// configure tag lookup concurrency limit
+	if p := config.Storage.TagParameters(); p != nil {
+		l, ok := p["concurrencylimit"]
+		if ok {
+			limit, ok := l.(int)
+			if !ok {
+				panic("tag lookup concurrency limit config key must have a integer value")
+			}
+			if limit < 0 {
+				panic("tag lookup concurrency limit should be a non-negative integer value")
+			}
+			options = append(options, storage.TagLookupConcurrencyLimit(limit))
+		}
+	}
+
 	// configure redirects
 	var redirectDisabled bool
 	if redirectConfig, ok := config.Storage["redirect"]; ok {

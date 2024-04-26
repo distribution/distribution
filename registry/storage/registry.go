@@ -3,11 +3,16 @@ package storage
 import (
 	"context"
 	"regexp"
+	"runtime"
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/registry/storage/cache"
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/reference"
+)
+
+var (
+	DefaultConcurrencyLimit = runtime.GOMAXPROCS(0)
 )
 
 // registry is the top-level implementation of Registry for use in the storage
@@ -18,6 +23,7 @@ type registry struct {
 	statter                      *blobStatter // global statter service.
 	blobDescriptorCacheProvider  cache.BlobDescriptorCacheProvider
 	deleteEnabled                bool
+	tagLookupConcurrencyLimit    int
 	resumableDigestEnabled       bool
 	blobDescriptorServiceFactory distribution.BlobDescriptorServiceFactory
 	manifestURLs                 manifestURLs
@@ -38,6 +44,13 @@ type RegistryOption func(*registry) error
 func EnableRedirect(registry *registry) error {
 	registry.blobServer.redirect = true
 	return nil
+}
+
+func TagLookupConcurrencyLimit(concurrencyLimit int) RegistryOption {
+	return func(registry *registry) error {
+		registry.tagLookupConcurrencyLimit = concurrencyLimit
+		return nil
+	}
 }
 
 // EnableDelete is a functional option for NewRegistry. It enables deletion on
@@ -184,9 +197,14 @@ func (repo *repository) Named() reference.Named {
 }
 
 func (repo *repository) Tags(ctx context.Context) distribution.TagService {
+	limit := DefaultConcurrencyLimit
+	if repo.tagLookupConcurrencyLimit > 0 {
+		limit = repo.tagLookupConcurrencyLimit
+	}
 	tags := &tagStore{
-		repository: repo,
-		blobStore:  repo.registry.blobStore,
+		repository:       repo,
+		blobStore:        repo.registry.blobStore,
+		concurrencyLimit: limit,
 	}
 
 	return tags

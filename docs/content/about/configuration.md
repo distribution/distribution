@@ -141,6 +141,8 @@ storage:
     usedualstack: false
     loglevel: debug
   inmemory:  # This driver takes no parameters
+  tag:
+    concurrencylimit: 8
   delete:
     enabled: false
   redirect:
@@ -520,6 +522,26 @@ If `blobdescriptor` is set to `inmemory`, the optional `blobdescriptorsize`
 parameter sets a limit on the number of descriptors to store in the cache.
 The default value is 10000. If this parameter is set to 0, the cache is allowed
 to grow with no size limit.
+
+### `tag`
+
+The `tag` subsection provides configuration to set concurrency limit for tag lookup.
+When user calls into the registry to delete the manifest, which in turn then does a
+lookup for all tags that reference the deleted manifest. To find the tag references,
+the registry will iterate every tag in the repository and read it's link file to check
+if it matches the deleted manifest (i.e. to see if uses the same sha256 digest).
+So, the more tags in repository, the worse the performance will be (as there will
+be more S3 API calls occurring for the tag directory lookups and tag file reads if
+using S3 storage driver).
+
+Therefore, add a single flag `concurrencylimit` to set concurrency limit to optimize tag
+lookup performance under the `tag` section. When a value is not provided or equal to 0,
+`GOMAXPROCS` will be used.
+
+```yaml
+tag:
+  concurrencylimit: 8
+```
 
 ### `redirect`
 
