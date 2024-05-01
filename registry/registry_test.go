@@ -103,7 +103,7 @@ func TestGracefulShutdown(t *testing.T) {
 	fmt.Fprintf(conn, "GET /v2/ ")
 
 	// send stop signal
-	quit <- os.Interrupt
+	registry.quit <- os.Interrupt
 	time.Sleep(100 * time.Millisecond)
 
 	// try connecting again. it shouldn't
@@ -325,7 +325,7 @@ func TestRegistrySupportedCipherSuite(t *testing.T) {
 	}
 
 	// send stop signal
-	quit <- os.Interrupt
+	registry.quit <- os.Interrupt
 	time.Sleep(100 * time.Millisecond)
 }
 
@@ -369,7 +369,7 @@ func TestRegistryUnsupportedCipherSuite(t *testing.T) {
 	}
 
 	// send stop signal
-	quit <- os.Interrupt
+	registry.quit <- os.Interrupt
 	time.Sleep(100 * time.Millisecond)
 }
 
