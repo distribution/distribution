@@ -93,7 +93,7 @@ func getOutstandingUploads(ctx context.Context, driver storageDriver.StorageDriv
 			ud.containingDir = filePath
 		}
 		if file == "startedat" {
-			if t, err := readStartedAtFile(driver, filePath); err == nil {
+			if t, err := readStartedAtFile(ctx, driver, filePath); err == nil {
 				ud.startedAt = t
 			} else {
 				errors = pushError(errors, filePath, err)
@@ -124,9 +124,8 @@ func uuidFromPath(path string) (string, bool) {
 }
 
 // readStartedAtFile reads the date from an upload's startedAtFile
-func readStartedAtFile(driver storageDriver.StorageDriver, path string) (time.Time, error) {
-	// todo:(richardscothern) - pass in a context
-	startedAtBytes, err := driver.GetContent(context.Background(), path)
+func readStartedAtFile(ctx context.Context, driver storageDriver.StorageDriver, path string) (time.Time, error) {
+	startedAtBytes, err := driver.GetContent(ctx, path)
 	if err != nil {
 		return time.Now(), err
 	}
