@@ -613,7 +613,8 @@ security.
 | `service` | yes      | The service being authenticated.                      |
 | `issuer`  | yes      | The name of the token issuer. The issuer inserts this into the token so it must match the value configured for the issuer. |
 | `rootcertbundle` | yes | The absolute path to the root certificate bundle. This bundle contains the public part of the certificates used to sign authentication tokens. |
-| `autoredirect`   | no      | When set to `true`, `realm` will automatically be set using the Host header of the request as the domain and a path of `/auth/token/`|
+| `autoredirect`   | no      | When set to `true`, `realm` will automatically be set using the Host header of the request as the domain and a path of `/auth/token/`(or specified by `autoredirectpath`), the `realm` URL Scheme will use `X-Forwarded-Proto` header if set, otherwise it will be set to `https`. |
+| `autoredirectpath`   | no      | The path to redirect to if `autoredirect` is set to `true`, default: `/auth/token/`. |
 
 
 For more information about Token based authentication configuration, see the
