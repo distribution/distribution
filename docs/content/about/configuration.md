@@ -168,6 +168,7 @@ auth:
     service: token-service
     issuer: registry-token-issuer
     rootcertbundle: /root/certs/bundle
+    jwks: /path/to/jwks
   htpasswd:
     realm: basic-realm
     path: /path/to/htpasswd
@@ -572,6 +573,7 @@ auth:
     service: token-service
     issuer: registry-token-issuer
     rootcertbundle: /root/certs/bundle
+    jwks: /path/to/jwks
   htpasswd:
     realm: basic-realm
     path: /path/to/htpasswd
@@ -615,6 +617,7 @@ security.
 | `rootcertbundle` | yes | The absolute path to the root certificate bundle. This bundle contains the public part of the certificates used to sign authentication tokens. |
 | `autoredirect`   | no      | When set to `true`, `realm` will automatically be set using the Host header of the request as the domain and a path of `/auth/token/`(or specified by `autoredirectpath`), the `realm` URL Scheme will use `X-Forwarded-Proto` header if set, otherwise it will be set to `https`. |
 | `autoredirectpath`   | no      | The path to redirect to if `autoredirect` is set to `true`, default: `/auth/token/`. |
+| `jwks`    | no       | The absolute path to the JSON Web Key Set (JWKS) file. The JWKS file contains the trusted keys used to verify the signature of authentication tokens. |
 
 
 For more information about Token based authentication configuration, see the
