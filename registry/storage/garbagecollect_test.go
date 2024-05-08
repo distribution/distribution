@@ -9,6 +9,7 @@ import (
 	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/distribution/distribution/v3/manifest/ocischema"
 	"github.com/distribution/distribution/v3/registry/storage/driver"
+	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
 	"github.com/distribution/distribution/v3/testutil"
 	"github.com/distribution/reference"
@@ -413,6 +414,47 @@ func TestDeleteManifestIndexIfTagNotFound(t *testing.T) {
 	}
 	if len(beforeUntag2) == len(after2) {
 		t.Fatalf("Garbage collection did not affect manifest storage: %d == %d", len(beforeUntag2), len(after2))
+	}
+}
+
+func TestGCWithUnusedLayerLinkPath(t *testing.T) {
+	ctx := dcontext.Background()
+	d := inmemory.New()
+
+	registry := createRegistry(t, d)
+	repo := makeRepository(t, registry, "unusedlayerlink")
+	image := uploadRandomSchema2Image(t, repo)
+
+	for dgst := range image.layers {
+		layerLinkPath, err := pathFor(layerLinkPathSpec{name: "unusedlayerlink", digest: dgst})
+		if err != nil {
+			t.Fatal(err)
+		}
+		fileInfo, err := d.Stat(ctx, layerLinkPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if fileInfo == nil {
+			t.Fatalf("layer link path %s not found", layerLinkPath)
+		}
+	}
+
+	err := MarkAndSweep(dcontext.Background(), d, registry, GCOpts{
+		DryRun:         false,
+		RemoveUntagged: true,
+	})
+	if err != nil {
+		t.Fatalf("got error: %v, expected nil", err)
+	}
+	for dgst := range image.layers {
+		layerLinkPath, err := pathFor(layerLinkPathSpec{name: "unusedlayerlink", digest: dgst})
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = d.Stat(ctx, layerLinkPath)
+		if _, ok := err.(storagedriver.PathNotFoundError); !ok {
+			t.Fatalf("layer link path %s should be not found", layerLinkPath)
+		}
 	}
 }
 
