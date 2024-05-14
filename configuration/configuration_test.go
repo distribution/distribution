@@ -75,6 +75,9 @@ var configStruct = Configuration{
 			Enabled: true,
 		},
 	},
+	Tags: Tags{
+		MaxTags: 1000,
+	},
 	Redis: Redis{
 		Options: RedisOptions{
 			Addrs:           []string{"localhost:6379"},
@@ -139,6 +142,8 @@ notifications:
            - application/octet-stream
         actions:
            - pull
+tags:
+  maxtags: 1000
 http:
   tls:
     clientcas:
@@ -192,6 +197,8 @@ notifications:
            - application/octet-stream
         actions:
            - pull
+tags:
+  maxtags: 1000
 http:
   headers:
     X-Content-Type-Options: [nosniff]
@@ -558,6 +565,8 @@ func copyConfig(config Configuration) *Configuration {
 		Disabled:  config.Validation.Disabled,
 		Manifests: config.Validation.Manifests,
 	}
+
+	configCopy.Tags = config.Tags
 
 	return configCopy
 }
