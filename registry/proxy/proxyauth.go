@@ -17,14 +17,23 @@ type userpass struct {
 	password string
 }
 
+func (u userpass) Basic(_ *url.URL) (string, string) {
+	return u.username, u.password
+}
+
+func (u userpass) RefreshToken(_ *url.URL, service string) string {
+	return ""
+}
+
+func (u userpass) SetRefreshToken(_ *url.URL, service, token string) {
+}
+
 type credentials struct {
 	creds map[string]userpass
 }
 
 func (c credentials) Basic(u *url.URL) (string, string) {
-	up := c.creds[u.String()]
-
-	return up.username, up.password
+	return c.creds[u.String()].Basic(u)
 }
 
 func (c credentials) RefreshToken(u *url.URL, service string) string {
@@ -35,12 +44,12 @@ func (c credentials) SetRefreshToken(u *url.URL, service, token string) {
 }
 
 // configureAuth stores credentials for challenge responses
-func configureAuth(username, password, remoteURL string) (auth.CredentialStore, error) {
+func configureAuth(username, password, remoteURL string) (auth.CredentialStore, auth.CredentialStore, error) {
 	creds := map[string]userpass{}
 
 	authURLs, err := getAuthURLs(remoteURL)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	for _, url := range authURLs {
@@ -51,7 +60,7 @@ func configureAuth(username, password, remoteURL string) (auth.CredentialStore, 
 		}
 	}
 
-	return credentials{creds: creds}, nil
+	return credentials{creds: creds}, userpass{username: username, password: password}, nil
 }
 
 func getAuthURLs(remoteURL string) ([]string, error) {
