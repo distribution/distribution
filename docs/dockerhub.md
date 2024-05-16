@@ -31,7 +31,7 @@ docker tag alpine localhost:5000/alpine
 docker push localhost:5000/alpine
 ```
 
-⚠️  Beware the default configuration uses [`filesystem` storage driver](https://github.com/distribution/distribution/blob/main/docs/storage-drivers/filesystem.md)
+⚠️  Beware the default configuration uses [`filesystem` storage driver](https://github.com/distribution/distribution/blob/main/docs/content/storage-drivers/filesystem.md)
 and the above example command does not mount a local filesystem volume into the running container.
 If you wish to mount the local filesystem to the `rootdirectory` of the
 `filesystem` storage driver run the following command:
