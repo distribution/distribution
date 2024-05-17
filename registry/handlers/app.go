@@ -57,6 +57,9 @@ const defaultCheckInterval = 10 * time.Second
 // context key for storing the Cloudflare True-Client-IP header
 const cfRealIPKey string = "http_request_cf-true-client-ip"
 
+// context key for storing the Cloudflare Ray ID header
+const cfRayIDKey string = "http_request_cf-ray-id"
+
 // App is a global registry application object. Shared resources can be placed
 // on this object that will be accessible from all requests. Any writable
 // fields should be protected.
@@ -804,8 +807,11 @@ func (app *App) logError(ctx context.Context, errors errcode.Errors) {
 func (app *App) context(w http.ResponseWriter, r *http.Request) *Context {
 	ctx := r.Context()
 	trueClientIP := r.Header.Get("true-client-ip")
+	rayId := r.Header.Get("cf-ray")
+
 	ctx = dcontext.WithValues(ctx, map[string]interface{}{
 		cfRealIPKey: trueClientIP,
+		cfRayIDKey:  rayId,
 	})
 	ctx = dcontext.WithVars(ctx, r)
 	ctx = dcontext.WithLogger(ctx, dcontext.GetLogger(ctx,
@@ -814,6 +820,7 @@ func (app *App) context(w http.ResponseWriter, r *http.Request) *Context {
 		"vars.digest",
 		"vars.uuid",
 		cfRealIPKey,
+		cfRayIDKey,
 	))
 
 	context := &Context{
