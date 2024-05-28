@@ -255,6 +255,21 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 				options = append(options, storage.ManifestURLsDenyRegexp(re))
 			}
 		}
+
+		switch config.Validation.Manifests.Indexes.Platforms {
+		case "list":
+			options = append(options, storage.EnableValidateImageIndexImagesExist)
+			for _, platform := range config.Validation.Manifests.Indexes.PlatformList {
+				options = append(options, storage.AddValidateImageIndexImagesExistPlatform(platform.Architecture, platform.OS))
+			}
+			fallthrough
+		case "none":
+			dcontext.GetLogger(app).Warn("Image index completeness validation has been disabled, which is an experimental option because other container tooling might expect all image indexes to be complete")
+		case "all":
+			fallthrough
+		default:
+			options = append(options, storage.EnableValidateImageIndexImagesExist)
+		}
 	}
 
 	// configure storage caches
