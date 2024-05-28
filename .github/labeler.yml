@@ -1,0 +1,61 @@
+area/api:
+  - changed-files:
+    - any-glob-to-any-file:
+      - registry/api/**
+      - registry/handlers/**
+area/auth:
+  - changed-files:
+    - any-glob-to-any-file:
+      - registry/auth/**
+area/build:
+  - changed-files:
+    - any-glob-to-any-file:
+      - Makefile
+      - Dockerfile
+      - docker-bake.hcl
+      - dockerfiles/**
+area/cache:
+  - changed-files:
+    - any-glob-to-any-file:
+      - registry/storage/cache/**
+area/ci:
+  - changed-files:
+    - any-glob-to-any-file:
+      - .github/**
+      - tests/**
+      - testutil/**
+area/config:
+  - changed-files:
+    - any-glob-to-any-file:
+      - configuration/**
+area/docs:
+  - changed-files:
+    - any-glob-to-any-file:
+      - README.md
+      - docs/**/*.md
+area/proxy:
+  - changed-files:
+    - any-glob-to-any-file:
+      - registry/proxy/**
+area/storage:
+  - changed-files:
+    - any-glob-to-any-file:
+      - registry/storage/**
+area/storage/azure:
+  - changed-files:
+    - any-glob-to-any-file:
+      - registry/storage/driver/azure/**
+area/storage/gcs:
+  - changed-files:
+    - any-glob-to-any-file:
+      - registry/storage/driver/gcs/**
+area/storage/s3:
+  - changed-files:
+    - any-glob-to-any-file:
+      - registry/storage/driver/s3-aws/**
+dependencies:
+  - changed-files:
+    - any-glob-to-any-file:
+      - vendor/**
+      - go.mod
+      - go.sum

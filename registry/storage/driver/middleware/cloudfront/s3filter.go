@@ -3,15 +3,17 @@ package middleware
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
 
-	dcontext "github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/internal/dcontext"
+	"github.com/distribution/distribution/v3/internal/requestutil"
 )
 
 const (
@@ -23,18 +25,21 @@ const (
 
 // newAWSIPs returns a New awsIP object.
 // If awsRegion is `nil`, it accepts any region. Otherwise, it only allow the regions specified
-func newAWSIPs(host string, updateFrequency time.Duration, awsRegion []string) *awsIPs {
+func newAWSIPs(ctx context.Context, host string, updateFrequency time.Duration, awsRegion []string) (*awsIPs, error) {
 	ips := &awsIPs{
 		host:            host,
 		updateFrequency: updateFrequency,
 		awsRegion:       awsRegion,
 		updaterStopChan: make(chan bool),
 	}
-	if err := ips.tryUpdate(); err != nil {
-		dcontext.GetLogger(context.Background()).WithError(err).Warn("failed to update AWS IP")
+	if err := ips.tryUpdate(ctx); err != nil {
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			return nil, err
+		}
+		dcontext.GetLogger(ctx).WithError(err).Warn("failed to update AWS IP")
 	}
 	go ips.updater()
-	return ips
+	return ips, nil
 }
 
 // awsIPs tracks a list of AWS ips, filtered by awsRegion
@@ -61,14 +66,20 @@ type prefixEntry struct {
 	Service    string `json:"service"`
 }
 
-func fetchAWSIPs(url string) (awsIPResponse, error) {
+func fetchAWSIPs(ctx context.Context, url string) (awsIPResponse, error) {
 	var response awsIPResponse
-	resp, err := http.Get(url)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return response, err
 	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return response, err
+	}
+	defer resp.Body.Close()
+
 	if resp.StatusCode != 200 {
-		body, _ := ioutil.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body)
 		return response, fmt.Errorf("failed to fetch network data. response = %s", body)
 	}
 	decoder := json.NewDecoder(resp.Body)
@@ -81,8 +92,8 @@ func fetchAWSIPs(url string) (awsIPResponse, error) {
 
 // tryUpdate attempts to download the new set of ip addresses.
 // tryUpdate must be thread safe with contains
-func (s *awsIPs) tryUpdate() error {
-	response, err := fetchAWSIPs(s.host)
+func (s *awsIPs) tryUpdate(ctx context.Context) error {
+	response, err := fetchAWSIPs(ctx, s.host)
 	if err != nil {
 		return err
 	}
@@ -94,7 +105,7 @@ func (s *awsIPs) tryUpdate() error {
 		regionAllowed := false
 		if len(s.awsRegion) > 0 {
 			for _, ar := range s.awsRegion {
-				if strings.ToLower(region) == ar {
+				if strings.EqualFold(region, ar) {
 					regionAllowed = true
 					break
 				}
@@ -113,7 +124,6 @@ func (s *awsIPs) tryUpdate() error {
 		if regionAllowed {
 			*output = append(*output, *network)
 		}
-
 	}
 
 	for _, prefix := range response.Prefixes {
@@ -134,17 +144,18 @@ func (s *awsIPs) tryUpdate() error {
 // This function is meant to be run in a background goroutine.
 // It will periodically update the ips from aws.
 func (s *awsIPs) updater() {
+	ctx := context.TODO()
 	defer close(s.updaterStopChan)
 	for {
 		time.Sleep(s.updateFrequency)
 		select {
 		case <-s.updaterStopChan:
-			dcontext.GetLogger(context.Background()).Info("aws ip updater received stop signal")
+			dcontext.GetLogger(ctx).Info("aws ip updater received stop signal")
 			return
 		default:
-			err := s.tryUpdate()
+			err := s.tryUpdate(ctx)
 			if err != nil {
-				dcontext.GetLogger(context.Background()).WithError(err).Error("git  AWS IP")
+				dcontext.GetLogger(ctx).WithError(err).Error("git  AWS IP")
 			}
 		}
 	}
@@ -182,12 +193,8 @@ func (s *awsIPs) contains(ip net.IP) bool {
 
 // parseIPFromRequest attempts to extract the ip address of the
 // client that made the request
-func parseIPFromRequest(ctx context.Context) (net.IP, error) {
-	request, err := dcontext.GetRequest(ctx)
-	if err != nil {
-		return nil, err
-	}
-	ipStr := dcontext.RemoteIP(request)
+func parseIPFromRequest(request *http.Request) (net.IP, error) {
+	ipStr := requestutil.RemoteIP(request)
 	ip := net.ParseIP(ipStr)
 	if ip == nil {
 		return nil, fmt.Errorf("invalid ip address from requester: %s", ipStr)
@@ -198,25 +205,20 @@ func parseIPFromRequest(ctx context.Context) (net.IP, error) {
 
 // eligibleForS3 checks if a request is eligible for using S3 directly
 // Return true only when the IP belongs to a specific aws region and user-agent is docker
-func eligibleForS3(ctx context.Context, awsIPs *awsIPs) bool {
+func eligibleForS3(request *http.Request, awsIPs *awsIPs) bool {
 	if awsIPs != nil && awsIPs.initialized {
-		if addr, err := parseIPFromRequest(ctx); err == nil {
-			request, err := dcontext.GetRequest(ctx)
-			if err != nil {
-				dcontext.GetLogger(ctx).Warnf("the CloudFront middleware cannot parse the request: %s", err)
-			} else {
-				loggerField := map[interface{}]interface{}{
-					"user-client": request.UserAgent(),
-					"ip":          dcontext.RemoteIP(request),
-				}
-				if awsIPs.contains(addr) {
-					dcontext.GetLoggerWithFields(ctx, loggerField).Info("request from the allowed AWS region, skipping CloudFront")
-					return true
-				}
-				dcontext.GetLoggerWithFields(ctx, loggerField).Warn("request not from the allowed AWS region, fallback to CloudFront")
+		if addr, err := parseIPFromRequest(request); err == nil {
+			loggerField := map[interface{}]interface{}{
+				"user-client": request.UserAgent(),
+				"ip":          requestutil.RemoteIP(request),
 			}
+			if awsIPs.contains(addr) {
+				dcontext.GetLoggerWithFields(request.Context(), loggerField).Info("request from the allowed AWS region, skipping CloudFront")
+				return true
+			}
+			dcontext.GetLoggerWithFields(request.Context(), loggerField).Warn("request not from the allowed AWS region, fallback to CloudFront")
 		} else {
-			dcontext.GetLogger(ctx).WithError(err).Warn("failed to parse ip address from context, fallback to CloudFront")
+			dcontext.GetLogger(request.Context()).WithError(err).Warn("failed to parse ip address from context, fallback to CloudFront")
 		}
 	}
 	return false

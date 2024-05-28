@@ -4,11 +4,10 @@ import (
 	"fmt"
 	"os"
 
-	dcontext "github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/distribution/distribution/v3/registry/storage"
 	"github.com/distribution/distribution/v3/registry/storage/driver/factory"
 	"github.com/distribution/distribution/v3/version"
-	"github.com/docker/libtrust"
 	"github.com/spf13/cobra"
 )
 
@@ -32,12 +31,15 @@ var RootCmd = &cobra.Command{
 			version.PrintVersion()
 			return
 		}
+		// nolint:errcheck
 		cmd.Usage()
 	},
 }
 
-var dryRun bool
-var removeUntagged bool
+var (
+	dryRun         bool
+	removeUntagged bool
+)
 
 // GCCmd is the cobra command that corresponds to the garbage-collect subcommand
 var GCCmd = &cobra.Command{
@@ -48,13 +50,8 @@ var GCCmd = &cobra.Command{
 		config, err := resolveConfiguration(args)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "configuration error: %v\n", err)
+			// nolint:errcheck
 			cmd.Usage()
-			os.Exit(1)
-		}
-
-		driver, err := factory.Create(config.Storage.Type(), config.Storage.Parameters())
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "failed to construct %s driver: %v", config.Storage.Type(), err)
 			os.Exit(1)
 		}
 
@@ -65,13 +62,13 @@ var GCCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		k, err := libtrust.GenerateECP256PrivateKey()
+		driver, err := factory.Create(ctx, config.Storage.Type(), config.Storage.Parameters())
 		if err != nil {
-			fmt.Fprint(os.Stderr, err)
+			fmt.Fprintf(os.Stderr, "failed to construct %s driver: %v", config.Storage.Type(), err)
 			os.Exit(1)
 		}
 
-		registry, err := storage.NewRegistry(ctx, driver, storage.Schema1SigningKey(k))
+		registry, err := storage.NewRegistry(ctx, driver)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to construct registry: %v", err)
 			os.Exit(1)

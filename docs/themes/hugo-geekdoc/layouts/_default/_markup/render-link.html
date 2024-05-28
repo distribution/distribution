@@ -1,0 +1,14 @@
+{{- $raw := or (hasPrefix .Text "<img") (hasPrefix .Text "<figure") -}}
+{{- $code := hasPrefix .Text "<code" -}}
+<a
+  class="gdoc-markdown__link{{ if $raw -}}
+    --raw
+  {{- else if $code -}}
+    --code
+  {{- end }}"
+  href="{{ .Destination | safeURL }}"
+  {{- with .Title }}{{ printf "title=\"%s\"" . | safeHTMLAttr }}{{- end }}
+>
+  {{- .Text | safeHTML -}}
+</a>
+{{- /* Drop trailing newlines */ -}}

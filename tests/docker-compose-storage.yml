@@ -1,0 +1,31 @@
+services:
+  minio:
+    image: docker.io/minio/minio:RELEASE.2023-10-16T04-13-43Z
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: distribution
+      MINIO_ROOT_PASSWORD: password
+    volumes:
+      - ./miniodata/distribution:/data:Z
+
+  minio-init:
+    image: docker.io/minio/mc:RELEASE.2023-10-14T01-57-03Z
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/bash -c "
+        /usr/bin/mc config host add minio http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD} && (
+          /usr/bin/mc stat minio/images-local || /usr/bin/mc mb minio/images-local
+        ) && /usr/bin/mc anonymous set public minio/images-local"
+    environment:
+      MINIO_ROOT_USER: distribution
+      MINIO_ROOT_PASSWORD: password

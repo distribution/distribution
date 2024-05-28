@@ -20,7 +20,7 @@ const (
 	// EventsMediaType is the mediatype for the json event envelope. If the
 	// Event, ActorRecord, SourceRecord or Envelope structs change, the version
 	// number should be incremented.
-	EventsMediaType = "application/vnd.docker.distribution.events.v1+json"
+	EventsMediaType = "application/vnd.docker.distribution.events.v2+json"
 	// LayerMediaType is the media type for image rootfs diffs (aka "layers")
 	// used by Docker. We don't expect this to change for quite a while.
 	layerMediaType = "application/vnd.docker.container.image.rootfs.diff+x-gtar"
@@ -143,9 +143,7 @@ type SourceRecord struct {
 	InstanceID string `json:"instanceID,omitempty"`
 }
 
-var (
-	// ErrSinkClosed is returned if a write is issued to a sink that has been
-	// closed. If encountered, the error should be considered terminal and
-	// retries will not be successful.
-	ErrSinkClosed = fmt.Errorf("sink: closed")
-)
+// ErrSinkClosed is returned if a write is issued to a sink that has been
+// closed. If encountered, the error should be considered terminal and
+// retries will not be successful.
+var ErrSinkClosed = fmt.Errorf("sink: closed")

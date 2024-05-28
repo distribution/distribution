@@ -36,3 +36,10 @@ bin/*
 *.sublime-project
 *.sublime-workspace
 .idea/*
+
+tests/miniodata
+
+# Docs
+**/.hugo_build.lock
+docs/resources
+docs/public

@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/distribution/distribution/v3/manifest/schema1"
+	"github.com/distribution/distribution/v3/manifest/schema2"
 	events "github.com/docker/go-events"
 )
 
@@ -22,7 +22,7 @@ import (
 func TestHTTPSink(t *testing.T) {
 	serverHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
-		if r.Method != "POST" {
+		if r.Method != http.MethodPost {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			t.Fatalf("unexpected request method: %v", r.Method)
 			return
@@ -121,11 +121,11 @@ func TestHTTPSink(t *testing.T) {
 	}{
 		{
 			statusCode: http.StatusOK,
-			event:      createTestEvent("push", "library/test", schema1.MediaTypeSignedManifest),
+			event:      createTestEvent("push", "library/test", schema2.MediaTypeManifest),
 		},
 		{
 			statusCode: http.StatusOK,
-			event:      createTestEvent("push", "library/test", schema1.MediaTypeSignedManifest),
+			event:      createTestEvent("push", "library/test", schema2.MediaTypeManifest),
 		},
 		{
 			statusCode: http.StatusOK,
@@ -197,7 +197,6 @@ func TestHTTPSink(t *testing.T) {
 	if err := sink.Close(); err == nil {
 		t.Fatalf("second close should have returned error: %v", err)
 	}
-
 }
 
 func createTestEvent(action, repo, typ string) Event {

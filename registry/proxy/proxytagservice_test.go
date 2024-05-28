@@ -13,9 +13,8 @@ import (
 type mockTagStore struct {
 	mapping map[string]distribution.Descriptor
 	sync.Mutex
+	distribution.TagService
 }
-
-var _ distribution.TagService = &mockTagStore{}
 
 func (m *mockTagStore) Get(ctx context.Context, tag string) (distribution.Descriptor, error) {
 	m.Lock()
@@ -50,16 +49,12 @@ func (m *mockTagStore) All(ctx context.Context) ([]string, error) {
 	m.Lock()
 	defer m.Unlock()
 
-	var tags []string
+	tags := make([]string, 0, len(m.mapping))
 	for tag := range m.mapping {
 		tags = append(tags, tag)
 	}
 
 	return tags, nil
-}
-
-func (m *mockTagStore) Lookup(ctx context.Context, digest distribution.Descriptor) ([]string, error) {
-	panic("not implemented")
 }
 
 func testProxyTagService(local, remote map[string]distribution.Descriptor) *proxyTagService {

@@ -1,23 +1,23 @@
 package handlers
 
 import (
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/distribution/distribution/v3/configuration"
-	"github.com/distribution/distribution/v3/context"
 	"github.com/distribution/distribution/v3/health"
+	"github.com/distribution/distribution/v3/internal/dcontext"
 )
 
 func TestFileHealthCheck(t *testing.T) {
 	interval := time.Second
 
-	tmpfile, err := ioutil.TempFile(os.TempDir(), "healthcheck")
+	tmpfile, err := os.CreateTemp(os.TempDir(), "healthcheck")
 	if err != nil {
 		t.Fatalf("could not create temporary file: %v", err)
 	}
@@ -40,7 +40,7 @@ func TestFileHealthCheck(t *testing.T) {
 		},
 	}
 
-	ctx := context.Background()
+	ctx := dcontext.Background()
 
 	app := NewApp(ctx, config)
 	healthRegistry := health.NewRegistry()
@@ -49,7 +49,7 @@ func TestFileHealthCheck(t *testing.T) {
 	// Wait for health check to happen
 	<-time.After(2 * interval)
 
-	status := healthRegistry.CheckStatus()
+	status := healthRegistry.CheckStatus(ctx)
 	if len(status) != 1 {
 		t.Fatal("expected 1 item in health check results")
 	}
@@ -60,7 +60,7 @@ func TestFileHealthCheck(t *testing.T) {
 	os.Remove(tmpfile.Name())
 
 	<-time.After(2 * interval)
-	if len(healthRegistry.CheckStatus()) != 0 {
+	if len(healthRegistry.CheckStatus(ctx)) != 0 {
 		t.Fatal("expected 0 items in health check results")
 	}
 }
@@ -104,7 +104,7 @@ func TestTCPHealthCheck(t *testing.T) {
 		},
 	}
 
-	ctx := context.Background()
+	ctx := dcontext.Background()
 
 	app := NewApp(ctx, config)
 	healthRegistry := health.NewRegistry()
@@ -113,7 +113,7 @@ func TestTCPHealthCheck(t *testing.T) {
 	// Wait for health check to happen
 	<-time.After(2 * interval)
 
-	if len(healthRegistry.CheckStatus()) != 0 {
+	if len(healthRegistry.CheckStatus(ctx)) != 0 {
 		t.Fatal("expected 0 items in health check results")
 	}
 
@@ -121,11 +121,11 @@ func TestTCPHealthCheck(t *testing.T) {
 	<-time.After(2 * interval)
 
 	// Health check should now fail
-	status := healthRegistry.CheckStatus()
+	status := healthRegistry.CheckStatus(ctx)
 	if len(status) != 1 {
 		t.Fatal("expected 1 item in health check results")
 	}
-	if status[addrStr] != "connection to "+addrStr+" failed" {
+	if !strings.Contains(status[addrStr], "connection failed") {
 		t.Fatal(`did not get "connection failed" result for health check`)
 	}
 }
@@ -137,7 +137,7 @@ func TestHTTPHealthCheck(t *testing.T) {
 	stopFailing := make(chan struct{})
 
 	checkedServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "HEAD" {
+		if r.Method != http.MethodHead {
 			t.Fatalf("expected HEAD request, got %s", r.Method)
 		}
 		select {
@@ -166,7 +166,7 @@ func TestHTTPHealthCheck(t *testing.T) {
 		},
 	}
 
-	ctx := context.Background()
+	ctx := dcontext.Background()
 
 	app := NewApp(ctx, config)
 	healthRegistry := health.NewRegistry()
@@ -175,7 +175,7 @@ func TestHTTPHealthCheck(t *testing.T) {
 	for i := 0; ; i++ {
 		<-time.After(interval)
 
-		status := healthRegistry.CheckStatus()
+		status := healthRegistry.CheckStatus(ctx)
 
 		if i < threshold-1 {
 			// definitely shouldn't have hit the threshold yet
@@ -192,7 +192,7 @@ func TestHTTPHealthCheck(t *testing.T) {
 		if len(status) != 1 {
 			t.Fatal("expected 1 item in health check results")
 		}
-		if status[checkedServer.URL] != "downstream service returned unexpected status: 500" {
+		if !strings.Contains(status[checkedServer.URL], "downstream service returned unexpected status: 500") {
 			t.Fatal("did not get expected result for health check")
 		}
 
@@ -204,7 +204,7 @@ func TestHTTPHealthCheck(t *testing.T) {
 
 	<-time.After(2 * interval)
 
-	if len(healthRegistry.CheckStatus()) != 0 {
+	if len(healthRegistry.CheckStatus(ctx)) != 0 {
 		t.Fatal("expected 0 items in health check results")
 	}
 }

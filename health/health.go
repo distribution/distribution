@@ -1,15 +1,23 @@
 package health
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"sync"
 	"time"
 
-	"github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/distribution/distribution/v3/registry/api/errcode"
 )
+
+// Registers global /debug/health api endpoint, creates default registry
+func init() {
+	DefaultRegistry = NewRegistry()
+	http.HandleFunc("/debug/health", StatusHandler)
+}
 
 // A Registry is a collection of checks. Most applications will use the global
 // registry defined in DefaultRegistry. However, unit tests may need to create
@@ -35,17 +43,17 @@ var DefaultRegistry *Registry
 // Checker is the interface for a Health Checker
 type Checker interface {
 	// Check returns nil if the service is okay.
-	Check() error
+	Check(context.Context) error
 }
 
 // CheckFunc is a convenience type to create functions that implement
 // the Checker interface
-type CheckFunc func() error
+type CheckFunc func(context.Context) error
 
 // Check Implements the Checker interface to allow for any func() error method
 // to be passed as a Checker
-func (cf CheckFunc) Check() error {
-	return cf()
+func (cf CheckFunc) Check(ctx context.Context) error {
+	return cf(ctx)
 }
 
 // Updater implements a health check that is explicitly set.
@@ -66,7 +74,7 @@ type updater struct {
 }
 
 // Check implements the Checker interface
-func (u *updater) Check() error {
+func (u *updater) Check(context.Context) error {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 
@@ -99,11 +107,11 @@ type thresholdUpdater struct {
 }
 
 // Check implements the Checker interface
-func (tu *thresholdUpdater) Check() error {
+func (tu *thresholdUpdater) Check(context.Context) error {
 	tu.mu.Lock()
 	defer tu.mu.Unlock()
 
-	if tu.count >= tu.threshold {
+	if tu.count >= tu.threshold || errors.As(tu.status, new(pollingTerminatedErr)) {
 		return tu.status
 	}
 
@@ -127,47 +135,44 @@ func (tu *thresholdUpdater) Update(status error) {
 
 // NewThresholdStatusUpdater returns a new thresholdUpdater
 func NewThresholdStatusUpdater(t int) Updater {
-	return &thresholdUpdater{threshold: t}
+	if t > 0 {
+		return &thresholdUpdater{threshold: t}
+	}
+	return NewStatusUpdater()
 }
 
-// PeriodicChecker wraps an updater to provide a periodic checker
-func PeriodicChecker(check Checker, period time.Duration) Checker {
-	u := NewStatusUpdater()
-	go func() {
-		t := time.NewTicker(period)
-		defer t.Stop()
-		for {
-			<-t.C
-			u.Update(check.Check())
-		}
-	}()
+type pollingTerminatedErr struct{ Err error }
 
-	return u
+func (e pollingTerminatedErr) Error() string {
+	return fmt.Sprintf("health: check is not polled: %v", e.Err)
 }
 
-// PeriodicThresholdChecker wraps an updater to provide a periodic checker that
-// uses a threshold before it changes status
-func PeriodicThresholdChecker(check Checker, period time.Duration, threshold int) Checker {
-	tu := NewThresholdStatusUpdater(threshold)
-	go func() {
-		t := time.NewTicker(period)
-		defer t.Stop()
-		for {
-			<-t.C
-			tu.Update(check.Check())
-		}
-	}()
+func (e pollingTerminatedErr) Unwrap() error { return e.Err }
 
-	return tu
+// Poll periodically polls the checker c at interval and updates the updater u
+// with the result. The checker is called with ctx as the context. When ctx is
+// done, Poll updates the updater with ctx.Err() and returns.
+func Poll(ctx context.Context, u Updater, c Checker, interval time.Duration) {
+	t := time.NewTicker(interval)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			u.Update(pollingTerminatedErr{Err: ctx.Err()})
+			return
+		case <-t.C:
+			u.Update(c.Check(ctx))
+		}
+	}
 }
 
 // CheckStatus returns a map with all the current health check errors
-func (registry *Registry) CheckStatus() map[string]string { // TODO(stevvooe) this needs a proper type
+func (registry *Registry) CheckStatus(ctx context.Context) map[string]string { // TODO(stevvooe) this needs a proper type
 	registry.mu.RLock()
 	defer registry.mu.RUnlock()
 	statusKeys := make(map[string]string)
 	for k, v := range registry.registeredChecks {
-		err := v.Check()
+		err := v.Check(ctx)
 		if err != nil {
 			statusKeys[k] = err.Error()
 		}
@@ -178,8 +183,8 @@ func (registry *Registry) CheckStatus() map[string]string { // TODO(stevvooe) th
 
 // CheckStatus returns a map with all the current health check errors from the
 // default registry.
-func CheckStatus() map[string]string {
-	return DefaultRegistry.CheckStatus()
+func CheckStatus(ctx context.Context) map[string]string {
+	return DefaultRegistry.CheckStatus(ctx)
 }
 
 // Register associates the checker with the provided name.
@@ -203,47 +208,23 @@ func Register(name string, check Checker) {
 }
 
 // RegisterFunc allows the convenience of registering a checker directly from
-// an arbitrary func() error.
-func (registry *Registry) RegisterFunc(name string, check func() error) {
-	registry.Register(name, CheckFunc(check))
+// an arbitrary func(context.Context) error.
+func (registry *Registry) RegisterFunc(name string, check CheckFunc) {
+	registry.Register(name, check)
 }
 
 // RegisterFunc allows the convenience of registering a checker in the default
-// registry directly from an arbitrary func() error.
-func RegisterFunc(name string, check func() error) {
+// registry directly from an arbitrary func(context.Context) error.
+func RegisterFunc(name string, check CheckFunc) {
 	DefaultRegistry.RegisterFunc(name, check)
-}
-
-// RegisterPeriodicFunc allows the convenience of registering a PeriodicChecker
-// from an arbitrary func() error.
-func (registry *Registry) RegisterPeriodicFunc(name string, period time.Duration, check CheckFunc) {
-	registry.Register(name, PeriodicChecker(check, period))
-}
-
-// RegisterPeriodicFunc allows the convenience of registering a PeriodicChecker
-// in the default registry from an arbitrary func() error.
-func RegisterPeriodicFunc(name string, period time.Duration, check CheckFunc) {
-	DefaultRegistry.RegisterPeriodicFunc(name, period, check)
-}
-
-// RegisterPeriodicThresholdFunc allows the convenience of registering a
-// PeriodicChecker from an arbitrary func() error.
-func (registry *Registry) RegisterPeriodicThresholdFunc(name string, period time.Duration, threshold int, check CheckFunc) {
-	registry.Register(name, PeriodicThresholdChecker(check, period, threshold))
-}
-
-// RegisterPeriodicThresholdFunc allows the convenience of registering a
-// PeriodicChecker in the default registry from an arbitrary func() error.
-func RegisterPeriodicThresholdFunc(name string, period time.Duration, threshold int, check CheckFunc) {
-	DefaultRegistry.RegisterPeriodicThresholdFunc(name, period, threshold, check)
 }
 
 // StatusHandler returns a JSON blob with all the currently registered Health Checks
 // and their corresponding status.
 // Returns 503 if any Error status exists, 200 otherwise
 func StatusHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "GET" {
-		checks := CheckStatus()
+	if r.Method == http.MethodGet {
+		checks := CheckStatus(r.Context())
 		status := http.StatusOK
 
 		// If there is an error, return 503
@@ -263,8 +244,11 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 // disable a web application when the health checks fail.
 func Handler(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		checks := CheckStatus()
+		checks := CheckStatus(r.Context())
 		if len(checks) != 0 {
+			// NOTE(milosgajdos): disable errcheck as the error is
+			// accessible via /debug/health
+			// nolint:errcheck
 			errcode.ServeJSON(w, errcode.ErrorCodeUnavailable.
 				WithDetail("health check failed: please see /debug/health"))
 			return
@@ -279,7 +263,7 @@ func Handler(handler http.Handler) http.Handler {
 func statusResponse(w http.ResponseWriter, r *http.Request, status int, checks map[string]string) {
 	p, err := json.Marshal(checks)
 	if err != nil {
-		context.GetLogger(context.Background()).Errorf("error serializing health status: %v", err)
+		dcontext.GetLogger(r.Context()).Errorf("error serializing health status: %v", err)
 		p, err = json.Marshal(struct {
 			ServerError string `json:"server_error"`
 		}{
@@ -288,7 +272,7 @@ func statusResponse(w http.ResponseWriter, r *http.Request, status int, checks m
 		status = http.StatusInternalServerError
 
 		if err != nil {
-			context.GetLogger(context.Background()).Errorf("error serializing health status failure message: %v", err)
+			dcontext.GetLogger(r.Context()).Errorf("error serializing health status failure message: %v", err)
 			return
 		}
 	}
@@ -297,12 +281,6 @@ func statusResponse(w http.ResponseWriter, r *http.Request, status int, checks m
 	w.Header().Set("Content-Length", fmt.Sprint(len(p)))
 	w.WriteHeader(status)
 	if _, err := w.Write(p); err != nil {
-		context.GetLogger(context.Background()).Errorf("error writing health status response body: %v", err)
+		dcontext.GetLogger(r.Context()).Errorf("error writing health status response body: %v", err)
 	}
-}
-
-// Registers global /debug/health api endpoint, creates default registry
-func init() {
-	DefaultRegistry = NewRegistry()
-	http.HandleFunc("/debug/health", StatusHandler)
 }

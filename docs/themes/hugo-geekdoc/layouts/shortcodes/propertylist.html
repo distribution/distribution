@@ -1,0 +1,60 @@
+{{- $name := .Get "name" -}}
+{{- $sort := .Get "sort" -}}
+{{- $order := default "asc" (.Get "order") -}}
+{{- $showAnchor := (and (default true .Page.Params.geekdocAnchor) (default true .Page.Site.Params.geekdocAnchor)) -}}
+
+{{- if .Site.Data.properties }}
+  <dl class="gdoc-props">
+    {{- with (index .Site.Data.properties (split $name ".")) }}
+      {{- $properties := .properties }}
+      {{- with $sort }}
+        {{- $properties = (sort $properties . $order) }}
+      {{- end }}
+      {{- range $properties }}
+        <dt class="flex flex-wrap align-center gdoc-props__meta"{{ if $showAnchor }} id="{{ anchorize .name }}"{{ end }}>
+          <span class="gdoc-props__title">{{ .name }}</span>
+          {{- if .required }}
+            <span class="gdoc-props__tag warning">{{ i18n "propertylist_required" | lower }}</span>
+          {{- else }}
+            <span class="gdoc-props__tag tip">{{ i18n "propertylist_optional" | lower }}</span>
+          {{- end }}
+          {{- with .type }}
+            <span class="gdoc-props__tag note">{{ . }}</span>
+          {{- end }}
+
+          {{- with .tags }}
+            {{- $tags := . }}
+            {{- if reflect.IsMap $tags }}
+              {{- $tags = (index $tags $.Site.Language.Lang) }}
+            {{- end }}
+            {{- range $tags }}
+              <span class="gdoc-props__tag">{{ . }}</span>
+            {{- end }}
+          {{- end }}
+          {{- if $showAnchor }}
+          <a data-clipboard-text="{{ .Page.Permalink }}#{{ anchorize .name | safeHTML }}" class="gdoc-page__anchor clip flex align-center" title="{{ i18n "title_anchor_prefix" }} {{ .name | safeHTML }}" aria-label="{{ i18n "title_anchor_prefix" }} {{ .name | safeHTML }}" href="#{{ anchorize .name | safeHTML }}">
+            <svg class="gdoc-icon gdoc_link"><use xlink:href="#gdoc_link"></use></svg>
+          </a>
+          {{- end }}
+        </dt>
+        <dd>
+          <div class="gdoc-props__description">
+            {{- with .description }}
+              {{- $desc := . }}
+              {{- if reflect.IsMap $desc }}
+                {{- $desc = (index $desc $.Site.Language.Lang) }}
+              {{- end }}
+              {{ $desc | $.Page.RenderString }}
+            {{- end }}
+          </div>
+          <div class="gdoc-props__default">
+            {{- with default "none" (.defaultValue | string) }}
+              <span>{{ i18n "propertylist_default" | title }}:</span>
+              <span>{{ . }}</span>
+            {{- end }}
+          </div>
+        </dd>
+      {{- end }}
+    {{- end }}
+  </dl>
+{{- end }}

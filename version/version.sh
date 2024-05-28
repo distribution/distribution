@@ -10,17 +10,17 @@ set -e
 cat <<EOF
 package version
 
-// Package is the overall, canonical project import path under which the
+// mainpkg is the overall, canonical project import path under which the
 // package was built.
-var Package = "$(go list)"
+var mainpkg = "$(go list -m)"
 
-// Version indicates which version of the binary is running. This is set to
+// version indicates which version of the binary is running. This is set to
 // the latest release tag by hand, always suffixed by "+unknown". During
 // build, it will be replaced by the actual version. The value here will be
 // used if the registry is run after a go get based install.
-var Version = "$(git describe --match 'v[0-9]*' --dirty='.m' --always)+unknown"
+var version = "$(git describe --match 'v[0-9]*' --dirty='.m' --always)+unknown"
 
-// Revision is filled with the VCS (e.g. git) revision being used to build
+// revision is filled with the VCS (e.g. git) revision being used to build
 // the program at linking time.
-var Revision = ""
+var revision = ""
 EOF

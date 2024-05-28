@@ -8,14 +8,20 @@
 package silly
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"strings"
 
-	dcontext "github.com/distribution/distribution/v3/context"
 	"github.com/distribution/distribution/v3/registry/auth"
+	"github.com/sirupsen/logrus"
 )
+
+// init registers the silly auth backend.
+func init() {
+	if err := auth.Register("silly", auth.InitFunc(newAccessController)); err != nil {
+		logrus.Errorf("failed to register silly auth: %v", err)
+	}
+}
 
 // accessController provides a simple implementation of auth.AccessController
 // that simply checks for a non-empty Authorization header. It is useful for
@@ -43,12 +49,7 @@ func newAccessController(options map[string]interface{}) (auth.AccessController,
 
 // Authorized simply checks for the existence of the authorization header,
 // responding with a bearer challenge if it doesn't exist.
-func (ac *accessController) Authorized(ctx context.Context, accessRecords ...auth.Access) (context.Context, error) {
-	req, err := dcontext.GetRequest(ctx)
-	if err != nil {
-		return nil, err
-	}
-
+func (ac *accessController) Authorized(req *http.Request, accessRecords ...auth.Access) (*auth.Grant, error) {
 	if req.Header.Get("Authorization") == "" {
 		challenge := challenge{
 			realm:   ac.realm,
@@ -66,11 +67,7 @@ func (ac *accessController) Authorized(ctx context.Context, accessRecords ...aut
 		return nil, &challenge
 	}
 
-	ctx = auth.WithUser(ctx, auth.UserInfo{Name: "silly"})
-	ctx = dcontext.WithLogger(ctx, dcontext.GetLogger(ctx, auth.UserNameKey, auth.UserKey))
-
-	return ctx, nil
-
+	return &auth.Grant{User: auth.UserInfo{Name: "silly"}}, nil
 }
 
 type challenge struct {
@@ -94,9 +91,4 @@ func (ch challenge) SetHeaders(r *http.Request, w http.ResponseWriter) {
 
 func (ch challenge) Error() string {
 	return fmt.Sprintf("silly authentication challenge: %#v", ch)
-}
-
-// init registers the silly auth backend.
-func init() {
-	auth.Register("silly", auth.InitFunc(newAccessController))
 }

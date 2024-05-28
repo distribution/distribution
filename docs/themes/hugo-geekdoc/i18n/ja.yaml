@@ -1,0 +1,53 @@
+---
+edit_page: ページの編集
+
+nav_navigation: ナビゲーション
+nav_tags: タグ
+nav_more: さらに
+nav_top: トップへ戻る
+
+form_placeholder_search: 検索
+
+error_page_title: お困りですか？ご心配なく
+error_message_title: お困りですか？
+error_message_code: 404 エラー
+error_message_text: >
+  お探しのものが見つからないようです。<a class="gdoc-error__link" href="{{ . }}">トップページ</a>
+  へ戻ることができるので、ご安心ください。
+
+button_toggle_dark: モードの切替 ダーク/ライト/自動
+button_nav_open: ナビゲーションを開く
+button_nav_close: ナビゲーションを閉じる
+button_menu_open: メニューバーを開く
+button_menu_close: メニューバーを閉じる
+button_homepage: トップページへ戻る
+
+title_anchor_prefix: "アンカー先:"
+
+posts_read_more: 全投稿を閲覧
+posts_read_time:
+  one: "読むのに 1 分かかります"
+  other: "読むのに要する時間 {{ . }} (分)"
+posts_update_prefix: 更新時刻
+posts_count:
+  one: "一件の投稿"
+  other: "{{ . }} 件の投稿"
+posts_tagged_with: "'{{ . }}'のタグが付いた記事全部"
+
+footer_build_with: >
+  <a href="https://gohugo.io/" class="gdoc-footer__link">Hugo</a> でビルドしています。
+  <svg class="gdoc-icon gdoc_heart"><use xlink:href="#gdoc_heart"></use></svg>
+footer_legal_notice: 法的な告知事項
+footer_privacy_policy: プライバシーポリシー
+footer_content_license_prefix: >
+  提供するコンテンツのライセンス
+
+language_switch_no_tranlation_prefix: "未翻訳のページ:"
+
+propertylist_required: 必須
+propertylist_optional: 任意
+propertylist_default: 既定値
+
+pagination_page_prev: 前
+pagination_page_next: 次
+pagination_page_state: "{{ .PageNumber }}/{{ .TotalPages }}"

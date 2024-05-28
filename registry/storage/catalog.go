@@ -7,19 +7,19 @@ import (
 	"path"
 	"strings"
 
-	"github.com/distribution/distribution/v3/reference"
 	"github.com/distribution/distribution/v3/registry/storage/driver"
+	"github.com/distribution/reference"
 )
 
 // Returns a list, or partial list, of repositories in the registry.
 // Because it's a quite expensive operation, it should only be used when building up
 // an initial set of repositories.
-func (reg *registry) Repositories(ctx context.Context, repos []string, last string) (n int, err error) {
-	var finishedWalk bool
-	var foundRepos []string
+func (reg *registry) Repositories(ctx context.Context, repos []string, last string) (int, error) {
+	filledBuffer := false
+	foundRepos := 0
 
 	if len(repos) == 0 {
-		return 0, errors.New("no space in slice")
+		return 0, errors.New("Attempted to list 0 repositories")
 	}
 
 	root, err := pathFor(repositoriesRootPathSpec{})
@@ -27,34 +27,44 @@ func (reg *registry) Repositories(ctx context.Context, repos []string, last stri
 		return 0, err
 	}
 
+	startAfter := ""
+	if last != "" {
+		startAfter, err = pathFor(manifestsPathSpec{name: last})
+		if err != nil {
+			return 0, err
+		}
+	}
+
 	err = reg.blobStore.driver.Walk(ctx, root, func(fileInfo driver.FileInfo) error {
 		err := handleRepository(fileInfo, root, last, func(repoPath string) error {
-			foundRepos = append(foundRepos, repoPath)
+			repos[foundRepos] = repoPath
+			foundRepos += 1
 			return nil
 		})
 		if err != nil {
 			return err
 		}
 
-		// if we've filled our array, no need to walk any further
-		if len(foundRepos) == len(repos) {
-			finishedWalk = true
-			return driver.ErrSkipDir
+		// if we've filled our slice, no need to walk any further
+		if foundRepos == len(repos) {
+			filledBuffer = true
+			return driver.ErrFilledBuffer
 		}
 
 		return nil
-	})
-
-	n = copy(repos, foundRepos)
+	}, driver.WithStartAfterHint(startAfter))
 
 	if err != nil {
-		return n, err
-	} else if !finishedWalk {
-		// We didn't fill buffer. No more records are available.
-		return n, io.EOF
+		return foundRepos, err
 	}
 
-	return n, err
+	if filledBuffer {
+		// There are potentially more repositories to list
+		return foundRepos, nil
+	}
+
+	// We didn't fill the buffer, so that's the end of the list of repos
+	return foundRepos, io.EOF
 }
 
 // Enumerate applies ingester to each repository
@@ -134,8 +144,9 @@ func compareReplaceInline(s1, s2 string, old, new byte) int {
 
 // handleRepository calls function fn with a repository path if fileInfo
 // has a path of a repository under root and that it is lexographically
-// after last. Otherwise, it will return ErrSkipDir. This should be used
-// with Walk to do handling with repositories in a storage.
+// after last. Otherwise, it will return ErrSkipDir or ErrFilledBuffer.
+// These should be used with Walk to do handling with repositories in a
+// storage.
 func handleRepository(fileInfo driver.FileInfo, root, last string, fn func(repoPath string) error) error {
 	filePath := fileInfo.Path()
 

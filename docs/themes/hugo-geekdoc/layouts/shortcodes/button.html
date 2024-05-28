@@ -1,0 +1,29 @@
+{{- $ref := "" }}
+{{- $class := "" }}
+{{- $size := default "regular" (.Get "size" | lower) }}
+
+{{- if not (in (slice "regular" "large") $size) }}
+  {{- $size = "regular" }}
+{{- end }}
+
+{{- with .Get "href" }}
+  {{- $ref = . }}
+{{- end }}
+
+{{- with .Get "relref" }}
+  {{- $ref = relref $ . }}
+{{- end }}
+
+{{- with .Get "class" }}
+  {{- $class = . }}
+{{- end }}
+
+
+<span class="gdoc-button gdoc-button--{{ $size }}{{ with $class }}{{ printf " %s" . }}{{ end }}">
+  <a
+    class="gdoc-button__link"
+    {{- with $ref }}{{ printf " href=\"%s\"" . | safeHTMLAttr }}{{ end }}
+  >
+    {{ $.Inner }}
+  </a>
+</span>

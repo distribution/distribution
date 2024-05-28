@@ -1,5 +1,9 @@
 name: validate
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches:
@@ -8,8 +12,9 @@ on:
     tags:
       - 'v*'
   pull_request:
-    branches:
-      - '*'
+
+permissions:
+  contents: read # to fetch code (actions/checkout)
 
 jobs:
   validate:
@@ -20,11 +25,14 @@ jobs:
         target:
           - lint
           - validate-vendor
+          - validate-git
     steps:
       -
         name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       -
         name: Run
         run: |
           make ${{ matrix.target }}
+        env:
+          COMMIT_RANGE: ${{ format('{0}..{1}', github.sha, 'HEAD') }}

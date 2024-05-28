@@ -1,0 +1,70 @@
+{{ $isPage := or (and (ne .Type "posts") (in "section page" .Kind )) (and (eq .Type "posts") (eq .Kind "page")) }}
+{{- if eq .Kind "home" }}
+  <script type="application/ld+json">
+  {
+      "@context": "http://schema.org",
+      "@type": "WebSite",
+      "name": {{ .Site.Title }},
+      "url": {{ .Site.BaseURL }},
+      {{- with partial "utils/description" . }}
+      "description": "{{ . | plainify | htmlUnescape | chomp }}",
+      {{- end }}
+      {{- with partial "utils/featured" . }}
+      "thumbnailUrl": {{ . }},
+      {{- end }}
+      {{- with .Site.Params.geekdocContentLicense }}
+      "license": "{{ .name }}",
+      {{- end }}
+      "inLanguage": {{ .Lang }}
+  }
+  </script>
+{{- else if $isPage }}
+  <script type="application/ld+json">
+  {
+      "@context": "http://schema.org",
+      "@type": "TechArticle",
+      "articleSection": "{{ .Section | humanize | title }}",
+      "name": {{ partial "utils/title" . }},
+      "url" : {{ .Permalink }},
+      "headline": {{ partial "utils/title" . }},
+      {{- with .Params.lead }}
+      "alternativeHeadline": {{ . }},
+      {{- end }}
+      {{- with partial "utils/description" . }}
+      "description": "{{ . | plainify | htmlUnescape | chomp }}",
+      {{- end }}
+      {{- with partial "utils/featured" . }}
+      "thumbnailUrl": {{ . }},
+      {{- end }}
+      "wordCount" : "{{ .WordCount }}",
+      {{- with .Site.Params.geekdocContentLicense }}
+      "license": "{{ .name }}",
+      {{- end }}
+      "inLanguage": {{ .Lang }},
+      "isFamilyFriendly": "true",
+      "mainEntityOfPage": {
+          "@type": "WebPage",
+          "@id": {{ .Permalink }}
+      },
+      {{- with $tags := .Params.tags }}
+      "keywords" : [ {{ range $i, $tag := $tags }}{{ if $i }}, {{ end }}"{{ $tag }}" {{ end }}],
+      {{- end }}
+      "copyrightHolder" : "{{ .Site.Title }}",
+      "copyrightYear" : "{{ .Date.Format "2006" }}",
+      "dateCreated": "{{ .Date.Format "2006-01-02T15:04:05.00Z" | safeJS }}",
+      "datePublished": "{{ .PublishDate.Format "2006-01-02T15:04:05.00Z" | safeJS }}",
+      "dateModified": "{{ .Lastmod.Format "2006-01-02T15:04:05.00Z" | safeJS }}",
+      "publisher":{
+          "@type":"Organization",
+          "name": {{ .Site.Title }},
+          "url": {{ .Site.BaseURL }},
+          "logo": {
+              "@type": "ImageObject",
+              "url": {{ (default "brand.svg" .Site.Params.logo) | absURL }},
+              "width":"32",
+              "height":"32"
+          }
+      }
+  }
+  </script>
+{{- end }}

@@ -13,7 +13,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math/big"
 	"net"
 	"net/http"
@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"github.com/distribution/distribution/v3/configuration"
-	dcontext "github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/internal/dcontext"
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
@@ -103,7 +103,7 @@ func TestGracefulShutdown(t *testing.T) {
 	fmt.Fprintf(conn, "GET /v2/ ")
 
 	// send stop signal
-	quit <- os.Interrupt
+	registry.quit <- os.Interrupt
 	time.Sleep(100 * time.Millisecond)
 
 	// try connecting again. it shouldn't
@@ -118,10 +118,11 @@ func TestGracefulShutdown(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer resp.Body.Close()
 	if resp.Status != "200 OK" {
 		t.Error("response status is not 200 OK: ", resp.Status)
 	}
-	if body, err := ioutil.ReadAll(resp.Body); err != nil || string(body) != "{}" {
+	if body, err := io.ReadAll(resp.Body); err != nil || string(body) != "{}" {
 		t.Error("Body is not {}; ", string(body))
 	}
 }
@@ -152,7 +153,7 @@ func TestGetCipherSuite(t *testing.T) {
 		t.Error("did not return expected error about unknown cipher suite")
 	}
 
-	var insecureCipherSuites = []string{
+	insecureCipherSuites := []string{
 		"TLS_RSA_WITH_RC4_128_SHA",
 		"TLS_RSA_WITH_AES_128_CBC_SHA256",
 		"TLS_ECDHE_ECDSA_WITH_RC4_128_SHA",
@@ -218,7 +219,9 @@ func buildRegistryTLSConfig(name, keyType string, cipherSuites []string) (*regis
 		return nil, fmt.Errorf("failed to create certificate: %v", err)
 	}
 	if _, err := os.Stat(os.TempDir()); os.IsNotExist(err) {
-		os.Mkdir(os.TempDir(), 1777)
+		if err := os.Mkdir(os.TempDir(), 1777); err != nil {
+			return nil, fmt.Errorf("failed to create temp dir: %v", err)
+		}
 	}
 
 	certPath := path.Join(os.TempDir(), name+".pem")
@@ -234,7 +237,7 @@ func buildRegistryTLSConfig(name, keyType string, cipherSuites []string) (*regis
 	}
 
 	keyPath := path.Join(os.TempDir(), name+".key")
-	keyOut, err := os.OpenFile(keyPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	keyOut, err := os.OpenFile(keyPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open %s for writing: %v", keyPath, err)
 	}
@@ -313,15 +316,16 @@ func TestRegistrySupportedCipherSuite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer resp.Body.Close()
 	if resp.Status != "200 OK" {
 		t.Error("response status is not 200 OK: ", resp.Status)
 	}
-	if body, err := ioutil.ReadAll(resp.Body); err != nil || string(body) != "{}" {
+	if body, err := io.ReadAll(resp.Body); err != nil || string(body) != "{}" {
 		t.Error("Body is not {}; ", string(body))
 	}
 
 	// send stop signal
-	quit <- os.Interrupt
+	registry.quit <- os.Interrupt
 	time.Sleep(100 * time.Millisecond)
 }
 
@@ -365,7 +369,7 @@ func TestRegistryUnsupportedCipherSuite(t *testing.T) {
 	}
 
 	// send stop signal
-	quit <- os.Interrupt
+	registry.quit <- os.Interrupt
 	time.Sleep(100 * time.Millisecond)
 }
 

@@ -10,8 +10,8 @@ import (
 	"testing"
 
 	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/reference"
 	"github.com/distribution/distribution/v3/testutil"
+	"github.com/distribution/reference"
 	"github.com/opencontainers/go-digest"
 )
 
@@ -150,7 +150,7 @@ func TestLinkedBlobStoreCreateWithMountFrom(t *testing.T) {
 	// cross-repo mount them into a nm/baz and provide a prepopulated blob descriptor
 	for dgst := range testLayers {
 		fooCanonical, _ := reference.WithDigest(fooRepoName, dgst)
-		size, err := strconv.ParseInt("0x"+dgst.Hex()[:8], 0, 64)
+		size, err := strconv.ParseInt("0x"+dgst.Encoded()[:8], 0, 64)
 		if err != nil {
 			t.Fatal(err)
 		}

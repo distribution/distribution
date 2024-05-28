@@ -1,21 +1,29 @@
 package token
 
 import (
-	"context"
 	"crypto"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 
-	dcontext "github.com/distribution/distribution/v3/context"
 	"github.com/distribution/distribution/v3/registry/auth"
-	"github.com/docker/libtrust"
+	"github.com/go-jose/go-jose/v3"
+	"github.com/sirupsen/logrus"
 )
+
+// init handles registering the token auth backend.
+func init() {
+	if err := auth.Register("token", auth.InitFunc(newAccessController)); err != nil {
+		logrus.Errorf("tailed to register token auth: %v", err)
+	}
+}
 
 // accessSet maps a typed, named resource to
 // a set of actions requested or authorized.
@@ -76,11 +84,12 @@ var (
 
 // authChallenge implements the auth.Challenge interface.
 type authChallenge struct {
-	err          error
-	realm        string
-	autoRedirect bool
-	service      string
-	accessSet    accessSet
+	err              error
+	realm            string
+	autoRedirect     bool
+	autoRedirectPath string
+	service          string
+	accessSet        accessSet
 }
 
 var _ auth.Challenge = authChallenge{}
@@ -95,13 +104,28 @@ func (ac authChallenge) Status() int {
 	return http.StatusUnauthorized
 }
 
+func buildAutoRedirectURL(r *http.Request, autoRedirectPath string) string {
+	scheme := "https"
+
+	if forwardedProto := r.Header.Get("X-Forwarded-Proto"); len(forwardedProto) > 0 {
+		scheme = forwardedProto
+	}
+
+	u := &url.URL{
+		Scheme: scheme,
+		Host:   r.Host,
+		Path:   autoRedirectPath,
+	}
+	return u.String()
+}
+
 // challengeParams constructs the value to be used in
 // the WWW-Authenticate response challenge header.
 // See https://tools.ietf.org/html/rfc6750#section-3
 func (ac authChallenge) challengeParams(r *http.Request) string {
 	var realm string
 	if ac.autoRedirect {
-		realm = fmt.Sprintf("https://%s/auth/token", r.Host)
+		realm = buildAutoRedirectURL(r, ac.autoRedirectPath)
 	} else {
 		realm = ac.realm
 	}
@@ -120,29 +144,36 @@ func (ac authChallenge) challengeParams(r *http.Request) string {
 	return str
 }
 
-// SetChallenge sets the WWW-Authenticate value for the response.
+// SetHeaders sets the WWW-Authenticate value for the response.
 func (ac authChallenge) SetHeaders(r *http.Request, w http.ResponseWriter) {
 	w.Header().Add("WWW-Authenticate", ac.challengeParams(r))
 }
 
 // accessController implements the auth.AccessController interface.
 type accessController struct {
-	realm        string
-	autoRedirect bool
-	issuer       string
-	service      string
-	rootCerts    *x509.CertPool
-	trustedKeys  map[string]libtrust.PublicKey
+	realm            string
+	autoRedirect     bool
+	autoRedirectPath string
+	issuer           string
+	service          string
+	rootCerts        *x509.CertPool
+	trustedKeys      map[string]crypto.PublicKey
 }
 
+const (
+	defaultAutoRedirectPath = "/auth/token"
+)
+
 // tokenAccessOptions is a convenience type for handling
-// options to the contstructor of an accessController.
+// options to the constructor of an accessController.
 type tokenAccessOptions struct {
-	realm          string
-	autoRedirect   bool
-	issuer         string
-	service        string
-	rootCertBundle string
+	realm            string
+	autoRedirect     bool
+	autoRedirectPath string
+	issuer           string
+	service          string
+	rootCertBundle   string
+	jwks             string
 }
 
 // checkOptions gathers the necessary options
@@ -150,17 +181,26 @@ type tokenAccessOptions struct {
 func checkOptions(options map[string]interface{}) (tokenAccessOptions, error) {
 	var opts tokenAccessOptions
 
-	keys := []string{"realm", "issuer", "service", "rootcertbundle"}
+	keys := []string{"realm", "issuer", "service", "rootcertbundle", "jwks"}
 	vals := make([]string, 0, len(keys))
 	for _, key := range keys {
 		val, ok := options[key].(string)
 		if !ok {
+			// NOTE(milosgajdos): this func makes me intensely sad
+			// just like all the other weakly typed config options.
+			// Either of these config options may be missing, but
+			// at least one must be present: we handle those cases
+			// in newAccessController func which consumes this one.
+			if key == "rootcertbundle" || key == "jwks" {
+				vals = append(vals, "")
+				continue
+			}
 			return opts, fmt.Errorf("token auth requires a valid option string: %q", key)
 		}
 		vals = append(vals, val)
 	}
 
-	opts.realm, opts.issuer, opts.service, opts.rootCertBundle = vals[0], vals[1], vals[2], vals[3]
+	opts.realm, opts.issuer, opts.service, opts.rootCertBundle, opts.jwks = vals[0], vals[1], vals[2], vals[3], vals[4]
 
 	autoRedirectVal, ok := options["autoredirect"]
 	if ok {
@@ -170,26 +210,33 @@ func checkOptions(options map[string]interface{}) (tokenAccessOptions, error) {
 		}
 		opts.autoRedirect = autoRedirect
 	}
+	if opts.autoRedirect {
+		autoRedirectPathVal, ok := options["autoredirectpath"]
+		if ok {
+			autoRedirectPath, ok := autoRedirectPathVal.(string)
+			if !ok {
+				return opts, fmt.Errorf("token auth requires a valid option string: autoredirectpath")
+			}
+			opts.autoRedirectPath = autoRedirectPath
+		}
+		if opts.autoRedirectPath == "" {
+			opts.autoRedirectPath = defaultAutoRedirectPath
+		}
+	}
 
 	return opts, nil
 }
 
-// newAccessController creates an accessController using the given options.
-func newAccessController(options map[string]interface{}) (auth.AccessController, error) {
-	config, err := checkOptions(options)
+func getRootCerts(path string) ([]*x509.Certificate, error) {
+	fp, err := os.Open(path)
 	if err != nil {
-		return nil, err
-	}
-
-	fp, err := os.Open(config.rootCertBundle)
-	if err != nil {
-		return nil, fmt.Errorf("unable to open token auth root certificate bundle file %q: %s", config.rootCertBundle, err)
+		return nil, fmt.Errorf("unable to open token auth root certificate bundle file %q: %s", path, err)
 	}
 	defer fp.Close()
 
-	rawCertBundle, err := ioutil.ReadAll(fp)
+	rawCertBundle, err := io.ReadAll(fp)
 	if err != nil {
-		return nil, fmt.Errorf("unable to read token auth root certificate bundle file %q: %s", config.rootCertBundle, err)
+		return nil, fmt.Errorf("unable to read token auth root certificate bundle file %q: %s", path, err)
 	}
 
 	var rootCerts []*x509.Certificate
@@ -207,54 +254,101 @@ func newAccessController(options map[string]interface{}) (auth.AccessController,
 		pemBlock, rawCertBundle = pem.Decode(rawCertBundle)
 	}
 
-	if len(rootCerts) == 0 {
-		return nil, errors.New("token auth requires at least one token signing root certificate")
+	return rootCerts, nil
+}
+
+func getJwks(path string) (*jose.JSONWebKeySet, error) {
+	// TODO(milosgajdos): we should consider providing a JWKS
+	// URL from which the JWKS could be fetched
+	jp, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("unable to open jwks file %q: %s", path, err)
+	}
+	defer jp.Close()
+
+	rawJWKS, err := io.ReadAll(jp)
+	if err != nil {
+		return nil, fmt.Errorf("unable to read token jwks file %q: %s", path, err)
+	}
+
+	var jwks jose.JSONWebKeySet
+	if err := json.Unmarshal(rawJWKS, &jwks); err != nil {
+		return nil, fmt.Errorf("failed to parse jwks: %v", err)
+	}
+
+	return &jwks, nil
+}
+
+// newAccessController creates an accessController using the given options.
+func newAccessController(options map[string]interface{}) (auth.AccessController, error) {
+	config, err := checkOptions(options)
+	if err != nil {
+		return nil, err
+	}
+
+	var (
+		rootCerts []*x509.Certificate
+		jwks      *jose.JSONWebKeySet
+	)
+
+	if config.rootCertBundle != "" {
+		rootCerts, err = getRootCerts(config.rootCertBundle)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if config.jwks != "" {
+		jwks, err = getJwks(config.jwks)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if (len(rootCerts) == 0 && jwks == nil) || // no certs bundle and no jwks
+		(len(rootCerts) == 0 && jwks != nil && len(jwks.Keys) == 0) { // no certs bundle and empty jwks
+		return nil, errors.New("token auth requires at least one token signing key")
 	}
 
 	rootPool := x509.NewCertPool()
-	trustedKeys := make(map[string]libtrust.PublicKey, len(rootCerts))
 	for _, rootCert := range rootCerts {
 		rootPool.AddCert(rootCert)
-		pubKey, err := libtrust.FromCryptoPublicKey(crypto.PublicKey(rootCert.PublicKey))
-		if err != nil {
-			return nil, fmt.Errorf("unable to get public key from token auth root certificate: %s", err)
+	}
+
+	trustedKeys := make(map[string]crypto.PublicKey)
+	if jwks != nil {
+		for _, key := range jwks.Keys {
+			trustedKeys[key.KeyID] = key.Public()
 		}
-		trustedKeys[pubKey.KeyID()] = pubKey
 	}
 
 	return &accessController{
-		realm:        config.realm,
-		autoRedirect: config.autoRedirect,
-		issuer:       config.issuer,
-		service:      config.service,
-		rootCerts:    rootPool,
-		trustedKeys:  trustedKeys,
+		realm:            config.realm,
+		autoRedirect:     config.autoRedirect,
+		autoRedirectPath: config.autoRedirectPath,
+		issuer:           config.issuer,
+		service:          config.service,
+		rootCerts:        rootPool,
+		trustedKeys:      trustedKeys,
 	}, nil
 }
 
 // Authorized handles checking whether the given request is authorized
 // for actions on resources described by the given access items.
-func (ac *accessController) Authorized(ctx context.Context, accessItems ...auth.Access) (context.Context, error) {
+func (ac *accessController) Authorized(req *http.Request, accessItems ...auth.Access) (*auth.Grant, error) {
 	challenge := &authChallenge{
-		realm:        ac.realm,
-		autoRedirect: ac.autoRedirect,
-		service:      ac.service,
-		accessSet:    newAccessSet(accessItems...),
+		realm:            ac.realm,
+		autoRedirect:     ac.autoRedirect,
+		autoRedirectPath: ac.autoRedirectPath,
+		service:          ac.service,
+		accessSet:        newAccessSet(accessItems...),
 	}
 
-	req, err := dcontext.GetRequest(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	parts := strings.Split(req.Header.Get("Authorization"), " ")
-
-	if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
+	prefix, rawToken, ok := strings.Cut(req.Header.Get("Authorization"), " ")
+	if !ok || rawToken == "" || !strings.EqualFold(prefix, "bearer") {
 		challenge.err = ErrTokenRequired
 		return nil, challenge
 	}
-
-	rawToken := parts[1]
 
 	token, err := NewToken(rawToken)
 	if err != nil {
@@ -269,12 +363,13 @@ func (ac *accessController) Authorized(ctx context.Context, accessItems ...auth.
 		TrustedKeys:       ac.trustedKeys,
 	}
 
-	if err = token.Verify(verifyOpts); err != nil {
+	claims, err := token.Verify(verifyOpts)
+	if err != nil {
 		challenge.err = err
 		return nil, challenge
 	}
 
-	accessSet := token.accessSet()
+	accessSet := claims.accessSet()
 	for _, access := range accessItems {
 		if !accessSet.contains(access) {
 			challenge.err = ErrInsufficientScope
@@ -282,12 +377,8 @@ func (ac *accessController) Authorized(ctx context.Context, accessItems ...auth.
 		}
 	}
 
-	ctx = auth.WithResources(ctx, token.resources())
-
-	return auth.WithUser(ctx, auth.UserInfo{Name: token.Claims.Subject}), nil
-}
-
-// init handles registering the token auth backend.
-func init() {
-	auth.Register("token", auth.InitFunc(newAccessController))
+	return &auth.Grant{
+		User:      auth.UserInfo{Name: claims.Subject},
+		Resources: claims.resources(),
+	}, nil
 }

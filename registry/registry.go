@@ -4,8 +4,8 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"os/signal"
@@ -13,24 +13,23 @@ import (
 	"syscall"
 	"time"
 
-	logrus_bugsnag "github.com/Shopify/logrus-bugsnag"
-
 	logstash "github.com/bshuster-repo/logrus-logstash-hook"
-	"github.com/bugsnag/bugsnag-go"
 	"github.com/docker/go-metrics"
 	gorhandlers "github.com/gorilla/handlers"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/yvasiyarov/gorelic"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"golang.org/x/crypto/acme"
 	"golang.org/x/crypto/acme/autocert"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 
 	"github.com/distribution/distribution/v3/configuration"
-	dcontext "github.com/distribution/distribution/v3/context"
 	"github.com/distribution/distribution/v3/health"
+	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/distribution/distribution/v3/registry/handlers"
 	"github.com/distribution/distribution/v3/registry/listener"
-	"github.com/distribution/distribution/v3/uuid"
+	"github.com/distribution/distribution/v3/tracing"
 	"github.com/distribution/distribution/v3/version"
 )
 
@@ -72,16 +71,26 @@ var defaultCipherSuites = []uint16{
 	tls.TLS_AES_256_GCM_SHA384,
 }
 
-// maps tls version strings to constants
-var defaultTLSVersionStr = "tls1.2"
+const defaultTLSVersionStr = "tls1.2"
+
+// tlsVersions maps user-specified values to tls version constants.
 var tlsVersions = map[string]uint16{
-	// user specified values
 	"tls1.2": tls.VersionTLS12,
 	"tls1.3": tls.VersionTLS13,
 }
 
-// this channel gets notified when process receives signal. It is global to ease unit testing
-var quit = make(chan os.Signal, 1)
+// defaultLogFormatter is the default formatter to use for logs.
+const defaultLogFormatter = "text"
+
+// HandlerFunc defines an http middleware
+type HandlerFunc func(config *configuration.Configuration, handler http.Handler) http.Handler
+
+var handlerMiddlewares []HandlerFunc
+
+// RegisterHandler is used to register http middlewares to the registry service
+func RegisterHandler(handlerFunc HandlerFunc) {
+	handlerMiddlewares = append(handlerMiddlewares, handlerFunc)
+}
 
 // ServeCmd is a cobra command for running the registry.
 var ServeCmd = &cobra.Command{
@@ -89,39 +98,22 @@ var ServeCmd = &cobra.Command{
 	Short: "`serve` stores and distributes Docker images",
 	Long:  "`serve` stores and distributes Docker images.",
 	Run: func(cmd *cobra.Command, args []string) {
-
 		// setup context
-		ctx := dcontext.WithVersion(dcontext.Background(), version.Version)
+		ctx := dcontext.WithVersion(dcontext.Background(), version.Version())
 
 		config, err := resolveConfiguration(args)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "configuration error: %v\n", err)
+			// nolint:errcheck
 			cmd.Usage()
 			os.Exit(1)
 		}
-
-		if config.HTTP.Debug.Addr != "" {
-			go func(addr string) {
-				logrus.Infof("debug server listening %v", addr)
-				if err := http.ListenAndServe(addr, nil); err != nil {
-					logrus.Fatalf("error listening on debug interface: %v", err)
-				}
-			}(config.HTTP.Debug.Addr)
-		}
-
 		registry, err := NewRegistry(ctx, config)
 		if err != nil {
 			logrus.Fatalln(err)
 		}
 
-		if config.HTTP.Debug.Prometheus.Enabled {
-			path := config.HTTP.Debug.Prometheus.Path
-			if path == "" {
-				path = "/metrics"
-			}
-			logrus.Info("providing prometheus metrics on ", path)
-			http.Handle(path, metrics.Handler())
-		}
+		configureDebugServer(config)
 
 		if err = registry.ListenAndServe(); err != nil {
 			logrus.Fatalln(err)
@@ -130,11 +122,13 @@ var ServeCmd = &cobra.Command{
 }
 
 // A Registry represents a complete instance of the registry.
+//
 // TODO(aaronl): It might make sense for Registry to become an interface.
 type Registry struct {
 	config *configuration.Configuration
 	app    *handlers.App
 	server *http.Server
+	quit   chan os.Signal
 }
 
 // NewRegistry creates a new registry from a context and configuration struct.
@@ -145,23 +139,30 @@ func NewRegistry(ctx context.Context, config *configuration.Configuration) (*Reg
 		return nil, fmt.Errorf("error configuring logger: %v", err)
 	}
 
-	configureBugsnag(config)
-
-	// inject a logger into the uuid library. warns us if there is a problem
-	// with uuid generation under low entropy.
-	uuid.Loggerf = dcontext.GetLogger(ctx).Warnf
-
 	app := handlers.NewApp(ctx, config)
 	// TODO(aaronl): The global scope of the health checks means NewRegistry
 	// can only be called once per process.
 	app.RegisterHealthChecks()
-	handler := configureReporting(app)
+	var handler http.Handler = app
 	handler = alive("/", handler)
 	handler = health.Handler(handler)
 	handler = panicHandler(handler)
 	if !config.Log.AccessLog.Disabled {
 		handler = gorhandlers.CombinedLoggingHandler(os.Stdout, handler)
 	}
+
+	for _, applyHandlerMiddleware := range handlerMiddlewares {
+		handler = applyHandlerMiddleware(config, handler)
+	}
+
+	err = tracing.InitOpenTelemetry(app.Context)
+	if err != nil {
+		return nil, fmt.Errorf("error during open telemetry initialization: %v", err)
+	}
+	if config.HTTP.H2C.Enabled {
+		handler = h2c.NewHandler(handler, &http2.Server{})
+	}
+	handler = otelHandler(handler)
 
 	server := &http.Server{
 		Handler: handler,
@@ -171,7 +172,15 @@ func NewRegistry(ctx context.Context, config *configuration.Configuration) (*Reg
 		app:    app,
 		config: config,
 		server: server,
+		quit:   make(chan os.Signal, 1),
 	}, nil
+}
+
+// otelHandler returns an http.Handler that wraps the provided `next` handler with OpenTelemetry instrumentation.
+// This instrumentation tracks each HTTP request, creating spans with names derived from the request method and URL path.
+func otelHandler(next http.Handler) http.Handler {
+	return otelhttp.NewHandler(next, "",
+		otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string { return r.Method + " " + r.URL.Path }))
 }
 
 // takes a list of cipher suites and converts it to a list of respective tls constants
@@ -201,6 +210,14 @@ func getCipherSuiteNames(ids []uint16) []string {
 		names[i] = tls.CipherSuiteName(id)
 	}
 	return names
+}
+
+// set ACME-server/DirectoryURL, if provided
+func setDirectoryURL(directoryurl string) *acme.Client {
+	if len(directoryurl) > 0 {
+		return &acme.Client{DirectoryURL: directoryurl}
+	}
+	return nil
 }
 
 // ListenAndServe runs the registry's HTTP server.
@@ -236,11 +253,10 @@ func (registry *Registry) ListenAndServe() error {
 		}
 
 		tlsConf := &tls.Config{
-			ClientAuth:               tls.NoClientCert,
-			NextProtos:               nextProtos(config),
-			MinVersion:               tlsMinVersion,
-			PreferServerCipherSuites: true,
-			CipherSuites:             tlsCipherSuites,
+			ClientAuth:   tls.NoClientCert,
+			NextProtos:   nextProtos(config),
+			MinVersion:   tlsMinVersion,
+			CipherSuites: tlsCipherSuites,
 		}
 
 		if config.HTTP.TLS.LetsEncrypt.CacheFile != "" {
@@ -252,6 +268,7 @@ func (registry *Registry) ListenAndServe() error {
 				Cache:      autocert.DirCache(config.HTTP.TLS.LetsEncrypt.CacheFile),
 				Email:      config.HTTP.TLS.LetsEncrypt.Email,
 				Prompt:     autocert.AcceptTOS,
+				Client:     setDirectoryURL(config.HTTP.TLS.LetsEncrypt.DirectoryURL),
 			}
 			tlsConf.GetCertificate = m.GetCertificate
 			tlsConf.NextProtos = append(tlsConf.NextProtos, acme.ALPNProto)
@@ -267,7 +284,7 @@ func (registry *Registry) ListenAndServe() error {
 			pool := x509.NewCertPool()
 
 			for _, ca := range config.HTTP.TLS.ClientCAs {
-				caPem, err := ioutil.ReadFile(ca)
+				caPem, err := os.ReadFile(ca)
 				if err != nil {
 					return err
 				}
@@ -277,7 +294,7 @@ func (registry *Registry) ListenAndServe() error {
 				}
 			}
 
-			for _, subj := range pool.Subjects() {
+			for _, subj := range pool.Subjects() { //nolint:staticcheck // FIXME(thaJeztah): ignore SA1019: ac.(*accessController).rootCerts.Subjects has been deprecated since Go 1.18: if s was returned by SystemCertPool, Subjects will not include the system roots. (staticcheck)
 				dcontext.GetLogger(registry.app).Debugf("CA Subject: %s", string(subj))
 			}
 
@@ -296,7 +313,7 @@ func (registry *Registry) ListenAndServe() error {
 	}
 
 	// setup channel to get notified on SIGTERM signal
-	signal.Notify(quit, syscall.SIGTERM)
+	signal.Notify(registry.quit, os.Interrupt, syscall.SIGTERM)
 	serveErr := make(chan error)
 
 	// Start serving in goroutine and listen for stop signal in main thread
@@ -307,46 +324,56 @@ func (registry *Registry) ListenAndServe() error {
 	select {
 	case err := <-serveErr:
 		return err
-	case <-quit:
+	case <-registry.quit:
 		dcontext.GetLogger(registry.app).Info("stopping server gracefully. Draining connections for ", config.HTTP.DrainTimeout)
 		// shutdown the server with a grace period of configured timeout
 		c, cancel := context.WithTimeout(context.Background(), config.HTTP.DrainTimeout)
 		defer cancel()
-		return registry.server.Shutdown(c)
+		return registry.Shutdown(c)
 	}
 }
 
-func configureReporting(app *handlers.App) http.Handler {
-	var handler http.Handler = app
-
-	if app.Config.Reporting.Bugsnag.APIKey != "" {
-		handler = bugsnag.Handler(handler)
+// Shutdown gracefully shuts down the registry's HTTP server and application object.
+func (registry *Registry) Shutdown(ctx context.Context) error {
+	err := registry.server.Shutdown(ctx)
+	if appErr := registry.app.Shutdown(); appErr != nil {
+		err = errors.Join(err, appErr)
 	}
+	return err
+}
 
-	if app.Config.Reporting.NewRelic.LicenseKey != "" {
-		agent := gorelic.NewAgent()
-		agent.NewrelicLicense = app.Config.Reporting.NewRelic.LicenseKey
-		if app.Config.Reporting.NewRelic.Name != "" {
-			agent.NewrelicName = app.Config.Reporting.NewRelic.Name
+func configureDebugServer(config *configuration.Configuration) {
+	if config.HTTP.Debug.Addr != "" {
+		go func(addr string) {
+			logrus.Infof("debug server listening %v", addr)
+			if err := http.ListenAndServe(addr, nil); err != nil {
+				logrus.Fatalf("error listening on debug interface: %v", err)
+			}
+		}(config.HTTP.Debug.Addr)
+		configurePrometheus(config)
+	}
+}
+
+func configurePrometheus(config *configuration.Configuration) {
+	if config.HTTP.Debug.Prometheus.Enabled {
+		path := config.HTTP.Debug.Prometheus.Path
+		if path == "" {
+			path = "/metrics"
 		}
-		agent.CollectHTTPStat = true
-		agent.Verbose = app.Config.Reporting.NewRelic.Verbose
-		agent.Run()
-
-		handler = agent.WrapHTTPHandler(handler)
+		logrus.Info("providing prometheus metrics on ", path)
+		http.Handle(path, metrics.Handler())
 	}
-
-	return handler
 }
 
 // configureLogging prepares the context with a logger using the
 // configuration.
 func configureLogging(ctx context.Context, config *configuration.Configuration) (context.Context, error) {
 	logrus.SetLevel(logLevel(config.Log.Level))
+	logrus.SetReportCaller(config.Log.ReportCaller)
 
 	formatter := config.Log.Formatter
 	if formatter == "" {
-		formatter = "text" // default formatter
+		formatter = defaultLogFormatter
 	}
 
 	switch formatter {
@@ -364,16 +391,10 @@ func configureLogging(ctx context.Context, config *configuration.Configuration) 
 			Formatter: &logrus.JSONFormatter{TimestampFormat: time.RFC3339Nano},
 		})
 	default:
-		// just let the library use default on empty string.
-		if config.Log.Formatter != "" {
-			return ctx, fmt.Errorf("unsupported logging formatter: %q", config.Log.Formatter)
-		}
+		return ctx, fmt.Errorf("unsupported logging formatter: %q", formatter)
 	}
 
-	if config.Log.Formatter != "" {
-		logrus.Debugf("using %q logging formatter", config.Log.Formatter)
-	}
-
+	logrus.Debugf("using %q logging formatter", formatter)
 	if len(config.Log.Fields) > 0 {
 		// build up the static fields, if present.
 		var fields []interface{}
@@ -397,32 +418,6 @@ func logLevel(level configuration.Loglevel) logrus.Level {
 	}
 
 	return l
-}
-
-// configureBugsnag configures bugsnag reporting, if enabled
-func configureBugsnag(config *configuration.Configuration) {
-	if config.Reporting.Bugsnag.APIKey == "" {
-		return
-	}
-
-	bugsnagConfig := bugsnag.Configuration{
-		APIKey: config.Reporting.Bugsnag.APIKey,
-	}
-	if config.Reporting.Bugsnag.ReleaseStage != "" {
-		bugsnagConfig.ReleaseStage = config.Reporting.Bugsnag.ReleaseStage
-	}
-	if config.Reporting.Bugsnag.Endpoint != "" {
-		bugsnagConfig.Endpoint = config.Reporting.Bugsnag.Endpoint
-	}
-	bugsnag.Configure(bugsnagConfig)
-
-	// configure logrus bugsnag hook
-	hook, err := logrus_bugsnag.NewBugsnagHook()
-	if err != nil {
-		logrus.Fatalln(err)
-	}
-
-	logrus.AddHook(hook)
 }
 
 // panicHandler add an HTTP handler to web app. The handler recover the happening

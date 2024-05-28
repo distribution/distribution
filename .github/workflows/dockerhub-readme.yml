@@ -1,0 +1,35 @@
+name: dockerhub-readme
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - 'main'
+    paths:
+      - '.github/workflows/dockerhub-readme.yml'
+      - 'docs/dockerhub.md'
+
+env:
+  DOCKERHUB_SLUG: distribution/distribution
+
+permissions:
+  contents: read
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v4
+      -
+        name: Update Docker Hub README
+        uses: peter-evans/dockerhub-description@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ env.DOCKERHUB_SLUG }}
+          readme-filepath: ./docs/dockerhub.md

@@ -8,45 +8,33 @@
 // An implementation registers its access controller by name with a constructor
 // which accepts an options map for configuring the access controller.
 //
-//		options := map[string]interface{}{"sillySecret": "whysosilly?"}
-// 		accessController, _ := auth.GetAccessController("silly", options)
+//	options := map[string]interface{}{"sillySecret": "whysosilly?"}
+//	accessController, _ := auth.GetAccessController("silly", options)
 //
 // This `accessController` can then be used in a request handler like so:
 //
-// 		func updateOrder(w http.ResponseWriter, r *http.Request) {
-//			orderNumber := r.FormValue("orderNumber")
-//			resource := auth.Resource{Type: "customerOrder", Name: orderNumber}
-// 			access := auth.Access{Resource: resource, Action: "update"}
+//	func updateOrder(w http.ResponseWriter, r *http.Request) {
+//		orderNumber := r.FormValue("orderNumber")
+//		resource := auth.Resource{Type: "customerOrder", Name: orderNumber}
+//		access := auth.Access{Resource: resource, Action: "update"}
 //
-// 			if ctx, err := accessController.Authorized(ctx, access); err != nil {
-//				if challenge, ok := err.(auth.Challenge) {
-//					// Let the challenge write the response.
-//					challenge.SetHeaders(r, w)
-//					w.WriteHeader(http.StatusUnauthorized)
-//					return
-//				} else {
-//					// Some other error.
-//				}
+//		if ctx, err := accessController.Authorized(r, access); err != nil {
+//			if challenge, ok := err.(auth.Challenge) {
+//				// Let the challenge write the response.
+//				challenge.SetHeaders(r, w)
+//				w.WriteHeader(http.StatusUnauthorized)
+//				return
+//			} else {
+//				// Some other error.
 //			}
-// 		}
-//
+//		}
+//	}
 package auth
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net/http"
-)
-
-const (
-	// UserKey is used to get the user object from
-	// a user context
-	UserKey = "auth.user"
-
-	// UserNameKey is used to get the user name from
-	// a user context
-	UserNameKey = "auth.user.name"
 )
 
 var (
@@ -57,8 +45,18 @@ var (
 	ErrAuthenticationFailure = errors.New("authentication failure")
 )
 
+// InitFunc is the type of an AccessController factory function and is used
+// to register the constructor for different AccessController backends.
+type InitFunc func(options map[string]interface{}) (AccessController, error)
+
+var accessControllers map[string]InitFunc
+
+func init() {
+	accessControllers = make(map[string]InitFunc)
+}
+
 // UserInfo carries information about
-// an autenticated/authorized client.
+// an authenticated/authorized client.
 type UserInfo struct {
 	Name string
 }
@@ -75,6 +73,12 @@ type Resource struct {
 type Access struct {
 	Resource
 	Action string
+}
+
+// Grant describes the permitted level of access for an authorized request.
+type Grant struct {
+	User      UserInfo   // The authenticated user for the request.
+	Resources []Resource // The list of resources which have been authorized for the request.
 }
 
 // Challenge is a special error type which is used for HTTP 401 Unauthorized
@@ -94,88 +98,20 @@ type Challenge interface {
 // and required access levels for a request. Implementations can support both
 // complete denial and http authorization challenges.
 type AccessController interface {
-	// Authorized returns a non-nil error if the context is granted access and
-	// returns a new authorized context. If one or more Access structs are
-	// provided, the requested access will be compared with what is available
-	// to the context. The given context will contain a "http.request" key with
-	// a `*http.Request` value. If the error is non-nil, access should always
-	// be denied. The error may be of type Challenge, in which case the caller
-	// may have the Challenge handle the request or choose what action to take
-	// based on the Challenge header or response status. The returned context
-	// object should have a "auth.user" value set to a UserInfo struct.
-	Authorized(ctx context.Context, access ...Access) (context.Context, error)
+	// Authorized determines if the request is granted access. If one or more
+	// Access structs are provided, the requested access will be compared with
+	// what is available to the request.
+	//
+	// Return a Grant to grant the request access. Return an error to deny
+	// access. The error may be of type Challenge, in which case the caller may
+	// have the Challenge handle the request or choose what action to take based
+	// on the Challenge header or response status.
+	Authorized(r *http.Request, access ...Access) (*Grant, error)
 }
 
 // CredentialAuthenticator is an object which is able to authenticate credentials
 type CredentialAuthenticator interface {
 	AuthenticateUser(username, password string) error
-}
-
-// WithUser returns a context with the authorized user info.
-func WithUser(ctx context.Context, user UserInfo) context.Context {
-	return userInfoContext{
-		Context: ctx,
-		user:    user,
-	}
-}
-
-type userInfoContext struct {
-	context.Context
-	user UserInfo
-}
-
-func (uic userInfoContext) Value(key interface{}) interface{} {
-	switch key {
-	case UserKey:
-		return uic.user
-	case UserNameKey:
-		return uic.user.Name
-	}
-
-	return uic.Context.Value(key)
-}
-
-// WithResources returns a context with the authorized resources.
-func WithResources(ctx context.Context, resources []Resource) context.Context {
-	return resourceContext{
-		Context:   ctx,
-		resources: resources,
-	}
-}
-
-type resourceContext struct {
-	context.Context
-	resources []Resource
-}
-
-type resourceKey struct{}
-
-func (rc resourceContext) Value(key interface{}) interface{} {
-	if key == (resourceKey{}) {
-		return rc.resources
-	}
-
-	return rc.Context.Value(key)
-}
-
-// AuthorizedResources returns the list of resources which have
-// been authorized for this request.
-func AuthorizedResources(ctx context.Context) []Resource {
-	if resources, ok := ctx.Value(resourceKey{}).([]Resource); ok {
-		return resources
-	}
-
-	return nil
-}
-
-// InitFunc is the type of an AccessController factory function and is used
-// to register the constructor for different AccesController backends.
-type InitFunc func(options map[string]interface{}) (AccessController, error)
-
-var accessControllers map[string]InitFunc
-
-func init() {
-	accessControllers = make(map[string]InitFunc)
 }
 
 // Register is used to register an InitFunc for

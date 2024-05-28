@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/distribution/distribution/v3/reference"
+	"github.com/distribution/reference"
 	"github.com/gorilla/mux"
 )
 
@@ -80,8 +80,8 @@ func NewURLBuilderFromRequest(r *http.Request, relative bool) *URLBuilder {
 			// comma-separated list of hosts, to which each proxy appends the
 			// requested host. We want to grab the first from this comma-separated
 			// list.
-			hosts := strings.SplitN(forwardedHost, ",", 2)
-			host = strings.TrimSpace(hosts[0])
+			host, _, _ = strings.Cut(forwardedHost, ",")
+			host = strings.TrimSpace(host)
 		}
 	}
 
@@ -202,7 +202,7 @@ func (ub *URLBuilder) BuildBlobUploadChunkURL(name reference.Named, uuid string,
 	return appendValuesURL(uploadURL, values...).String(), nil
 }
 
-// clondedRoute returns a clone of the named route from the router. Routes
+// cloneRoute returns a clone of the named route from the router. Routes
 // must be cloned to avoid modifying them during url generation.
 func (ub *URLBuilder) cloneRoute(name string) clonedRoute {
 	route := new(mux.Route)

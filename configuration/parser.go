@@ -23,7 +23,7 @@ func MajorMinorVersion(major, minor uint) Version {
 }
 
 func (version Version) major() (uint, error) {
-	majorPart := strings.Split(string(version), ".")[0]
+	majorPart, _, _ := strings.Cut(string(version), ".")
 	major, err := strconv.ParseUint(majorPart, 10, 0)
 	return uint(major), err
 }
@@ -35,7 +35,7 @@ func (version Version) Major() uint {
 }
 
 func (version Version) minor() (uint, error) {
-	minorPart := strings.Split(string(version), ".")[1]
+	_, minorPart, _ := strings.Cut(string(version), ".")
 	minor, err := strconv.ParseUint(minorPart, 10, 0)
 	return uint(minor), err
 }
@@ -89,8 +89,8 @@ func NewParser(prefix string, parseInfos []VersionedParseInfo) *Parser {
 	}
 
 	for _, env := range os.Environ() {
-		envParts := strings.SplitN(env, "=", 2)
-		p.env = append(p.env, envVar{envParts[0], envParts[1]})
+		k, v, _ := strings.Cut(env, "=")
+		p.env = append(p.env, envVar{k, v})
 	}
 
 	// We must sort the environment variables lexically by name so that
@@ -138,7 +138,7 @@ func (p *Parser) Parse(in []byte, v interface{}) error {
 
 			err = p.overwriteFields(parseAs, pathStr, path[1:], envVar.value)
 			if err != nil {
-				return err
+				return fmt.Errorf("parsing environment variable %s: %v", pathStr, err)
 			}
 		}
 	}
@@ -166,6 +166,25 @@ func (p *Parser) overwriteFields(v reflect.Value, fullpath string, path []string
 		return p.overwriteStruct(v, fullpath, path, payload)
 	case reflect.Map:
 		return p.overwriteMap(v, fullpath, path, payload)
+	case reflect.Slice:
+		idx, err := strconv.Atoi(path[0])
+		if err != nil {
+			panic("non-numeric index: " + path[0])
+		}
+
+		if idx > v.Len() {
+			panic("undefined index: " + path[0])
+		}
+
+		// if there is no element or the current slice length
+		// is the same as the indexed variable create a new element,
+		// append it and then set it to the passed in env var value.
+		if v.Len() == 0 || idx == v.Len() {
+			typ := v.Type().Elem()
+			elem := reflect.New(typ).Elem()
+			v.Set(reflect.Append(v, elem))
+		}
+		return p.overwriteFields(v.Index(idx), fullpath, path[1:], payload)
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
 			if !v.IsNil() {
@@ -206,7 +225,6 @@ func (p *Parser) overwriteStruct(v reflect.Value, fullpath string, path []string
 		fieldVal := reflect.New(sf.Type)
 		err := yaml.Unmarshal([]byte(payload), fieldVal.Interface())
 		if err != nil {
-			logrus.Warnf("Error parsing environment variable %s: %s", fullpath, err)
 			return err
 		}
 		field.Set(reflect.Indirect(fieldVal))

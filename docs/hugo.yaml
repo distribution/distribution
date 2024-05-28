@@ -1,0 +1,29 @@
+baseURL: https://distribution.github.io/distribution
+languageCode: en-us
+title: CNCF Distribution
+theme: hugo-geekdoc
+
+markup:
+  goldmark:
+    renderer:
+      unsafe: true
+
+pluralizeListTitles: false
+enableRobotsTXT: true
+taxonomies: [tags]
+minify:
+  disableHTML: true
+
+# Geekdoc required configuration
+pygmentsUseClasses: true
+pygmentsCodeFences: true
+disablePathToLower: true
+
+params:
+  geekdocRepo: "https://github.com/distribution/distribution"
+  geekdocEditPath: edit/main/docs
+  geekdocLegalNotice: "https://www.linuxfoundation.org/legal/trademark-usage"
+  geekdocContentLicense:
+    name: CC BY 4.0
+    link: https://creativecommons.org/licenses/by/4.0/
+  geekdocOverwriteHTMLBase: true

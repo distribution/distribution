@@ -23,25 +23,33 @@ const (
 //
 // The path layout in the storage backend is roughly as follows:
 //
-//		<root>/v2
-//			-> repositories/
-// 				-><name>/
-// 					-> _manifests/
-// 						revisions
-//							-> <manifest digest path>
-//								-> link
-// 						tags/<tag>
-//							-> current/link
-// 							-> index
-//								-> <algorithm>/<hex digest>/link
-// 					-> _layers/
-// 						<layer links to blob store>
-// 					-> _uploads/<id>
-// 						data
-// 						startedat
-// 						hashstates/<algorithm>/<offset>
-//			-> blob/<algorithm>
-//				<split directory content addressable storage>
+//	<root>/v2
+//	├── blobs
+//	│   └── <algorithm>
+//	│       └── <split directory content addressable storage>
+//	└── repositories
+//	    └── <name>
+//	        ├── _layers
+//	        │   └── <layer links to blob store>
+//	        ├── _manifests
+//	        │   ├── revisions
+//	        │   │   └── <manifest digest path>
+//	        │   │       └── link
+//	        │   └── tags
+//	        │       └── <tag>
+//	        │           ├── current
+//	        │           │   └── link
+//	        │           └── index
+//	        │               └── <algorithm>
+//	        │                   └── <hex digest>
+//	        │                       └── link
+//	        └── _uploads
+//	            └── <id>
+//	                ├── data
+//	                ├── hashstates
+//	                │   └── <algorithm>
+//	                │       └── <offset>
+//	                └── startedat
 //
 // The storage backend layout is broken up into a content-addressable blob
 // store and repositories. The content-addressable blob store holds most data
@@ -69,43 +77,46 @@ const (
 //
 // We cover the path formats implemented by this path mapper below.
 //
+//	Repositories:
+//
+//	repositoriesRootPathSpec:     <root>/v2/repositories
+//
 //	Manifests:
 //
-// 	manifestRevisionsPathSpec:      <root>/v2/repositories/<name>/_manifests/revisions/
-// 	manifestRevisionPathSpec:      <root>/v2/repositories/<name>/_manifests/revisions/<algorithm>/<hex digest>/
-// 	manifestRevisionLinkPathSpec:  <root>/v2/repositories/<name>/_manifests/revisions/<algorithm>/<hex digest>/link
+//	manifestsPathSpec:             <root>/v2/repositories/<name>/_manifests
+//	manifestRevisionsPathSpec:     <root>/v2/repositories/<name>/_manifests/revisions/
+//	manifestRevisionPathSpec:      <root>/v2/repositories/<name>/_manifests/revisions/<algorithm>/<hex digest>/
+//	manifestRevisionLinkPathSpec:  <root>/v2/repositories/<name>/_manifests/revisions/<algorithm>/<hex digest>/link
 //
 //	Tags:
 //
-// 	manifestTagsPathSpec:                  <root>/v2/repositories/<name>/_manifests/tags/
-// 	manifestTagPathSpec:                   <root>/v2/repositories/<name>/_manifests/tags/<tag>/
-// 	manifestTagCurrentPathSpec:            <root>/v2/repositories/<name>/_manifests/tags/<tag>/current/link
-// 	manifestTagIndexPathSpec:              <root>/v2/repositories/<name>/_manifests/tags/<tag>/index/
-// 	manifestTagIndexEntryPathSpec:         <root>/v2/repositories/<name>/_manifests/tags/<tag>/index/<algorithm>/<hex digest>/
-// 	manifestTagIndexEntryLinkPathSpec:     <root>/v2/repositories/<name>/_manifests/tags/<tag>/index/<algorithm>/<hex digest>/link
+//	manifestTagsPathSpec:                  <root>/v2/repositories/<name>/_manifests/tags/
+//	manifestTagPathSpec:                   <root>/v2/repositories/<name>/_manifests/tags/<tag>/
+//	manifestTagCurrentPathSpec:            <root>/v2/repositories/<name>/_manifests/tags/<tag>/current/link
+//	manifestTagIndexPathSpec:              <root>/v2/repositories/<name>/_manifests/tags/<tag>/index/
+//	manifestTagIndexEntryPathSpec:         <root>/v2/repositories/<name>/_manifests/tags/<tag>/index/<algorithm>/<hex digest>/
+//	manifestTagIndexEntryLinkPathSpec:     <root>/v2/repositories/<name>/_manifests/tags/<tag>/index/<algorithm>/<hex digest>/link
 //
-// 	Blobs:
+//	Blobs:
 //
-// 	layerLinkPathSpec:            <root>/v2/repositories/<name>/_layers/<algorithm>/<hex digest>/link
-// 	layersPathSpec:               <root>/v2/repositories/<name>/_layers
+//	layerLinkPathSpec:            <root>/v2/repositories/<name>/_layers/<algorithm>/<hex digest>/link
+//	layersPathSpec:               <root>/v2/repositories/<name>/_layers
 //
 //	Uploads:
 //
-// 	uploadDataPathSpec:             <root>/v2/repositories/<name>/_uploads/<id>/data
-// 	uploadStartedAtPathSpec:        <root>/v2/repositories/<name>/_uploads/<id>/startedat
-// 	uploadHashStatePathSpec:        <root>/v2/repositories/<name>/_uploads/<id>/hashstates/<algorithm>/<offset>
+//	uploadDataPathSpec:             <root>/v2/repositories/<name>/_uploads/<id>/data
+//	uploadStartedAtPathSpec:        <root>/v2/repositories/<name>/_uploads/<id>/startedat
+//	uploadHashStatePathSpec:        <root>/v2/repositories/<name>/_uploads/<id>/hashstates/<algorithm>/<offset>
 //
 //	Blob Store:
 //
 //	blobsPathSpec:                  <root>/v2/blobs/
-// 	blobPathSpec:                   <root>/v2/blobs/<algorithm>/<first two hex bytes of digest>/<hex digest>
-// 	blobDataPathSpec:               <root>/v2/blobs/<algorithm>/<first two hex bytes of digest>/<hex digest>/data
-// 	blobMediaTypePathSpec:               <root>/v2/blobs/<algorithm>/<first two hex bytes of digest>/<hex digest>/data
+//	blobPathSpec:                   <root>/v2/blobs/<algorithm>/<first two hex bytes of digest>/<hex digest>
+//	blobDataPathSpec:               <root>/v2/blobs/<algorithm>/<first two hex bytes of digest>/<hex digest>/data
 //
 // For more information on the semantic meaning of each path and their
 // contents, please see the path spec documentation.
 func pathFor(spec pathSpec) (string, error) {
-
 	// Switch on the path object type and return the appropriate path. At
 	// first glance, one may wonder why we don't use an interface to
 	// accomplish this. By keep the formatting separate from the pathSpec, we
@@ -123,6 +134,9 @@ func pathFor(spec pathSpec) (string, error) {
 
 	switch v := spec.(type) {
 
+	case manifestsPathSpec:
+		return path.Join(append(repoPrefix, v.name, "_manifests")...), nil
+
 	case manifestRevisionsPathSpec:
 		return path.Join(append(repoPrefix, v.name, "_manifests", "revisions")...), nil
 
@@ -135,7 +149,6 @@ func pathFor(spec pathSpec) (string, error) {
 		return path.Join(append(append(repoPrefix, v.name, "_manifests", "revisions"), components...)...), nil
 	case manifestRevisionLinkPathSpec:
 		root, err := pathFor(manifestRevisionPathSpec(v))
-
 		if err != nil {
 			return "", err
 		}
@@ -147,7 +160,6 @@ func pathFor(spec pathSpec) (string, error) {
 		root, err := pathFor(manifestTagsPathSpec{
 			name: v.name,
 		})
-
 		if err != nil {
 			return "", err
 		}
@@ -155,7 +167,6 @@ func pathFor(spec pathSpec) (string, error) {
 		return path.Join(root, v.tag), nil
 	case manifestTagCurrentPathSpec:
 		root, err := pathFor(manifestTagPathSpec(v))
-
 		if err != nil {
 			return "", err
 		}
@@ -163,7 +174,6 @@ func pathFor(spec pathSpec) (string, error) {
 		return path.Join(root, "current", "link"), nil
 	case manifestTagIndexPathSpec:
 		root, err := pathFor(manifestTagPathSpec(v))
-
 		if err != nil {
 			return "", err
 		}
@@ -171,7 +181,6 @@ func pathFor(spec pathSpec) (string, error) {
 		return path.Join(root, "index"), nil
 	case manifestTagIndexEntryLinkPathSpec:
 		root, err := pathFor(manifestTagIndexEntryPathSpec(v))
-
 		if err != nil {
 			return "", err
 		}
@@ -182,7 +191,6 @@ func pathFor(spec pathSpec) (string, error) {
 			name: v.name,
 			tag:  v.tag,
 		})
-
 		if err != nil {
 			return "", err
 		}
@@ -254,6 +262,13 @@ func pathFor(spec pathSpec) (string, error) {
 type pathSpec interface {
 	pathSpec()
 }
+
+// manifestPathSpec describes the directory path for a manifest.
+type manifestsPathSpec struct {
+	name string
+}
+
+func (manifestsPathSpec) pathSpec() {}
 
 // manifestRevisionsPathSpec describes the directory path for
 // a manifest revision.
@@ -345,15 +360,15 @@ type layersPathSpec struct {
 
 func (layersPathSpec) pathSpec() {}
 
-// blobLinkPathSpec specifies a path for a blob link, which is a file with a
+// layerLinkPathSpec specifies a path for a blob link, which is a file with a
 // blob id. The blob link will contain a content addressable blob id reference
 // into the blob store. The format of the contents is as follows:
 //
-// 	<algorithm>:<hex digest of layer data>
+//	<algorithm>:<hex digest of layer data>
 //
 // The following example of the file contents is more illustrative:
 //
-// 	sha256:96443a84ce518ac22acb2e985eda402b58ac19ce6f91980bde63726a79d80b36
+//	sha256:96443a84ce518ac22acb2e985eda402b58ac19ce6f91980bde63726a79d80b36
 //
 // This  indicates that there is a blob with the id/digest, calculated via
 // sha256 that can be fetched from the blob store.
@@ -402,7 +417,7 @@ type uploadDataPathSpec struct {
 
 func (uploadDataPathSpec) pathSpec() {}
 
-// uploadDataPathSpec defines the path parameters for the file that stores the
+// uploadStartedAtPathSpec defines the path parameters for the file that stores the
 // start time of an uploads. If it is missing, the upload is considered
 // unknown. Admittedly, the presence of this file is an ugly hack to make sure
 // we have a way to cleanup old or stalled uploads that doesn't rely on driver
@@ -431,28 +446,26 @@ type uploadHashStatePathSpec struct {
 func (uploadHashStatePathSpec) pathSpec() {}
 
 // repositoriesRootPathSpec returns the root of repositories
-type repositoriesRootPathSpec struct {
-}
+type repositoriesRootPathSpec struct{}
 
 func (repositoriesRootPathSpec) pathSpec() {}
 
 // digestPathComponents provides a consistent path breakdown for a given
 // digest. For a generic digest, it will be as follows:
 //
-// 	<algorithm>/<hex digest>
+//	<algorithm>/<hex digest>
 //
 // If multilevel is true, the first two bytes of the digest will separate
 // groups of digest folder. It will be as follows:
 //
-// 	<algorithm>/<first two bytes of digest>/<full digest>
-//
+//	<algorithm>/<first two bytes of digest>/<full digest>
 func digestPathComponents(dgst digest.Digest, multilevel bool) ([]string, error) {
 	if err := dgst.Validate(); err != nil {
 		return nil, err
 	}
 
 	algorithm := blobAlgorithmReplacer.Replace(string(dgst.Algorithm()))
-	hex := dgst.Hex()
+	hex := dgst.Encoded()
 	prefix := []string{algorithm}
 
 	var suffix []string
@@ -468,7 +481,6 @@ func digestPathComponents(dgst digest.Digest, multilevel bool) ([]string, error)
 
 // Reconstructs a digest from a path
 func digestFromPath(digestPath string) (digest.Digest, error) {
-
 	digestPath = strings.TrimSuffix(digestPath, "/data")
 	dir, hex := path.Split(digestPath)
 	dir = path.Dir(dir)
@@ -482,6 +494,6 @@ func digestFromPath(digestPath string) (digest.Digest, error) {
 		algo = next
 	}
 
-	dgst := digest.NewDigestFromHex(algo, hex)
+	dgst := digest.NewDigestFromEncoded(digest.Algorithm(algo), hex)
 	return dgst, dgst.Validate()
 }

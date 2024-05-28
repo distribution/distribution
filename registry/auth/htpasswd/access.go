@@ -18,9 +18,16 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
-	dcontext "github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/distribution/distribution/v3/registry/auth"
+	"github.com/sirupsen/logrus"
 )
+
+func init() {
+	if err := auth.Register("htpasswd", auth.InitFunc(newAccessController)); err != nil {
+		logrus.Errorf("failed to register htpasswd auth: %v", err)
+	}
+}
 
 type accessController struct {
 	realm    string
@@ -49,12 +56,7 @@ func newAccessController(options map[string]interface{}) (auth.AccessController,
 	return &accessController{realm: realm.(string), path: path}, nil
 }
 
-func (ac *accessController) Authorized(ctx context.Context, accessRecords ...auth.Access) (context.Context, error) {
-	req, err := dcontext.GetRequest(ctx)
-	if err != nil {
-		return nil, err
-	}
-
+func (ac *accessController) Authorized(req *http.Request, accessRecords ...auth.Access) (*auth.Grant, error) {
 	username, password, ok := req.BasicAuth()
 	if !ok {
 		return nil, &challenge{
@@ -92,14 +94,14 @@ func (ac *accessController) Authorized(ctx context.Context, accessRecords ...aut
 	ac.mu.Unlock()
 
 	if err := localHTPasswd.authenticateUser(username, password); err != nil {
-		dcontext.GetLogger(ctx).Errorf("error authenticating user %q: %v", username, err)
+		dcontext.GetLogger(req.Context()).Errorf("error authenticating user %q: %v", username, err)
 		return nil, &challenge{
 			realm: ac.realm,
 			err:   auth.ErrAuthenticationFailure,
 		}
 	}
 
-	return auth.WithUser(ctx, auth.UserInfo{Name: username}), nil
+	return &auth.Grant{User: auth.UserInfo{Name: username}}, nil
 }
 
 // challenge implements the auth.Challenge interface.
@@ -128,10 +130,10 @@ func createHtpasswdFile(path string) error {
 		return err
 	}
 
-	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0600)
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0o600)
 	if err != nil {
 		return fmt.Errorf("failed to open htpasswd path %s", err)
 	}
@@ -153,8 +155,4 @@ func createHtpasswdFile(path string) error {
 		"password": pass,
 	}).Warnf("htpasswd is missing, provisioning with default user")
 	return nil
-}
-
-func init() {
-	auth.Register("htpasswd", auth.InitFunc(newAccessController))
 }

@@ -43,4 +43,4 @@ e.g. to release `2.3.1`
 
    `2.3 -> 2.3.1`
 
-90. Build a new distribution/registry image on [Docker hub](https://hub.docker.com/u/distribution/dashboard) by adding a new automated build with the new tag and re-building the images.
+90. Build a new distribution/registry image on [Docker Hub](https://hub.docker.com/u/distribution/dashboard) by adding a new automated build with the new tag and re-building the images.

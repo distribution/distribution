@@ -4,16 +4,12 @@ import (
 	"context"
 
 	"github.com/distribution/distribution/v3"
-	"github.com/opencontainers/go-digest"
 )
 
 // builder is a type for constructing manifests.
 type builder struct {
-	// bs is a BlobService used to publish the configuration blob.
-	bs distribution.BlobService
-
-	// configMediaType is media type used to describe configuration
-	configMediaType string
+	// configDescriptor is used to describe configuration
+	configDescriptor distribution.Descriptor
 
 	// configJSON references
 	configJSON []byte
@@ -26,11 +22,10 @@ type builder struct {
 // NewManifestBuilder is used to build new manifests for the current schema
 // version. It takes a BlobService so it can publish the configuration blob
 // as part of the Build process.
-func NewManifestBuilder(bs distribution.BlobService, configMediaType string, configJSON []byte) distribution.ManifestBuilder {
+func NewManifestBuilder(configDescriptor distribution.Descriptor, configJSON []byte) distribution.ManifestBuilder {
 	mb := &builder{
-		bs:              bs,
-		configMediaType: configMediaType,
-		configJSON:      make([]byte, len(configJSON)),
+		configDescriptor: configDescriptor,
+		configJSON:       make([]byte, len(configJSON)),
 	}
 	copy(mb.configJSON, configJSON)
 
@@ -45,30 +40,7 @@ func (mb *builder) Build(ctx context.Context) (distribution.Manifest, error) {
 	}
 	copy(m.Layers, mb.dependencies)
 
-	configDigest := digest.FromBytes(mb.configJSON)
-
-	var err error
-	m.Config, err = mb.bs.Stat(ctx, configDigest)
-	switch err {
-	case nil:
-		// Override MediaType, since Put always replaces the specified media
-		// type with application/octet-stream in the descriptor it returns.
-		m.Config.MediaType = mb.configMediaType
-		return FromStruct(m)
-	case distribution.ErrBlobUnknown:
-		// nop
-	default:
-		return nil, err
-	}
-
-	// Add config to the blob store
-	m.Config, err = mb.bs.Put(ctx, mb.configMediaType, mb.configJSON)
-	// Override MediaType, since Put always replaces the specified media
-	// type with application/octet-stream in the descriptor it returns.
-	m.Config.MediaType = mb.configMediaType
-	if err != nil {
-		return nil, err
-	}
+	m.Config = mb.configDescriptor
 
 	return FromStruct(m)
 }

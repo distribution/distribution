@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -13,7 +14,7 @@ import (
 func TestGETDownHandlerDoesNotChangeStatus(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
-	req, err := http.NewRequest("GET", "https://fakeurl.com/debug/health/down", nil)
+	req, err := http.NewRequest(http.MethodGet, "https://fakeurl.com/debug/health/down", nil)
 	if err != nil {
 		t.Errorf("Failed to create request.")
 	}
@@ -30,7 +31,7 @@ func TestGETDownHandlerDoesNotChangeStatus(t *testing.T) {
 func TestGETUpHandlerDoesNotChangeStatus(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
-	req, err := http.NewRequest("GET", "https://fakeurl.com/debug/health/up", nil)
+	req, err := http.NewRequest(http.MethodGet, "https://fakeurl.com/debug/health/up", nil)
 	if err != nil {
 		t.Errorf("Failed to create request.")
 	}
@@ -48,7 +49,7 @@ func TestGETUpHandlerDoesNotChangeStatus(t *testing.T) {
 func TestPOSTDownHandlerChangeStatus(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
-	req, err := http.NewRequest("POST", "https://fakeurl.com/debug/health/down", nil)
+	req, err := http.NewRequest(http.MethodPost, "https://fakeurl.com/debug/health/down", nil)
 	if err != nil {
 		t.Errorf("Failed to create request.")
 	}
@@ -59,7 +60,7 @@ func TestPOSTDownHandlerChangeStatus(t *testing.T) {
 		t.Errorf("Did not get a 200.")
 	}
 
-	if len(health.CheckStatus()) != 1 {
+	if len(health.CheckStatus(context.Background())) != 1 {
 		t.Errorf("DownHandler didn't add an error check.")
 	}
 }
@@ -69,7 +70,7 @@ func TestPOSTDownHandlerChangeStatus(t *testing.T) {
 func TestPOSTUpHandlerChangeStatus(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
-	req, err := http.NewRequest("POST", "https://fakeurl.com/debug/health/up", nil)
+	req, err := http.NewRequest(http.MethodPost, "https://fakeurl.com/debug/health/up", nil)
 	if err != nil {
 		t.Errorf("Failed to create request.")
 	}
@@ -80,7 +81,7 @@ func TestPOSTUpHandlerChangeStatus(t *testing.T) {
 		t.Errorf("Did not get a 200.")
 	}
 
-	if len(health.CheckStatus()) != 0 {
+	if len(health.CheckStatus(context.Background())) != 0 {
 		t.Errorf("UpHandler didn't remove the error check.")
 	}
 }

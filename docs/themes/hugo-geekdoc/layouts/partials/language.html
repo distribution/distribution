@@ -1,0 +1,51 @@
+{{ if .Site.IsMultiLingual }}
+  <span class="gdoc-language">
+    <ul class="gdoc-language__selector" role="button" aria-pressed="false" tabindex="0">
+      <li>
+        {{ range .Site.Languages }}
+          {{ if eq . $.Site.Language }}
+            <span class="flex align-center">
+              <svg class="gdoc-icon gdoc_language"><use xlink:href="#gdoc_language"></use></svg>
+              <span>{{ .Lang | upper }}</span>
+            </span>
+          {{ end }}
+        {{ end }}
+
+
+        <ul class="gdoc-language__list">
+          {{ if $.Translations }}
+            {{ range $.Translations }}
+              <li>
+                <a
+                  class="flex gdoc-language__entry"
+                  title="{{ .Language.LanguageName }}"
+                  href="{{ .RelPermalink }}"
+                  hreflang="{{ .Lang }}"
+                  lang="{{ .Lang }}"
+                >
+                  {{ .Language.LanguageName }}
+                </a>
+              </li>
+            {{ end }}
+          {{ else }}
+            {{ range .Site.Languages -}}
+              {{ if ne $.Site.Language.Lang .Lang }}
+                <li>
+                  <a
+                    class="flex gdoc-language__entry"
+                    title="{{ i18n "language_switch_no_tranlation_prefix" }} {{ .LanguageName }}"
+                    href="{{ .Lang | relLangURL }}"
+                    hreflang="{{ .Lang }}"
+                    lang="{{ .Lang }}"
+                  >
+                    {{ .LanguageName }}*
+                  </a>
+                </li>
+              {{ end -}}
+            {{ end -}}
+          {{ end }}
+        </ul>
+      </li>
+    </ul>
+  </span>
+{{ end }}

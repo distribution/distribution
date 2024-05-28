@@ -1,13 +1,13 @@
 package redis
 
 import (
+	"context"
 	"flag"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/distribution/distribution/v3/registry/storage/cache/cachecheck"
-	"github.com/gomodule/redigo/redis"
+	"github.com/redis/go-redis/v9"
 )
 
 var redisAddr string
@@ -20,7 +20,7 @@ func init() {
 // implementation.
 func TestRedisBlobDescriptorCacheProvider(t *testing.T) {
 	if redisAddr == "" {
-		// fallback to an environement variable
+		// fallback to an environment variable
 		redisAddr = os.Getenv("TEST_REGISTRY_STORAGE_CACHE_REDIS_ADDR")
 	}
 
@@ -29,25 +29,22 @@ func TestRedisBlobDescriptorCacheProvider(t *testing.T) {
 		t.Skip("please set -test.registry.storage.cache.redis.addr to test layer info cache against redis")
 	}
 
-	pool := &redis.Pool{
-		Dial: func() (redis.Conn, error) {
-			return redis.Dial("tcp", redisAddr)
+	pool := redis.NewClient(&redis.Options{
+		Addr: redisAddr,
+		OnConnect: func(ctx context.Context, cn *redis.Conn) error {
+			res := cn.Ping(ctx)
+			return res.Err()
 		},
-		MaxIdle:   1,
-		MaxActive: 2,
-		TestOnBorrow: func(c redis.Conn, t time.Time) error {
-			_, err := c.Do("PING")
-			return err
-		},
-		Wait: false, // if a connection is not available, proceed without cache.
-	}
+		MaxRetries: 3,
+		PoolSize:   2,
+	})
 
 	// Clear the database
-	conn := pool.Get()
-	if _, err := conn.Do("FLUSHDB"); err != nil {
+	ctx := context.Background()
+	err := pool.FlushDB(ctx).Err()
+	if err != nil {
 		t.Fatalf("unexpected error flushing redis db: %v", err)
 	}
-	conn.Close()
 
 	cachecheck.CheckBlobDescriptorCache(t, NewRedisBlobDescriptorCacheProvider(pool))
 }

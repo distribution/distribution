@@ -6,16 +6,15 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"path"
 	"reflect"
 	"testing"
 
 	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/reference"
 	"github.com/distribution/distribution/v3/registry/storage/cache/memory"
-	"github.com/distribution/distribution/v3/registry/storage/driver/testdriver"
+	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
 	"github.com/distribution/distribution/v3/testutil"
+	"github.com/distribution/reference"
 	"github.com/opencontainers/go-digest"
 )
 
@@ -24,8 +23,8 @@ import (
 func TestWriteSeek(t *testing.T) {
 	ctx := context.Background()
 	imageName, _ := reference.WithName("foo/bar")
-	driver := testdriver.New()
-	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableDelete, EnableRedirect)
+	driver := inmemory.New()
+	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableDelete, EnableRedirect)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -36,18 +35,18 @@ func TestWriteSeek(t *testing.T) {
 	bs := repository.Blobs(ctx)
 
 	blobUpload, err := bs.Create(ctx)
-
 	if err != nil {
 		t.Fatalf("unexpected error starting layer upload: %s", err)
 	}
 	contents := []byte{1, 2, 3}
-	blobUpload.Write(contents)
+	if _, err := blobUpload.Write(contents); err != nil {
+		t.Fatalf("unexpected error writing contents: %v", err)
+	}
 	blobUpload.Close()
 	offset := blobUpload.Size()
 	if offset != int64(len(contents)) {
 		t.Fatalf("unexpected value for blobUpload offset:  %v != %v", offset, len(contents))
 	}
-
 }
 
 // TestSimpleBlobUpload covers the blob upload process, exercising common
@@ -60,8 +59,8 @@ func TestSimpleBlobUpload(t *testing.T) {
 
 	ctx := context.Background()
 	imageName, _ := reference.WithName("foo/bar")
-	driver := testdriver.New()
-	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableDelete, EnableRedirect)
+	driver := inmemory.New()
+	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableDelete, EnableRedirect)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -75,7 +74,6 @@ func TestSimpleBlobUpload(t *testing.T) {
 	rd := io.TeeReader(randomDataReader, h)
 
 	blobUpload, err := bs.Create(ctx)
-
 	if err != nil {
 		t.Fatalf("unexpected error starting layer upload: %s", err)
 	}
@@ -213,7 +211,7 @@ func TestSimpleBlobUpload(t *testing.T) {
 	}
 
 	// Re-upload the blob
-	randomBlob, err := ioutil.ReadAll(randomDataReader)
+	randomBlob, err := io.ReadAll(randomDataReader)
 	if err != nil {
 		t.Fatalf("Error reading all of blob %s", err.Error())
 	}
@@ -234,7 +232,7 @@ func TestSimpleBlobUpload(t *testing.T) {
 	}
 
 	// Reuse state to test delete with a delete-disabled registry
-	registry, err = NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableRedirect)
+	registry, err = NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableRedirect)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -255,8 +253,8 @@ func TestSimpleBlobUpload(t *testing.T) {
 func TestSimpleBlobRead(t *testing.T) {
 	ctx := context.Background()
 	imageName, _ := reference.WithName("foo/bar")
-	driver := testdriver.New()
-	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableDelete, EnableRedirect)
+	driver := inmemory.New()
+	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableDelete, EnableRedirect)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -331,7 +329,7 @@ func TestSimpleBlobRead(t *testing.T) {
 		t.Fatalf("seek failed: expected 0 offset, got %d", offset)
 	}
 
-	p, err := ioutil.ReadAll(rc)
+	p, err := io.ReadAll(rc)
 	if err != nil {
 		t.Fatalf("error reading all of blob: %v", err)
 	}
@@ -346,7 +344,7 @@ func TestSimpleBlobRead(t *testing.T) {
 		t.Fatalf("error resetting layer reader: %v", err)
 	}
 
-	randomLayerData, err := ioutil.ReadAll(randomLayerReader)
+	randomLayerData, err := io.ReadAll(randomLayerReader)
 	if err != nil {
 		t.Fatalf("random layer read failed: %v", err)
 	}
@@ -367,8 +365,8 @@ func TestBlobMount(t *testing.T) {
 	ctx := context.Background()
 	imageName, _ := reference.WithName("foo/bar")
 	sourceImageName, _ := reference.WithName("foo/source")
-	driver := testdriver.New()
-	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableDelete, EnableRedirect)
+	driver := inmemory.New()
+	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableDelete, EnableRedirect)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -385,7 +383,6 @@ func TestBlobMount(t *testing.T) {
 	sbs := sourceRepository.Blobs(ctx)
 
 	blobUpload, err := sbs.Create(ctx)
-
 	if err != nil {
 		t.Fatalf("unexpected error starting layer upload: %s", err)
 	}
@@ -518,8 +515,8 @@ func TestBlobMount(t *testing.T) {
 func TestLayerUploadZeroLength(t *testing.T) {
 	ctx := context.Background()
 	imageName, _ := reference.WithName("foo/bar")
-	driver := testdriver.New()
-	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableDelete, EnableRedirect)
+	driver := inmemory.New()
+	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableDelete, EnableRedirect)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -601,6 +598,7 @@ func addBlob(ctx context.Context, bs distribution.BlobIngester, desc distributio
 	if err != nil {
 		return distribution.Descriptor{}, err
 	}
+	// nolint:errcheck
 	defer wr.Cancel(ctx)
 
 	if nn, err := io.Copy(wr, rd); err != nil {

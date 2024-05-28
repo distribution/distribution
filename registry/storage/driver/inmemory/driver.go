@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"net/http"
 	"sync"
 	"time"
 
@@ -22,7 +22,7 @@ func init() {
 // inMemoryDriverFacotry implements the factory.StorageDriverFactory interface.
 type inMemoryDriverFactory struct{}
 
-func (factory *inMemoryDriverFactory) Create(parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
+func (factory *inMemoryDriverFactory) Create(ctx context.Context, parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
 	return New(), nil
 }
 
@@ -79,7 +79,7 @@ func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
 	}
 	defer rc.Close()
 
-	return ioutil.ReadAll(rc)
+	return io.ReadAll(rc)
 }
 
 // PutContent stores the []byte content at a location designated by "path".
@@ -97,7 +97,9 @@ func (d *driver) PutContent(ctx context.Context, p string, contents []byte) erro
 	}
 
 	f.truncate()
-	f.WriteAt(contents, 0)
+	if _, err := f.WriteAt(contents, 0); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -127,7 +129,7 @@ func (d *driver) reader(ctx context.Context, path string, offset int64) (io.Read
 		return nil, fmt.Errorf("%q is a directory", path)
 	}
 
-	return ioutil.NopCloser(found.(*file).sectionReader(offset)), nil
+	return io.NopCloser(found.(*file).sectionReader(offset)), nil
 }
 
 // Writer returns a FileWriter which will store the content written to it
@@ -190,7 +192,6 @@ func (d *driver) List(ctx context.Context, path string) ([]string, error) {
 	}
 
 	entries, err := found.(*dir).list(normalized)
-
 	if err != nil {
 		switch err {
 		case errNotExists:
@@ -238,21 +239,22 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 	}
 }
 
-// URLFor returns a URL which may be used to retrieve the content stored at the given path.
-// May return an UnsupportedMethodErr in certain StorageDriver implementations.
-func (d *driver) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
-	return "", storagedriver.ErrUnsupportedMethod{}
+// RedirectURL returns a URL which may be used to retrieve the content stored at the given path.
+func (d *driver) RedirectURL(*http.Request, string) (string, error) {
+	return "", nil
 }
 
 // Walk traverses a filesystem defined within driver, starting
 // from the given path, calling f on each file and directory
-func (d *driver) Walk(ctx context.Context, path string, f storagedriver.WalkFn) error {
-	return storagedriver.WalkFallback(ctx, d, path, f)
+func (d *driver) Walk(ctx context.Context, path string, f storagedriver.WalkFn, options ...func(*storagedriver.WalkOptions)) error {
+	return storagedriver.WalkFallback(ctx, d, path, f, options...)
 }
 
 type writer struct {
 	d         *driver
 	f         *file
+	buffer    []byte
+	buffSize  int
 	closed    bool
 	committed bool
 	cancelled bool
@@ -276,8 +278,17 @@ func (w *writer) Write(p []byte) (int, error) {
 
 	w.d.mutex.Lock()
 	defer w.d.mutex.Unlock()
+	if cap(w.buffer) < len(p)+w.buffSize {
+		data := make([]byte, len(w.buffer), len(p)+w.buffSize)
+		copy(data, w.buffer)
+		w.buffer = data
+	}
 
-	return w.f.WriteAt(p, int64(len(w.f.data)))
+	w.buffer = w.buffer[:w.buffSize+len(p)]
+	n := copy(w.buffer[w.buffSize:w.buffSize+len(p)], p)
+	w.buffSize += n
+
+	return n, nil
 }
 
 func (w *writer) Size() int64 {
@@ -292,10 +303,15 @@ func (w *writer) Close() error {
 		return fmt.Errorf("already closed")
 	}
 	w.closed = true
+
+	if err := w.flush(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (w *writer) Cancel() error {
+func (w *writer) Cancel(ctx context.Context) error {
 	if w.closed {
 		return fmt.Errorf("already closed")
 	} else if w.committed {
@@ -309,7 +325,7 @@ func (w *writer) Cancel() error {
 	return w.d.root.delete(w.f.path())
 }
 
-func (w *writer) Commit() error {
+func (w *writer) Commit(ctx context.Context) error {
 	if w.closed {
 		return fmt.Errorf("already closed")
 	} else if w.committed {
@@ -318,5 +334,23 @@ func (w *writer) Commit() error {
 		return fmt.Errorf("already cancelled")
 	}
 	w.committed = true
+
+	if err := w.flush(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (w *writer) flush() error {
+	w.d.mutex.Lock()
+	defer w.d.mutex.Unlock()
+
+	if _, err := w.f.WriteAt(w.buffer, int64(len(w.f.data))); err != nil {
+		return err
+	}
+	w.buffer = []byte{}
+	w.buffSize = 0
+
 	return nil
 }

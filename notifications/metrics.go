@@ -20,6 +20,57 @@ var (
 	statusCounter = prometheus.NotificationsNamespace.NewLabeledCounter("status", "The number of status code", "code", "endpoint")
 )
 
+// endpoints is global registry of endpoints used to report metrics to expvar
+var endpoints struct {
+	registered []*Endpoint
+	mu         sync.Mutex
+}
+
+func init() {
+	// NOTE(stevvooe): Setup registry metrics structure to report to expvar.
+	// Ideally, we do more metrics through logging but we need some nice
+	// realtime metrics for queue state for now.
+
+	registry := expvar.Get("registry")
+
+	if registry == nil {
+		registry = expvar.NewMap("registry")
+	}
+
+	var notifications expvar.Map
+	notifications.Init()
+	notifications.Set("endpoints", expvar.Func(func() interface{} {
+		endpoints.mu.Lock()
+		defer endpoints.mu.Unlock()
+
+		var names []interface{}
+		for _, v := range endpoints.registered {
+			var epjson struct {
+				Name string `json:"name"`
+				URL  string `json:"url"`
+				EndpointConfig
+
+				Metrics EndpointMetrics
+			}
+
+			epjson.Name = v.Name()
+			epjson.URL = v.URL()
+			epjson.EndpointConfig = v.EndpointConfig
+
+			v.ReadMetrics(&epjson.Metrics)
+
+			names = append(names, epjson)
+		}
+
+		return names
+	}))
+
+	registry.(*expvar.Map).Set("notifications", &notifications)
+
+	// register prometheus metrics
+	metrics.Register(prometheus.NotificationsNamespace)
+}
+
 // EndpointMetrics track various actions taken by the endpoint, typically by
 // number of events. The goal of this to export it via expvar but we may find
 // some other future solution to be better.
@@ -123,61 +174,10 @@ func (eqc *endpointMetricsEventQueueListener) egress(event events.Event) {
 	pendingGauge.WithValues(eqc.EndpointName).Dec(1)
 }
 
-// endpoints is global registry of endpoints used to report metrics to expvar
-var endpoints struct {
-	registered []*Endpoint
-	mu         sync.Mutex
-}
-
 // register places the endpoint into expvar so that stats are tracked.
 func register(e *Endpoint) {
 	endpoints.mu.Lock()
 	defer endpoints.mu.Unlock()
 
 	endpoints.registered = append(endpoints.registered, e)
-}
-
-func init() {
-	// NOTE(stevvooe): Setup registry metrics structure to report to expvar.
-	// Ideally, we do more metrics through logging but we need some nice
-	// realtime metrics for queue state for now.
-
-	registry := expvar.Get("registry")
-
-	if registry == nil {
-		registry = expvar.NewMap("registry")
-	}
-
-	var notifications expvar.Map
-	notifications.Init()
-	notifications.Set("endpoints", expvar.Func(func() interface{} {
-		endpoints.mu.Lock()
-		defer endpoints.mu.Unlock()
-
-		var names []interface{}
-		for _, v := range endpoints.registered {
-			var epjson struct {
-				Name string `json:"name"`
-				URL  string `json:"url"`
-				EndpointConfig
-
-				Metrics EndpointMetrics
-			}
-
-			epjson.Name = v.Name()
-			epjson.URL = v.URL()
-			epjson.EndpointConfig = v.EndpointConfig
-
-			v.ReadMetrics(&epjson.Metrics)
-
-			names = append(names, epjson)
-		}
-
-		return names
-	}))
-
-	registry.(*expvar.Map).Set("notifications", &notifications)
-
-	// register prometheus metrics
-	metrics.Register(prometheus.NotificationsNamespace)
 }

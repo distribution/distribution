@@ -6,11 +6,10 @@ import (
 	"fmt"
 
 	"github.com/distribution/distribution/v3"
-	dcontext "github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/distribution/distribution/v3/manifest"
 	"github.com/distribution/distribution/v3/manifest/manifestlist"
 	"github.com/distribution/distribution/v3/manifest/ocischema"
-	"github.com/distribution/distribution/v3/manifest/schema1"
 	"github.com/distribution/distribution/v3/manifest/schema2"
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -48,10 +47,10 @@ type manifestStore struct {
 
 	skipDependencyVerification bool
 
-	schema1Handler      ManifestHandler
-	schema2Handler      ManifestHandler
-	ocischemaHandler    ManifestHandler
-	manifestListHandler ManifestHandler
+	schema2Handler        ManifestHandler
+	manifestListHandler   ManifestHandler
+	ocischemaHandler      ManifestHandler
+	ocischemaIndexHandler ManifestHandler
 }
 
 var _ distribution.ManifestService = &manifestStore{}
@@ -95,8 +94,6 @@ func (ms *manifestStore) Get(ctx context.Context, dgst digest.Digest, options ..
 	}
 
 	switch versioned.SchemaVersion {
-	case 1:
-		return ms.schema1Handler.Unmarshal(ctx, dgst, content)
 	case 2:
 		// This can be an image manifest or a manifest list
 		switch versioned.MediaType {
@@ -104,14 +101,16 @@ func (ms *manifestStore) Get(ctx context.Context, dgst digest.Digest, options ..
 			return ms.schema2Handler.Unmarshal(ctx, dgst, content)
 		case v1.MediaTypeImageManifest:
 			return ms.ocischemaHandler.Unmarshal(ctx, dgst, content)
-		case manifestlist.MediaTypeManifestList, v1.MediaTypeImageIndex:
+		case manifestlist.MediaTypeManifestList:
 			return ms.manifestListHandler.Unmarshal(ctx, dgst, content)
+		case v1.MediaTypeImageIndex:
+			return ms.ocischemaIndexHandler.Unmarshal(ctx, dgst, content)
 		case "":
 			// OCI image or image index - no media type in the content
 
 			// First see if it looks like an image index
-			res, err := ms.manifestListHandler.Unmarshal(ctx, dgst, content)
-			resIndex := res.(*manifestlist.DeserializedManifestList)
+			res, err := ms.ocischemaIndexHandler.Unmarshal(ctx, dgst, content)
+			resIndex := res.(*ocischema.DeserializedImageIndex)
 			if err == nil && resIndex.Manifests != nil {
 				return resIndex, nil
 			}
@@ -130,14 +129,14 @@ func (ms *manifestStore) Put(ctx context.Context, manifest distribution.Manifest
 	dcontext.GetLogger(ms.ctx).Debug("(*manifestStore).Put")
 
 	switch manifest.(type) {
-	case *schema1.SignedManifest:
-		return ms.schema1Handler.Put(ctx, manifest, ms.skipDependencyVerification)
 	case *schema2.DeserializedManifest:
 		return ms.schema2Handler.Put(ctx, manifest, ms.skipDependencyVerification)
 	case *ocischema.DeserializedManifest:
 		return ms.ocischemaHandler.Put(ctx, manifest, ms.skipDependencyVerification)
 	case *manifestlist.DeserializedManifestList:
 		return ms.manifestListHandler.Put(ctx, manifest, ms.skipDependencyVerification)
+	case *ocischema.DeserializedImageIndex:
+		return ms.ocischemaIndexHandler.Put(ctx, manifest, ms.skipDependencyVerification)
 	}
 
 	return "", fmt.Errorf("unrecognized manifest type %T", manifest)

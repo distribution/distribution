@@ -1,0 +1,53 @@
+---
+edit_page: Modifica la pagina
+
+nav_navigation: Navigazione
+nav_tags: Etichette
+nav_more: Altro
+nav_top: Torna su
+
+form_placeholder_search: Cerca
+
+error_page_title: Perso? Non ti preoccupare
+error_message_title: Perso?
+error_message_code: Errore 404
+error_message_text: >
+  Sembra che non sia possibile trovare quello che stavi cercando. Non ti preoccupare,
+  possiamo riportarti alla <a class="gdoc-error__link" href="{{ . }}">pagina iniziale</a>.
+
+button_toggle_dark: Seleziona il tema Chiaro/Scuro/Automatico
+button_nav_open: Apri la Navigazione
+button_nav_close: Chiudi la Navigazione
+button_menu_open: Apri la Barra del Menu
+button_menu_close: Chiudi la Barra del Menu
+button_homepage: Torna alla pagina iniziale
+
+title_anchor_prefix: "Ancora a:"
+
+posts_read_more: Leggi tutto il post
+posts_read_time:
+  one: "Tempo di lettura: un minuto"
+  other: "Tempo di lettura: {{ . }} minuti"
+posts_update_prefix: Aggiornato il
+posts_count:
+  one: "Un post"
+  other: "{{ . }} post"
+posts_tagged_with: Tutti i post etichettati con '{{ . }}'
+
+footer_build_with: >
+  Realizzato con <a href="https://gohugo.io/" class="gdoc-footer__link">Hugo</a> e
+  <svg class="gdoc-icon gdoc_heart"><use xlink:href="#gdoc_heart"></use></svg>
+footer_legal_notice: Avviso Legale
+footer_privacy_policy: Politica sulla Privacy
+footer_content_license_prefix: >
+  Contenuto sotto licenza
+
+language_switch_no_tranlation_prefix: "Pagina non tradotta:"
+
+propertylist_required: richiesto
+propertylist_optional: opzionale
+propertylist_default: valore predefinito
+
+pagination_page_prev: precedente
+pagination_page_next: prossimo
+pagination_page_state: "{{ .PageNumber }}/{{ .TotalPages }}"

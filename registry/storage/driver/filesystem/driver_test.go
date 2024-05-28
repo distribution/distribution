@@ -1,40 +1,32 @@
 package filesystem
 
 import (
-	"io/ioutil"
-	"os"
 	"reflect"
 	"testing"
 
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/distribution/v3/registry/storage/driver/testsuites"
-	. "gopkg.in/check.v1"
 )
 
-// Hook up gocheck into the "go test" runner.
-func Test(t *testing.T) { TestingT(t) }
+func newDriverConstructor(tb testing.TB) testsuites.DriverConstructor {
+	root := tb.TempDir()
 
-func init() {
-	root, err := ioutil.TempDir("", "driver-")
-	if err != nil {
-		panic(err)
+	return func() (storagedriver.StorageDriver, error) {
+		return FromParameters(map[string]interface{}{
+			"rootdirectory": root,
+		})
 	}
-	defer os.Remove(root)
+}
 
-	driver, err := FromParameters(map[string]interface{}{
-		"rootdirectory": root,
-	})
-	if err != nil {
-		panic(err)
-	}
+func TestFilesystemDriverSuite(t *testing.T) {
+	testsuites.Driver(t, newDriverConstructor(t))
+}
 
-	testsuites.RegisterSuite(func() (storagedriver.StorageDriver, error) {
-		return driver, nil
-	}, testsuites.NeverSkip)
+func BenchmarkFilesystemDriverSuite(b *testing.B) {
+	testsuites.BenchDriver(b, newDriverConstructor(b))
 }
 
 func TestFromParametersImpl(t *testing.T) {
-
 	tests := []struct {
 		params   map[string]interface{} // technically the yaml can contain anything
 		expected DriverParameters
@@ -109,5 +101,4 @@ func TestFromParametersImpl(t *testing.T) {
 			t.Fatalf("unexpected params from filesystem driver. expected %+v, got %+v", item.expected, params)
 		}
 	}
-
 }

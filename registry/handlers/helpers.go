@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	dcontext "github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/internal/dcontext"
 )
 
 // closeResources closes all the provided resources after running the target
@@ -31,7 +31,7 @@ func closeResources(handler http.Handler, closers ...io.Closer) http.Handler {
 func copyFullPayload(ctx context.Context, responseWriter http.ResponseWriter, r *http.Request, destWriter io.Writer, limit int64, action string) error {
 	// Get a channel that tells us if the client disconnects
 	clientClosed := r.Context().Done()
-	var body = r.Body
+	body := r.Body
 	if limit > 0 {
 		body = http.MaxBytesReader(responseWriter, body, limit)
 	}
@@ -68,19 +68,18 @@ func copyFullPayload(ctx context.Context, responseWriter http.ResponseWriter, r 
 	return nil
 }
 
-func parseContentRange(cr string) (int64, int64, error) {
-	ranges := strings.Split(cr, "-")
-	if len(ranges) != 2 {
+func parseContentRange(cr string) (start int64, end int64, err error) {
+	rStart, rEnd, ok := strings.Cut(cr, "-")
+	if !ok {
 		return -1, -1, fmt.Errorf("invalid content range format, %s", cr)
 	}
-	start, err := strconv.ParseInt(ranges[0], 10, 64)
+	start, err = strconv.ParseInt(rStart, 10, 64)
 	if err != nil {
 		return -1, -1, err
 	}
-	end, err := strconv.ParseInt(ranges[1], 10, 64)
+	end, err = strconv.ParseInt(rEnd, 10, 64)
 	if err != nil {
 		return -1, -1, err
 	}
-
 	return start, end, nil
 }

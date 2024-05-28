@@ -4,15 +4,13 @@ import (
 	"context"
 	"time"
 
-	"github.com/distribution/distribution/v3"
-	dcontext "github.com/distribution/distribution/v3/context"
-	"github.com/distribution/distribution/v3/reference"
-	"github.com/distribution/distribution/v3/registry/proxy/scheduler"
 	"github.com/opencontainers/go-digest"
-)
 
-// todo(richardscothern): from cache control header or config
-const repositoryTTL = 24 * 7 * time.Hour
+	"github.com/distribution/distribution/v3"
+	"github.com/distribution/distribution/v3/internal/dcontext"
+	"github.com/distribution/distribution/v3/registry/proxy/scheduler"
+	"github.com/distribution/reference"
+)
 
 type proxyManifestStore struct {
 	ctx             context.Context
@@ -20,6 +18,7 @@ type proxyManifestStore struct {
 	remoteManifests distribution.ManifestService
 	repositoryName  reference.Named
 	scheduler       *scheduler.TTLExpirationScheduler
+	ttl             *time.Duration
 	authChallenger  authChallenger
 }
 
@@ -61,7 +60,7 @@ func (pms proxyManifestStore) Get(ctx context.Context, dgst digest.Digest, optio
 		return nil, err
 	}
 
-	proxyMetrics.ManifestPush(uint64(len(payload)))
+	proxyMetrics.ManifestPush(uint64(len(payload)), !fromRemote)
 	if fromRemote {
 		proxyMetrics.ManifestPull(uint64(len(payload)))
 
@@ -77,9 +76,15 @@ func (pms proxyManifestStore) Get(ctx context.Context, dgst digest.Digest, optio
 			return nil, err
 		}
 
-		pms.scheduler.AddManifest(repoBlob, repositoryTTL)
+		if pms.scheduler != nil && pms.ttl != nil {
+			if err := pms.scheduler.AddManifest(repoBlob, *pms.ttl); err != nil {
+				dcontext.GetLogger(ctx).Errorf("Error adding manifest: %s", err)
+				return nil, err
+			}
+		}
+
 		// Ensure the manifest blob is cleaned up
-		//pms.scheduler.AddBlob(blobRef, repositoryTTL)
+		// pms.scheduler.AddBlob(blobRef, repositoryTTL)
 
 	}
 

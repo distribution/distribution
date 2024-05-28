@@ -3,12 +3,16 @@ package storage
 import (
 	"context"
 	"regexp"
+	"runtime"
 
 	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/reference"
 	"github.com/distribution/distribution/v3/registry/storage/cache"
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
-	"github.com/docker/libtrust"
+	"github.com/distribution/reference"
+)
+
+var (
+	DefaultConcurrencyLimit = runtime.GOMAXPROCS(0)
 )
 
 // registry is the top-level implementation of Registry for use in the storage
@@ -19,9 +23,8 @@ type registry struct {
 	statter                      *blobStatter // global statter service.
 	blobDescriptorCacheProvider  cache.BlobDescriptorCacheProvider
 	deleteEnabled                bool
-	schema1Enabled               bool
+	tagLookupConcurrencyLimit    int
 	resumableDigestEnabled       bool
-	schema1SigningKey            libtrust.PrivateKey
 	blobDescriptorServiceFactory distribution.BlobDescriptorServiceFactory
 	manifestURLs                 manifestURLs
 	driver                       storagedriver.StorageDriver
@@ -37,23 +40,23 @@ type manifestURLs struct {
 type RegistryOption func(*registry) error
 
 // EnableRedirect is a functional option for NewRegistry. It causes the backend
-// blob server to attempt using (StorageDriver).URLFor to serve all blobs.
+// blob server to attempt using (StorageDriver).RedirectURL to serve all blobs.
 func EnableRedirect(registry *registry) error {
 	registry.blobServer.redirect = true
 	return nil
+}
+
+func TagLookupConcurrencyLimit(concurrencyLimit int) RegistryOption {
+	return func(registry *registry) error {
+		registry.tagLookupConcurrencyLimit = concurrencyLimit
+		return nil
+	}
 }
 
 // EnableDelete is a functional option for NewRegistry. It enables deletion on
 // the registry.
 func EnableDelete(registry *registry) error {
 	registry.deleteEnabled = true
-	return nil
-}
-
-// EnableSchema1 is a functional option for NewRegistry. It enables pushing of
-// schema1 manifests.
-func EnableSchema1(registry *registry) error {
-	registry.schema1Enabled = true
 	return nil
 }
 
@@ -76,15 +79,6 @@ func ManifestURLsAllowRegexp(r *regexp.Regexp) RegistryOption {
 func ManifestURLsDenyRegexp(r *regexp.Regexp) RegistryOption {
 	return func(registry *registry) error {
 		registry.manifestURLs.deny = r
-		return nil
-	}
-}
-
-// Schema1SigningKey returns a functional option for NewRegistry. It sets the
-// key for signing  all schema1 manifests.
-func Schema1SigningKey(key libtrust.PrivateKey) RegistryOption {
-	return func(registry *registry) error {
-		registry.schema1SigningKey = key
 		return nil
 	}
 }
@@ -121,7 +115,7 @@ func BlobDescriptorCacheProvider(blobDescriptorCacheProvider cache.BlobDescripto
 // NewRegistry creates a new registry instance from the provided driver. The
 // resulting registry may be shared by multiple goroutines but is cheap to
 // allocate. If the Redirect option is specified, the backend blob server will
-// attempt to use (StorageDriver).URLFor to serve all blobs.
+// attempt to use (StorageDriver).RedirectURL to serve all blobs.
 func NewRegistry(ctx context.Context, driver storagedriver.StorageDriver, options ...RegistryOption) (distribution.Namespace, error) {
 	// create global statter
 	statter := &blobStatter{
@@ -203,9 +197,14 @@ func (repo *repository) Named() reference.Named {
 }
 
 func (repo *repository) Tags(ctx context.Context) distribution.TagService {
+	limit := DefaultConcurrencyLimit
+	if repo.tagLookupConcurrencyLimit > 0 {
+		limit = repo.tagLookupConcurrencyLimit
+	}
 	tags := &tagStore{
-		repository: repo,
-		blobStore:  repo.registry.blobStore,
+		repository:       repo,
+		blobStore:        repo.registry.blobStore,
+		concurrencyLimit: limit,
 	}
 
 	return tags
@@ -215,19 +214,12 @@ func (repo *repository) Tags(ctx context.Context) distribution.TagService {
 // may be context sensitive in the future. The instance should be used similar
 // to a request local.
 func (repo *repository) Manifests(ctx context.Context, options ...distribution.ManifestServiceOption) (distribution.ManifestService, error) {
-	manifestLinkPathFns := []linkPathFunc{
-		// NOTE(stevvooe): Need to search through multiple locations since
-		// 2.1.0 unintentionally linked into  _layers.
-		manifestRevisionLinkPath,
-		blobLinkPath,
-	}
-
 	manifestDirectoryPathSpec := manifestRevisionsPathSpec{name: repo.name.Name()}
 
 	var statter distribution.BlobDescriptorService = &linkedBlobStatter{
-		blobStore:   repo.blobStore,
-		repository:  repo,
-		linkPathFns: manifestLinkPathFns,
+		blobStore:  repo.blobStore,
+		repository: repo,
+		linkPath:   manifestRevisionLinkPath,
 	}
 
 	if repo.registry.blobDescriptorServiceFactory != nil {
@@ -243,50 +235,35 @@ func (repo *repository) Manifests(ctx context.Context, options ...distribution.M
 
 		// TODO(stevvooe): linkPath limits this blob store to only
 		// manifests. This instance cannot be used for blob checks.
-		linkPathFns:           manifestLinkPathFns,
+		linkPath:              manifestRevisionLinkPath,
 		linkDirectoryPathSpec: manifestDirectoryPathSpec,
 	}
 
-	var v1Handler ManifestHandler
-	if repo.schema1Enabled {
-		v1Handler = &signedManifestHandler{
-			ctx:               ctx,
-			schema1SigningKey: repo.schema1SigningKey,
-			repository:        repo,
-			blobStore:         blobStore,
-		}
-	} else {
-		v1Handler = &v1UnsupportedHandler{
-			innerHandler: &signedManifestHandler{
-				ctx:               ctx,
-				schema1SigningKey: repo.schema1SigningKey,
-				repository:        repo,
-				blobStore:         blobStore,
-			},
-		}
+	manifestListHandler := &manifestListHandler{
+		ctx:        ctx,
+		repository: repo,
+		blobStore:  blobStore,
 	}
 
 	ms := &manifestStore{
-		ctx:            ctx,
-		repository:     repo,
-		blobStore:      blobStore,
-		schema1Handler: v1Handler,
+		ctx:        ctx,
+		repository: repo,
+		blobStore:  blobStore,
 		schema2Handler: &schema2ManifestHandler{
 			ctx:          ctx,
 			repository:   repo,
 			blobStore:    blobStore,
 			manifestURLs: repo.registry.manifestURLs,
 		},
-		manifestListHandler: &manifestListHandler{
-			ctx:        ctx,
-			repository: repo,
-			blobStore:  blobStore,
-		},
+		manifestListHandler: manifestListHandler,
 		ocischemaHandler: &ocischemaManifestHandler{
 			ctx:          ctx,
 			repository:   repo,
 			blobStore:    blobStore,
 			manifestURLs: repo.registry.manifestURLs,
+		},
+		ocischemaIndexHandler: &ocischemaIndexHandler{
+			manifestListHandler: manifestListHandler,
 		},
 	}
 
@@ -306,9 +283,9 @@ func (repo *repository) Manifests(ctx context.Context, options ...distribution.M
 // to a request local.
 func (repo *repository) Blobs(ctx context.Context) distribution.BlobStore {
 	var statter distribution.BlobDescriptorService = &linkedBlobStatter{
-		blobStore:   repo.blobStore,
-		repository:  repo,
-		linkPathFns: []linkPathFunc{blobLinkPath},
+		blobStore:  repo.blobStore,
+		repository: repo,
+		linkPath:   blobLinkPath,
 	}
 
 	if repo.descriptorCache != nil {
@@ -329,7 +306,7 @@ func (repo *repository) Blobs(ctx context.Context) distribution.BlobStore {
 
 		// TODO(stevvooe): linkPath limits this blob store to only layers.
 		// This instance cannot be used for manifest checks.
-		linkPathFns:            []linkPathFunc{blobLinkPath},
+		linkPath:               blobLinkPath,
 		linkDirectoryPathSpec:  layersPathSpec{name: repo.name.Name()},
 		deleteEnabled:          repo.registry.deleteEnabled,
 		resumableDigestEnabled: repo.resumableDigestEnabled,

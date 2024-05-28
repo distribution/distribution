@@ -1,0 +1,53 @@
+---
+edit_page: Edit page
+
+nav_navigation: Navigation
+nav_tags: Tags
+nav_more: More
+nav_top: Back to top
+
+form_placeholder_search: Search
+
+error_page_title: Lost? Don't worry
+error_message_title: Lost?
+error_message_code: Error 404
+error_message_text: >
+  Seems like what you are looking for can't be found. Don't worry, we can
+  bring you back to the <a class="gdoc-error__link" href="{{ . }}">homepage</a>.
+
+button_toggle_dark: Toggle Dark/Light/Auto mode
+button_nav_open: Open Navigation
+button_nav_close: Close Navigation
+button_menu_open: Open Menu Bar
+button_menu_close: Close Menu Bar
+button_homepage: Back to homepage
+
+title_anchor_prefix: "Anchor to:"
+
+posts_read_more: Read full post
+posts_read_time:
+  one: "One minute to read"
+  other: "{{ . }} minutes to read"
+posts_update_prefix: Updated on
+posts_count:
+  one: "One post"
+  other: "{{ . }} posts"
+posts_tagged_with: All posts tagged with '{{ . }}'
+
+footer_build_with: >
+  Built with <a href="https://gohugo.io/" class="gdoc-footer__link">Hugo</a> and
+  <svg class="gdoc-icon gdoc_heart"><use xlink:href="#gdoc_heart"></use></svg>
+footer_legal_notice: Legal Notice
+footer_privacy_policy: Privacy Policy
+footer_content_license_prefix: >
+  Content licensed under
+
+language_switch_no_tranlation_prefix: "Page not translated:"
+
+propertylist_required: required
+propertylist_optional: optional
+propertylist_default: default
+
+pagination_page_prev: prev
+pagination_page_next: next
+pagination_page_state: "{{ .PageNumber }}/{{ .TotalPages }}"

@@ -1,8 +1,15 @@
 name: conformance
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   pull_request:
   push:
+
+permissions:
+  contents: read # to fetch code (actions/checkout)
 
 jobs:
   run-conformance-test:
@@ -10,12 +17,12 @@ jobs:
     steps:
       -
         name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       -
         name: Build image
-        uses: docker/bake-action@v1
+        uses: docker/bake-action@v4
         with:
           targets: image-local
       -
@@ -28,7 +35,7 @@ jobs:
           docker run --rm -p 5000:5000 -e REGISTRY_STORAGE_DELETE_ENABLED=true -idt "registry:local"
       -
         name: Run OCI Distribution Spec conformance tests
-        uses: opencontainers/distribution-spec@main
+        uses: opencontainers/distribution-spec@v1.0.1
         env:
           OCI_ROOT_URL: ${{ env.OCI_ROOT_URL }}
           OCI_NAMESPACE: oci-conformance/distribution-test
@@ -42,7 +49,7 @@ jobs:
         run: mkdir -p .out/ && mv {report.html,junit.xml} .out/
       -
         name: Upload test results
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4.3.0
         with:
           name: oci-test-results-${{ github.sha }}
           path: .out/

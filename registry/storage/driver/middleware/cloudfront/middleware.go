@@ -1,6 +1,5 @@
 // Package middleware - cloudfront wrapper for storage libs
 // N.B. currently only works with S3, not arbitrary sites
-//
 package middleware
 
 import (
@@ -8,16 +7,25 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
+	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/service/cloudfront/sign"
-	dcontext "github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/internal/dcontext"
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	storagemiddleware "github.com/distribution/distribution/v3/registry/storage/driver/middleware"
+	"github.com/sirupsen/logrus"
 )
+
+// init registers the cloudfront layerHandler backend.
+func init() {
+	if err := storagemiddleware.Register("cloudfront", newCloudFrontStorageMiddleware); err != nil {
+		logrus.Errorf("failed to register cloudfront middleware: %v", err)
+	}
+}
 
 // cloudFrontStorageMiddleware provides a simple implementation of layerHandler that
 // constructs temporary signed CloudFront URLs from the storagedriver layer URL,
@@ -34,13 +42,22 @@ var _ storagedriver.StorageDriver = &cloudFrontStorageMiddleware{}
 
 // newCloudFrontLayerHandler constructs and returns a new CloudFront
 // LayerHandler implementation.
-// Required options: baseurl, privatekey, keypairid
-
-// Optional options: ipFilteredBy, awsregion
-// ipfilteredby: valid value "none|aws|awsregion". "none", do not filter any IP, default value. "aws", only aws IP goes
-//               to S3 directly. "awsregion", only regions listed in awsregion options goes to S3 directly
-// awsregion: a comma separated string of AWS regions.
-func newCloudFrontStorageMiddleware(storageDriver storagedriver.StorageDriver, options map[string]interface{}) (storagedriver.StorageDriver, error) {
+//
+// Required options:
+//
+//   - baseurl
+//   - privatekey
+//   - keypairid
+//
+// Optional options:
+//
+//   - ipFilteredBy
+//   - awsregion
+//   - ipfilteredby: valid value "none|aws|awsregion". "none", do not filter any IP,
+//     default value. "aws", only aws IP goes to S3 directly. "awsregion", only
+//     regions listed in awsregion options goes to S3 directly
+//   - awsregion: a comma separated string of AWS regions.
+func newCloudFrontStorageMiddleware(ctx context.Context, storageDriver storagedriver.StorageDriver, options map[string]interface{}) (storagedriver.StorageDriver, error) {
 	// parse baseurl
 	base, ok := options["baseurl"]
 	if !ok {
@@ -81,7 +98,7 @@ func newCloudFrontStorageMiddleware(storageDriver storagedriver.StorageDriver, o
 	}
 
 	// get urlSigner from the file specified in pkPath
-	pkBytes, err := ioutil.ReadFile(pkPath)
+	pkBytes, err := os.ReadFile(pkPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read privatekey file: %s", err)
 	}
@@ -149,7 +166,10 @@ func newCloudFrontStorageMiddleware(storageDriver storagedriver.StorageDriver, o
 			case "", "none":
 				awsIPs = nil
 			case "aws":
-				awsIPs = newAWSIPs(ipRangesURL, updateFrequency, nil)
+				awsIPs, err = newAWSIPs(ctx, ipRangesURL, updateFrequency, nil)
+				if err != nil {
+					return nil, err
+				}
 			case "awsregion":
 				var awsRegion []string
 				if i, ok := options["awsregion"]; ok {
@@ -157,7 +177,10 @@ func newCloudFrontStorageMiddleware(storageDriver storagedriver.StorageDriver, o
 						for _, awsRegions := range strings.Split(regions, ",") {
 							awsRegion = append(awsRegion, strings.ToLower(strings.TrimSpace(awsRegions)))
 						}
-						awsIPs = newAWSIPs(ipRangesURL, updateFrequency, awsRegion)
+						awsIPs, err = newAWSIPs(ctx, ipRangesURL, updateFrequency, awsRegion)
+						if err != nil {
+							return nil, err
+						}
 					} else {
 						return nil, fmt.Errorf("awsRegion must be a comma separated string of valid aws regions")
 					}
@@ -187,18 +210,18 @@ type S3BucketKeyer interface {
 	S3BucketKey(path string) string
 }
 
-// URLFor attempts to find a url which may be used to retrieve the file at the given path.
+// RedirectURL attempts to find a url which may be used to retrieve the file at the given path.
 // Returns an error if the file cannot be found.
-func (lh *cloudFrontStorageMiddleware) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
+func (lh *cloudFrontStorageMiddleware) RedirectURL(r *http.Request, path string) (string, error) {
 	// TODO(endophage): currently only supports S3
 	keyer, ok := lh.StorageDriver.(S3BucketKeyer)
 	if !ok {
-		dcontext.GetLogger(ctx).Warn("the CloudFront middleware does not support this backend storage driver")
-		return lh.StorageDriver.URLFor(ctx, path, options)
+		dcontext.GetLogger(r.Context()).Warn("the CloudFront middleware does not support this backend storage driver")
+		return lh.StorageDriver.RedirectURL(r, path)
 	}
 
-	if eligibleForS3(ctx, lh.awsIPs) {
-		return lh.StorageDriver.URLFor(ctx, path, options)
+	if eligibleForS3(r, lh.awsIPs) {
+		return lh.StorageDriver.RedirectURL(r, path)
 	}
 
 	// Get signed cloudfront url.
@@ -207,9 +230,4 @@ func (lh *cloudFrontStorageMiddleware) URLFor(ctx context.Context, path string, 
 		return "", err
 	}
 	return cfURL, nil
-}
-
-// init registers the cloudfront layerHandler backend.
-func init() {
-	storagemiddleware.Register("cloudfront", storagemiddleware.InitFunc(newCloudFrontStorageMiddleware))
 }

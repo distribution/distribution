@@ -4,9 +4,8 @@ import (
 	"net/http"
 
 	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/distribution/distribution/v3/registry/api/errcode"
-	v2 "github.com/distribution/distribution/v3/registry/api/v2"
 	"github.com/gorilla/handlers"
 	"github.com/opencontainers/go-digest"
 )
@@ -18,12 +17,12 @@ func blobDispatcher(ctx *Context, r *http.Request) http.Handler {
 
 		if err == errDigestNotAvailable {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				ctx.Errors = append(ctx.Errors, v2.ErrorCodeDigestInvalid.WithDetail(err))
+				ctx.Errors = append(ctx.Errors, errcode.ErrorCodeDigestInvalid.WithDetail(err))
 			})
 		}
 
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx.Errors = append(ctx.Errors, v2.ErrorCodeDigestInvalid.WithDetail(err))
+			ctx.Errors = append(ctx.Errors, errcode.ErrorCodeDigestInvalid.WithDetail(err))
 		})
 	}
 
@@ -33,12 +32,12 @@ func blobDispatcher(ctx *Context, r *http.Request) http.Handler {
 	}
 
 	mhandler := handlers.MethodHandler{
-		"GET":  http.HandlerFunc(blobHandler.GetBlob),
-		"HEAD": http.HandlerFunc(blobHandler.GetBlob),
+		http.MethodGet:  http.HandlerFunc(blobHandler.GetBlob),
+		http.MethodHead: http.HandlerFunc(blobHandler.GetBlob),
 	}
 
 	if !ctx.readOnly {
-		mhandler["DELETE"] = http.HandlerFunc(blobHandler.DeleteBlob)
+		mhandler[http.MethodDelete] = http.HandlerFunc(blobHandler.DeleteBlob)
 	}
 
 	return mhandler
@@ -54,12 +53,12 @@ type blobHandler struct {
 // GetBlob fetches the binary data from backend storage returns it in the
 // response.
 func (bh *blobHandler) GetBlob(w http.ResponseWriter, r *http.Request) {
-	context.GetLogger(bh).Debug("GetBlob")
+	dcontext.GetLogger(bh).Debug("GetBlob")
 	blobs := bh.Repository.Blobs(bh)
 	desc, err := blobs.Stat(bh, bh.Digest)
 	if err != nil {
 		if err == distribution.ErrBlobUnknown {
-			bh.Errors = append(bh.Errors, v2.ErrorCodeBlobUnknown.WithDetail(bh.Digest))
+			bh.Errors = append(bh.Errors, errcode.ErrorCodeBlobUnknown.WithDetail(bh.Digest))
 		} else {
 			bh.Errors = append(bh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 		}
@@ -67,7 +66,7 @@ func (bh *blobHandler) GetBlob(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := blobs.ServeBlob(bh, w, r, desc.Digest); err != nil {
-		context.GetLogger(bh).Debugf("unexpected error getting blob HTTP handler: %v", err)
+		dcontext.GetLogger(bh).Debugf("unexpected error getting blob HTTP handler: %v", err)
 		bh.Errors = append(bh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 		return
 	}
@@ -75,7 +74,7 @@ func (bh *blobHandler) GetBlob(w http.ResponseWriter, r *http.Request) {
 
 // DeleteBlob deletes a layer blob
 func (bh *blobHandler) DeleteBlob(w http.ResponseWriter, r *http.Request) {
-	context.GetLogger(bh).Debug("DeleteBlob")
+	dcontext.GetLogger(bh).Debug("DeleteBlob")
 
 	blobs := bh.Repository.Blobs(bh)
 	err := blobs.Delete(bh, bh.Digest)
@@ -85,11 +84,11 @@ func (bh *blobHandler) DeleteBlob(w http.ResponseWriter, r *http.Request) {
 			bh.Errors = append(bh.Errors, errcode.ErrorCodeUnsupported)
 			return
 		case distribution.ErrBlobUnknown:
-			bh.Errors = append(bh.Errors, v2.ErrorCodeBlobUnknown)
+			bh.Errors = append(bh.Errors, errcode.ErrorCodeBlobUnknown)
 			return
 		default:
 			bh.Errors = append(bh.Errors, err)
-			context.GetLogger(bh).Errorf("Unknown error deleting blob: %s", err.Error())
+			dcontext.GetLogger(bh).Errorf("Unknown error deleting blob: %s", err.Error())
 			return
 		}
 	}

@@ -4,13 +4,14 @@ import (
 	"testing"
 
 	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/manifest/schema1"
-	"github.com/distribution/distribution/v3/reference"
+	"github.com/distribution/distribution/v3/manifest"
+	"github.com/distribution/distribution/v3/manifest/schema2"
 	v2 "github.com/distribution/distribution/v3/registry/api/v2"
-	"github.com/distribution/distribution/v3/uuid"
+	"github.com/distribution/reference"
 	events "github.com/docker/go-events"
-	"github.com/docker/libtrust"
+	"github.com/google/uuid"
 	"github.com/opencontainers/go-digest"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 var (
@@ -19,29 +20,24 @@ var (
 	repo   = "test/repo"
 	source = SourceRecord{
 		Addr:       "remote.test",
-		InstanceID: uuid.Generate().String(),
+		InstanceID: uuid.NewString(),
 	}
 	ub = mustUB(v2.NewURLBuilderFromString("http://test.example.com/", false))
 
 	actor = ActorRecord{
 		Name: "test",
 	}
-	request = RequestRecord{}
-	layers  = []schema1.FSLayer{
-		{
-			BlobSum: "asdf",
-		},
-		{
-			BlobSum: "qwer",
-		},
-	}
-	m = schema1.Manifest{
-		Name:     repo,
-		Tag:      "latest",
-		FSLayers: layers,
+	request      = RequestRecord{}
+	tag          = "latest"
+	ociMediaType = v1.MediaTypeImageManifest
+	artifactType = "application/vnd.example.sbom.v1"
+	cfg          = distribution.Descriptor{
+		MediaType: artifactType,
+		Size:      100,
+		Digest:    "cfgdgst",
 	}
 
-	sm      *schema1.SignedManifest
+	sm      *schema2.DeserializedManifest
 	payload []byte
 	dgst    digest.Digest
 )
@@ -83,7 +79,7 @@ func TestEventBridgeManifestPushedWithTag(t *testing.T) {
 	}))
 
 	repoRef, _ := reference.WithName(repo)
-	if err := l.ManifestPushed(repoRef, sm, distribution.WithTag(m.Tag)); err != nil {
+	if err := l.ManifestPushed(repoRef, sm, distribution.WithTag(tag)); err != nil {
 		t.Fatalf("unexpected error notifying manifest pull: %v", err)
 	}
 }
@@ -99,7 +95,7 @@ func TestEventBridgeManifestPulledWithTag(t *testing.T) {
 	}))
 
 	repoRef, _ := reference.WithName(repo)
-	if err := l.ManifestPulled(repoRef, sm, distribution.WithTag(m.Tag)); err != nil {
+	if err := l.ManifestPulled(repoRef, sm, distribution.WithTag(tag)); err != nil {
 		t.Fatalf("unexpected error notifying manifest pull: %v", err)
 	}
 }
@@ -122,14 +118,14 @@ func TestEventBridgeManifestDeleted(t *testing.T) {
 func TestEventBridgeTagDeleted(t *testing.T) {
 	l := createTestEnv(t, testSinkFn(func(event events.Event) error {
 		checkDeleted(t, EventActionDelete, event)
-		if event.(Event).Target.Tag != m.Tag {
-			t.Fatalf("unexpected tag on event target: %q != %q", event.(Event).Target.Tag, m.Tag)
+		if event.(Event).Target.Tag != tag {
+			t.Fatalf("unexpected tag on event target: %q != %q", event.(Event).Target.Tag, tag)
 		}
 		return nil
 	}))
 
 	repoRef, _ := reference.WithName(repo)
-	if err := l.TagDeleted(repoRef, m.Tag); err != nil {
+	if err := l.TagDeleted(repoRef, tag); err != nil {
 		t.Fatalf("unexpected error notifying tag deletion: %v", err)
 	}
 }
@@ -147,18 +143,21 @@ func TestEventBridgeRepoDeleted(t *testing.T) {
 }
 
 func createTestEnv(t *testing.T, fn testSinkFn) Listener {
-	pk, err := libtrust.GenerateECP256PrivateKey()
-	if err != nil {
-		t.Fatalf("error generating private key: %v", err)
+	manifest := schema2.Manifest{
+		Versioned: manifest.Versioned{
+			MediaType: ociMediaType,
+		},
+		Config: cfg,
 	}
 
-	sm, err = schema1.Sign(&m, pk)
+	deserializedManifest, err := schema2.FromStruct(manifest)
 	if err != nil {
-		t.Fatalf("error signing manifest: %v", err)
+		t.Fatalf("creating OCI manifest: %v", err)
 	}
 
-	payload = sm.Canonical
+	_, payload, _ = deserializedManifest.Payload()
 	dgst = digest.FromBytes(payload)
+	sm = deserializedManifest
 
 	return NewBridge(ub, source, actor, request, fn, true)
 }
@@ -198,15 +197,6 @@ func checkCommonManifest(t *testing.T, action string, event events.Event) {
 	if event.(Event).Target.URL != u {
 		t.Fatalf("incorrect url passed: \n%q != \n%q", event.(Event).Target.URL, u)
 	}
-
-	if len(event.(Event).Target.References) != len(layers) {
-		t.Fatalf("unexpected number of references %v != %v", len(event.(Event).Target.References), len(layers))
-	}
-	for i, targetReference := range event.(Event).Target.References {
-		if targetReference.Digest != layers[i].BlobSum {
-			t.Fatalf("unexpected reference: %q != %q", targetReference.Digest, layers[i].BlobSum)
-		}
-	}
 }
 
 func checkCommon(t *testing.T, event events.Event) {
@@ -233,7 +223,6 @@ func checkCommon(t *testing.T, event events.Event) {
 	if event.(Event).Target.Repository != repo {
 		t.Fatalf("unexpected repository: %q != %q", event.(Event).Target.Repository, repo)
 	}
-
 }
 
 type testSinkFn func(event events.Event) error

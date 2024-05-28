@@ -2,10 +2,11 @@ package s3
 
 import (
 	"bytes"
+	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"math/rand"
+	"net/http"
 	"os"
 	"path"
 	"reflect"
@@ -14,45 +15,39 @@ import (
 	"strings"
 	"testing"
 
-	"gopkg.in/check.v1"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
-
-	"github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/internal/dcontext"
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/distribution/v3/registry/storage/driver/testsuites"
 )
 
-// Hook up gocheck into the "go test" runner.
-func Test(t *testing.T) { check.TestingT(t) }
-
-var s3DriverConstructor func(rootDirectory, storageClass string) (*Driver, error)
-var skipS3 func() string
+var (
+	s3DriverConstructor func(rootDirectory, storageClass string) (*Driver, error)
+	skipCheck           func(tb testing.TB)
+)
 
 func init() {
-	accessKey := os.Getenv("AWS_ACCESS_KEY")
-	secretKey := os.Getenv("AWS_SECRET_KEY")
-	bucket := os.Getenv("S3_BUCKET")
-	encrypt := os.Getenv("S3_ENCRYPT")
-	keyID := os.Getenv("S3_KEY_ID")
-	secure := os.Getenv("S3_SECURE")
-	skipVerify := os.Getenv("S3_SKIP_VERIFY")
-	v4Auth := os.Getenv("S3_V4_AUTH")
-	region := os.Getenv("AWS_REGION")
-	objectACL := os.Getenv("S3_OBJECT_ACL")
-	root, err := ioutil.TempDir("", "driver-")
-	regionEndpoint := os.Getenv("REGION_ENDPOINT")
-	forcePathStyle := os.Getenv("AWS_S3_FORCE_PATH_STYLE")
-	sessionToken := os.Getenv("AWS_SESSION_TOKEN")
-	useDualStack := os.Getenv("S3_USE_DUALSTACK")
-	combineSmallPart := os.Getenv("MULTIPART_COMBINE_SMALL_PART")
-	accelerate := os.Getenv("S3_ACCELERATE")
-	if err != nil {
-		panic(err)
-	}
-	defer os.Remove(root)
+	var (
+		accessKey      = os.Getenv("AWS_ACCESS_KEY")
+		secretKey      = os.Getenv("AWS_SECRET_KEY")
+		bucket         = os.Getenv("S3_BUCKET")
+		encrypt        = os.Getenv("S3_ENCRYPT")
+		keyID          = os.Getenv("S3_KEY_ID")
+		secure         = os.Getenv("S3_SECURE")
+		skipVerify     = os.Getenv("S3_SKIP_VERIFY")
+		v4Auth         = os.Getenv("S3_V4_AUTH")
+		region         = os.Getenv("AWS_REGION")
+		objectACL      = os.Getenv("S3_OBJECT_ACL")
+		regionEndpoint = os.Getenv("REGION_ENDPOINT")
+		forcePathStyle = os.Getenv("AWS_S3_FORCE_PATH_STYLE")
+		sessionToken   = os.Getenv("AWS_SESSION_TOKEN")
+		useDualStack   = os.Getenv("S3_USE_DUALSTACK")
+		accelerate     = os.Getenv("S3_ACCELERATE")
+		logLevel       = os.Getenv("S3_LOGLEVEL")
+	)
 
+	var err error
 	s3DriverConstructor = func(rootDirectory, storageClass string) (*Driver, error) {
 		encryptBool := false
 		if encrypt != "" {
@@ -85,7 +80,7 @@ func init() {
 				return nil, err
 			}
 		}
-		forcePathStyleBool := true
+		forcePathStyleBool := false
 		if forcePathStyle != "" {
 			forcePathStyleBool, err = strconv.ParseBool(forcePathStyle)
 			if err != nil {
@@ -96,14 +91,6 @@ func init() {
 		useDualStackBool := false
 		if useDualStack != "" {
 			useDualStackBool, err = strconv.ParseBool(useDualStack)
-		}
-
-		multipartCombineSmallPart := true
-		if combineSmallPart != "" {
-			multipartCombineSmallPart, err = strconv.ParseBool(combineSmallPart)
-			if err != nil {
-				return nil, err
-			}
 		}
 
 		accelerateBool := true
@@ -130,7 +117,6 @@ func init() {
 			defaultMultipartCopyChunkSize,
 			defaultMultipartCopyMaxConcurrency,
 			defaultMultipartCopyThresholdSize,
-			multipartCombineSmallPart,
 			rootDirectory,
 			storageClass,
 			driverName + "-test",
@@ -138,35 +124,44 @@ func init() {
 			sessionToken,
 			useDualStackBool,
 			accelerateBool,
+			getS3LogLevelFromParam(logLevel),
 		}
 
-		return New(parameters)
+		return New(context.Background(), parameters)
 	}
 
 	// Skip S3 storage driver tests if environment variable parameters are not provided
-	skipS3 = func() string {
-		if accessKey == "" || secretKey == "" || region == "" || bucket == "" || encrypt == "" {
-			return "Must set AWS_ACCESS_KEY, AWS_SECRET_KEY, AWS_REGION, S3_BUCKET, and S3_ENCRYPT to run S3 tests"
-		}
-		return ""
-	}
+	skipCheck = func(tb testing.TB) {
+		tb.Helper()
 
-	testsuites.RegisterSuite(func() (storagedriver.StorageDriver, error) {
+		if accessKey == "" || secretKey == "" || region == "" || bucket == "" || encrypt == "" {
+			tb.Skip("Must set AWS_ACCESS_KEY, AWS_SECRET_KEY, AWS_REGION, S3_BUCKET, and S3_ENCRYPT to run S3 tests")
+		}
+	}
+}
+
+func newDriverConstructor(tb testing.TB) testsuites.DriverConstructor {
+	root := tb.TempDir()
+
+	return func() (storagedriver.StorageDriver, error) {
 		return s3DriverConstructor(root, s3.StorageClassStandard)
-	}, skipS3)
+	}
+}
+
+func TestS3DriverSuite(t *testing.T) {
+	skipCheck(t)
+	testsuites.Driver(t, newDriverConstructor(t))
+}
+
+func BenchmarkS3DriverSuite(b *testing.B) {
+	skipCheck(b)
+	testsuites.BenchDriver(b, newDriverConstructor(b))
 }
 
 func TestEmptyRootList(t *testing.T) {
-	if skipS3() != "" {
-		t.Skip(skipS3())
-	}
+	skipCheck(t)
 
-	validRoot, err := ioutil.TempDir("", "driver-")
-	if err != nil {
-		t.Fatalf("unexpected error creating temporary directory: %v", err)
-	}
-	defer os.Remove(validRoot)
-
+	validRoot := t.TempDir()
 	rootedDriver, err := s3DriverConstructor(validRoot, s3.StorageClassStandard)
 	if err != nil {
 		t.Fatalf("unexpected error creating rooted driver: %v", err)
@@ -184,11 +179,12 @@ func TestEmptyRootList(t *testing.T) {
 
 	filename := "/test"
 	contents := []byte("contents")
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	err = rootedDriver.PutContent(ctx, filename, contents)
 	if err != nil {
 		t.Fatalf("unexpected error creating content: %v", err)
 	}
+	// nolint:errcheck
 	defer rootedDriver.Delete(ctx, filename)
 
 	keys, _ := emptyRootDriver.List(ctx, "/")
@@ -199,70 +195,90 @@ func TestEmptyRootList(t *testing.T) {
 	}
 
 	keys, _ = slashRootDriver.List(ctx, "/")
-	for _, path := range keys {
-		if !storagedriver.PathRegexp.MatchString(path) {
-			t.Fatalf("unexpected string in path: %q != %q", path, storagedriver.PathRegexp)
+	for _, p := range keys {
+		if !storagedriver.PathRegexp.MatchString(p) {
+			t.Fatalf("unexpected string in path: %q != %q", p, storagedriver.PathRegexp)
 		}
 	}
 }
 
-// TestWalkEmptySubDirectory assures we list an empty sub directory only once when walking
-// through its parent directory.
-func TestWalkEmptySubDirectory(t *testing.T) {
-	if skipS3() != "" {
-		t.Skip(skipS3())
+func TestClientTransport(t *testing.T) {
+	skipCheck(t)
+
+	testCases := []struct {
+		skipverify bool
+	}{
+		{true},
+		{false},
 	}
 
-	drv, err := s3DriverConstructor("", s3.StorageClassStandard)
-	if err != nil {
-		t.Fatalf("unexpected error creating rooted driver: %v", err)
-	}
+	for _, tc := range testCases {
+		// NOTE(milosgajdos): we cannot simply reuse s3DriverConstructor
+		// because s3DriverConstructor is initialized in init() using the process
+		// env vars: we can not override S3_SKIP_VERIFY env var with t.Setenv
+		params := map[string]interface{}{
+			"region":     os.Getenv("AWS_REGION"),
+			"bucket":     os.Getenv("S3_BUCKET"),
+			"skipverify": tc.skipverify,
+		}
+		t.Run(fmt.Sprintf("SkipVerify %v", tc.skipverify), func(t *testing.T) {
+			drv, err := FromParameters(context.TODO(), params)
+			if err != nil {
+				t.Fatalf("failed to create driver: %v", err)
+			}
 
-	// create an empty sub directory.
-	s3driver := drv.StorageDriver.(*driver)
-	if _, err := s3driver.S3.PutObject(&s3.PutObjectInput{
-		Bucket: aws.String(os.Getenv("S3_BUCKET")),
-		Key:    aws.String("/testdir/emptydir/"),
-	}); err != nil {
-		t.Fatalf("error creating empty directory: %s", err)
-	}
-
-	bucketFiles := []string{}
-	s3driver.Walk(context.Background(), "/testdir", func(fileInfo storagedriver.FileInfo) error {
-		bucketFiles = append(bucketFiles, fileInfo.Path())
-		return nil
-	})
-
-	expected := []string{"/testdir/emptydir"}
-	if !reflect.DeepEqual(bucketFiles, expected) {
-		t.Errorf("expecting files %+v, found %+v instead", expected, bucketFiles)
+			s3drv := drv.baseEmbed.Base.StorageDriver.(*driver)
+			if tc.skipverify {
+				tr, ok := s3drv.S3.Client.Config.HTTPClient.Transport.(*http.Transport)
+				if !ok {
+					t.Fatal("unexpected driver transport")
+				}
+				if !tr.TLSClientConfig.InsecureSkipVerify {
+					t.Errorf("unexpected TLS Config. Expected InsecureSkipVerify: %v, got %v",
+						tc.skipverify,
+						tr.TLSClientConfig.InsecureSkipVerify)
+				}
+				// make sure the proxy is always set
+				if tr.Proxy == nil {
+					t.Fatal("missing HTTP transport proxy config")
+				}
+				return
+			}
+			// if tc.skipverify is false we do not override the driver
+			// HTTP client transport and leave it to the AWS SDK.
+			if s3drv.S3.Client.Config.HTTPClient.Transport != nil {
+				t.Errorf("unexpected S3 driver client transport")
+			}
+		})
 	}
 }
 
 func TestStorageClass(t *testing.T) {
-	if skipS3() != "" {
-		t.Skip(skipS3())
-	}
+	skipCheck(t)
 
-	rootDir, err := ioutil.TempDir("", "driver-")
-	if err != nil {
-		t.Fatalf("unexpected error creating temporary directory: %v", err)
-	}
-	defer os.Remove(rootDir)
-
+	rootDir := t.TempDir()
 	contents := []byte("contents")
-	ctx := context.Background()
-	for _, storageClass := range s3StorageClasses {
+	ctx := dcontext.Background()
+
+	// We don't need to test all the storage classes, just that its selectable.
+	// The first 3 are common to AWS and MinIO, so use those.
+	for _, storageClass := range s3StorageClasses[:3] {
 		filename := "/test-" + storageClass
 		s3Driver, err := s3DriverConstructor(rootDir, storageClass)
 		if err != nil {
 			t.Fatalf("unexpected error creating driver with storage class %v: %v", storageClass, err)
 		}
 
+		// Can only test outposts if using s3 outposts
+		if storageClass == s3.StorageClassOutposts {
+			continue
+		}
+
 		err = s3Driver.PutContent(ctx, filename, contents)
 		if err != nil {
 			t.Fatalf("unexpected error creating content with storage class %v: %v", storageClass, err)
 		}
+		// nolint:errcheck
 		defer s3Driver.Delete(ctx, filename)
 
 		driverUnwrapped := s3Driver.Base.StorageDriver.(*driver)
@@ -275,7 +291,9 @@ func TestStorageClass(t *testing.T) {
 		}
 		defer resp.Body.Close()
 		// Amazon only populates this header value for non-standard storage classes
-		if storageClass == s3.StorageClassStandard && resp.StorageClass != nil {
+		if storageClass == noStorageClass {
+			// We haven't specified a storage class so we can't confirm what it is
+		} else if storageClass == s3.StorageClassStandard && resp.StorageClass != nil {
 			t.Fatalf(
 				"unexpected response storage class for file with storage class %v: %v",
 				storageClass,
@@ -298,17 +316,11 @@ func TestStorageClass(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	if skipS3() != "" {
-		t.Skip(skipS3())
-	}
+	skipCheck(t)
 
-	rootDir, err := ioutil.TempDir("", "driver-")
-	if err != nil {
-		t.Fatalf("unexpected error creating temporary directory: %v", err)
-	}
-	defer os.Remove(rootDir)
+	rootDir := t.TempDir()
 
-	driver, err := s3DriverConstructor(rootDir, s3.StorageClassStandard)
+	drvr, err := s3DriverConstructor(rootDir, s3.StorageClassStandard)
 	if err != nil {
 		t.Fatalf("unexpected error creating driver with standard storage: %v", err)
 	}
@@ -343,10 +355,9 @@ func TestDelete(t *testing.T) {
 		return false
 	}
 
-	var objs = []string{
+	objs := []string{
 		"/file1",
 		"/file1-2",
-		"/file1/2",
 		"/folder1/file1",
 		"/folder2/file1",
 		"/folder3/file1",
@@ -358,15 +369,6 @@ func TestDelete(t *testing.T) {
 	}
 
 	tcs := []testCase{
-		{
-			// special case where a given path is a file and has subpaths
-			name:   "delete file1",
-			delete: "/file1",
-			expected: []string{
-				"/file1",
-				"/file1/2",
-			},
-		},
 		{
 			name:   "delete folder1",
 			delete: "/folder1",
@@ -410,41 +412,33 @@ func TestDelete(t *testing.T) {
 		},
 	}
 
-	// objects to skip auto-created test case
-	var skipCase = map[string]bool{
-		// special case where deleting "/file1" also deletes "/file1/2" is tested explicitly
-		"/file1": true,
-	}
 	// create a test case for each file
-	for _, path := range objs {
-		if skipCase[path] {
-			continue
-		}
+	for _, p := range objs {
 		tcs = append(tcs, testCase{
-			name:     fmt.Sprintf("delete path:'%s'", path),
-			delete:   path,
-			expected: []string{path},
+			name:     fmt.Sprintf("delete path:'%s'", p),
+			delete:   p,
+			expected: []string{p},
 		})
 	}
 
 	init := func() []string {
 		// init file structure matching objs
 		var created []string
-		for _, path := range objs {
-			err := driver.PutContent(context.Background(), path, []byte("content "+path))
+		for _, p := range objs {
+			err := drvr.PutContent(dcontext.Background(), p, []byte("content "+p))
 			if err != nil {
-				fmt.Printf("unable to init file %s: %s\n", path, err)
+				fmt.Printf("unable to init file %s: %s\n", p, err)
 				continue
 			}
-			created = append(created, path)
+			created = append(created, p)
 		}
 		return created
 	}
 
 	cleanup := func(objs []string) {
 		var lastErr error
-		for _, path := range objs {
-			err := driver.Delete(context.Background(), path)
+		for _, p := range objs {
+			err := drvr.Delete(dcontext.Background(), p)
 			if err != nil {
 				switch err.(type) {
 				case storagedriver.PathNotFoundError:
@@ -463,7 +457,7 @@ func TestDelete(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			objs := init()
 
-			err := driver.Delete(context.Background(), tc.delete)
+			err := drvr.Delete(dcontext.Background(), tc.delete)
 
 			if tc.err != nil {
 				if err == nil {
@@ -491,7 +485,7 @@ func TestDelete(t *testing.T) {
 				return false
 			}
 			for _, path := range objs {
-				stat, err := driver.Stat(context.Background(), path)
+				stat, err := drvr.Stat(dcontext.Background(), path)
 				if err != nil {
 					switch err.(type) {
 					case storagedriver.PathNotFoundError:
@@ -521,23 +515,18 @@ func TestDelete(t *testing.T) {
 }
 
 func TestWalk(t *testing.T) {
-	if skipS3() != "" {
-		t.Skip(skipS3())
-	}
+	skipCheck(t)
 
-	rootDir, err := ioutil.TempDir("", "driver-")
-	if err != nil {
-		t.Fatalf("unexpected error creating temporary directory: %v", err)
-	}
-	defer os.Remove(rootDir)
+	rootDir := t.TempDir()
 
-	driver, err := s3DriverConstructor(rootDir, s3.StorageClassStandard)
+	drvr, err := s3DriverConstructor(rootDir, s3.StorageClassStandard)
 	if err != nil {
 		t.Fatalf("unexpected error creating driver with standard storage: %v", err)
 	}
 
-	var fileset = []string{
+	fileset := []string{
 		"/file1",
+		"/folder1-suffix/file1",
 		"/folder1/file1",
 		"/folder2/file1",
 		"/folder3/subfolder1/subfolder1/file1",
@@ -546,23 +535,23 @@ func TestWalk(t *testing.T) {
 	}
 
 	// create file structure matching fileset above
-	var created []string
-	for _, path := range fileset {
-		err := driver.PutContent(context.Background(), path, []byte("content "+path))
+	created := make([]string, 0, len(fileset))
+	for _, p := range fileset {
+		err := drvr.PutContent(dcontext.Background(), p, []byte("content "+p))
 		if err != nil {
-			fmt.Printf("unable to create file %s: %s\n", path, err)
+			fmt.Printf("unable to create file %s: %s\n", p, err)
 			continue
 		}
-		created = append(created, path)
+		created = append(created, p)
 	}
 
 	// cleanup
 	defer func() {
 		var lastErr error
-		for _, path := range created {
-			err := driver.Delete(context.Background(), path)
+		for _, p := range created {
+			err := drvr.Delete(dcontext.Background(), p)
 			if err != nil {
-				_ = fmt.Errorf("cleanup failed for path %s: %s", path, err)
+				_ = fmt.Errorf("cleanup failed for path %s: %s", p, err)
 				lastErr = err
 			}
 		}
@@ -571,18 +560,23 @@ func TestWalk(t *testing.T) {
 		}
 	}()
 
+	noopFn := func(fileInfo storagedriver.FileInfo) error { return nil }
+
 	tcs := []struct {
 		name     string
 		fn       storagedriver.WalkFn
 		from     string
+		options  []func(*storagedriver.WalkOptions)
 		expected []string
 		err      bool
 	}{
 		{
 			name: "walk all",
-			fn:   func(fileInfo storagedriver.FileInfo) error { return nil },
+			fn:   noopFn,
 			expected: []string{
 				"/file1",
+				"/folder1-suffix",
+				"/folder1-suffix/file1",
 				"/folder1",
 				"/folder1/file1",
 				"/folder2",
@@ -611,6 +605,8 @@ func TestWalk(t *testing.T) {
 			},
 			expected: []string{
 				"/file1",
+				"/folder1-suffix",
+				"/folder1-suffix/file1",
 				"/folder1",
 				"/folder1/file1",
 				"/folder2",
@@ -622,21 +618,100 @@ func TestWalk(t *testing.T) {
 			},
 		},
 		{
+			name: "start late without from",
+			fn:   noopFn,
+			options: []func(*storagedriver.WalkOptions){
+				storagedriver.WithStartAfterHint("/folder3/subfolder1/subfolder1/file1"),
+			},
+			expected: []string{
+				// start late
+				"/folder3",
+				"/folder3/subfolder2",
+				"/folder3/subfolder2/subfolder1",
+				"/folder3/subfolder2/subfolder1/file1",
+				"/folder4",
+				"/folder4/file1",
+			},
+			err: false,
+		},
+		{
+			name: "start late with from",
+			fn:   noopFn,
+			from: "/folder3",
+			options: []func(*storagedriver.WalkOptions){
+				storagedriver.WithStartAfterHint("/folder3/subfolder1/subfolder1/file1"),
+			},
+			expected: []string{
+				// start late
+				"/folder3/subfolder2",
+				"/folder3/subfolder2/subfolder1",
+				"/folder3/subfolder2/subfolder1/file1",
+			},
+			err: false,
+		},
+		{
+			name: "start after from",
+			fn:   noopFn,
+			from: "/folder1",
+			options: []func(*storagedriver.WalkOptions){
+				storagedriver.WithStartAfterHint("/folder2"),
+			},
+			expected: []string{},
+			err:      false,
+		},
+		{
+			name: "start matches from",
+			fn:   noopFn,
+			from: "/folder3",
+			options: []func(*storagedriver.WalkOptions){
+				storagedriver.WithStartAfterHint("/folder3"),
+			},
+			expected: []string{
+				"/folder3/subfolder1",
+				"/folder3/subfolder1/subfolder1",
+				"/folder3/subfolder1/subfolder1/file1",
+				"/folder3/subfolder2",
+				"/folder3/subfolder2/subfolder1",
+				"/folder3/subfolder2/subfolder1/file1",
+			},
+			err: false,
+		},
+		{
+			name: "start doesn't exist",
+			fn:   noopFn,
+			from: "/folder3",
+			options: []func(*storagedriver.WalkOptions){
+				storagedriver.WithStartAfterHint("/folder3/notafolder/notafile"),
+			},
+			expected: []string{
+				"/folder3/subfolder1",
+				"/folder3/subfolder1/subfolder1",
+				"/folder3/subfolder1/subfolder1/file1",
+				"/folder3/subfolder2",
+				"/folder3/subfolder2/subfolder1",
+				"/folder3/subfolder2/subfolder1/file1",
+			},
+			err: false,
+		},
+		{
 			name: "stop early",
 			fn: func(fileInfo storagedriver.FileInfo) error {
 				if fileInfo.Path() == "/folder1/file1" {
-					return storagedriver.ErrSkipDir
+					return storagedriver.ErrFilledBuffer
 				}
 				return nil
 			},
 			expected: []string{
 				"/file1",
+				"/folder1-suffix",
+				"/folder1-suffix/file1",
 				"/folder1",
 				"/folder1/file1",
 				// stop early
 			},
 			err: false,
 		},
+
 		{
 			name: "error",
 			fn: func(fileInfo storagedriver.FileInfo) error {
@@ -649,9 +724,8 @@ func TestWalk(t *testing.T) {
 		},
 		{
 			name: "from folder",
-			fn:   func(fileInfo storagedriver.FileInfo) error { return nil },
+			fn:   noopFn,
 			expected: []string{
-				"/folder1",
 				"/folder1/file1",
 			},
 			from: "/folder1",
@@ -664,10 +738,10 @@ func TestWalk(t *testing.T) {
 			tc.from = "/"
 		}
 		t.Run(tc.name, func(t *testing.T) {
-			err := driver.Walk(context.Background(), tc.from, func(fileInfo storagedriver.FileInfo) error {
+			err := drvr.Walk(dcontext.Background(), tc.from, func(fileInfo storagedriver.FileInfo) error {
 				walked = append(walked, fileInfo.Path())
 				return tc.fn(fileInfo)
-			})
+			}, tc.options...)
 			if tc.err && err == nil {
 				t.Fatalf("expected err")
 			}
@@ -680,22 +754,15 @@ func TestWalk(t *testing.T) {
 }
 
 func TestOverThousandBlobs(t *testing.T) {
-	if skipS3() != "" {
-		t.Skip(skipS3())
-	}
+	skipCheck(t)
 
-	rootDir, err := ioutil.TempDir("", "driver-")
-	if err != nil {
-		t.Fatalf("unexpected error creating temporary directory: %v", err)
-	}
-	defer os.Remove(rootDir)
-
+	rootDir := t.TempDir()
 	standardDriver, err := s3DriverConstructor(rootDir, s3.StorageClassStandard)
 	if err != nil {
 		t.Fatalf("unexpected error creating driver with standard storage: %v", err)
 	}
 
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	for i := 0; i < 1005; i++ {
 		filename := "/thousandfiletest/file" + strconv.Itoa(i)
 		contents := []byte("contents")
@@ -713,36 +780,33 @@ func TestOverThousandBlobs(t *testing.T) {
 }
 
 func TestMoveWithMultipartCopy(t *testing.T) {
-	if skipS3() != "" {
-		t.Skip(skipS3())
-	}
+	skipCheck(t)
 
-	rootDir, err := ioutil.TempDir("", "driver-")
-	if err != nil {
-		t.Fatalf("unexpected error creating temporary directory: %v", err)
-	}
-	defer os.Remove(rootDir)
-
+	rootDir := t.TempDir()
 	d, err := s3DriverConstructor(rootDir, s3.StorageClassStandard)
 	if err != nil {
 		t.Fatalf("unexpected error creating driver: %v", err)
 	}
 
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	sourcePath := "/source"
 	destPath := "/dest"
 
+	// nolint:errcheck
 	defer d.Delete(ctx, sourcePath)
+	// nolint:errcheck
 	defer d.Delete(ctx, destPath)
 
 	// An object larger than d's MultipartCopyThresholdSize will cause d.Move() to perform a multipart copy.
 	multipartCopyThresholdSize := d.baseEmbed.Base.StorageDriver.(*driver).MultipartCopyThresholdSize
 	contents := make([]byte, 2*multipartCopyThresholdSize)
-	rand.Read(contents)
+	if _, err := rand.Read(contents); err != nil {
+		t.Fatalf("unexpected error creating content: %v", err)
+	}
 
 	err = d.PutContent(ctx, sourcePath, contents)
 	if err != nil {
-		t.Fatalf("unexpected error creating content: %v", err)
+		t.Fatalf("unexpected error writing content: %v", err)
 	}
 
 	err = d.Move(ctx, sourcePath, destPath)
@@ -767,26 +831,23 @@ func TestMoveWithMultipartCopy(t *testing.T) {
 }
 
 func TestListObjectsV2(t *testing.T) {
-	rootDir, err := ioutil.TempDir("", "driver-")
-	if err != nil {
-		t.Fatalf("unexpected error creating temporary directory: %v", err)
-	}
-	defer os.Remove(rootDir)
+	skipCheck(t)
 
+	rootDir := t.TempDir()
 	d, err := s3DriverConstructor(rootDir, s3.StorageClassStandard)
 	if err != nil {
 		t.Fatalf("unexpected error creating driver: %v", err)
 	}
 
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	n := 6
 	prefix := "/test-list-objects-v2"
 	var filePaths []string
 	for i := 0; i < n; i++ {
 		filePaths = append(filePaths, fmt.Sprintf("%s/%d", prefix, i))
 	}
-	for _, path := range filePaths {
-		if err := d.PutContent(ctx, path, []byte(path)); err != nil {
+	for _, p := range filePaths {
+		if err := d.PutContent(ctx, p, []byte(p)); err != nil {
 			t.Fatalf("unexpected error putting content: %v", err)
 		}
 	}

@@ -1,0 +1,53 @@
+---
+edit_page: Seite bearbeiten
+
+nav_navigation: Navigation
+nav_tags: Tags
+nav_more: Weitere
+nav_top: Nach oben
+
+form_placeholder_search: Suchen
+
+error_page_title: Verlaufen? Keine Sorge
+error_message_title: Verlaufen?
+error_message_code: Fehler 404
+error_message_text: >
+  Wir können die Seite nach der Du gesucht hast leider nicht finden. Keine Sorge,
+  wir bringen Dich zurück zur <a class="gdoc-error__link" href="{{ . }}">Startseite</a>.
+
+button_toggle_dark: Wechsel zwischen Dunkel/Hell/Auto Modus
+button_nav_open: Navigation öffnen
+button_nav_close: Navigation schließen
+button_menu_open: Menüband öffnen
+button_menu_close: Menüband schließen
+button_homepage: Zurück zur Startseite
+
+title_anchor_prefix: "Link zu:"
+
+posts_read_more: Ganzen Artikel lesen
+posts_read_time:
+  one: "Eine Minute Lesedauer"
+  other: "{{ . }} Minuten Lesedauer"
+posts_update_prefix: Aktualisiert am
+posts_count:
+  one: "Ein Artikel"
+  other: "{{ . }} Artikel"
+posts_tagged_with: Alle Artikel mit dem Tag '{{ . }}'
+
+footer_build_with: >
+  Entwickelt mit <a href="https://gohugo.io/" class="gdoc-footer__link">Hugo</a> und
+  <svg class="gdoc-icon gdoc_heart"><use xlink:href="#gdoc_heart"></use></svg>
+footer_legal_notice: Impressum
+footer_privacy_policy: Datenschutzerklärung
+footer_content_license_prefix: >
+  Inhalt lizensiert unter
+
+language_switch_no_tranlation_prefix: "Seite nicht übersetzt:"
+
+propertylist_required: erforderlich
+propertylist_optional: optional
+propertylist_default: Standardwert
+
+pagination_page_prev: vorher
+pagination_page_next: weiter
+pagination_page_state: "{{ .PageNumber }}/{{ .TotalPages }}"

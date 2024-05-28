@@ -2,8 +2,10 @@ package driver
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
@@ -17,20 +19,33 @@ type Version string
 
 // Major returns the major (primary) component of a version.
 func (version Version) Major() uint {
-	majorPart := strings.Split(string(version), ".")[0]
+	majorPart, _, _ := strings.Cut(string(version), ".")
 	major, _ := strconv.ParseUint(majorPart, 10, 0)
 	return uint(major)
 }
 
 // Minor returns the minor (secondary) component of a version.
 func (version Version) Minor() uint {
-	minorPart := strings.Split(string(version), ".")[1]
+	_, minorPart, _ := strings.Cut(string(version), ".")
 	minor, _ := strconv.ParseUint(minorPart, 10, 0)
 	return uint(minor)
 }
 
 // CurrentVersion is the current storage driver Version.
 const CurrentVersion Version = "0.1"
+
+// WalkOptions provides options to the walk function that may adjust its behaviour
+type WalkOptions struct {
+	// If StartAfterHint is set, the walk may start with the first item lexographically
+	// after the hint, but it is not guaranteed and drivers may start the walk from the path.
+	StartAfterHint string
+}
+
+func WithStartAfterHint(startAfterHint string) func(*WalkOptions) {
+	return func(s *WalkOptions) {
+		s.StartAfterHint = startAfterHint
+	}
+}
 
 // StorageDriver defines methods that a Storage Driver must implement for a
 // filesystem-like key/value object storage. Storage Drivers are automatically
@@ -59,6 +74,11 @@ type StorageDriver interface {
 
 	// Writer returns a FileWriter which will store the content written to it
 	// at the location designated by "path" after the call to Commit.
+	// A path may be appended to if it has not been committed, or if the
+	// existing committed content is zero length.
+	//
+	// The behaviour of appending to paths with non-empty committed content is
+	// undefined. Specific implementations may document their own behavior.
 	Writer(ctx context.Context, path string, append bool) (FileWriter, error)
 
 	// Stat retrieves the FileInfo for the given path, including the current
@@ -66,7 +86,7 @@ type StorageDriver interface {
 	Stat(ctx context.Context, path string) (FileInfo, error)
 
 	// List returns a list of the objects that are direct descendants of the
-	//given path.
+	// given path.
 	List(ctx context.Context, path string) ([]string, error)
 
 	// Move moves an object stored at sourcePath to destPath, removing the
@@ -78,18 +98,18 @@ type StorageDriver interface {
 	// Delete recursively deletes all objects stored at "path" and its subpaths.
 	Delete(ctx context.Context, path string) error
 
-	// URLFor returns a URL which may be used to retrieve the content stored at
-	// the given path, possibly using the given options.
-	// May return an ErrUnsupportedMethod in certain StorageDriver
-	// implementations.
-	URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error)
+	// RedirectURL returns a URL which the client of the request r may use
+	// to retrieve the content stored at path. Returning the empty string
+	// signals that the request may not be redirected.
+	RedirectURL(r *http.Request, path string) (string, error)
 
 	// Walk traverses a filesystem defined within driver, starting
 	// from the given path, calling f on each file.
 	// If the returned error from the WalkFn is ErrSkipDir and fileInfo refers
 	// to a directory, the directory will not be entered and Walk
-	// will continue the traversal.  If fileInfo refers to a normal file, processing stops
-	Walk(ctx context.Context, path string, f WalkFn) error
+	// will continue the traversal.
+	// If the returned error from the WalkFn is ErrFilledBuffer, processing stops.
+	Walk(ctx context.Context, path string, f WalkFn, options ...func(*WalkOptions)) error
 }
 
 // FileWriter provides an abstraction for an opened writable file-like object in
@@ -103,12 +123,12 @@ type FileWriter interface {
 	Size() int64
 
 	// Cancel removes any written content from this FileWriter.
-	Cancel() error
+	Cancel(context.Context) error
 
 	// Commit flushes all content written to this FileWriter and makes it
 	// available for future calls to StorageDriver.GetContent and
 	// StorageDriver.Reader.
-	Commit() error
+	Commit(context.Context) error
 }
 
 // PathRegexp is the regular expression which each file path must match. A
@@ -163,9 +183,65 @@ func (err InvalidOffsetError) Error() string {
 // the driver type on which it occurred.
 type Error struct {
 	DriverName string
-	Enclosed   error
+	Detail     error
 }
 
 func (err Error) Error() string {
-	return fmt.Sprintf("%s: %s", err.DriverName, err.Enclosed)
+	return fmt.Sprintf("%s: %s", err.DriverName, err.Detail)
+}
+
+func (err Error) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		DriverName string `json:"driver"`
+		Detail     string `json:"detail"`
+	}{
+		DriverName: err.DriverName,
+		Detail:     err.Detail.Error(),
+	})
+}
+
+// Errors provides the envelope for multiple errors
+// for use within the storagedriver implementations.
+type Errors struct {
+	DriverName string
+	Errs       []error
+}
+
+var _ error = Errors{}
+
+func (e Errors) Error() string {
+	switch len(e.Errs) {
+	case 0:
+		return fmt.Sprintf("%s: <nil>", e.DriverName)
+	case 1:
+		return fmt.Sprintf("%s: %s", e.DriverName, e.Errs[0].Error())
+	default:
+		msg := "errors:\n"
+		for _, err := range e.Errs {
+			msg += err.Error() + "\n"
+		}
+		return fmt.Sprintf("%s: %s", e.DriverName, msg)
+	}
+}
+
+// MarshalJSON converts slice of errors into the format
+// that is serializable by JSON.
+func (e Errors) MarshalJSON() ([]byte, error) {
+	tmpErrs := struct {
+		DriverName string   `json:"driver"`
+		Details    []string `json:"details"`
+	}{
+		DriverName: e.DriverName,
+	}
+
+	if len(e.Errs) == 0 {
+		tmpErrs.Details = make([]string, 0)
+		return json.Marshal(tmpErrs)
+	}
+
+	for _, err := range e.Errs {
+		tmpErrs.Details = append(tmpErrs.Details, err.Error())
+	}
+
+	return json.Marshal(tmpErrs)
 }

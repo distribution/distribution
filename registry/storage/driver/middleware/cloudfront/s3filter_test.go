@@ -8,12 +8,10 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"reflect" // used as a replacement for testify
+	"sync"
 	"testing"
 	"time"
-
-	dcontext "github.com/distribution/distribution/v3/context"
-
-	"reflect" // used as a replacement for testify
 )
 
 // Rather than pull in all of testify
@@ -34,8 +32,10 @@ func (m mockIPRangeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(500)
 		return
 	}
-	w.Write(bytes)
-
+	if _, err := w.Write(bytes); err != nil {
+		w.WriteHeader(500)
+		return
+	}
 }
 
 func newTestHandler(data awsIPResponse) *httptest.Server {
@@ -64,11 +64,10 @@ func TestS3TryUpdate(t *testing.T) {
 	})
 	defer server.Close()
 
-	ips := newAWSIPs(serverIPRanges(server), time.Hour, nil)
+	ips, _ := newAWSIPs(context.Background(), serverIPRanges(server), time.Hour, nil)
 
 	assertEqual(t, 1, len(ips.ipv4))
 	assertEqual(t, 0, len(ips.ipv6))
-
 }
 
 func TestMatchIPV6(t *testing.T) {
@@ -80,8 +79,10 @@ func TestMatchIPV6(t *testing.T) {
 	})
 	defer server.Close()
 
-	ips := newAWSIPs(serverIPRanges(server), time.Hour, nil)
-	ips.tryUpdate()
+	ctx := context.Background()
+	ips, _ := newAWSIPs(ctx, serverIPRanges(server), time.Hour, nil)
+	err := ips.tryUpdate(ctx)
+	assertEqual(t, err, nil)
 	assertEqual(t, true, ips.contains(net.ParseIP("ff00::")))
 	assertEqual(t, 1, len(ips.ipv6))
 	assertEqual(t, 0, len(ips.ipv4))
@@ -96,8 +97,10 @@ func TestMatchIPV4(t *testing.T) {
 	})
 	defer server.Close()
 
-	ips := newAWSIPs(serverIPRanges(server), time.Hour, nil)
-	ips.tryUpdate()
+	ctx := context.Background()
+	ips, _ := newAWSIPs(ctx, serverIPRanges(server), time.Hour, nil)
+	err := ips.tryUpdate(ctx)
+	assertEqual(t, err, nil)
 	assertEqual(t, true, ips.contains(net.ParseIP("192.168.0.0")))
 	assertEqual(t, true, ips.contains(net.ParseIP("192.168.0.1")))
 	assertEqual(t, false, ips.contains(net.ParseIP("192.169.0.0")))
@@ -115,8 +118,10 @@ func TestMatchIPV4_2(t *testing.T) {
 	})
 	defer server.Close()
 
-	ips := newAWSIPs(serverIPRanges(server), time.Hour, nil)
-	ips.tryUpdate()
+	ctx := context.Background()
+	ips, _ := newAWSIPs(ctx, serverIPRanges(server), time.Hour, nil)
+	err := ips.tryUpdate(ctx)
+	assertEqual(t, err, nil)
 	assertEqual(t, true, ips.contains(net.ParseIP("192.168.0.0")))
 	assertEqual(t, true, ips.contains(net.ParseIP("192.168.0.1")))
 	assertEqual(t, false, ips.contains(net.ParseIP("192.169.0.0")))
@@ -134,8 +139,10 @@ func TestMatchIPV4WithRegionMatched(t *testing.T) {
 	})
 	defer server.Close()
 
-	ips := newAWSIPs(serverIPRanges(server), time.Hour, []string{"us-east-1"})
-	ips.tryUpdate()
+	ctx := context.Background()
+	ips, _ := newAWSIPs(ctx, serverIPRanges(server), time.Hour, []string{"us-east-1"})
+	err := ips.tryUpdate(ctx)
+	assertEqual(t, err, nil)
 	assertEqual(t, true, ips.contains(net.ParseIP("192.168.0.0")))
 	assertEqual(t, true, ips.contains(net.ParseIP("192.168.0.1")))
 	assertEqual(t, false, ips.contains(net.ParseIP("192.169.0.0")))
@@ -153,8 +160,10 @@ func TestMatchIPV4WithRegionMatch_2(t *testing.T) {
 	})
 	defer server.Close()
 
-	ips := newAWSIPs(serverIPRanges(server), time.Hour, []string{"us-west-2", "us-east-1"})
-	ips.tryUpdate()
+	ctx := context.Background()
+	ips, _ := newAWSIPs(ctx, serverIPRanges(server), time.Hour, []string{"us-west-2", "us-east-1"})
+	err := ips.tryUpdate(ctx)
+	assertEqual(t, err, nil)
 	assertEqual(t, true, ips.contains(net.ParseIP("192.168.0.0")))
 	assertEqual(t, true, ips.contains(net.ParseIP("192.168.0.1")))
 	assertEqual(t, false, ips.contains(net.ParseIP("192.169.0.0")))
@@ -172,8 +181,10 @@ func TestMatchIPV4WithRegionNotMatched(t *testing.T) {
 	})
 	defer server.Close()
 
-	ips := newAWSIPs(serverIPRanges(server), time.Hour, []string{"us-west-2"})
-	ips.tryUpdate()
+	ctx := context.Background()
+	ips, _ := newAWSIPs(ctx, serverIPRanges(server), time.Hour, []string{"us-west-2"})
+	err := ips.tryUpdate(ctx)
+	assertEqual(t, err, nil)
 	assertEqual(t, false, ips.contains(net.ParseIP("192.168.0.0")))
 	assertEqual(t, false, ips.contains(net.ParseIP("192.168.0.1")))
 	assertEqual(t, false, ips.contains(net.ParseIP("192.169.0.0")))
@@ -190,8 +201,10 @@ func TestInvalidData(t *testing.T) {
 	})
 	defer server.Close()
 
-	ips := newAWSIPs(serverIPRanges(server), time.Hour, nil)
-	ips.tryUpdate()
+	ctx := context.Background()
+	ips, _ := newAWSIPs(ctx, serverIPRanges(server), time.Hour, nil)
+	err := ips.tryUpdate(ctx)
+	assertEqual(t, err, nil)
 	assertEqual(t, 1, len(ips.ipv4))
 }
 
@@ -208,14 +221,14 @@ func TestInvalidNetworkType(t *testing.T) {
 	})
 	defer server.Close()
 
-	ips := newAWSIPs(serverIPRanges(server), time.Hour, nil)
+	ips, _ := newAWSIPs(context.Background(), serverIPRanges(server), time.Hour, nil)
 	assertEqual(t, 0, len(ips.getCandidateNetworks(make([]byte, 17)))) // 17 bytes does not correspond to any net type
 	assertEqual(t, 1, len(ips.getCandidateNetworks(make([]byte, 4))))  // netv4 networks
 	assertEqual(t, 2, len(ips.getCandidateNetworks(make([]byte, 16)))) // netv6 networks
 }
 
 func TestParsing(t *testing.T) {
-	var data = `{
+	data := `{
       "prefixes": [{
         "ip_prefix": "192.168.0.0",
         "region": "someregion",
@@ -225,11 +238,16 @@ func TestParsing(t *testing.T) {
         "region": "anotherregion",
         "service": "ec2"}]
     }`
-	rawMockHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write([]byte(data)) })
+	rawMockHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, err := w.Write([]byte(data)); err != nil {
+			w.WriteHeader(500)
+			return
+		}
+	})
 	t.Parallel()
 	server := httptest.NewServer(rawMockHandler)
 	defer server.Close()
-	schema, err := fetchAWSIPs(server.URL)
+	schema, err := fetchAWSIPs(context.Background(), server.URL)
 
 	assertEqual(t, nil, err)
 	assertEqual(t, 1, len(schema.Prefixes))
@@ -249,86 +267,84 @@ func TestParsing(t *testing.T) {
 func TestUpdateCalledRegularly(t *testing.T) {
 	t.Parallel()
 
+	mu := &sync.RWMutex{}
 	updateCount := 0
+
 	server := httptest.NewServer(http.HandlerFunc(
 		func(rw http.ResponseWriter, req *http.Request) {
+			mu.Lock()
 			updateCount++
-			rw.Write([]byte("ok"))
+			mu.Unlock()
+			if _, err := rw.Write([]byte("ok")); err != nil {
+				rw.WriteHeader(http.StatusInternalServerError)
+			}
 		}))
 	defer server.Close()
-	newAWSIPs(fmt.Sprintf("%s/", server.URL), time.Second, nil)
+	if _, err := newAWSIPs(context.Background(), fmt.Sprintf("%s/", server.URL), time.Second, nil); err != nil {
+		t.Fatalf("failed creating AWS IP filter: %v", err)
+	}
 	time.Sleep(time.Second*4 + time.Millisecond*500)
+	mu.RLock()
+	defer mu.RUnlock()
 	if updateCount < 4 {
 		t.Errorf("Update should have been called at least 4 times, actual=%d", updateCount)
 	}
 }
 
 func TestEligibleForS3(t *testing.T) {
-	awsIPs := &awsIPs{
+	t.Parallel()
+	ips := &awsIPs{
 		ipv4: []net.IPNet{{
 			IP:   net.ParseIP("192.168.1.1"),
 			Mask: net.IPv4Mask(255, 255, 255, 0),
 		}},
 		initialized: true,
 	}
-	empty := context.TODO()
-	makeContext := func(ip string) context.Context {
-		req := &http.Request{
-			RemoteAddr: ip,
-		}
 
-		return dcontext.WithRequest(empty, req)
-	}
-
-	cases := []struct {
-		Context  context.Context
-		Expected bool
+	tests := []struct {
+		RemoteAddr string
+		Expected   bool
 	}{
-		{Context: empty, Expected: false},
-		{Context: makeContext("192.168.1.2"), Expected: true},
-		{Context: makeContext("192.168.0.2"), Expected: false},
+		{RemoteAddr: "", Expected: false},
+		{RemoteAddr: "192.168.1.2", Expected: true},
+		{RemoteAddr: "192.168.0.2", Expected: false},
 	}
 
-	for _, testCase := range cases {
-		name := fmt.Sprintf("Client IP = %v",
-			testCase.Context.Value("http.request.ip"))
-		t.Run(name, func(t *testing.T) {
-			assertEqual(t, testCase.Expected, eligibleForS3(testCase.Context, awsIPs))
+	for _, tc := range tests {
+		tc := tc
+		t.Run(fmt.Sprintf("Client IP = %v", tc.RemoteAddr), func(t *testing.T) {
+			t.Parallel()
+			req := &http.Request{RemoteAddr: tc.RemoteAddr}
+			assertEqual(t, tc.Expected, eligibleForS3(req, ips))
 		})
 	}
 }
 
 func TestEligibleForS3WithAWSIPNotInitialized(t *testing.T) {
-	awsIPs := &awsIPs{
+	t.Parallel()
+	ips := &awsIPs{
 		ipv4: []net.IPNet{{
 			IP:   net.ParseIP("192.168.1.1"),
 			Mask: net.IPv4Mask(255, 255, 255, 0),
 		}},
 		initialized: false,
 	}
-	empty := context.TODO()
-	makeContext := func(ip string) context.Context {
-		req := &http.Request{
-			RemoteAddr: ip,
-		}
 
-		return dcontext.WithRequest(empty, req)
-	}
-
-	cases := []struct {
-		Context  context.Context
-		Expected bool
+	tests := []struct {
+		RemoteAddr string
+		Expected   bool
 	}{
-		{Context: empty, Expected: false},
-		{Context: makeContext("192.168.1.2"), Expected: false},
-		{Context: makeContext("192.168.0.2"), Expected: false},
+		{RemoteAddr: "", Expected: false},
+		{RemoteAddr: "192.168.1.2", Expected: false},
+		{RemoteAddr: "192.168.0.2", Expected: false},
 	}
 
-	for _, testCase := range cases {
-		name := fmt.Sprintf("Client IP = %v",
-			testCase.Context.Value("http.request.ip"))
-		t.Run(name, func(t *testing.T) {
-			assertEqual(t, testCase.Expected, eligibleForS3(testCase.Context, awsIPs))
+	for _, tc := range tests {
+		tc := tc
+		t.Run(fmt.Sprintf("Client IP = %v", tc.RemoteAddr), func(t *testing.T) {
+			t.Parallel()
+			req := &http.Request{RemoteAddr: tc.RemoteAddr}
+			assertEqual(t, tc.Expected, eligibleForS3(req, ips))
 		})
 	}
 }
@@ -366,37 +382,49 @@ func BenchmarkContainsRandom(b *testing.B) {
 	numNetworksPerType := 1000 // keep in sync with the above
 	// intentionally skip constructor when creating awsIPs, to avoid updater routine.
 	// This benchmark is only concerned with contains() performance.
-	awsIPs := awsIPs{}
-	populateRandomNetworks(b, &awsIPs, numNetworksPerType, numNetworksPerType)
+	ips := awsIPs{}
+	populateRandomNetworks(b, &ips, numNetworksPerType, numNetworksPerType)
 
 	ipv4 := make([][]byte, b.N)
 	ipv6 := make([][]byte, b.N)
 	for i := 0; i < b.N; i++ {
 		ipv4[i] = make([]byte, 4)
 		ipv6[i] = make([]byte, 16)
-		rand.Read(ipv4[i])
-		rand.Read(ipv6[i])
+		_, err := rand.Read(ipv4[i])
+		if err != nil {
+			b.Fatal(err)
+		}
+		_, err = rand.Read(ipv6[i])
+		if err != nil {
+			b.Fatal(err)
+		}
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		awsIPs.contains(ipv4[i])
-		awsIPs.contains(ipv6[i])
+		ips.contains(ipv4[i])
+		ips.contains(ipv6[i])
 	}
 }
 
 func BenchmarkContainsProd(b *testing.B) {
-	awsIPs := newAWSIPs(defaultIPRangesURL, defaultUpdateFrequency, nil)
+	ips, _ := newAWSIPs(context.Background(), defaultIPRangesURL, defaultUpdateFrequency, nil)
 	ipv4 := make([][]byte, b.N)
 	ipv6 := make([][]byte, b.N)
 	for i := 0; i < b.N; i++ {
 		ipv4[i] = make([]byte, 4)
 		ipv6[i] = make([]byte, 16)
-		rand.Read(ipv4[i])
-		rand.Read(ipv6[i])
+		_, err := rand.Read(ipv4[i])
+		if err != nil {
+			b.Fatal(err)
+		}
+		_, err = rand.Read(ipv6[i])
+		if err != nil {
+			b.Fatal(err)
+		}
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		awsIPs.contains(ipv4[i])
-		awsIPs.contains(ipv6[i])
+		ips.contains(ipv4[i])
+		ips.contains(ipv6[i])
 	}
 }

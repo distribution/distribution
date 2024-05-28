@@ -9,14 +9,14 @@ import (
 
 	"github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
-	"github.com/distribution/distribution/v3/uuid"
+	"github.com/google/uuid"
 )
 
 func testUploadFS(t *testing.T, numUploads int, repoName string, startedAt time.Time) (driver.StorageDriver, context.Context) {
 	d := inmemory.New()
 	ctx := context.Background()
 	for i := 0; i < numUploads; i++ {
-		addUploads(ctx, t, d, uuid.Generate().String(), repoName, startedAt)
+		addUploads(ctx, t, d, uuid.NewString(), repoName, startedAt)
 	}
 	return d, ctx
 }
@@ -35,10 +35,9 @@ func addUploads(ctx context.Context, t *testing.T, d driver.StorageDriver, uploa
 		t.Fatalf("Unable to resolve path")
 	}
 
-	if d.PutContent(ctx, startedAtPath, []byte(startedAt.Format(time.RFC3339))); err != nil {
+	if err := d.PutContent(ctx, startedAtPath, []byte(startedAt.Format(time.RFC3339))); err != nil {
 		t.Fatalf("Unable to write startedAt file")
 	}
-
 }
 
 func TestPurgeGather(t *testing.T) {
@@ -71,7 +70,7 @@ func TestPurgeAll(t *testing.T) {
 	fs, ctx := testUploadFS(t, uploadCount, "test-repo", oneHourAgo)
 
 	// Ensure > 1 repos are purged
-	addUploads(ctx, t, fs, uuid.Generate().String(), "test-repo2", oneHourAgo)
+	addUploads(ctx, t, fs, uuid.NewString(), "test-repo2", oneHourAgo)
 	uploadCount++
 
 	deleted, errs := PurgeUploads(ctx, fs, time.Now(), true)
@@ -93,7 +92,7 @@ func TestPurgeSome(t *testing.T) {
 	newUploadCount := 4
 
 	for i := 0; i < newUploadCount; i++ {
-		addUploads(ctx, t, fs, uuid.Generate().String(), "test-repo", time.Now().Add(1*time.Hour))
+		addUploads(ctx, t, fs, uuid.NewString(), "test-repo", time.Now().Add(1*time.Hour))
 	}
 
 	deleted, errs := PurgeUploads(ctx, fs, time.Now(), true)
@@ -113,7 +112,7 @@ func TestPurgeOnlyUploads(t *testing.T) {
 
 	// Create a directory tree outside _uploads and ensure
 	// these files aren't deleted.
-	dataPath, err := pathFor(uploadDataPathSpec{name: "test-repo", id: uuid.Generate().String()})
+	dataPath, err := pathFor(uploadDataPathSpec{name: "test-repo", id: uuid.NewString()})
 	if err != nil {
 		t.Fatalf(err.Error())
 	}

@@ -5,10 +5,10 @@ import (
 	"time"
 
 	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/context"
-	"github.com/distribution/distribution/v3/reference"
-	"github.com/distribution/distribution/v3/uuid"
+	"github.com/distribution/distribution/v3/internal/requestutil"
+	"github.com/distribution/reference"
 	events "github.com/docker/go-events"
+	"github.com/google/uuid"
 	"github.com/opencontainers/go-digest"
 )
 
@@ -49,7 +49,7 @@ func NewBridge(ub URLBuilder, source SourceRecord, actor ActorRecord, request Re
 func NewRequestRecord(id string, r *http.Request) RequestRecord {
 	return RequestRecord{
 		ID:        id,
-		Addr:      context.RemoteAddr(r),
+		Addr:      requestutil.RemoteAddr(r),
 		Host:      r.Host,
 		Method:    r.Method,
 		UserAgent: r.UserAgent(),
@@ -150,9 +150,9 @@ func (b *bridge) createManifestEvent(action string, repo reference.Named, sm dis
 	}
 
 	event.Target.MediaType = mt
-	event.Target.Length = desc.Size
-	event.Target.Size = desc.Size
 	event.Target.Digest = desc.Digest
+	event.Target.Size = desc.Size
+	event.Target.Length = desc.Size
 	if b.includeReferences {
 		event.Target.References = append(event.Target.References, manifest.References()...)
 	}
@@ -219,7 +219,7 @@ func (b *bridge) createEvent(action string) *Event {
 // createEvent returns a new event, timestamped, with the specified action.
 func createEvent(action string) *Event {
 	return &Event{
-		ID:        uuid.Generate().String(),
+		ID:        uuid.NewString(),
 		Timestamp: time.Now(),
 		Action:    action,
 	}

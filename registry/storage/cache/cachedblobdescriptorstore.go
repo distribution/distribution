@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/distribution/distribution/v3"
-	dcontext "github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/internal/dcontext"
 	prometheus "github.com/distribution/distribution/v3/metrics"
 	"github.com/opencontainers/go-digest"
 )
@@ -15,8 +15,12 @@ type cachedBlobStatter struct {
 }
 
 var (
-	// cacheCount is the number of total cache request received/hits/misses
-	cacheCount = prometheus.StorageNamespace.NewLabeledCounter("cache", "The number of cache request received", "type")
+	// cacheRequestCount is the number of total cache requests received.
+	cacheRequestCount = prometheus.StorageNamespace.NewCounter("cache_requests", "The number of cache request received")
+	// cacheRequestCount is the number of total cache requests received.
+	cacheHitCount = prometheus.StorageNamespace.NewCounter("cache_hits", "The number of cache request received")
+	// cacheErrorCount is the number of cache request errors.
+	cacheErrorCount = prometheus.StorageNamespace.NewCounter("cache_errors", "The number of cache request errors")
 )
 
 // NewCachedBlobStatter creates a new statter which prefers a cache and
@@ -29,12 +33,12 @@ func NewCachedBlobStatter(cache distribution.BlobDescriptorService, backend dist
 }
 
 func (cbds *cachedBlobStatter) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
-	cacheCount.WithValues("Request").Inc(1)
+	cacheRequestCount.Inc(1)
 
 	// try getting from cache
 	desc, cacheErr := cbds.cache.Stat(ctx, dgst)
 	if cacheErr == nil {
-		cacheCount.WithValues("Hit").Inc(1)
+		cacheHitCount.Inc(1)
 		return desc, nil
 	}
 
@@ -45,8 +49,6 @@ func (cbds *cachedBlobStatter) Stat(ctx context.Context, dgst digest.Digest) (di
 	}
 
 	if cacheErr == distribution.ErrBlobUnknown {
-		// cache doesn't have info. update it with info got from backend
-		cacheCount.WithValues("Miss").Inc(1)
 		if err := cbds.cache.SetDescriptor(ctx, dgst, desc); err != nil {
 			dcontext.GetLoggerWithField(ctx, "blob", dgst).WithError(err).Error("error from cache setting desc")
 		}
@@ -54,7 +56,7 @@ func (cbds *cachedBlobStatter) Stat(ctx context.Context, dgst digest.Digest) (di
 	} else {
 		// unknown error from cache. just log and error. do not store cache as it may be trigger many set calls
 		dcontext.GetLoggerWithField(ctx, "blob", dgst).WithError(cacheErr).Error("error from cache stat(ing) blob")
-		cacheCount.WithValues("Error").Inc(1)
+		cacheErrorCount.Inc(1)
 	}
 
 	return desc, nil

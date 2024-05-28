@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/distribution/distribution/v3/reference"
+	"github.com/distribution/reference"
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
@@ -63,12 +63,12 @@ type Descriptor struct {
 	// encoded as utf-8.
 	MediaType string `json:"mediaType,omitempty"`
 
-	// Size in bytes of content.
-	Size int64 `json:"size,omitempty"`
-
 	// Digest uniquely identifies the content. A byte stream can be verified
 	// against this digest.
 	Digest digest.Digest `json:"digest,omitempty"`
+
+	// Size in bytes of content.
+	Size int64 `json:"size,omitempty"`
 
 	// URLs contains the source URLs of this content.
 	URLs []string `json:"urls,omitempty"`
@@ -140,22 +140,14 @@ type BlobDescriptorServiceFactory interface {
 	BlobAccessController(svc BlobDescriptorService) BlobDescriptorService
 }
 
-// ReadSeekCloser is the primary reader type for blob data, combining
-// io.ReadSeeker with io.Closer.
-type ReadSeekCloser interface {
-	io.ReadSeeker
-	io.Closer
-}
-
 // BlobProvider describes operations for getting blob data.
 type BlobProvider interface {
 	// Get returns the entire blob identified by digest along with the descriptor.
 	Get(ctx context.Context, dgst digest.Digest) ([]byte, error)
 
-	// Open provides a ReadSeekCloser to the blob identified by the provided
-	// descriptor. If the blob is not known to the service, an error will be
-	// returned.
-	Open(ctx context.Context, dgst digest.Digest) (ReadSeekCloser, error)
+	// Open provides an [io.ReadSeekCloser] to the blob identified by the provided
+	// descriptor. If the blob is not known to the service, an error is returned.
+	Open(ctx context.Context, dgst digest.Digest) (io.ReadSeekCloser, error)
 }
 
 // BlobServer can serve blobs via http.

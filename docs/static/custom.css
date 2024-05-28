@@ -1,0 +1,50 @@
+/* Global customization */
+
+:root {
+  --code-max-height: 60rem;
+}
+
+/* Light mode theming */
+:root,
+:root[color-theme="light"] {
+  --header-background: #203554;
+  --header-font-color: #ffffff;
+
+  --footer-background: #203554;
+  --footer-font-color: #ffffff;
+  --footer-link-color: rgb(110, 168, 212);
+  --footer-link-color-visited: rgb(186, 142, 240);
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --header-background: #203554;
+    --header-font-color: #ffffff;
+
+    --footer-background: #203554;
+    --footer-font-color: #ffffff;
+    --footer-link-color: rgb(110, 168, 212);
+    --footer-link-color-visited: rgb(186, 142, 240);
+  }
+}
+
+/* Dark mode theming */
+:root[color-theme="dark"] {
+  --header-background: #203554;
+  --header-font-color: #ffffff;
+
+  --footer-background: #203554;
+  --footer-font-color: #ffffff;
+  --footer-link-color: rgb(110, 168, 212);
+  --footer-link-color-visited: rgb(186, 142, 240);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --header-background: #203554;
+    --header-font-color: #ffffff;
+
+    --footer-background: #203554;
+    --footer-font-color: #ffffff;
+    --footer-link-color: rgb(110, 168, 212);
+    --footer-link-color-visited: rgb(186, 142, 240);
+  }
+}

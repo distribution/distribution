@@ -1,0 +1,23 @@
+{{- $value := default 0 (.Get "value") -}}
+{{- $title := .Get "title" -}}
+{{- $icon := .Get "icon" -}}
+
+
+<div class="gdoc-progress">
+  <div class="gdoc-progress__label flex justify-between">
+    <div class="gdoc-progress__label--name flex align-center">
+      {{ with $icon -}}
+        <svg class="gdoc-icon {{ . }}"><use xlink:href="#{{ . }}"></use></svg>
+      {{- end }}
+      {{ with $title }}<span>{{ . }}</span>{{ end }}
+    </div>
+    <div>{{ $value }}%</div>
+  </div>
+  <div class="gdoc-progress__wrap">
+    <div
+      class="gdoc-progress__bar"
+      data-percent="{{ $value }}"
+      style="width: {{ $value }}%;"
+    ></div>
+  </div>
+</div>

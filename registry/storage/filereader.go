@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 )
@@ -16,7 +15,7 @@ import (
 // set this correctly, so we may want to leave it to the driver. For
 // out of process drivers, we'll have to optimize this buffer size for
 // local communication.
-const fileReaderBufferSize = 4 << 20
+const fileReaderBufferSize = 4 * 1024 * 1024
 
 // remoteFileReader provides a read seeker interface to files stored in
 // storagedriver. Used to implement part of layer interface and will be used
@@ -126,7 +125,7 @@ func (fr *fileReader) reader() (io.Reader, error) {
 			// reader that returns io.EOF. However, we do not set fr.rc,
 			// allowing future attempts at getting a reader to possibly
 			// succeed if the file turns up later.
-			return ioutil.NopCloser(bytes.NewReader([]byte{})), nil
+			return io.NopCloser(bytes.NewReader([]byte{})), nil
 		default:
 			return nil, err
 		}

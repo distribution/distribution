@@ -11,14 +11,12 @@ import (
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-var (
-	// SchemaVersion provides a pre-initialized version structure for this
-	// packages version of the manifest.
-	SchemaVersion = manifest.Versioned{
-		SchemaVersion: 2, // historical value here.. does not pertain to OCI or docker version
-		MediaType:     v1.MediaTypeImageManifest,
-	}
-)
+// SchemaVersion provides a pre-initialized version structure for OCI Image
+// Manifests
+var SchemaVersion = manifest.Versioned{
+	SchemaVersion: 2,
+	MediaType:     v1.MediaTypeImageManifest,
+}
 
 func init() {
 	ocischemaFunc := func(b []byte) (distribution.Manifest, distribution.Descriptor, error) {
@@ -32,7 +30,12 @@ func init() {
 		}
 
 		dgst := digest.FromBytes(b)
-		return m, distribution.Descriptor{Digest: dgst, Size: int64(len(b)), MediaType: v1.MediaTypeImageManifest}, err
+		return m, distribution.Descriptor{
+			MediaType:   v1.MediaTypeImageManifest,
+			Digest:      dgst,
+			Size:        int64(len(b)),
+			Annotations: m.Annotations,
+		}, err
 	}
 	err := distribution.RegisterManifestSchema(v1.MediaTypeImageManifest, ocischemaFunc)
 	if err != nil {
@@ -95,17 +98,17 @@ func (m *DeserializedManifest) UnmarshalJSON(b []byte) error {
 	copy(m.canonical, b)
 
 	// Unmarshal canonical JSON into Manifest object
-	var manifest Manifest
-	if err := json.Unmarshal(m.canonical, &manifest); err != nil {
+	var mfst Manifest
+	if err := json.Unmarshal(m.canonical, &mfst); err != nil {
 		return err
 	}
 
-	if manifest.MediaType != "" && manifest.MediaType != v1.MediaTypeImageManifest {
+	if mfst.MediaType != "" && mfst.MediaType != v1.MediaTypeImageManifest {
 		return fmt.Errorf("if present, mediaType in manifest should be '%s' not '%s'",
-			v1.MediaTypeImageManifest, manifest.MediaType)
+			v1.MediaTypeImageManifest, mfst.MediaType)
 	}
 
-	m.Manifest = manifest
+	m.Manifest = mfst
 
 	return nil
 }
@@ -126,16 +129,12 @@ func (m DeserializedManifest) Payload() (string, []byte, error) {
 	return v1.MediaTypeImageManifest, m.canonical, nil
 }
 
-// unknownDocument represents a manifest, manifest list, or index that has not
-// yet been validated
-type unknownDocument struct {
-	Manifests interface{} `json:"manifests,omitempty"`
-}
-
 // validateManifest returns an error if the byte slice is invalid JSON or if it
 // contains fields that belong to a index
 func validateManifest(b []byte) error {
-	var doc unknownDocument
+	var doc struct {
+		Manifests interface{} `json:"manifests,omitempty"`
+	}
 	if err := json.Unmarshal(b, &doc); err != nil {
 		return err
 	}
