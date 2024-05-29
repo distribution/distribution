@@ -72,7 +72,7 @@ be configured to use the `filesystem` driver for storage.
 
 The easiest way to run a registry as a pull through cache is to run the official
 Registry image.
-At least, you need to specify `proxy.remoteurl` within `/etc/docker/registry/config.yml`
+At least, you need to specify `proxy.remoteurl` within `/etc/distribution/config.yml`
 as described in the following subsection.
 
 Multiple registry caches can be deployed over the same back-end. A single
