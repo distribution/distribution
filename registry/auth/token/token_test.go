@@ -19,8 +19,8 @@ import (
 	"time"
 
 	"github.com/distribution/distribution/v3/registry/auth"
-	"github.com/go-jose/go-jose/v3"
-	"github.com/go-jose/go-jose/v3/jwt"
+	"github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
 )
 
 func makeRootKeys(numKeys int) ([]*ecdsa.PrivateKey, error) {
@@ -123,12 +123,12 @@ func makeTestToken(jwk *jose.JSONWebKey, issuer, audience string, access []*Reso
 		Access:     access,
 	}
 
-	tokenString, err := jwt.Signed(signer).Claims(claimSet).CompactSerialize()
+	tokenString, err := jwt.Signed(signer).Claims(claimSet).Serialize()
 	if err != nil {
 		return nil, fmt.Errorf("unable to build token string: %v", err)
 	}
 
-	return NewToken(tokenString)
+	return NewToken(tokenString, []jose.SignatureAlgorithm{signingKey.Algorithm})
 }
 
 // NOTE(milosgajdos): certTemplateInfo type as well

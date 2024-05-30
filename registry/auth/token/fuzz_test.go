@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	fuzz "github.com/AdaLogics/go-fuzz-headers"
+	"github.com/go-jose/go-jose/v4"
 )
 
 func FuzzToken1(f *testing.F) {
@@ -18,7 +19,7 @@ func FuzzToken1(f *testing.F) {
 		if err != nil {
 			return
 		}
-		token, err := NewToken(rawToken)
+		token, err := NewToken(rawToken, []jose.SignatureAlgorithm{jose.EdDSA, jose.RS384})
 		if err != nil {
 			return
 		}

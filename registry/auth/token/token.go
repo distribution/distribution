@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-jose/go-jose/v3"
-	"github.com/go-jose/go-jose/v3/jwt"
+	"github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/distribution/distribution/v3/registry/auth"
@@ -22,6 +22,38 @@ const (
 	// checks to account for clock skew as per https://tools.ietf.org/html/rfc7519#section-4.1.5
 	Leeway = 60 * time.Second
 )
+
+var signingAlgorithms = map[string]jose.SignatureAlgorithm{
+	"EdDSA": jose.EdDSA,
+	"HS256": jose.HS256,
+	"HS384": jose.HS384,
+	"HS512": jose.HS512,
+	"RS256": jose.RS256,
+	"RS384": jose.RS384,
+	"RS512": jose.RS512,
+	"ES256": jose.ES256,
+	"ES384": jose.ES384,
+	"ES512": jose.ES512,
+	"PS256": jose.PS256,
+	"PS384": jose.PS384,
+	"PS512": jose.PS512,
+}
+
+var defaultSigningAlgorithms = []jose.SignatureAlgorithm{
+	jose.EdDSA,
+	jose.HS256,
+	jose.HS384,
+	jose.HS512,
+	jose.RS256,
+	jose.RS384,
+	jose.RS512,
+	jose.ES256,
+	jose.ES384,
+	jose.ES512,
+	jose.PS256,
+	jose.PS384,
+	jose.PS512,
+}
 
 // Errors used by token parsing and verification.
 var (
@@ -69,8 +101,8 @@ type VerifyOptions struct {
 
 // NewToken parses the given raw token string
 // and constructs an unverified JSON Web Token.
-func NewToken(rawToken string) (*Token, error) {
-	token, err := jwt.ParseSigned(rawToken)
+func NewToken(rawToken string, signingAlgs []jose.SignatureAlgorithm) (*Token, error) {
+	token, err := jwt.ParseSigned(rawToken, signingAlgs)
 	if err != nil {
 		return nil, ErrMalformedToken
 	}
@@ -140,6 +172,13 @@ func (t *Token) VerifySigningKey(verifyOpts VerifyOptions) (signingKey crypto.Pu
 	// verifying the first one in the list only at the moment.
 	header := t.JWT.Headers[0]
 
+	signingKey, err = verifyCertChain(header, verifyOpts.Roots)
+	// NOTE(milosgajdos): if the x5c header is missing
+	// the token may have been signed by a JWKS.
+	if err != nil && err != jose.ErrMissingX5cHeader {
+		return
+	}
+
 	switch {
 	case header.JSONWebKey != nil:
 		signingKey, err = verifyJWK(header, verifyOpts)
@@ -149,7 +188,7 @@ func (t *Token) VerifySigningKey(verifyOpts VerifyOptions) (signingKey crypto.Pu
 			err = fmt.Errorf("token signed by untrusted key with ID: %q", header.KeyID)
 		}
 	default:
-		signingKey, err = verifyCertChain(header, verifyOpts.Roots)
+		err = ErrInvalidToken
 	}
 
 	return

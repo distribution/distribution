@@ -168,6 +168,9 @@ auth:
     service: token-service
     issuer: registry-token-issuer
     rootcertbundle: /root/certs/bundle
+    signingalgorithms:
+        - EdDSA
+        - HS256
   htpasswd:
     realm: basic-realm
     path: /path/to/htpasswd
@@ -577,6 +580,10 @@ auth:
     service: token-service
     issuer: registry-token-issuer
     rootcertbundle: /root/certs/bundle
+    signingalgorithms:
+        - EdDSA
+        - HS256
+        - ES512
   htpasswd:
     realm: basic-realm
     path: /path/to/htpasswd
@@ -620,7 +627,37 @@ security.
 | `rootcertbundle` | yes | The absolute path to the root certificate bundle. This bundle contains the public part of the certificates used to sign authentication tokens. |
 | `autoredirect`   | no      | When set to `true`, `realm` will automatically be set using the Host header of the request as the domain and a path of `/auth/token/`(or specified by `autoredirectpath`), the `realm` URL Scheme will use `X-Forwarded-Proto` header if set, otherwise it will be set to `https`. |
 | `autoredirectpath`   | no      | The path to redirect to if `autoredirect` is set to `true`, default: `/auth/token/`. |
+| `signingalgorithms`  | no      | A list of token signing algorithms to use for verifying token signatures. If left empty the default list of signing algorithms is used. Please see below for allowed values and default. |
 
+Available `signingalgorithms`:
+- EdDSA
+- HS256
+- HS384
+- HS512
+- RS256
+- RS384
+- RS512
+- ES256
+- ES384
+- ES512
+- PS256
+- PS384
+- PS512
+
+Default `signingalgorithms`:
+- EdDSA
+- HS256
+- HS384
+- HS512
+- RS256
+- RS384
+- RS512
+- ES256
+- ES384
+- ES512
+- PS256
+- PS384
+- PS512
 
 For more information about Token based authentication configuration, see the
 [specification](../spec/auth/token.md).
