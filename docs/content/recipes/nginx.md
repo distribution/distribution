@@ -183,7 +183,7 @@ Review the [requirements](../#requirements), then follow these steps.
            - ./auth/nginx.conf:/etc/nginx/nginx.conf:ro
 
        registry:
-         image: registry:2
+         image: registry:3
          volumes:
            - ./data:/var/lib/registry
    ```
