@@ -43,7 +43,7 @@ services:
       dockerfile: ./Dockerfile
     command:
       - "serve"
-      - "/etc/docker/registry/config-test.yml"
+      - "/etc/distribution/config-test.yml"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5001/debug/health"]
       interval: 5s
@@ -58,4 +58,4 @@ services:
       - "5000:5000"
       - "5001:5001"
     volumes:
-      - ./conf-e2e-cloud-storage.yml:/etc/docker/registry/config-test.yml
+      - ./conf-e2e-cloud-storage.yml:/etc/distribution/config-test.yml

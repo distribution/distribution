@@ -44,7 +44,7 @@ docker run -d -p 5000:5000 $PWD/FS/PATH:/var/lib/registry --restart always --nam
 If you don't wan to use the default configuration file, you can supply
 your own custom configuration file as follows:
 ```
-docker run -d -p 5000:5000 $PWD/PATH/TO/config.yml:/etc/docker/registry/config.yml --restart always --name registry distribution/distribution:edge
+docker run -d -p 5000:5000 $PWD/PATH/TO/config.yml:/etc/distribution/config.yml --restart always --name registry distribution/distribution:edge
 ```
 
 ## Communication
