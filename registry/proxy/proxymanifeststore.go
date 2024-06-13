@@ -55,6 +55,19 @@ func (pms proxyManifestStore) Get(ctx context.Context, dgst digest.Digest, optio
 		fromRemote = true
 	}
 
+	repoBlob, err := reference.WithDigest(pms.repositoryName, dgst)
+	if err != nil {
+		dcontext.GetLogger(ctx).Errorf("Error creating reference: %s", err)
+		return nil, err
+	}
+
+	if pms.scheduler != nil && pms.ttl != nil {
+		if err := pms.scheduler.AddManifest(repoBlob, *pms.ttl); err != nil {
+			dcontext.GetLogger(ctx).Errorf("Error adding manifest: %s", err)
+			return nil, err
+		}
+	}
+
 	_, payload, err := manifest.Payload()
 	if err != nil {
 		return nil, err
@@ -70,18 +83,18 @@ func (pms proxyManifestStore) Get(ctx context.Context, dgst digest.Digest, optio
 		}
 
 		// Schedule the manifest blob for removal
-		repoBlob, err := reference.WithDigest(pms.repositoryName, dgst)
-		if err != nil {
-			dcontext.GetLogger(ctx).Errorf("Error creating reference: %s", err)
-			return nil, err
-		}
+		// repoBlob, err := reference.WithDigest(pms.repositoryName, dgst)
+		// if err != nil {
+		// 	dcontext.GetLogger(ctx).Errorf("Error creating reference: %s", err)
+		// 	return nil, err
+		// }
 
-		if pms.scheduler != nil && pms.ttl != nil {
-			if err := pms.scheduler.AddManifest(repoBlob, *pms.ttl); err != nil {
-				dcontext.GetLogger(ctx).Errorf("Error adding manifest: %s", err)
-				return nil, err
-			}
-		}
+		// if pms.scheduler != nil && pms.ttl != nil {
+		// 	if err := pms.scheduler.AddManifest(repoBlob, *pms.ttl); err != nil {
+		// 		dcontext.GetLogger(ctx).Errorf("Error adding manifest: %s", err)
+		// 		return nil, err
+		// 	}
+		// }
 
 		// Ensure the manifest blob is cleaned up
 		// pms.scheduler.AddBlob(blobRef, repositoryTTL)
