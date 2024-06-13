@@ -12,7 +12,7 @@ target "lint" {
 }
 
 variable "COMMIT_RANGE" {
-  default = ""
+  default = "HEAD..HEAD"
 }
 target "validate-git" {
   dockerfile = "./dockerfiles/git.Dockerfile"
