@@ -149,7 +149,11 @@ func compareReplaceInline(s1, s2 string, old, new byte) int {
 // storage.
 func handleRepository(fileInfo driver.FileInfo, root, last string, fn func(repoPath string) error) error {
 	filePath := fileInfo.Path()
-
+	
+	if len(filePath) <= len(root) {
+		return nil
+	}
+	
 	// lop the base path off
 	repo := filePath[len(root)+1:]
 
