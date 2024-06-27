@@ -4,10 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/reference"
 	"github.com/opencontainers/go-digest"
+
+	"github.com/distribution/distribution/v3"
+	"github.com/distribution/distribution/v3/registry/storage/driver"
 )
 
 func emit(format string, a ...interface{}) {
@@ -115,7 +116,7 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 	manifestArr = unmarkReferencedManifest(manifestArr, markSet)
 
 	// sweep
-	vacuum := NewVacuum(ctx, storageDriver)
+	vacuum := NewVacuum(ctx, registry, storageDriver)
 	if !opts.DryRun {
 		for _, obj := range manifestArr {
 			err = vacuum.RemoveManifest(obj.Name, obj.Digest, obj.Tags)
