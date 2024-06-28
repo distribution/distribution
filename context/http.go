@@ -168,7 +168,10 @@ func GetResponseLogger(ctx context.Context) Logger {
 	duration := Since(ctx, "http.request.startedat")
 
 	if duration > 0 {
-		l = l.WithField("http.response.duration", duration.String())
+		l = l.WithFields(log.Fields{
+			"http.response.duration":       duration.String(),
+			"http.response.duration.epoch": duration.Seconds(),
+		})
 	}
 
 	return l
