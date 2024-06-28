@@ -654,7 +654,12 @@ func Parse(rd io.Reader) (*Configuration, error) {
 }
 
 type Redis struct {
-	redis.UniversalOptions
+	redis.UniversalOptions `yaml:",inline"`
+	TLS                    struct {
+		Certificate string   `yaml:"certificate,omitempty"`
+		Key         string   `yaml:"key,omitempty"`
+		ClientCAs   []string `yaml:"clientcas,omitempty"`
+	} `yaml:"tls,omitempty"`
 }
 
 func (c Redis) MarshalYAML() (interface{}, error) {
@@ -667,12 +672,17 @@ func (c Redis) MarshalYAML() (interface{}, error) {
 		field := typ.Field(i)
 		fieldValue := val.Field(i)
 
-		// ignore imports and funcs
-		if field.PkgPath != "" || fieldValue.Kind() == reflect.Func {
+		// ignore funcs fields in redis.UniversalOptions
+		if fieldValue.Kind() == reflect.Func {
 			continue
 		}
 
 		fields[strings.ToLower(field.Name)] = fieldValue.Interface()
+	}
+
+	// Add TLS fields if they're not empty
+	if c.TLS.Certificate != "" || c.TLS.Key != "" || len(c.TLS.ClientCAs) > 0 {
+		fields["tls"] = c.TLS
 	}
 
 	return fields, nil
@@ -710,6 +720,40 @@ func (c *Redis) UnmarshalYAML(unmarshal func(interface{}) error) error {
 					if err := setFieldValue(fieldValue, value); err != nil {
 						return fmt.Errorf("failed to set value for field: %s, error: %v", fieldName, err)
 					}
+				}
+			}
+		}
+	}
+
+	// Handle TLS fields
+	if tlsData, ok := fields["tls"]; ok {
+		tlsMap, ok := tlsData.(map[interface{}]interface{})
+		if !ok {
+			return fmt.Errorf("invalid TLS data structure")
+		}
+
+		if cert, ok := tlsMap["certificate"]; ok {
+			var isString bool
+			c.TLS.Certificate, isString = cert.(string)
+			if !isString {
+				return fmt.Errorf("Redis TLS certificate must be a string")
+			}
+		}
+		if key, ok := tlsMap["key"]; ok {
+			var isString bool
+			c.TLS.Key, isString = key.(string)
+			if !isString {
+				return fmt.Errorf("Redis TLS (private) key must be a string")
+			}
+		}
+		if cas, ok := tlsMap["clientcas"]; ok {
+			caList, ok := cas.([]interface{})
+			if !ok {
+				return fmt.Errorf("invalid clientcas data structure")
+			}
+			for _, ca := range caList {
+				if caStr, ok := ca.(string); ok {
+					c.TLS.ClientCAs = append(c.TLS.ClientCAs, caStr)
 				}
 			}
 		}

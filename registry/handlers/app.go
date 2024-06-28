@@ -3,6 +3,8 @@ package handlers
 import (
 	"context"
 	"crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
 	"expvar"
 	"fmt"
 	"math"
@@ -490,6 +492,35 @@ func (app *App) configureRedis(cfg *configuration.Configuration) {
 	if len(cfg.Redis.Addrs) == 0 {
 		dcontext.GetLogger(app).Infof("redis not configured")
 		return
+	}
+
+	// redis TLS config
+	if cfg.Redis.TLS.Certificate != "" || cfg.Redis.TLS.Key != "" {
+		var err error
+		tlsConf := &tls.Config{}
+		tlsConf.Certificates = make([]tls.Certificate, 1)
+		tlsConf.Certificates[0], err = tls.LoadX509KeyPair(cfg.Redis.TLS.Certificate, cfg.Redis.TLS.Key)
+		if err != nil {
+			panic(err)
+		}
+		if len(cfg.Redis.TLS.ClientCAs) != 0 {
+			pool := x509.NewCertPool()
+			for _, ca := range cfg.Redis.TLS.ClientCAs {
+				caPem, err := os.ReadFile(ca)
+				if err != nil {
+					dcontext.GetLogger(app).Errorf("failed reading redis client CA: %v", err)
+					return
+				}
+
+				if ok := pool.AppendCertsFromPEM(caPem); !ok {
+					dcontext.GetLogger(app).Error("could not add CA to pool")
+					return
+				}
+			}
+			tlsConf.ClientAuth = tls.RequireAndVerifyClientCert
+			tlsConf.ClientCAs = pool
+		}
+		cfg.Redis.UniversalOptions.TLSConfig = tlsConf
 	}
 
 	app.redis = app.createPool(cfg.Redis.UniversalOptions)

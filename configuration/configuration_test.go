@@ -132,7 +132,7 @@ var configStruct = Configuration{
 		},
 	},
 	Redis: Redis{
-		redis.UniversalOptions{
+		UniversalOptions: redis.UniversalOptions{
 			Addrs:           []string{"localhost:6379"},
 			Username:        "alice",
 			Password:        "123456",
@@ -143,6 +143,15 @@ var configStruct = Configuration{
 			DialTimeout:     time.Millisecond * 10,
 			ReadTimeout:     time.Millisecond * 10,
 			WriteTimeout:    time.Millisecond * 10,
+		},
+		TLS: struct {
+			Certificate string   `yaml:"certificate,omitempty"`
+			Key         string   `yaml:"key,omitempty"`
+			ClientCAs   []string `yaml:"clientcas,omitempty"`
+		}{
+			Certificate: "/foo/cert.crt",
+			Key:         "/foo/key.pem",
+			ClientCAs:   []string{"/path/to/ca.pem"},
 		},
 	},
 }
@@ -182,11 +191,17 @@ notifications:
         actions:
            - pull
 http:
-  clientcas:
-    - /path/to/ca.pem
+  tls:
+    clientcas:
+      - /path/to/ca.pem
   headers:
     X-Content-Type-Options: [nosniff]
 redis:
+  tls:
+    certificate: /foo/cert.crt
+    key: /foo/key.pem
+    clientcas:
+      - /path/to/ca.pem
   addrs: [localhost:6379]
   username: alice
   password: "123456"
@@ -265,6 +280,7 @@ func (suite *ConfigSuite) TestParseSimple() {
 func (suite *ConfigSuite) TestParseInmemory() {
 	suite.expectedConfig.Storage = Storage{"inmemory": Parameters{}}
 	suite.expectedConfig.Log.Fields = nil
+	suite.expectedConfig.HTTP.TLS.ClientCAs = nil
 	suite.expectedConfig.Redis = Redis{}
 
 	config, err := Parse(bytes.NewReader([]byte(inmemoryConfigYamlV0_1)))
@@ -285,6 +301,7 @@ func (suite *ConfigSuite) TestParseIncomplete() {
 	suite.expectedConfig.Auth = Auth{"silly": Parameters{"realm": "silly"}}
 	suite.expectedConfig.Notifications = Notifications{}
 	suite.expectedConfig.HTTP.Headers = nil
+	suite.expectedConfig.HTTP.TLS.ClientCAs = nil
 	suite.expectedConfig.Redis = Redis{}
 
 	// Note: this also tests that REGISTRY_STORAGE and
@@ -551,8 +568,14 @@ func copyConfig(config Configuration) *Configuration {
 	for k, v := range config.HTTP.Headers {
 		configCopy.HTTP.Headers[k] = v
 	}
+	configCopy.HTTP.TLS.ClientCAs = make([]string, 0, len(config.HTTP.TLS.ClientCAs))
+	configCopy.HTTP.TLS.ClientCAs = append(configCopy.HTTP.TLS.ClientCAs, config.HTTP.TLS.ClientCAs...)
 
 	configCopy.Redis = config.Redis
+	configCopy.Redis.TLS.Certificate = config.Redis.TLS.Certificate
+	configCopy.Redis.TLS.Key = config.Redis.TLS.Key
+	configCopy.Redis.TLS.ClientCAs = make([]string, 0, len(config.Redis.TLS.ClientCAs))
+	configCopy.Redis.TLS.ClientCAs = append(configCopy.Redis.TLS.ClientCAs, config.Redis.TLS.ClientCAs...)
 
 	return configCopy
 }
