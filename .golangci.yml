@@ -6,7 +6,7 @@ linters:
     - goimports
     - revive
     - ineffassign
-    - vet
+    - govet
     - unused
     - misspell
     - bodyclose
@@ -22,7 +22,7 @@ linters-settings:
       - name: unused-parameter
         disabled: true
 
-run:
+issues:
   deadline: 2m
-  skip-dirs:
+  exlude-dirs:
     - vendor

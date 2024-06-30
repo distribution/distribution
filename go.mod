@@ -1,6 +1,6 @@
 module github.com/distribution/distribution/v3
 
-go 1.21.8
+go 1.22.4
 
 require (
 	cloud.google.com/go/storage v1.30.1
@@ -41,8 +41,6 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 )
 
-require github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
-
 require (
 	cloud.google.com/go v0.110.7 // indirect
 	cloud.google.com/go/compute v1.23.0 // indirect
@@ -59,6 +57,7 @@ require (
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-logr/logr v1.3.0 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
+	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/s2a-go v0.1.4 // indirect
