@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"mime"
 	"net/http"
@@ -142,6 +143,8 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		if _, ok := err.(distribution.ErrManifestUnknownRevision); ok {
 			imh.Errors = append(imh.Errors, errcode.ErrorCodeManifestUnknown.WithDetail(err))
+		} else if checkAllErrorsStatusCode(err, 401) {
+			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnauthorized.WithDetail(err))
 		} else {
 			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 		}
@@ -223,6 +226,21 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 	if _, err := w.Write(p); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 	}
+}
+
+func checkAllErrorsStatusCode(err error, statusCode int) bool {
+	var errs errcode.Errors
+	if !errors.As(err, &errs) {
+		return false
+	}
+	for _, e := range errs {
+		var specificErr errcode.Error
+		ok := errors.As(e, &specificErr)
+		if !ok || specificErr.StatusCode != statusCode {
+			return false
+		}
+	}
+	return true
 }
 
 func etagMatch(r *http.Request, etag string) bool {
