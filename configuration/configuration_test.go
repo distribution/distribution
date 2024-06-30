@@ -132,7 +132,7 @@ var configStruct = Configuration{
 		},
 	},
 	Redis: Redis{
-		UniversalOptions: redis.UniversalOptions{
+		Options: redis.UniversalOptions{
 			Addrs:           []string{"localhost:6379"},
 			Username:        "alice",
 			Password:        "123456",
@@ -144,11 +144,7 @@ var configStruct = Configuration{
 			ReadTimeout:     time.Millisecond * 10,
 			WriteTimeout:    time.Millisecond * 10,
 		},
-		TLS: struct {
-			Certificate string   `yaml:"certificate,omitempty"`
-			Key         string   `yaml:"key,omitempty"`
-			ClientCAs   []string `yaml:"clientcas,omitempty"`
-		}{
+		TLS: RedisTLSOptions{
 			Certificate: "/foo/cert.crt",
 			Key:         "/foo/key.pem",
 			ClientCAs:   []string{"/path/to/ca.pem"},

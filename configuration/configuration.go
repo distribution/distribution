@@ -653,19 +653,23 @@ func Parse(rd io.Reader) (*Configuration, error) {
 	return config, nil
 }
 
+type RedisOptions = redis.UniversalOptions
+
+type RedisTLSOptions struct {
+	Certificate string   `yaml:"certificate,omitempty"`
+	Key         string   `yaml:"key,omitempty"`
+	ClientCAs   []string `yaml:"clientcas,omitempty"`
+}
+
 type Redis struct {
-	redis.UniversalOptions `yaml:",inline"`
-	TLS                    struct {
-		Certificate string   `yaml:"certificate,omitempty"`
-		Key         string   `yaml:"key,omitempty"`
-		ClientCAs   []string `yaml:"clientcas,omitempty"`
-	} `yaml:"tls,omitempty"`
+	Options RedisOptions    `yaml:",inline"`
+	TLS     RedisTLSOptions `yaml:"tls,omitempty"`
 }
 
 func (c Redis) MarshalYAML() (interface{}, error) {
 	fields := make(map[string]interface{})
 
-	val := reflect.ValueOf(c.UniversalOptions)
+	val := reflect.ValueOf(c.Options)
 	typ := val.Type()
 
 	for i := 0; i < val.NumField(); i++ {
@@ -695,7 +699,7 @@ func (c *Redis) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 
-	val := reflect.ValueOf(&c.UniversalOptions).Elem()
+	val := reflect.ValueOf(&c.Options).Elem()
 	typ := val.Type()
 
 	for i := 0; i < typ.NumField(); i++ {

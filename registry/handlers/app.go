@@ -489,7 +489,7 @@ func (app *App) configureEvents(configuration *configuration.Configuration) {
 }
 
 func (app *App) configureRedis(cfg *configuration.Configuration) {
-	if len(cfg.Redis.Addrs) == 0 {
+	if len(cfg.Redis.Options.Addrs) == 0 {
 		dcontext.GetLogger(app).Infof("redis not configured")
 		return
 	}
@@ -520,10 +520,10 @@ func (app *App) configureRedis(cfg *configuration.Configuration) {
 			tlsConf.ClientAuth = tls.RequireAndVerifyClientCert
 			tlsConf.ClientCAs = pool
 		}
-		cfg.Redis.UniversalOptions.TLSConfig = tlsConf
+		cfg.Redis.Options.TLSConfig = tlsConf
 	}
 
-	app.redis = app.createPool(cfg.Redis.UniversalOptions)
+	app.redis = app.createPool(cfg.Redis.Options)
 
 	// Enable metrics instrumentation.
 	if err := redisotel.InstrumentMetrics(app.redis); err != nil {
