@@ -1612,13 +1612,6 @@ func (w *writer) flush() error {
 	}
 
 	buf := bytes.NewBuffer(w.ready.data)
-	if w.pending.Len() > 0 && w.pending.Len() < int(w.driver.ChunkSize) {
-		if _, err := buf.Write(w.pending.data); err != nil {
-			return err
-		}
-		w.pending.Clear()
-	}
-
 	partSize := buf.Len()
 	partNumber := aws.Int64(int64(len(w.parts) + 1))
 
@@ -1643,5 +1636,9 @@ func (w *writer) flush() error {
 	w.ready.Clear()
 	w.ready, w.pending = w.pending, w.ready
 
+	// In case we have more data in the pending buffer (now ready), we need to flush it
+	if w.ready.Len() > 0 {
+		return w.flush()
+	}
 	return nil
 }
