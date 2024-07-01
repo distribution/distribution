@@ -68,6 +68,9 @@ var configStruct = Configuration{
 	Catalog: Catalog{
 		MaxEntries: 1000,
 	},
+	Tags: Tags{
+		MaxTags: 1000,
+	},
 	HTTP: struct {
 		Addr         string        `yaml:"addr,omitempty"`
 		Net          string        `yaml:"net,omitempty"`
