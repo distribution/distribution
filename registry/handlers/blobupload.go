@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/distribution/distribution/v3"
+	"github.com/distribution/distribution/v3/configuration"
 	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/distribution/distribution/v3/registry/api/errcode"
 	"github.com/distribution/distribution/v3/registry/storage"
@@ -17,9 +18,10 @@ import (
 
 // blobUploadDispatcher constructs and returns the blob upload handler for the
 // given request context.
-func blobUploadDispatcher(ctx *Context, r *http.Request) http.Handler {
+func blobUploadDispatcher(ctx *Context, app *App, r *http.Request) http.Handler {
 	buh := &blobUploadHandler{
 		Context: ctx,
+		Config:  app.Config,
 		UUID:    getUploadUUID(ctx),
 	}
 
@@ -28,7 +30,7 @@ func blobUploadDispatcher(ctx *Context, r *http.Request) http.Handler {
 		http.MethodHead: http.HandlerFunc(buh.GetUploadStatus),
 	}
 
-	if !ctx.readOnly {
+	if !app.readOnly {
 		handler[http.MethodPost] = http.HandlerFunc(buh.StartBlobUpload)
 		handler[http.MethodPatch] = http.HandlerFunc(buh.PatchBlobData)
 		handler[http.MethodPut] = http.HandlerFunc(buh.PutBlobUploadComplete)
@@ -51,6 +53,8 @@ func blobUploadDispatcher(ctx *Context, r *http.Request) http.Handler {
 // blobUploadHandler handles the http blob upload process.
 type blobUploadHandler struct {
 	*Context
+
+	Config *configuration.Configuration
 
 	// UUID identifies the upload instance for the current request. Using UUID
 	// to key blob writers since this implementation uses UUIDs.
@@ -270,7 +274,7 @@ func (buh *blobUploadHandler) CancelBlobUpload(w http.ResponseWriter, r *http.Re
 }
 
 func (buh *blobUploadHandler) ResumeBlobUpload(ctx *Context, r *http.Request) http.Handler {
-	state, err := hmacKey(ctx.Config.HTTP.Secret).unpackUploadState(r.FormValue("_state"))
+	state, err := hmacKey(buh.Config.HTTP.Secret).unpackUploadState(r.FormValue("_state"))
 	if err != nil {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			dcontext.GetLogger(ctx).Infof("error resolving upload: %v", err)
