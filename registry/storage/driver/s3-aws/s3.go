@@ -223,12 +223,13 @@ func FromParameters(ctx context.Context, parameters map[string]interface{}) (*Dr
 	}
 
 	regionName := parameters["region"]
-	if regionName == nil || fmt.Sprint(regionName) == "" {
-		return nil, fmt.Errorf("no region parameter provided")
-	}
 	region := fmt.Sprint(regionName)
+
 	// Don't check the region value if a custom endpoint is provided.
 	if regionEndpoint == "" {
+		if regionName == nil || region == "" {
+			return nil, fmt.Errorf("no region parameter provided")
+		}
 		if _, ok := validRegions[region]; !ok {
 			return nil, fmt.Errorf("invalid region provided: %v", region)
 		}
