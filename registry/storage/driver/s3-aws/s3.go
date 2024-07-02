@@ -106,6 +106,7 @@ type DriverParameters struct {
 	KeyID                       string
 	Secure                      bool
 	SkipVerify                  bool
+	DisableKeepAlives           bool
 	V4Auth                      bool
 	ChunkSize                   int64
 	MultipartCopyChunkSize      int64
@@ -290,6 +291,23 @@ func FromParameters(ctx context.Context, parameters map[string]interface{}) (*Dr
 		return nil, fmt.Errorf("the skipVerify parameter should be a boolean")
 	}
 
+	disableKeepAlivesBool := false
+	disableKeepAlives := parameters["disablekeepalives"]
+	switch disableKeepAlives := disableKeepAlives.(type) {
+	case string:
+		b, err := strconv.ParseBool(disableKeepAlives)
+		if err != nil {
+			return nil, fmt.Errorf("the disablekeepalives parameter should be a boolean")
+		}
+		disableKeepAlivesBool = b
+	case bool:
+		disableKeepAlivesBool = disableKeepAlives
+	case nil:
+		// do nothing
+	default:
+		return nil, fmt.Errorf("the disablekeepalives parameter should be a boolean")
+	}
+
 	v4Bool := true
 	v4auth := parameters["v4auth"]
 	switch v4auth := v4auth.(type) {
@@ -433,6 +451,7 @@ func FromParameters(ctx context.Context, parameters map[string]interface{}) (*Dr
 		fmt.Sprint(keyID),
 		secureBool,
 		skipVerifyBool,
+		disableKeepAlivesBool,
 		v4Bool,
 		chunkSize,
 		multipartCopyChunkSize,
@@ -539,11 +558,24 @@ func New(ctx context.Context, params DriverParameters) (*Driver, error) {
 		awsConfig.UseDualStackEndpoint = endpoints.DualStackEndpointStateEnabled
 	}
 
+	httpTransportModified := false
+	httpTransport := http.DefaultTransport.(*http.Transport).Clone()
+
 	if params.SkipVerify {
-		httpTransport := http.DefaultTransport.(*http.Transport).Clone()
 		httpTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		httpTransportModified = true
+	}
+
+	if params.DisableKeepAlives {
+		httpTransport.DisableKeepAlives = true
+		httpTransportModified = true
+	}
+
+	var httpRoundTripper http.RoundTripper = httpTransport
+
+	if httpTransportModified {
 		awsConfig.WithHTTPClient(&http.Client{
-			Transport: httpTransport,
+			Transport: httpRoundTripper,
 		})
 	}
 

@@ -16,6 +16,7 @@ An implementation of the `storagedriver.StorageDriver` interface which uses [Mic
 | `realm`                            | no       | Domain name suffix for the Storage Service API endpoint. For example realm for "Azure in China" would be `core.chinacloudapi.cn` and realm for "Azure Government" would be `core.usgovcloudapi.net`. By default, this is `core.windows.net`.                        |
 | `copy_status_poll_max_retry`       | no       | Max retry number for polling of copy operation status. Retries use a simple backoff algorithm where each retry number is multiplied by `copy_status_poll_delay`, and this number is used as the delay. Set to -1 to disable retries and abort if the copy does not complete immediately. Defaults to 5.                |
 | `copy_status_poll_delay`            | no       | Time to wait between retries for polling of copy operation status. This time is multiplied by N on each retry, where N is the retry number. Defaults to 100ms |
+| `disablekeepalives` | no | Disables HTTP keep-alives on the HTTP tranport when `true`. Each connection to the server will be used for a single HTTP request. The default is `false`. |
 
 
 ## Related information

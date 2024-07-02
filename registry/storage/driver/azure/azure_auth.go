@@ -2,6 +2,7 @@ package azure
 
 import (
 	"context"
+	"net/http"
 	"sync"
 	"time"
 
@@ -45,6 +46,14 @@ type azureClient struct {
 	signer    signer
 }
 
+type azureTransporter struct {
+	roundTripper http.RoundTripper
+}
+
+func (a *azureTransporter) Do(req *http.Request) (*http.Response, error) {
+	return a.roundTripper.RoundTrip(req)
+}
+
 func newAzureClient(params *Parameters) (*azureClient, error) {
 	if params.AccountKey != "" {
 		cred, err := azblob.NewSharedKeyCredential(params.AccountName, params.AccountKey)
@@ -76,7 +85,29 @@ func newAzureClient(params *Parameters) (*azureClient, error) {
 		return nil, err
 	}
 
-	client, err := azblob.NewClient(params.ServiceURL, cred, nil)
+	httpTransportModified := false
+	httpTransport := http.DefaultTransport.(*http.Transport).Clone()
+
+	if params.DisableKeepAlives {
+		httpTransport.DisableKeepAlives = true
+		httpTransportModified = true
+	}
+
+	var httpRoundTripper http.RoundTripper = httpTransport
+
+	var azClientOpts *azblob.ClientOptions
+
+	if httpTransportModified {
+		azClientOpts = &azblob.ClientOptions{
+			ClientOptions: azcore.ClientOptions{
+				Transport: &azureTransporter{
+					roundTripper: httpRoundTripper,
+				},
+			},
+		}
+	}
+
+	client, err := azblob.NewClient(params.ServiceURL, cred, azClientOpts)
 	if err != nil {
 		return nil, err
 	}
