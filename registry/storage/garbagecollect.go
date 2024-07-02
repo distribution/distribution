@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/distribution/distribution/v3"
@@ -36,6 +37,7 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 
 	// mark
 	markSet := make(map[digest.Digest]struct{})
+	deleteLayerSet := make(map[string][]digest.Digest)
 	manifestArr := make([]ManifestDel, 0)
 	err := repositoryEnumerator.Enumerate(ctx, func(repoName string) error {
 		emit(repoName)
@@ -97,15 +99,32 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 			})
 		})
 
-		// In certain situations such as unfinished uploads, deleting all
-		// tags in S3 or removing the _manifests folder manually, this
-		// error may be of type PathNotFound.
-		//
-		// In these cases we can continue marking other manifests safely.
-		if _, ok := err.(driver.PathNotFoundError); ok {
-			return nil
+		if err != nil {
+			// In certain situations such as unfinished uploads, deleting all
+			// tags in S3 or removing the _manifests folder manually, this
+			// error may be of type PathNotFound.
+			//
+			// In these cases we can continue marking other manifests safely.
+			if _, ok := err.(driver.PathNotFoundError); !ok {
+				return err
+			}
+		}
+		blobService := repository.Blobs(ctx)
+		layerEnumerator, ok := blobService.(distribution.ManifestEnumerator)
+		if !ok {
+			return errors.New("unable to convert BlobService into ManifestEnumerator")
 		}
 
+		var deleteLayers []digest.Digest
+		err = layerEnumerator.Enumerate(ctx, func(dgst digest.Digest) error {
+			if _, ok := markSet[dgst]; !ok {
+				deleteLayers = append(deleteLayers, dgst)
+			}
+			return nil
+		})
+		if len(deleteLayers) > 0 {
+			deleteLayerSet[repoName] = deleteLayers
+		}
 		return err
 	})
 	if err != nil {
@@ -145,6 +164,15 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 		err = vacuum.RemoveBlob(string(dgst))
 		if err != nil {
 			return fmt.Errorf("failed to delete blob %s: %v", dgst, err)
+		}
+	}
+
+	for repo, dgsts := range deleteLayerSet {
+		for _, dgst := range dgsts {
+			err = vacuum.RemoveLayer(repo, dgst)
+			if err != nil {
+				return fmt.Errorf("failed to delete layer link %s of repo %s: %v", dgst, repo, err)
+			}
 		}
 	}
 

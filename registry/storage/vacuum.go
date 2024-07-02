@@ -100,3 +100,18 @@ func (v Vacuum) RemoveRepository(repoName string) error {
 
 	return nil
 }
+
+// RemoveLayer removes a layer link path from the storage
+func (v Vacuum) RemoveLayer(repoName string, dgst digest.Digest) error {
+	layerLinkPath, err := pathFor(layerLinkPathSpec{name: repoName, digest: dgst})
+	if err != nil {
+		return err
+	}
+	dcontext.GetLogger(v.ctx).Infof("Deleting layer link path: %s", layerLinkPath)
+	err = v.driver.Delete(v.ctx, layerLinkPath)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
