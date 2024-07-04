@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/suite"
 	"gopkg.in/yaml.v2"
 )
@@ -134,22 +135,23 @@ var configStruct = Configuration{
 		},
 	},
 	Redis: Redis{
-		Addr:     "localhost:6379",
-		Username: "alice",
-		Password: "123456",
-		DB:       1,
-		Pool: struct {
-			MaxIdle     int           `yaml:"maxidle,omitempty"`
-			MaxActive   int           `yaml:"maxactive,omitempty"`
-			IdleTimeout time.Duration `yaml:"idletimeout,omitempty"`
-		}{
-			MaxIdle:     16,
-			MaxActive:   64,
-			IdleTimeout: time.Second * 300,
+		Options: redis.UniversalOptions{
+			Addrs:           []string{"localhost:6379"},
+			Username:        "alice",
+			Password:        "123456",
+			DB:              1,
+			MaxIdleConns:    16,
+			PoolSize:        64,
+			ConnMaxIdleTime: time.Second * 300,
+			DialTimeout:     time.Millisecond * 10,
+			ReadTimeout:     time.Millisecond * 10,
+			WriteTimeout:    time.Millisecond * 10,
 		},
-		DialTimeout:  time.Millisecond * 10,
-		ReadTimeout:  time.Millisecond * 10,
-		WriteTimeout: time.Millisecond * 10,
+		TLS: RedisTLSOptions{
+			Certificate: "/foo/cert.crt",
+			Key:         "/foo/key.pem",
+			ClientCAs:   []string{"/path/to/ca.pem"},
+		},
 	},
 	Validation: Validation{
 		Manifests: ValidationManifests{
@@ -197,19 +199,24 @@ notifications:
         actions:
            - pull
 http:
-  clientcas:
-    - /path/to/ca.pem
+  tls:
+    clientcas:
+      - /path/to/ca.pem
   headers:
     X-Content-Type-Options: [nosniff]
 redis:
-  addr: localhost:6379
+  tls:
+    certificate: /foo/cert.crt
+    key: /foo/key.pem
+    clientcas:
+      - /path/to/ca.pem
+  addrs: [localhost:6379]
   username: alice
-  password: 123456
+  password: "123456"
   db: 1
-  pool:
-    maxidle: 16
-    maxactive: 64
-    idletimeout: 300s
+  maxidleconns: 16
+  poolsize: 64
+  connmaxidletime: 300s
   dialtimeout: 10ms
   readtimeout: 10ms
   writetimeout: 10ms
@@ -289,6 +296,7 @@ func (suite *ConfigSuite) TestParseSimple() {
 func (suite *ConfigSuite) TestParseInmemory() {
 	suite.expectedConfig.Storage = Storage{"inmemory": Parameters{}}
 	suite.expectedConfig.Log.Fields = nil
+	suite.expectedConfig.HTTP.TLS.ClientCAs = nil
 	suite.expectedConfig.Redis = Redis{}
 
 	config, err := Parse(bytes.NewReader([]byte(inmemoryConfigYamlV0_1)))
@@ -309,6 +317,7 @@ func (suite *ConfigSuite) TestParseIncomplete() {
 	suite.expectedConfig.Auth = Auth{"silly": Parameters{"realm": "silly"}}
 	suite.expectedConfig.Notifications = Notifications{}
 	suite.expectedConfig.HTTP.Headers = nil
+	suite.expectedConfig.HTTP.TLS.ClientCAs = nil
 	suite.expectedConfig.Redis = Redis{}
 	suite.expectedConfig.Validation.Manifests.Indexes.Platforms = ""
 
@@ -579,8 +588,14 @@ func copyConfig(config Configuration) *Configuration {
 	for k, v := range config.HTTP.Headers {
 		configCopy.HTTP.Headers[k] = v
 	}
+	configCopy.HTTP.TLS.ClientCAs = make([]string, 0, len(config.HTTP.TLS.ClientCAs))
+	configCopy.HTTP.TLS.ClientCAs = append(configCopy.HTTP.TLS.ClientCAs, config.HTTP.TLS.ClientCAs...)
 
 	configCopy.Redis = config.Redis
+	configCopy.Redis.TLS.Certificate = config.Redis.TLS.Certificate
+	configCopy.Redis.TLS.Key = config.Redis.TLS.Key
+	configCopy.Redis.TLS.ClientCAs = make([]string, 0, len(config.Redis.TLS.ClientCAs))
+	configCopy.Redis.TLS.ClientCAs = append(configCopy.Redis.TLS.ClientCAs, config.Redis.TLS.ClientCAs...)
 
 	configCopy.Validation = Validation{
 		Enabled:   config.Validation.Enabled,
