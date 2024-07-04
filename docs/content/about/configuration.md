@@ -241,6 +241,11 @@ notifications:
         actions:
            - pull
 redis:
+  tls:
+    certificate: /path/to/cert.crt
+    key: /path/to/key.pem
+    clientcas:
+      - /path/to/ca.pem
   addrs: [localhost:6379]
   password: asecret
   db: 0
@@ -959,12 +964,27 @@ how the registry connects to the `redis` instance.
 You should configure Redis with the **allkeys-lru** eviction policy, because the
 registry does not set an expiration value on keys.
 
-Under the hood distribution uses [`go-redis`](https://redis.uptrace.dev/) for
-redis connectivity and its [`UniversalOptions`](https://pkg.go.dev/github.com/redis/go-redis/v9#UniversalOptions)
+Under the hood distribution uses [`go-redis`](https://github.com/redis/go-redis) Go module for
+Redis connectivity and its [`UniversalOptions`](https://pkg.go.dev/github.com/redis/go-redis/v9#UniversalOptions)
 struct.
+
+You can optionally specify TLS configuration on top of the `UniversalOptions` settings.
+
+Use these settings to configure Redis TLS:
+
+| Parameter | Required | Description                                           |
+|-----------|----------|-------------------------------------------------------|
+| `certificate`  | yes  | Absolute path to the x509 certificate file.           |
+| `key`          | yes  | Absolute path to the x509 private key file.           |
+| `clientcas`    | no   | An array of absolute paths to x509 CA files.          |
 
 ```yaml
 redis:
+  tls:
+    certificate: /path/to/cert.crt
+    key: /path/to/key.pem
+    clientcas:
+      - /path/to/ca.pem
   addrs: [localhost:6379]
   password: asecret
   db: 0
