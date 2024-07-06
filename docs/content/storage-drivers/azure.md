@@ -20,7 +20,22 @@ An implementation of the `storagedriver.StorageDriver` interface which uses [Mic
 
 ## Related information
 
-* To get information about
-[azure-blob-storage](https://azure.microsoft.com/en-us/services/storage/), visit
-the Microsoft website.
-* You can use Microsoft's [Blob Service REST API](https://docs.microsoft.com/en-us/rest/api/storageservices/Blob-Service-REST-API) to [create a storage container](https://docs.microsoft.com/en-us/rest/api/storageservices/Create-Container).
+* To get information about Azure blob storage [the offical docs](https://azure.microsoft.com/en-us/services/storage/).
+* You can use Azure [Blob Service REST API](https://docs.microsoft.com/en-us/rest/api/storageservices/Blob-Service-REST-API) to [create a storage container](https://docs.microsoft.com/en-us/rest/api/storageservices/Create-Container).
+
+## Azure identity
+
+In order to use managed identity to access Azure blob storage you can use [Microsoft Bicep](https://learn.microsoft.com/en-us/azure/templates/microsoft.app/managedenvironments/storages?pivots=deployment-language-bicep).
+
+The following will configure credentials that will be used by the Azure storage driver to construct AZ Identity that will be used to access the blob storage:
+```
+properties: {
+  azure: {
+    accountname: accountname
+    container: containername
+    credentials: {
+      type: default
+    }
+  }
+}
+```

@@ -168,6 +168,7 @@ auth:
     service: token-service
     issuer: registry-token-issuer
     rootcertbundle: /root/certs/bundle
+    jwks: /path/to/jwks
     signingalgorithms:
         - EdDSA
         - HS256
@@ -584,6 +585,7 @@ auth:
     service: token-service
     issuer: registry-token-issuer
     rootcertbundle: /root/certs/bundle
+    jwks: /path/to/jwks
     signingalgorithms:
         - EdDSA
         - HS256
@@ -623,15 +625,16 @@ Token-based authentication allows you to decouple the authentication system from
 the registry. It is an established authentication paradigm with a high degree of
 security.
 
-| Parameter | Required | Description                                           |
-|-----------|----------|-------------------------------------------------------|
-| `realm`   | yes      | The realm in which the registry server authenticates. |
-| `service` | yes      | The service being authenticated.                      |
-| `issuer`  | yes      | The name of the token issuer. The issuer inserts this into the token so it must match the value configured for the issuer. |
-| `rootcertbundle` | yes | The absolute path to the root certificate bundle. This bundle contains the public part of the certificates used to sign authentication tokens. |
-| `autoredirect`   | no      | When set to `true`, `realm` will automatically be set using the Host header of the request as the domain and a path of `/auth/token/`(or specified by `autoredirectpath`), the `realm` URL Scheme will use `X-Forwarded-Proto` header if set, otherwise it will be set to `https`. |
-| `autoredirectpath`   | no      | The path to redirect to if `autoredirect` is set to `true`, default: `/auth/token/`. |
-| `signingalgorithms`  | no      | A list of token signing algorithms to use for verifying token signatures. If left empty the default list of signing algorithms is used. Please see below for allowed values and default. |
+| Parameter            | Required | Description                                           |
+|----------------------|----------|-------------------------------------------------------|
+| `realm`              | yes      | The realm in which the registry server authenticates. |
+| `service`            | yes      | The service being authenticated.                      |
+| `issuer`             | yes      | The name of the token issuer. The issuer inserts this into the token so it must match the value configured for the issuer. |
+| `rootcertbundle`     | yes      | The absolute path to the root certificate bundle. This bundle contains the public part of the certificates used to sign authentication tokens. |
+| `autoredirect`       | no       | When set to `true`, `realm` will be set to the Host header of the request as the domain and a path of `/auth/token/`(or specified by `autoredirectpath`), the `realm` URL Scheme will use `X-Forwarded-Proto` header if set, otherwise it will be set to `https`. |
+| `autoredirectpath`   | no       | The path to redirect to if `autoredirect` is set to `true`, default: `/auth/token/`. |
+| `signingalgorithms`  | no       | A list of token signing algorithms to use for verifying token signatures. If left empty the default list of signing algorithms is used. Please see below for allowed values and default. |
+| `jwks`               | no       | The absolute path to the JSON Web Key Set (JWKS) file. The JWKS file contains the trusted keys used to verify the signature of authentication tokens. |
 
 Available `signingalgorithms`:
 - EdDSA
