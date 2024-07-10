@@ -1,0 +1,284 @@
+# commit to be tagged for new release
+commit = "HEAD"
+
+project_name = "registry"
+github_repo = "distribution/distribution"
+
+# previous release
+previous = "v3.0.0-alpha.1"
+
+pre_release = true
+
+preface = """\
+Welcome to the 3.0.0-beta.1 release of registry!
+
+This is the last major pre-release of registry.
+It contains various updates and bug fixes with a few minor feature additions.
+
+See the changelog below for full list of changes.
+
+### Deprecated
+
+* the default configuration path has changed to `/etc/distribution/config.yml`
+
+### Notable Changes
+
+* Support for sparse indexes enables selective mirroring of platform images
+* Auth config now requires explicit declaration of token signing algorithms
+* Support for OpenTelemetry tracing has been added
+* Redis cache now supports clustering and custom TLS config
+* Various caching proxy bug fixes and minitor improvements
+* Various garbage collection fixes and improvements
+* Documentation has received various updates and fixes
+
+### Changes
+
+<details><summary>181 commits</summary>
+<p>
+
+  * [`60da1934`](https://github.com/distribution/distribution/commit/60da1934b6c5ca04a5e3abc820f288209b97bc5c) Bump Go and golang linter (#4389)
+  * [`83a071e9`](https://github.com/distribution/distribution/commit/83a071e98ac210b905890cf0740bf662b9c8f54b) Bump alpine version
+  * [`5316d3bd`](https://github.com/distribution/distribution/commit/5316d3bda28d090d4c3494d837a0419a0370691c) Bump Go and golang linter
+  * [`948a39d3`](https://github.com/distribution/distribution/commit/948a39d358e0a89e9704eff9270d76b9506393ca) Update docs: JWKS credentials and AZ identity (#4397)
+  * [`d3cc664f`](https://github.com/distribution/distribution/commit/d3cc664fa2219d5ac6e7a724dbb755f27b08a2e6) Update docs: JWKS credentials and AZ identity
+  * [`4dd0ac97`](https://github.com/distribution/distribution/commit/4dd0ac977e9674cc0c2f3b206edb43475dac91c1) feat: implement 'rewrite' storage middleware (#4146)
+  * [`558ace13`](https://github.com/distribution/distribution/commit/558ace139143057e0f8e3dbbcc5b695dda33462a) feat: implement 'rewrite' storage middleware
+  * [`306f4ff7`](https://github.com/distribution/distribution/commit/306f4ff71eae432a323723eb4ffaf9aa861ca603) Replace custom Redis config struct with go-redis UniversalOptions (adds sentinel & cluster support) (#4306)
+  * [`6d591190`](https://github.com/distribution/distribution/commit/6d5911900a793318e61324584a144d2b06b40b2b) Update Redis configuration docs with TLS options
+  * [`a008d360`](https://github.com/distribution/distribution/commit/a008d360b4cda5deff8bfcce10a518c98ca717d8) Create type alias for redis.UniversalOptions
+  * [`f27799d1`](https://github.com/distribution/distribution/commit/f27799d1aa6285241f13d62408cd0a576d46f253) Add custom TLS config to Redis
+  * [`b63cbb33`](https://github.com/distribution/distribution/commit/b63cbb33181f9a917c226c59f15e284b96d87bd8) Replace custom Redis config struct with go-redis UniversalOptions
+  * [`3a849954`](https://github.com/distribution/distribution/commit/3a8499541a8d624b909c1e16a8d41e22b756457e) docs: disable base element override (#4391)
+  * [`f36b44ff`](https://github.com/distribution/distribution/commit/f36b44ff73cd4e7c94436ec3fd89f9c1777265ae) docs: disable base element override
+  * [`10d90f72`](https://github.com/distribution/distribution/commit/10d90f72904b3f8869499570230c2b26d5e7a446) remove layer's link file by gc (#4344)
+  * [`d9050bb9`](https://github.com/distribution/distribution/commit/d9050bb917d8fde4406a127d1fed5a09af7fbcdc) remove layer's link file by gc
+  * [`2b036a9f`](https://github.com/distribution/distribution/commit/2b036a9fc14d8a38f79b04e0c20d68f785d1e15b) Update dockerhub.md (#4394)
+  * [`43a64480`](https://github.com/distribution/distribution/commit/43a64480ef634d75a70a29048facaa181bb27f19) Update dockerhub.md
+  * [`5f804a9d`](https://github.com/distribution/distribution/commit/5f804a9df72f86e05de6a7c99466539b8fa26d2c) build(deps): bump github.com/Azure/azure-sdk-for-go/sdk/azidentity from 1.3.0 to 1.6.0 (#4380)
+  * [`050e1a3e`](https://github.com/distribution/distribution/commit/050e1a3ee7483fe1b779275ada6a23521e67f730) build(deps): bump github.com/Azure/azure-sdk-for-go/sdk/azidentity
+  * [`e1ec19ae`](https://github.com/distribution/distribution/commit/e1ec19ae60b8628b564d4fb01ce09ef81047987c) New path for distribution config (#4365)
+  * [`975613d4`](https://github.com/distribution/distribution/commit/975613d4a0b01418f2869ec6f78a17c5b464f61a) New path for distribution config
+  * [`675d7e27`](https://github.com/distribution/distribution/commit/675d7e27f59c9d332418315adb20f02c20593cea) feature: Bump go-jose and require signing algorithms in auth (#4349)
+  * [`52d68216`](https://github.com/distribution/distribution/commit/52d68216c0a8a4bc06871e2afdd62c3a8c068313) feature: Bump go-jose and require signing algorithms in auth
+  * [`37b83869`](https://github.com/distribution/distribution/commit/37b83869a95a0a597cbe8a1fb8e1ea2819b45191) Add option to enable sparse indexes (#3536)
+  * [`c40c4b28`](https://github.com/distribution/distribution/commit/c40c4b289ad1575d450da47476f335a724db370b) Enable configuration of index dependency validation
+  * [`e0a54de7`](https://github.com/distribution/distribution/commit/e0a54de7fc1dd9046f1d6449cc615af209003cbb) Add a go.mod toolchain version (#4347)
+  * [`421a359b`](https://github.com/distribution/distribution/commit/421a359b26a52e2553a752a20ff002595c838ea2) Add a go.mod toolchain version
+  * [`ad69db3f`](https://github.com/distribution/distribution/commit/ad69db3fd5b4207aa066f304c9532a5cbddd40d0) docs: update location of `filesystem.md` (#4355)
+  * [`119c608f`](https://github.com/distribution/distribution/commit/119c608fad0d4adb00fd0c9a1c7c65a960493e46) docs: update location of `filesystem.md`
+  * [`2c6b6482`](https://github.com/distribution/distribution/commit/2c6b6482fcfc82bd8c59695485ae1050b1cd861a) Include headers when serving blob through proxy (#4273)
+  * [`04182455`](https://github.com/distribution/distribution/commit/041824555ca2a5967699e0281e48e1e7b65eec93) Include headers when serving blob through proxy
+  * [`6a9b0cfb`](https://github.com/distribution/distribution/commit/6a9b0cfb71149fc85e1ea1af27d7a7349ca95bf2) Add support for `Basic Authentication` to `proxyingRegistry` (#4263)
+  * [`1e8ea031`](https://github.com/distribution/distribution/commit/1e8ea031732b73b727f3a93ca2b3d8e3196fcfc4) Add support for `Basic Authentication` to `proxyingRegistry`
+  * [`56a020f7`](https://github.com/distribution/distribution/commit/56a020f7f1fbec903d785b552c97330c58fddae6) Stop proxy scheduler on system exit (#4293)
+  * [`062309c0`](https://github.com/distribution/distribution/commit/062309c08b47a911d4c4558315628d938423b165) Stop proxy scheduler on system exit
+  * [`c49220d4`](https://github.com/distribution/distribution/commit/c49220d492233615f22c1eea91e3121a681751eb) Fix #2902: ‘autoRedirect’ hardcode ‘https’ scheme (#2903)
+  * [`63eb22d7`](https://github.com/distribution/distribution/commit/63eb22d74b42df1ab96624dc3a1e78e5d3915cd8) Fix: ‘autoRedirect’ hardcode ‘https’ scheme
+  * [`cb3a2010`](https://github.com/distribution/distribution/commit/cb3a2010c458f8c177e4b5a4a85d96e0518025bc) Set readStartAtFile context aware for purge uploads (#4339)
+  * [`f1875862`](https://github.com/distribution/distribution/commit/f1875862cf98feeae883c7795d44d62f83a22e5a) Set readStartAtFile context aware for purge uploads
+  * [`c8e22f67`](https://github.com/distribution/distribution/commit/c8e22f672344679fe7ef66d40cd99096c7f9e5b1) Add Shutdown method to registry.Registry (#4338)
+  * [`16a305eb`](https://github.com/distribution/distribution/commit/16a305ebafcf62f361ad5f2ae6f2b33c2fe3e3e5) Add registry.Shutdown method for graceful shutdown of embedded registry
+  * [`e0795fcf`](https://github.com/distribution/distribution/commit/e0795fcfe34c9e7d0fc037fd6231dbab3d1bcccb) add bounded concurrency for tag lookup and untag (#4329)
+  * [`a2afe23f`](https://github.com/distribution/distribution/commit/a2afe23f386e827d1975530aab12010f0be2a774) add concurrency limits for tag lookup and untag
+  * [`a5882d66`](https://github.com/distribution/distribution/commit/a5882d66468fd477d3f7a909c2d93ee71b434467) vendor: update manifest dependencies
+  * [`47a9dac2`](https://github.com/distribution/distribution/commit/47a9dac250aa62a25ef5a0da56dcd16862d1f705) fix: ignore error of manifest tag path not found in gc (#4331)
+  * [`11215632`](https://github.com/distribution/distribution/commit/112156321fceeb4a6c845970d971cec84a3f0794) fix: ignore error of manifest tag path not found in gc
+  * [`e6d1d182`](https://github.com/distribution/distribution/commit/e6d1d182bf002e9cb782e8a77493ccef0d716d2a) Allow setting s3 forcepathstyle without regionendpoint (#4291)
+  * [`8654a0ee`](https://github.com/distribution/distribution/commit/8654a0ee456c84a8a3e89ddb58339ba205fccea8) Allow setting s3 forcepathstyle without regionendpoint
+  * [`03e58dfc`](https://github.com/distribution/distribution/commit/03e58dfcf80e802c207c2b3eaa6d9e75da4d1981) chore: fix some typos in comments (#4335)
+  * [`2fe34420`](https://github.com/distribution/distribution/commit/2fe3442035e01805e2117788f9facdbcce354f44) chore: fix some typos in comments
+  * [`d61d8ebc`](https://github.com/distribution/distribution/commit/d61d8ebc16770c0b257cb342f12576d59e2df272) build(deps): bump golang.org/x/net from 0.20.0 to 0.23.0 (#4333)
+  * [`2db0a598`](https://github.com/distribution/distribution/commit/2db0a598ccd7c5d3a943b3477a447d869f637c5d) build(deps): bump golang.org/x/net from 0.20.0 to 0.23.0
+  * [`e8ea4e59`](https://github.com/distribution/distribution/commit/e8ea4e5951440f20ebc812c043a9329d974ce106) chore: fix some typos in comments (#4332)
+  * [`e0a1ce14`](https://github.com/distribution/distribution/commit/e0a1ce14a8e9ca691ac13959a17cd5f141645cf2) chore: fix some typos in comments
+  * [`bdd3d31f`](https://github.com/distribution/distribution/commit/bdd3d31faedad54834116db2c9f118eb45fcc735) proxy: Do not configure HTTP secret for proxy registry (#4305)
+  * [`127fa7e0`](https://github.com/distribution/distribution/commit/127fa7e0574cffe8a091a25e01f6a5dab5a9d8fd) proxy: Do not configure HTTP secret for proxy registry
+  * [`df983747`](https://github.com/distribution/distribution/commit/df983747649396a7377a4b428ad3a1aebf7a9001) Fix garbage-collect --delete-untagged to handle schema 2 manifest list and OCI image index (#4285)
+  * [`601b37d9`](https://github.com/distribution/distribution/commit/601b37d98b9330bd66137cdc89a01896cf7a481d) Handle OCI image index and V2 manifest list during garbage collection
+  * [`bc6e81e1`](https://github.com/distribution/distribution/commit/bc6e81e1b9a8017a66fc56a55913b92930941feb) Add Go 1.22 support to CI (#4314)
+  * [`21c718d5`](https://github.com/distribution/distribution/commit/21c718d58c71e0053b51be5b4f5c5e397b571efb) Add Go 1.22 support to CI
+  * [`0947c654`](https://github.com/distribution/distribution/commit/0947c654e9de35658ed3bf11daf7c8a7036143f0) chore: bump distriution/reference dependency (#4312)
+  * [`167d7996`](https://github.com/distribution/distribution/commit/167d7996bebe275715b919664756123e076e1925) chore: bump distriution/reference dependency
+  * [`dde4f2a6`](https://github.com/distribution/distribution/commit/dde4f2a6db018f4ab8250a2b0e05924b4a98dd80) chore: remove repetitive words in comments (#4313)
+  * [`2446e110`](https://github.com/distribution/distribution/commit/2446e1102d1d73cfd078c8998a245e16b31e6883) chore: remove repetitive words in comments
+  * [`0d1792f5`](https://github.com/distribution/distribution/commit/0d1792f55f3c5bd0380d6cac781aba75dd5f87c0) build(deps): bump fossa-contrib/fossa-action from 2 to 3 (#4232)
+  * [`87ae3eb8`](https://github.com/distribution/distribution/commit/87ae3eb8d45a978fd527e569258f2f3318c7cf3e) build(deps): bump fossa-contrib/fossa-action from 2 to 3
+  * [`f525c27f`](https://github.com/distribution/distribution/commit/f525c27f55dd565bcdb7adc25681b4b336f5859e) build(deps): bump ossf/scorecard-action from 2.0.6 to 2.3.1 (#4231)
+  * [`053fd16a`](https://github.com/distribution/distribution/commit/053fd16ae95a1c53ebb9fcba6031feab5a5903a6) build(deps): bump ossf/scorecard-action from 2.0.6 to 2.3.1
+  * [`9d366245`](https://github.com/distribution/distribution/commit/9d3662456396b95dec573f5f26b27b2310bbab98) Upgrade Scorecard Action version to fix error (#4311)
+  * [`fdbb3a82`](https://github.com/distribution/distribution/commit/fdbb3a828868ea9abf01920c7b8d0e8b851f5ed2) fix: upgrade scorecard version
+  * [`94146f53`](https://github.com/distribution/distribution/commit/94146f53d82e8e2095781062da7c3c996361e3d0) Don't try to parse error responses with no body (#4307)
+  * [`e8820b25`](https://github.com/distribution/distribution/commit/e8820b2564ef3cd3fade9df3c65321a3d4dfcfa6) Don't try to parse error responses with no body
+  * [`3cb985ca`](https://github.com/distribution/distribution/commit/3cb985cac0cc56c643d28083c867f47902a6aae9) Initialize proxy prometheus counters values to 0 (#4283)
+  * [`6ca646ca`](https://github.com/distribution/distribution/commit/6ca646caadcda2fbde6befdb2a2f1cac1cd3da59) Initialize proxy prometheus counters values to 0 to prevent gaps after registry restart
+  * [`1e3de582`](https://github.com/distribution/distribution/commit/1e3de5823161684f78c995c60cf00632d17bca6c) Update go versions (#4303)
+  * [`1cb89e3e`](https://github.com/distribution/distribution/commit/1cb89e3e0e08b1d357f093ab7c4d8466735884c4) Update go versions
+  * [`7c751749`](https://github.com/distribution/distribution/commit/7c7517493c7be01aa6a9c904034bda97a6f8c378) build(deps): bump github.com/go-jose/go-jose/v3 from 3.0.1 to 3.0.3 (#4297)
+  * [`1c5fe22d`](https://github.com/distribution/distribution/commit/1c5fe22dec3752d1f74768e17028020779b5a73f) build(deps): bump github.com/go-jose/go-jose/v3 from 3.0.1 to 3.0.3
+  * [`3783a795`](https://github.com/distribution/distribution/commit/3783a79518be20bc3a000a2826c015e8969d5a20) build(deps): bump google.golang.org/protobuf from 1.31.0 to 1.33.0 (#4301)
+  * [`cb2b51ca`](https://github.com/distribution/distribution/commit/cb2b51cac9cee286fe6618a60360a8321ac1db70) build(deps): bump google.golang.org/protobuf from 1.31.0 to 1.33.0
+  * [`d9815da9`](https://github.com/distribution/distribution/commit/d9815da9cba94fd9ca2e52c4781f0373e57323a8) Support redirects in gcs storage with default credentials (#4295)
+  * [`de450c90`](https://github.com/distribution/distribution/commit/de450c903af640bea467c5bbd66604612026578b) update: support redirects in gcs storage with default credentials
+  * [`663b430c`](https://github.com/distribution/distribution/commit/663b430ccc10e184ecb82eff77661a38f1f6f660) fix: typo (#4296)
+  * [`6465b4cd`](https://github.com/distribution/distribution/commit/6465b4cd084fdee552cd462753ec012d2779ee7f) fix: typo
+  * [`5c662eb1`](https://github.com/distribution/distribution/commit/5c662eb1c209bb8687738eeee2c73643cc93d1af) Standardize OTEL error logging format to match application logs (#4292)
+  * [`71a069dc`](https://github.com/distribution/distribution/commit/71a069dc38ee1239c39892a946ea7c04619557e5) Standardize OTEL error logging format to match application logs
+  * [`51a72c2a`](https://github.com/distribution/distribution/commit/51a72c2aef976bd55de3a7b8b0120f97b4169476) [otel-tracing] Added Tracing to Base package (driver) (#4196)
+  * [`f690b3eb`](https://github.com/distribution/distribution/commit/f690b3ebe26f14c5d83998b2fec73f7491ec14d2) Added Open Telemetry Tracing to Filesystem package
+  * [`95077fda`](https://github.com/distribution/distribution/commit/95077fda37479fe4e6b7d748cd4b095081ae2470) fix: typo (#4290)
+  * [`a4918b67`](https://github.com/distribution/distribution/commit/a4918b67bbe4f2bdf870bb6fad345529555f107e) fix: typo
+  * [`38beeee2`](https://github.com/distribution/distribution/commit/38beeee2c8d88c7a87e5563844aa157ea5615144) Update notifications.md (#4287)
+  * [`1c3d44ec`](https://github.com/distribution/distribution/commit/1c3d44eccd57ae51d83b466c3935a56aeca1d985) Update notifications.md
+  * [`a2b608a1`](https://github.com/distribution/distribution/commit/a2b608a15cc329df91bb21d388c93c8e4697f097) build(deps): bump codecov/codecov-action from 3 to 4 (#4271)
+  * [`939061d1`](https://github.com/distribution/distribution/commit/939061d102b2cc3422312a9dd788a429fadbf021) build(deps): bump codecov/codecov-action from 3 to 4
+  * [`6a568c10`](https://github.com/distribution/distribution/commit/6a568c100fe130b083d945511f379ea8be52db26) Do not write manifests on HEAD requests (#4286)
+  * [`2763ba1e`](https://github.com/distribution/distribution/commit/2763ba1eae3620daf9c7536b721e7a630541edae) Do not write manifests on HEAD requests
+  * [`62aa44ed`](https://github.com/distribution/distribution/commit/62aa44edfde08456ea01e476e42d13377c358bb9) Add a trademarks and docs license link (#4276)
+  * [`5bebd152`](https://github.com/distribution/distribution/commit/5bebd152be0c9a40721d1b1f97195f909dad5d73) Add a trademarks and docs license link
+  * [`9b3eac8f`](https://github.com/distribution/distribution/commit/9b3eac8f08207cc088270cf4acabb6ebeee1e7a0) build(deps): bump peter-evans/dockerhub-description from 3 to 4 (#4267)
+  * [`e5f5ff7a`](https://github.com/distribution/distribution/commit/e5f5ff7a11ff4bd7009f6fcdcb1fe84dccc70e42) build(deps): bump peter-evans/dockerhub-description from 3 to 4
+  * [`6bc70e64`](https://github.com/distribution/distribution/commit/6bc70e640d8e95ac026149410ab02104f0953c63) build(deps): bump actions/upload-artifact from 4.1.0 to 4.3.0 (#4265)
+  * [`ee58e343`](https://github.com/distribution/distribution/commit/ee58e3438f1c5475d0eeef5b9d1a26f834a6c731) build(deps): bump actions/upload-artifact from 4.1.0 to 4.3.0
+  * [`945eed71`](https://github.com/distribution/distribution/commit/945eed71e117a50143650b8d45845dc047b95ed6) feat: Add HTTP2 for unencrypted HTTP (v3) (#4248)
+  * [`11f50c03`](https://github.com/distribution/distribution/commit/11f50c034e908fea9b8176f4fef9755853bbd518) feat: Add HTTP2 for unencrypted HTTP
+  * [`0b21cc06`](https://github.com/distribution/distribution/commit/0b21cc06b0960f24f0e39280e5fa85cc631b8be7) refactor(storage/s3): remove redundant len check (#4259)
+  * [`41161a6e`](https://github.com/distribution/distribution/commit/41161a6e12807bcc151bddc5f9fde6619108e228) refactor(storage/s3): remove redundant len check
+  * [`01b4555d`](https://github.com/distribution/distribution/commit/01b4555d59222ec9698cb1173b980cbbb1fb5289) docs: add rendering hook and fix broken links (#4247)
+  * [`5e75227f`](https://github.com/distribution/distribution/commit/5e75227fb213162564bab74b146300ffed9f0bbd) docs: fix broken links and improve link resolution
+  * [`1611bd2f`](https://github.com/distribution/distribution/commit/1611bd2fc41820a545106852bcc505eb5f60b317) chore: Migrate PR labeler config to v5 (#4258)
+  * [`c78c1561`](https://github.com/distribution/distribution/commit/c78c156139ad203b380588e716f6473579afc9e3) Update labeler.yml
+  * [`65c6a6d3`](https://github.com/distribution/distribution/commit/65c6a6d37775d1aa85b2921449f874548672af7e) Update .github/labeler.yml
+  * [`b1d1be8e`](https://github.com/distribution/distribution/commit/b1d1be8e879597b12a202f7bc3741717f85e7045) chore: Migrate PR labeler config to v5
+  * [`969bc4a1`](https://github.com/distribution/distribution/commit/969bc4a12562d62940204d32b0edd5240d0de10d) chore: Remove `area/config` duplicate entry in `labeler.yml` (#4257)
+  * [`a626871f`](https://github.com/distribution/distribution/commit/a626871f127539bd0e2cd1a5af4711a4ed33b033) chore: Sort entries
+  * [`d2c57396`](https://github.com/distribution/distribution/commit/d2c57396e043dd84c79fa2027fdbc889227e4a1d) chore: Remove `area/config` duplicate entry in `labeler.yml`
+  * [`781d0368`](https://github.com/distribution/distribution/commit/781d03682c4fcf8c3c8b80a85c5fc618e2c593f6) chore: Remove duplicate `area/ci` entry in PR labeler (#4256)
+  * [`45cea887`](https://github.com/distribution/distribution/commit/45cea887eb7561ee80f876f6ad37bb4d812c162a) chore: Remove duplicate `area/ci` entry in PR labeler
+  * [`bf6f5c3f`](https://github.com/distribution/distribution/commit/bf6f5c3f748deab2aa17741a3b86f4a682b2c33d) fix: add labeler action (#4213)
+  * [`ea02d9c4`](https://github.com/distribution/distribution/commit/ea02d9c42e90c6e479aad82b745bfcd7feded963) fix: add labeler action
+  * [`dd32792b`](https://github.com/distribution/distribution/commit/dd32792bc0a2b86e7a98c8fed1421b15392804b7) fix: update Dockerfile version output (#4212)
+  * [`5bd45551`](https://github.com/distribution/distribution/commit/5bd45551b40abfc5fec37c7510ced32eb19996ad) fix: update Dockerfile version output
+  * [`6926aea0`](https://github.com/distribution/distribution/commit/6926aea0ee50996890257223ad86de65ba889d3e) vendor: github.com/gorilla/handlers v1.5.2 (#4211)
+  * [`4f9fe183`](https://github.com/distribution/distribution/commit/4f9fe183c3a1ebc762c274c564eb6abed4e06997) vendor: github.com/gorilla/handlers v1.5.2
+  * [`435d1b94`](https://github.com/distribution/distribution/commit/435d1b94834ab77d5ba9099a24bfd81e2af2dca5) remove deprecated ReadSeekCloser interfaces (#4245)
+  * [`50332793`](https://github.com/distribution/distribution/commit/5033279355313edc81af518c427602bb107ed8d5) remove deprecated ReadSeekCloser interfaces
+  * [`0c13e046`](https://github.com/distribution/distribution/commit/0c13e046aeef3676120c5b5550aff3cdc23f9bac) build(deps): bump actions/upload-artifact from 3.0.0 to 4.1.0 (#4254)
+  * [`ef1db8ac`](https://github.com/distribution/distribution/commit/ef1db8ac266e566ab1e25866a8e65de29685576d) build(deps): bump actions/upload-artifact from 3.0.0 to 4.1.0
+  * [`88d85426`](https://github.com/distribution/distribution/commit/88d854269fa67d48eb6496050d8d1f4765b250b2) build(deps): bump docker/bake-action from 2 to 4 (#4253)
+  * [`6b14735d`](https://github.com/distribution/distribution/commit/6b14735dbf4c9fd5e199d887da09b22fffd6426d) ci: disable provenance when generating docs
+  * [`f09bf31f`](https://github.com/distribution/distribution/commit/f09bf31f3ef2427f2c6b612ced905a8d8b55f32c) ci: handle provenance for built artifacts
+  * [`f4a3149a`](https://github.com/distribution/distribution/commit/f4a3149a2f4edafaacebea211d3c2cf7d923bfa6) build(deps): bump docker/bake-action from 2 to 4
+  * [`14366a2d`](https://github.com/distribution/distribution/commit/14366a2dff6a8f595e39d258085381731b43cec6) fix: load gcs credentials and client inside DriverConstructor (#4218)
+  * [`5bd7f258`](https://github.com/distribution/distribution/commit/5bd7f2588057e58009c13db38db9168337c9d379) fix: load gcs credentials and client inside DriverConstructor
+  * [`9dfead3d`](https://github.com/distribution/distribution/commit/9dfead3d9a82b57028283195a586a01ae71b77e1) build(deps): bump docker/setup-buildx-action from 2 to 3 (#4230)
+  * [`f2342966`](https://github.com/distribution/distribution/commit/f2342966469aa2ab268a06391703badd13633326) build(deps): bump docker/setup-buildx-action from 2 to 3
+  * [`e780c8bb`](https://github.com/distribution/distribution/commit/e780c8bb24b2157d7f74ecc079edcfc3d6ceb096) update to alpine 3.19 (#4210)
+  * [`5f397b87`](https://github.com/distribution/distribution/commit/5f397b877dc7dab2de3854fb9ba2f746c7a9bea7) update to alpine 3.19
+  * [`9d04a0fc`](https://github.com/distribution/distribution/commit/9d04a0fcd1ca1be05df436799821e1dbf18d1d10) build(deps): bump docker/metadata-action from 4 to 5 (#4240)
+  * [`5c585db7`](https://github.com/distribution/distribution/commit/5c585db74ec89755e49d7907a869235dac618aad) build(deps): bump docker/metadata-action from 4 to 5
+  * [`1d2895f2`](https://github.com/distribution/distribution/commit/1d2895f2bfee0071d1da65c75ed239cc952d20d5) build(deps): bump docker/login-action from 2 to 3 (#4239)
+  * [`5c5d8d3d`](https://github.com/distribution/distribution/commit/5c5d8d3ddd79825e9b2e0551f7db6501c2adb168) build(deps): bump docker/login-action from 2 to 3
+  * [`2fcf2091`](https://github.com/distribution/distribution/commit/2fcf2091e21717c082016228ac25cfc69b7dba43) build(deps): bump actions/upload-pages-artifact from 2 to 3 (#4234)
+  * [`fc992dfe`](https://github.com/distribution/distribution/commit/fc992dfef7d19d53eaf467b3476dd0e594a7f017) build(deps): bump actions/upload-pages-artifact from 2 to 3
+  * [`e9995cdb`](https://github.com/distribution/distribution/commit/e9995cdb3f105ca3c55de3b2c8fa609b3ac9bc36) chore: use no-cache-filter for outdated stage (#4216)
+  * [`55e91b39`](https://github.com/distribution/distribution/commit/55e91b39e407bde9b6137b8555ede1850e91dac4) chore: use no-cache-filter for outdated stage
+  * [`4382e4bb`](https://github.com/distribution/distribution/commit/4382e4bb20528fc06840cbf04138042844b05899) chore: generate authors and update mailmap (#4215)
+  * [`587f9e28`](https://github.com/distribution/distribution/commit/587f9e286d7505d1928e825cd4a83fd26de65763) chore: generate authors
+  * [`befbaa68`](https://github.com/distribution/distribution/commit/befbaa680ca097c4b584684b686186419bf19330) chore: update mailmap
+  * [`b2bd724b`](https://github.com/distribution/distribution/commit/b2bd724b52147b909267d08a1739263b3e0101f5) chore: sort and fix mailmap
+  * [`a808a5bb`](https://github.com/distribution/distribution/commit/a808a5bb0e67401bdec7338e474f6adae79ac2d6) build(deps): bump actions/configure-pages from 3 to 4 (#4227)
+  * [`f0a66954`](https://github.com/distribution/distribution/commit/f0a669540ead51317cc3fdea56834fa9600e8e54) build(deps): bump actions/configure-pages from 3 to 4
+  * [`ec0a4773`](https://github.com/distribution/distribution/commit/ec0a477324f1f30fbe09caff86158e793cefb73d) build(deps): bump actions/setup-go from 3 to 5 (#4228)
+  * [`78a6be85`](https://github.com/distribution/distribution/commit/78a6be85ee9e759aec076b239479207e274ec108) build(deps): bump actions/setup-go from 3 to 5
+  * [`51a7c2bd`](https://github.com/distribution/distribution/commit/51a7c2bdf84a767a58165bfdbcebc468d2e1b0cb) build(deps): bump actions/checkout from 3 to 4 (#4226)
+  * [`38a2d53c`](https://github.com/distribution/distribution/commit/38a2d53c7bfcf1b8ee52537dd7ecfd422c26f96c) build(deps): bump actions/checkout from 3 to 4
+  * [`8ab33dd8`](https://github.com/distribution/distribution/commit/8ab33dd8add1725d2f36011a54e4922770ae66de) build(deps): bump actions/deploy-pages from 2 to 4 (#4224)
+  * [`af2fa0ff`](https://github.com/distribution/distribution/commit/af2fa0ff4d07feb4b83deed0a017ed9fcdd03ce2) build(deps): bump actions/deploy-pages from 2 to 4
+  * [`f73bcf07`](https://github.com/distribution/distribution/commit/f73bcf07007f96bad261c0ed24d808278f60d8b2) build(deps): bump github/codeql-action from 1.0.26 to 3.22.12 (#4225)
+  * [`ba702e1d`](https://github.com/distribution/distribution/commit/ba702e1d7c1245808e3245cca25fe59124de7fcf) build(deps): bump github/codeql-action from 1.0.26 to 3.22.12
+  * [`7a9e0ea0`](https://github.com/distribution/distribution/commit/7a9e0ea014dc1067bfaf9bd8186ff7d4e800f6a6) chore: dependabot to keep gha up to date (#4217)
+  * [`7838a369`](https://github.com/distribution/distribution/commit/7838a369a367aad88d6468f778114557b6807b4f) chore: dependabot to keep gha up to date
+  * [`2cc6bd73`](https://github.com/distribution/distribution/commit/2cc6bd73e629bdb7ca84b4491496d62f4dd506bf) vendor: github.com/mitchellh/mapstructure v1.5.0 (#4222)
+  * [`bdfa8324`](https://github.com/distribution/distribution/commit/bdfa8324a088bb45938f158d45aa6eafd5655275) vendor: github.com/mitchellh/mapstructure v1.5.0
+  * [`316e4099`](https://github.com/distribution/distribution/commit/316e4099b1f9223e7b922e7a92d800d2c4f13ea2) fix: add missing skip in s3 driver test (#4219)
+  * [`6908e0d5`](https://github.com/distribution/distribution/commit/6908e0d5facd31ed32046df03a09040c964be0b3) fix: add missing skip in s3 driver test
+  * [`012adcae`](https://github.com/distribution/distribution/commit/012adcae7de005cc134dcad37e3809e52f6238ba) feat: add PR labeler (#4205)
+  * [`e96fce17`](https://github.com/distribution/distribution/commit/e96fce1703986d12e365f823205ab2c4cd11ed7f) feat: add PR labeler
+  * [`fb6ccc33`](https://github.com/distribution/distribution/commit/fb6ccc33d11f3eae2d76683b5c5ad39653d2baaa) update: readme cleanup and fxes (#4208)
+  * [`e29a5c8e`](https://github.com/distribution/distribution/commit/e29a5c8e68353705ea282d1e13f26937da199944) update: readme cleanup and fxes
+  * [`c8f17009`](https://github.com/distribution/distribution/commit/c8f17009c44560d4c07b2ae11414ae148cd23565) docs: remove legacy kramdown options from link (#4209)
+  * [`0e0d74b0`](https://github.com/distribution/distribution/commit/0e0d74b03763eabf1c2b6bf30d2d2203901f4195) docs: remove legacy kramdown options from link
+  * [`d830076a`](https://github.com/distribution/distribution/commit/d830076a49dc1b66129c3591a7d71f7f34109ea9) fix: build status badge (#4207)
+  * [`59929031`](https://github.com/distribution/distribution/commit/599290318264d3aa6e9b7f4ec24f9a56462bd168) fix: build status badge
+  * [`2306ab8a`](https://github.com/distribution/distribution/commit/2306ab8aed3d82a73f652693d121659b4319bfa4) feat: add GH issue template (#4206)
+  * [`535b6586`](https://github.com/distribution/distribution/commit/535b65869b31e776895b8e4484562ea35782f6e5) feat: add GH issue template
+  * [`c5a88721`](https://github.com/distribution/distribution/commit/c5a887217e74d55e3f62b2c4beb3b7909d5b97ed) version: export getter functions (#4204)
+  * [`a74cacff`](https://github.com/distribution/distribution/commit/a74cacff04e76ec91230ed407a10d50f64c028ef) version: export getter functions
+  * [`ab27c9d5`](https://github.com/distribution/distribution/commit/ab27c9d5f18cb080aff37770d1c55f2554c6b307) version: use go list -m
+  * [`ec617ca6`](https://github.com/distribution/distribution/commit/ec617ca6d20c7522b7fb994cfaf590fc7ac9adca) update: set User-Agent header in GCS storage driver (#4203)
+  * [`d59a570c`](https://github.com/distribution/distribution/commit/d59a570c3d9e91ab5e8e7ddc4282c2087d390f96) update: set User-Agent header in GCS storage driver
+</p>
+</details>
+
+### Contributors
+
+* Milos Gajdos
+* CrazyMax
+* erezrokah
+* Wang Yan
+* Sebastiaan van Stijn
+* Liang Zheng
+* David Karlsson
+* James Hewitt
+* guoguangwu
+* Cory Snider
+* Dimitar Kostadinov
+* Ismail Alidzhikov
+* Paul Meyer
+* gotgelf
+* Anders Ingemann
+* Andrey Smirnov
+* Anthony Ramahay
+* Austin Vazquez
+* Benjamin Schanzel
+* Chad Faragher
+* Emmanuel Ferdman
+* Eng Zer Jun
+* Jaime Martinez
+* Joyce Brum
+* Kyle Squizzato
+* Mahmoud Kandil
+* Markus Thömmes
+* Mikel Rychliski
+* Robin Ketelbuters
+* Steven Kalt
+* Sylvain DESGRAIS
+* Tadeusz Dudkiewicz
+* goodactive
+* icefed
+* oliver-goetz
+* xiaoxiangxianzi
+
+### Dependency Changes
+
+* **github.com/Azure/azure-sdk-for-go/sdk/azcore**                v1.6.0 -> v1.11.1
+* **github.com/Azure/azure-sdk-for-go/sdk/azidentity**            v1.3.0 -> v1.6.0
+* **github.com/Azure/azure-sdk-for-go/sdk/internal**              v1.3.0 -> v1.8.0
+* **github.com/AzureAD/microsoft-authentication-library-for-go**  v1.0.0 -> v1.2.2
+* **github.com/distribution/reference**                           v0.5.0 -> v0.6.0
+* **github.com/go-jose/go-jose/v4**                               v4.0.2 **_new_**
+* **github.com/golang-jwt/jwt/v5**                                v5.2.1 **_new_**
+* **github.com/google/uuid**                                      v1.3.1 -> v1.6.0
+* **github.com/gorilla/handlers**                                 v1.5.1 -> v1.5.2
+* **github.com/mitchellh/mapstructure**                           v1.1.2 -> v1.5.0
+* **github.com/pkg/browser**                                      681adbf594b8 -> 5ac0b6a4141c
+* **github.com/stretchr/testify**                                 v1.8.4 -> v1.9.0
+* **golang.org/x/crypto**                                         v0.17.0 -> v0.24.0
+* **golang.org/x/net**                                            v0.18.0 -> v0.26.0
+* **golang.org/x/sync**                                           v0.3.0 -> v0.7.0
+* **golang.org/x/sys**                                            v0.15.0 -> v0.21.0
+* **golang.org/x/text**                                           v0.14.0 -> v0.16.0
+* **google.golang.org/protobuf**                                  v1.31.0 -> v1.33.0
+
+Previous release can be found at [v3.0.0-alpha.1](https://github.com/distribution/distribution/tree/v3.0.0-alpha.1)
+"""
