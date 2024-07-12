@@ -22,9 +22,9 @@ jobs:
           - 1.21.0
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Set up Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v4
         with:
           go-version: ${{ matrix.go }}
       - name: Test
@@ -46,11 +46,11 @@ jobs:
       - test
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Semantic Release
-        uses: cycjimmy/semantic-release-action@v3
+        uses: cycjimmy/semantic-release-action@v4
         id: semantic_release
         with:
           extra_plugins: |
@@ -61,7 +61,7 @@ jobs:
       - name: Docker meta
         id: meta
         if: ${{ steps.semantic_release.outputs.new_release_published }}
-        uses: docker/metadata-action@v4
+        uses: docker/metadata-action@v5
         with:
           images: |
             ${{ env.DOCKERHUB_SLUG }}
@@ -82,21 +82,21 @@ jobs:
             org.opencontainers.image.title=Distribution
             org.opencontainers.image.description=The toolkit to pack, ship, store, and deliver container content
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
       - name: Login to DockerHub
         if: github.event_name != 'pull_request'
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Login to GHCR
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build artifacts
-        uses: docker/bake-action@v2
+        uses: docker/bake-action@v4
         with:
           targets: artifact-all
       - name: Move artifacts
@@ -109,7 +109,7 @@ jobs:
           path: ./bin/*
           if-no-files-found: error
       - name: Build image
-        uses: docker/bake-action@v2
+        uses: docker/bake-action@v4
         with:
           files: |
             ./docker-bake.hcl
@@ -117,7 +117,7 @@ jobs:
           targets: image-all
           push: true
       - name: Semantic Release
-        uses: cycjimmy/semantic-release-action@v3
+        uses: cycjimmy/semantic-release-action@v4
         with:
           extra_plugins: |
             conventional-changelog-conventionalcommits
