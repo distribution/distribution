@@ -4,7 +4,7 @@ on:
   workflow_dispatch: # allow a release to be triggered manually
 
 env:
-  GHCR_SLUG: ghcr.io/${{ github.repository_owner }}/distribution
+  GHCR_SLUG: ghcr.io/${{ github.repository }}
   DOCKERHUB_SLUG: distribution/distribution
 
 permissions:

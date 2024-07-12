@@ -11,7 +11,7 @@ on:
   pull_request:
 
 env:
-  GHCR_SLUG: ghcr.io/${{ github.repository }}/distribution
+  GHCR_SLUG: ghcr.io/${{ github.repository }}
 
 permissions:
   contents: read # to fetch code (actions/checkout)
