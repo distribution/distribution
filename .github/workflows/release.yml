@@ -6,7 +6,6 @@ on:
   workflow_dispatch: # allow a release to be triggered manually
 
 env:
-  DOCKERHUB_SLUG: distribution/distribution
   GHCR_SLUG: ghcr.io/${{ github.repository_owner }}/distribution
 
 permissions:
@@ -39,7 +38,7 @@ jobs:
   build:
     permissions:
       contents: write # to create GitHub release (softprops/action-gh-release)
-      id-token: 'write' # to write to GHCR
+      id-token: write # to write to GHCR
       packages: write # to write to GHCR
 
     runs-on: ubuntu-latest
@@ -50,7 +49,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - name: Semantic Release`
+      - name: Semantic Release
         uses: cycjimmy/semantic-release-action@v3
         id: semantic_release
         with:
@@ -117,7 +116,7 @@ jobs:
             ${{ steps.meta.outputs.bake-file }}
           targets: image-all
           push: true
-      - name: Semantic Release`
+      - name: Semantic Release
         uses: cycjimmy/semantic-release-action@v3
         with:
           extra_plugins: |
