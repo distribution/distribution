@@ -3,7 +3,6 @@
     "main",
     "next",
     '+([0-9])?(.{+([0-9]),x}).x',
-    { name: "release/2.8", range: "2.8.x", channel: "2.8.x" },
   ],
   "plugins": [
     [
