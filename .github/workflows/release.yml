@@ -1,0 +1,126 @@
+name: release
+
+on:
+  schedule:
+    - cron:  '0 0 1 * *' # run release monthly
+  workflow_dispatch: # allow a release to be triggered manually
+
+env:
+  DOCKERHUB_SLUG: distribution/distribution
+  GHCR_SLUG: ghcr.io/${{ github.repository_owner }}/distribution
+
+permissions:
+  contents: read # to fetch code (actions/checkout)
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        go:
+          - 1.20.7
+          - 1.21.0
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ matrix.go }}
+      - name: Test
+        run: |
+          make coverage
+      - name: Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          directory: ./
+
+  build:
+    permissions:
+      contents: write # to create GitHub release (softprops/action-gh-release)
+      id-token: 'write' # to write to GHCR
+      packages: write # to write to GHCR
+
+    runs-on: ubuntu-latest
+    needs:
+      - test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Semantic Release`
+        uses: cycjimmy/semantic-release-action@v3
+        id: semantic_release
+        with:
+          extra_plugins: |
+            conventional-changelog-conventionalcommits
+          dry_run: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Docker meta
+        id: meta
+        if: ${{ steps.semantic_release.outputs.new_release_published }}
+        uses: docker/metadata-action@v4
+        with:
+          images: |
+            ${{ env.DOCKERHUB_SLUG }}
+            ${{ env.GHCR_SLUG }}
+          ### versioning strategy
+          ### push semver tag v3.2.1 on main (default branch)
+          # distribution/distribution:3.2.1
+          # distribution/distribution:3.2
+          # distribution/distribution:3
+          # ghcr.io/distribution/distribution:3.2.1
+          # ghcr.io/distribution/distribution:3.2
+          # ghcr.io/distribution/distribution:3
+          tags: |
+            type=semver,pattern={{version}},value=${{ steps.semantic_release.outputs.new_release_version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ steps.semantic_release.outputs.new_release_version }}
+            type=semver,pattern={{major}},value=${{ steps.semantic_release.outputs.new_release_version }}
+          labels: |
+            org.opencontainers.image.title=Distribution
+            org.opencontainers.image.description=The toolkit to pack, ship, store, and deliver container content
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Login to DockerHub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Login to GHCR
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build artifacts
+        uses: docker/bake-action@v2
+        with:
+          targets: artifact-all
+      - name: Move artifacts
+        run: |
+          mv ./bin/**/* ./bin/
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: registry
+          path: ./bin/*
+          if-no-files-found: error
+      - name: Build image
+        uses: docker/bake-action@v2
+        with:
+          files: |
+            ./docker-bake.hcl
+            ${{ steps.meta.outputs.bake-file }}
+          targets: image-all
+          push: true
+      - name: Semantic Release`
+        uses: cycjimmy/semantic-release-action@v3
+        with:
+          extra_plugins: |
+            conventional-changelog-conventionalcommits
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,26 @@
+{
+  "branches": [
+    "main",
+    "next",
+    '+([0-9])?(.{+([0-9]),x}).x',
+    { name: "release/2.8", range: "2.8.x", channel: "2.8.x" },
+  ],
+  "plugins": [
+    [
+      "@semantic-release/commit-analyzer",
+      {
+        "preset": "conventionalcommits"
+      }
+    ],
+    "@semantic-release/release-notes-generator",
+    [
+      "@semantic-release/github",
+      {
+        "assets": [
+          { "path": "bin/*.tar.gz", "label": "Binary" },
+          { "path": "bin/*.sha256", "label": "SHA256" }
+        ]
+      }
+    ]
+  ]
+}
