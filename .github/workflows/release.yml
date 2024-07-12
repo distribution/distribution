@@ -7,6 +7,7 @@ on:
 
 env:
   GHCR_SLUG: ghcr.io/${{ github.repository_owner }}/distribution
+  DOCKERHUB_SLUG: distribution/distribution
 
 permissions:
   contents: read # to fetch code (actions/checkout)
@@ -37,7 +38,7 @@ jobs:
 
   build:
     permissions:
-      contents: write # to create GitHub release (softprops/action-gh-release)
+      contents: write # to create GitHub release (cycjimmy/semantic-release-action)
       id-token: write # to write to GHCR
       packages: write # to write to GHCR
 
@@ -53,9 +54,10 @@ jobs:
         uses: cycjimmy/semantic-release-action@v4
         id: semantic_release
         with:
+          dry_run: true
+          semantic_version: 22.0.5
           extra_plugins: |
             conventional-changelog-conventionalcommits
-          dry_run: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Docker meta
@@ -99,6 +101,7 @@ jobs:
         uses: docker/bake-action@v4
         with:
           targets: artifact-all
+          provenance: false
       - name: Move artifacts
         run: |
           mv ./bin/**/* ./bin/
@@ -119,6 +122,7 @@ jobs:
       - name: Semantic Release
         uses: cycjimmy/semantic-release-action@v4
         with:
+          semantic_version: 22.0.5
           extra_plugins: |
             conventional-changelog-conventionalcommits
         env:
