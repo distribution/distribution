@@ -78,8 +78,8 @@ jobs:
           # ghcr.io/distribution/distribution:3
           tags: |
             type=semver,pattern={{version}},value=${{ steps.semantic_release.outputs.new_release_version }}
-            type=semver,pattern={{major}}.{{minor}},value=${{ steps.semantic_release.outputs.new_release_version }}
-            type=semver,pattern={{major}},value=${{ steps.semantic_release.outputs.new_release_version }}
+            type=raw,value=${{ steps.semantic_release.outputs.new_release_major_version }}.${{ steps.semantic_release.outputs.new_release_minor_version }}
+            type=raw,value=${{ steps.semantic_release.outputs.new_release_major_version }}
           labels: |
             org.opencontainers.image.title=Distribution
             org.opencontainers.image.description=The toolkit to pack, ship, store, and deliver container content
