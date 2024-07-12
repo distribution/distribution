@@ -105,15 +105,15 @@ To manually run a release for a particular release or maintenance branch:
 
 Go to the `Actions` tab of the repository:
 
-![Actions](./docs/images/actions_tab.png)
+![Actions](./docs/static/images/actions_tab.png)
 
 Select the `release` action in the sidebar:
 
-![Release Sidebar](./docs/images/release_sidebar.png)
+![Release Sidebar](./docs/static/images/release_sidebar.png)
 
 Select the branch you want to run a release for and run the action:
 
-![Run Single Release](./docs/images/run_single_release.png)
+![Run Single Release](./docs/static/images/run_single_release.png)
 
 ### Manually Running All Releases
 
@@ -121,12 +121,12 @@ To manually run a release on all release and maintenance branches:
 
 Go to the `Actions` tab of the repository:
 
-![Actions](./docs/images/actions_tab.png)
+![Actions](./docs/static/images/actions_tab.png)
 
 Select the `scheduled-release` action in the sidebar:
 
-![Scheduled Release Sidebar](./docs/images/scheduled_release_sidebar.png)
+![Scheduled Release Sidebar](./docs/static/images/scheduled_release_sidebar.png)
 
 Leave the `main` branch selected and run the action:
 
-![Run All Releases](./docs/images/run_all_releases.png)
+![Run All Releases](./docs/static/images/run_all_releases.png)
