@@ -1,8 +1,8 @@
 name: scheduled release
 
 on:
-  schedule:
-    - cron:  '0 0 1 * *' # run release monthly
+  # schedule: #TODO: enable schedule once we've gone through the release process and are confortable with it
+  #   - cron:  '0 0 1 * *' # run release monthly
   workflow_dispatch: # allow a release to be triggered manually
 
 permissions:
