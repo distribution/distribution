@@ -66,8 +66,8 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            ${{ env.DOCKERHUB_SLUG }}
-            ${{ env.GHCR_SLUG }}
+            name=${{ env.DOCKERHUB_SLUG }},enable=${{ github.repository_owner == 'distribution' }}
+            name=${{ env.GHCR_SLUG }}
           ### versioning strategy
           ### push semver tag v3.2.1 on main (default branch)
           # distribution/distribution:3.2.1
@@ -86,7 +86,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Login to DockerHub
-        if: github.event_name != 'pull_request'
+        if: ${{ github.repository_owner == 'distribution' }}
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
