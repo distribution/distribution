@@ -1,0 +1,46 @@
+name: scheduled release
+
+on:
+  schedule:
+    - cron:  '0 0 1 * *' # run release monthly
+  workflow_dispatch: # allow a release to be triggered manually
+
+permissions:
+  actions: write # needed to trigger other workflows
+
+jobs:
+  build-branch-matrix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # No shallow clone, we need all history
+      - name: generate matrix
+        id: generate-matrix
+        shell: bash
+        run: |
+          branches=('main' 'alpha' 'beta' 'rc')
+          regex='^([0-9])?(\.([0-9]|x))?\.x$' # matches branches like 1.x or 2.0.x
+
+          for branch in $(git for-each-ref --format='%(refname)' refs/remotes/origin/ | cut -d/ -f4-); do
+              if [[ $branch =~ $regex ]]; then
+                  branches+=("$branch")
+              fi
+          done
+
+          echo "matrix=$(printf '%s\n' "${branches[@]}" | jq -R . | jq -s . | jq '{branch: .}' | jq -c .)" >> $GITHUB_OUTPUT
+    outputs:
+      matrix: ${{ steps.generate-matrix.outputs.matrix }}
+  run-release:
+    needs: build-branch-matrix
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.build-branch-matrix.outputs.matrix) }}
+    steps:
+    - name: Invoke workflow without inputs
+      uses: benc-uk/workflow-dispatch@v1
+      with:
+        workflow: release
+        ref: ${{ matrix.branch }}

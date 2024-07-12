@@ -1,8 +1,6 @@
 name: release
 
 on:
-  schedule:
-    - cron:  '0 0 1 * *' # run release monthly
   workflow_dispatch: # allow a release to be triggered manually
 
 env:
