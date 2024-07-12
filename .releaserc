@@ -19,8 +19,8 @@
       "@semantic-release/github",
       {
         "assets": [
-          { "path": "bin/*.tar.gz", "label": "Binary" },
-          { "path": "bin/*.sha256", "label": "SHA256" }
+          { "path": "bin/*.tar.gz" },
+          { "path": "bin/*.sha256" }
         ]
       }
     ]

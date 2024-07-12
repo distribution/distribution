@@ -100,6 +100,7 @@ jobs:
       - name: Build artifacts
         uses: docker/bake-action@v4
         with:
+          set: artifact.args.RELEASE_VERSION=v${{ steps.semantic_release.outputs.new_release_version }}
           targets: artifact-all
           provenance: false
       - name: Move artifacts
