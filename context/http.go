@@ -9,9 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/docker/distribution/uuid"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/docker/distribution/uuid"
 )
 
 // Common errors used with this package.
@@ -152,6 +153,7 @@ func GetRequestLogger(ctx context.Context) Logger {
 		"http.request.useragent",
 		"http.request.remoteaddr",
 		"http.request.contenttype",
+		"http.request.content-length",
 		"http.request.cf-ray")
 }
 

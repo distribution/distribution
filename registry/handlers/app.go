@@ -688,6 +688,8 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 		}
 		context := app.context(w, r)
 
+		dcontext.GetRequestLogger(context).Infof("request received")
+
 		defer func() {
 			// Automated error response handling here. Handlers may return their
 			// own errors if they need different behavior (such as range errors
@@ -843,9 +845,11 @@ func (app *App) context(w http.ResponseWriter, r *http.Request) *Context {
 // authorized checks if the request can proceed with access to the requested
 // repository. If it succeeds, the context may access the requested
 // repository. An error will be returned if access is not available.
-func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Context) error {
-	dcontext.GetLogger(context).Debug("authorizing request")
-	repo := getName(context)
+func (app *App) authorized(w http.ResponseWriter, r *http.Request, ctx *Context) error {
+	startedAt := time.Now()
+
+	dcontext.GetLogger(ctx).Debug("authorizing request")
+	repo := getName(ctx)
 
 	if app.accessController == nil {
 		return nil // access controller is not enabled.
@@ -870,14 +874,14 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 			// that mistake elsewhere in the code, allowing any operation to
 			// proceed.
 			if err := errcode.ServeJSON(w, errcode.ErrorCodeUnauthorized); err != nil {
-				dcontext.GetLogger(context).Errorf("error serving error json: %v (from %v)", err, context.Errors)
+				dcontext.GetLogger(ctx).Errorf("error serving error json: %v (from %v)", err, ctx.Errors)
 			}
 			return fmt.Errorf("forbidden: no repository name")
 		}
 		accessRecords = appendCatalogAccessRecord(accessRecords, r)
 	}
 
-	ctx, err := app.accessController.Authorized(context.Context, accessRecords...)
+	authorizedCtx, err := app.accessController.Authorized(ctx.Context, accessRecords...)
 	if err != nil {
 		switch err := err.(type) {
 		case auth.Challenge:
@@ -885,25 +889,28 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 			err.SetHeaders(r, w)
 
 			if err := errcode.ServeJSON(w, errcode.ErrorCodeUnauthorized.WithDetail(accessRecords)); err != nil {
-				dcontext.GetLogger(context).Errorf("error serving error json: %v (from %v)", err, context.Errors)
+				dcontext.GetLogger(ctx).Errorf("error serving error json: %v (from %v)", err, ctx.Errors)
 			}
 		default:
 			// This condition is a potential security problem either in
 			// the configuration or whatever is backing the access
 			// controller. Just return a bad request with no information
 			// to avoid exposure. The request should not proceed.
-			dcontext.GetLogger(context).Errorf("error checking authorization: %v", err)
+			dcontext.GetLogger(ctx).Errorf("error checking authorization: %v", err)
 			w.WriteHeader(http.StatusBadRequest)
 		}
 
 		return err
 	}
 
-	dcontext.GetLogger(ctx, auth.UserNameKey).Info("authorized request")
+	authorizedCtx = context.WithValue(authorizedCtx, "authorize_duration", time.Since(startedAt).Seconds())
+
+	dcontext.GetLogger(authorizedCtx, auth.UserNameKey, "authorize_duration").Info("authorized request")
+
 	// TODO(stevvooe): This pattern needs to be cleaned up a bit. One context
 	// should be replaced by another, rather than replacing the context on a
 	// mutable object.
-	context.Context = ctx
+	ctx.Context = authorizedCtx
 	return nil
 }
 
