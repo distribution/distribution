@@ -24,27 +24,26 @@ var SchemaVersion = manifest.Versioned{
 }
 
 func init() {
-	manifestListFunc := func(b []byte) (distribution.Manifest, distribution.Descriptor, error) {
-		m := new(DeserializedManifestList)
-		err := m.UnmarshalJSON(b)
-		if err != nil {
-			return nil, distribution.Descriptor{}, err
-		}
-
-		if m.MediaType != MediaTypeManifestList {
-			err = fmt.Errorf("mediaType in manifest list should be '%s' not '%s'",
-				MediaTypeManifestList, m.MediaType)
-
-			return nil, distribution.Descriptor{}, err
-		}
-
-		dgst := digest.FromBytes(b)
-		return m, distribution.Descriptor{Digest: dgst, Size: int64(len(b)), MediaType: MediaTypeManifestList}, err
-	}
-	err := distribution.RegisterManifestSchema(MediaTypeManifestList, manifestListFunc)
-	if err != nil {
+	if err := distribution.RegisterManifestSchema(MediaTypeManifestList, unmarshalManifestList); err != nil {
 		panic(fmt.Sprintf("Unable to register manifest: %s", err))
 	}
+}
+
+func unmarshalManifestList(b []byte) (distribution.Manifest, distribution.Descriptor, error) {
+	m := &DeserializedManifestList{}
+	if err := m.UnmarshalJSON(b); err != nil {
+		return nil, distribution.Descriptor{}, err
+	}
+
+	if m.MediaType != MediaTypeManifestList {
+		return nil, distribution.Descriptor{}, fmt.Errorf("mediaType in manifest list should be '%s' not '%s'", MediaTypeManifestList, m.MediaType)
+	}
+
+	return m, distribution.Descriptor{
+		Digest:    digest.FromBytes(b),
+		Size:      int64(len(b)),
+		MediaType: MediaTypeManifestList,
+	}, nil
 }
 
 // PlatformSpec specifies a platform where a particular image manifest is

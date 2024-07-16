@@ -41,20 +41,22 @@ var SchemaVersion = manifest.Versioned{
 }
 
 func init() {
-	schema2Func := func(b []byte) (distribution.Manifest, distribution.Descriptor, error) {
-		m := new(DeserializedManifest)
-		err := m.UnmarshalJSON(b)
-		if err != nil {
-			return nil, distribution.Descriptor{}, err
-		}
-
-		dgst := digest.FromBytes(b)
-		return m, distribution.Descriptor{Digest: dgst, Size: int64(len(b)), MediaType: MediaTypeManifest}, err
-	}
-	err := distribution.RegisterManifestSchema(MediaTypeManifest, schema2Func)
-	if err != nil {
+	if err := distribution.RegisterManifestSchema(MediaTypeManifest, unmarshalSchema2); err != nil {
 		panic(fmt.Sprintf("Unable to register manifest: %s", err))
 	}
+}
+
+func unmarshalSchema2(b []byte) (distribution.Manifest, distribution.Descriptor, error) {
+	m := &DeserializedManifest{}
+	if err := m.UnmarshalJSON(b); err != nil {
+		return nil, distribution.Descriptor{}, err
+	}
+
+	return m, distribution.Descriptor{
+		Digest:    digest.FromBytes(b),
+		Size:      int64(len(b)),
+		MediaType: MediaTypeManifest,
+	}, nil
 }
 
 // Manifest defines a schema2 manifest.
