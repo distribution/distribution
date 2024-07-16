@@ -32,7 +32,7 @@ type Builder struct {
 // NewManifestBuilder is used to build new manifests for the current schema
 // version. It takes a BlobService so it can publish the configuration blob
 // as part of the Build process, and annotations.
-func NewManifestBuilder(bs distribution.BlobService, configJSON []byte, annotations map[string]string) distribution.ManifestBuilder {
+func NewManifestBuilder(bs distribution.BlobService, configJSON []byte, annotations map[string]string) *Builder {
 	mb := &Builder{
 		bs:          bs,
 		configJSON:  make([]byte, len(configJSON)),
@@ -96,8 +96,8 @@ func (mb *Builder) Build(ctx context.Context) (distribution.Manifest, error) {
 }
 
 // AppendReference adds a reference to the current ManifestBuilder.
-func (mb *Builder) AppendReference(d distribution.Describable) error {
-	mb.layers = append(mb.layers, d.Descriptor())
+func (mb *Builder) AppendReference(ref distribution.Descriptor) error {
+	mb.layers = append(mb.layers, ref)
 	return nil
 }
 

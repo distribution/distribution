@@ -26,27 +26,6 @@ type Manifest interface {
 	Payload() (mediaType string, payload []byte, err error)
 }
 
-// ManifestBuilder creates a manifest allowing one to include dependencies.
-// Instances can be obtained from a version-specific manifest package.  Manifest
-// specific data is passed into the function which creates the builder.
-type ManifestBuilder interface {
-	// Build creates the manifest from his builder.
-	Build(ctx context.Context) (Manifest, error)
-
-	// References returns a list of objects which have been added to this
-	// builder. The dependencies are returned in the order they were added,
-	// which should be from base to head.
-	References() []Descriptor
-
-	// AppendReference includes the given object in the manifest after any
-	// existing dependencies. If the add fails, such as when adding an
-	// unsupported dependency, an error may be returned.
-	//
-	// The destination of the reference is dependent on the manifest type and
-	// the dependency type.
-	AppendReference(dependency Describable) error
-}
-
 // ManifestService describes operations on manifests.
 type ManifestService interface {
 	// Exists returns true if the manifest exists.
@@ -69,8 +48,12 @@ type ManifestEnumerator interface {
 	Enumerate(ctx context.Context, ingester func(digest.Digest) error) error
 }
 
-// Describable is an interface for descriptors
+// Describable is an interface for descriptors.
+//
+// Implementations of Describable are generally objects which can be
+// described, not simply descriptors.
 type Describable interface {
+	// Descriptor returns the descriptor.
 	Descriptor() Descriptor
 }
 

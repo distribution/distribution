@@ -595,7 +595,7 @@ func TestIndexManifestStorageWithSelectivePlatforms(t *testing.T) {
 // createRandomImage builds an image manifest and store it and its layers in the registry
 func createRandomImage(t *testing.T, testname string, imageMediaType string, blobStore distribution.BlobStore) (distribution.Manifest, error) {
 	builder := ocischema.NewManifestBuilder(blobStore, []byte{}, map[string]string{})
-	err := builder.(*ocischema.Builder).SetMediaType(imageMediaType)
+	err := builder.SetMediaType(imageMediaType)
 	if err != nil {
 		t.Fatal(err)
 	}

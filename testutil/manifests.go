@@ -1,7 +1,6 @@
 package testutil
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/distribution/distribution/v3"
@@ -51,7 +50,18 @@ func MakeSchema2Manifest(repository distribution.Repository, digests []digest.Di
 		return nil, fmt.Errorf("unexpected error storing content in blobstore: %v", err)
 	}
 	builder := schema2.NewManifestBuilder(d, configJSON)
-	return makeManifest(ctx, builder, digests)
+	for _, dgst := range digests {
+		if err := builder.AppendReference(distribution.Descriptor{Digest: dgst}); err != nil {
+			return nil, fmt.Errorf("unexpected error building schema2 manifest: %v", err)
+		}
+	}
+
+	mfst, err := builder.Build(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("unexpected error generating schema2 manifest: %v", err)
+	}
+
+	return mfst, nil
 }
 
 func MakeOCIManifest(repository distribution.Repository, digests []digest.Digest) (distribution.Manifest, error) {
@@ -61,19 +71,15 @@ func MakeOCIManifest(repository distribution.Repository, digests []digest.Digest
 	var configJSON []byte
 
 	builder := ocischema.NewManifestBuilder(blobStore, configJSON, make(map[string]string))
-	return makeManifest(ctx, builder, digests)
-}
-
-func makeManifest(ctx context.Context, builder distribution.ManifestBuilder, digests []digest.Digest) (distribution.Manifest, error) {
-	for _, digest := range digests {
-		if err := builder.AppendReference(distribution.Descriptor{Digest: digest}); err != nil {
-			return nil, fmt.Errorf("unexpected error building manifest: %v", err)
+	for _, dgst := range digests {
+		if err := builder.AppendReference(distribution.Descriptor{Digest: dgst}); err != nil {
+			return nil, fmt.Errorf("unexpected error building OCI manifest: %v", err)
 		}
 	}
 
 	mfst, err := builder.Build(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("unexpected error generating manifest: %v", err)
+		return nil, fmt.Errorf("unexpected error generating OCI manifest: %v", err)
 	}
 
 	return mfst, nil
