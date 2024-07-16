@@ -706,10 +706,9 @@ var setContentLength = request.NamedHandler{
 }
 
 func (d *driver) s3Client(ctx context.Context) *s3.S3 {
-	s := d.S3
+	s := &s3.S3{Client: client.New(d.S3.Client.Config, d.S3.Client.ClientInfo, d.S3.Client.Handlers.Copy())}
 
 	if d.LogS3APIRequests {
-		s = &s3.S3{Client: client.New(d.S3.Client.Config, d.S3.Client.ClientInfo, d.S3.Client.Handlers.Copy())}
 		r := d.logS3Operation(ctx)
 		s.Client.Handlers.Complete.PushBackNamed(r)
 	}
