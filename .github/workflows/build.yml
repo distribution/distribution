@@ -27,8 +27,8 @@ jobs:
       fail-fast: false
       matrix:
         go:
-          - 1.21.8
-          - 1.22.1
+          - 1.21.12
+          - 1.22.5
         target:
           - test-coverage
           - test-cloud-storage
