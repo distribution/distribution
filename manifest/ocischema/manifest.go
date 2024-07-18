@@ -19,28 +19,27 @@ var SchemaVersion = manifest.Versioned{
 }
 
 func init() {
-	ocischemaFunc := func(b []byte) (distribution.Manifest, distribution.Descriptor, error) {
-		if err := validateManifest(b); err != nil {
-			return nil, distribution.Descriptor{}, err
-		}
-		m := new(DeserializedManifest)
-		err := m.UnmarshalJSON(b)
-		if err != nil {
-			return nil, distribution.Descriptor{}, err
-		}
-
-		dgst := digest.FromBytes(b)
-		return m, distribution.Descriptor{
-			MediaType:   v1.MediaTypeImageManifest,
-			Digest:      dgst,
-			Size:        int64(len(b)),
-			Annotations: m.Annotations,
-		}, err
-	}
-	err := distribution.RegisterManifestSchema(v1.MediaTypeImageManifest, ocischemaFunc)
-	if err != nil {
+	if err := distribution.RegisterManifestSchema(v1.MediaTypeImageManifest, unmarshalOCISchema); err != nil {
 		panic(fmt.Sprintf("Unable to register manifest: %s", err))
 	}
+}
+
+func unmarshalOCISchema(b []byte) (distribution.Manifest, distribution.Descriptor, error) {
+	if err := validateManifest(b); err != nil {
+		return nil, distribution.Descriptor{}, err
+	}
+
+	m := &DeserializedManifest{}
+	if err := m.UnmarshalJSON(b); err != nil {
+		return nil, distribution.Descriptor{}, err
+	}
+
+	return m, distribution.Descriptor{
+		MediaType:   v1.MediaTypeImageManifest,
+		Digest:      digest.FromBytes(b),
+		Size:        int64(len(b)),
+		Annotations: m.Annotations,
+	}, nil
 }
 
 // Manifest defines a ocischema manifest.

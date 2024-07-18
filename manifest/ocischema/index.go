@@ -19,35 +19,31 @@ var IndexSchemaVersion = manifest.Versioned{
 }
 
 func init() {
-	imageIndexFunc := func(b []byte) (distribution.Manifest, distribution.Descriptor, error) {
-		if err := validateIndex(b); err != nil {
-			return nil, distribution.Descriptor{}, err
-		}
-		m := new(DeserializedImageIndex)
-		err := m.UnmarshalJSON(b)
-		if err != nil {
-			return nil, distribution.Descriptor{}, err
-		}
-
-		if m.MediaType != "" && m.MediaType != v1.MediaTypeImageIndex {
-			err = fmt.Errorf("if present, mediaType in image index should be '%s' not '%s'",
-				v1.MediaTypeImageIndex, m.MediaType)
-
-			return nil, distribution.Descriptor{}, err
-		}
-
-		dgst := digest.FromBytes(b)
-		return m, distribution.Descriptor{
-			MediaType:   v1.MediaTypeImageIndex,
-			Digest:      dgst,
-			Size:        int64(len(b)),
-			Annotations: m.Annotations,
-		}, err
-	}
-	err := distribution.RegisterManifestSchema(v1.MediaTypeImageIndex, imageIndexFunc)
-	if err != nil {
+	if err := distribution.RegisterManifestSchema(v1.MediaTypeImageIndex, unmarshalImageIndex); err != nil {
 		panic(fmt.Sprintf("Unable to register OCI Image Index: %s", err))
 	}
+}
+
+func unmarshalImageIndex(b []byte) (distribution.Manifest, distribution.Descriptor, error) {
+	if err := validateIndex(b); err != nil {
+		return nil, distribution.Descriptor{}, err
+	}
+
+	m := &DeserializedImageIndex{}
+	if err := m.UnmarshalJSON(b); err != nil {
+		return nil, distribution.Descriptor{}, err
+	}
+
+	if m.MediaType != "" && m.MediaType != v1.MediaTypeImageIndex {
+		return nil, distribution.Descriptor{}, fmt.Errorf("if present, mediaType in image index should be '%s' not '%s'", v1.MediaTypeImageIndex, m.MediaType)
+	}
+
+	return m, distribution.Descriptor{
+		MediaType:   v1.MediaTypeImageIndex,
+		Digest:      digest.FromBytes(b),
+		Size:        int64(len(b)),
+		Annotations: m.Annotations,
+	}, nil
 }
 
 // ImageIndex references manifests for various platforms.
