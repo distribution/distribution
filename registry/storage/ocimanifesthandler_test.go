@@ -7,10 +7,10 @@ import (
 	"testing"
 
 	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/manifest"
 	"github.com/distribution/distribution/v3/manifest/ocischema"
 	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
 	"github.com/opencontainers/go-digest"
+	"github.com/opencontainers/image-spec/specs-go"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
@@ -49,11 +49,9 @@ func TestVerifyOCIManifestNonDistributableLayer(t *testing.T) {
 	}
 
 	template := ocischema.Manifest{
-		Versioned: manifest.Versioned{
-			SchemaVersion: 2,
-			MediaType:     v1.MediaTypeImageManifest,
-		},
-		Config: config,
+		Versioned: specs.Versioned{SchemaVersion: 2},
+		MediaType: v1.MediaTypeImageManifest,
+		Config:    config,
 	}
 
 	type testcase struct {
@@ -189,10 +187,8 @@ func TestVerifyOCIManifestBlobLayerAndConfig(t *testing.T) {
 	}
 
 	template := ocischema.Manifest{
-		Versioned: manifest.Versioned{
-			SchemaVersion: 2,
-			MediaType:     v1.MediaTypeImageManifest,
-		},
+		Versioned: specs.Versioned{SchemaVersion: 2},
+		MediaType: v1.MediaTypeImageManifest,
 	}
 
 	checkFn := func(m ocischema.Manifest, rerr error) {

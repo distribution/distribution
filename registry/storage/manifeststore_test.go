@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/manifest"
 	"github.com/distribution/distribution/v3/manifest/manifestlist"
 	"github.com/distribution/distribution/v3/manifest/ocischema"
 	"github.com/distribution/distribution/v3/manifest/schema2"
@@ -19,6 +18,7 @@ import (
 	"github.com/distribution/distribution/v3/testutil"
 	"github.com/distribution/reference"
 	"github.com/opencontainers/go-digest"
+	"github.com/opencontainers/image-spec/specs-go"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
@@ -94,10 +94,8 @@ func testManifestStorage(t *testing.T, options ...RegistryOption) {
 	builder := schema2.NewManifestBuilder(d, sampleConfig)
 
 	m := &schema2.Manifest{
-		Versioned: manifest.Versioned{
-			SchemaVersion: 2,
-			MediaType:     schema2.MediaTypeManifest,
-		},
+		Versioned: specs.Versioned{SchemaVersion: 2},
+		MediaType: schema2.MediaTypeManifest,
 		Config: distribution.Descriptor{
 			Digest:    digest.FromBytes(sampleConfig),
 			Size:      int64(len(sampleConfig)),
@@ -393,7 +391,7 @@ func testOCIManifestStorage(t *testing.T, testname string, includeMediaTypes boo
 		t.Fatalf("%s: unexpected MediaType for result, %s", testname, fetchedManifest.MediaType)
 	}
 
-	if fetchedManifest.SchemaVersion != ocischema.SchemaVersion.SchemaVersion {
+	if fetchedManifest.SchemaVersion != 2 {
 		t.Fatalf("%s: unexpected schema version for result, %d", testname, fetchedManifest.SchemaVersion)
 	}
 

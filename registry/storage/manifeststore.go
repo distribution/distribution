@@ -7,11 +7,11 @@ import (
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/internal/dcontext"
-	"github.com/distribution/distribution/v3/manifest"
 	"github.com/distribution/distribution/v3/manifest/manifestlist"
 	"github.com/distribution/distribution/v3/manifest/ocischema"
 	"github.com/distribution/distribution/v3/manifest/schema2"
 	"github.com/opencontainers/go-digest"
+	"github.com/opencontainers/image-spec/specs-go"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
@@ -88,7 +88,13 @@ func (ms *manifestStore) Get(ctx context.Context, dgst digest.Digest, options ..
 		return nil, err
 	}
 
-	var versioned manifest.Versioned
+	// versioned is a minimal representation of a manifest with version and mediatype.
+	var versioned struct {
+		specs.Versioned
+
+		// MediaType is the media type of this schema.
+		MediaType string `json:"mediaType,omitempty"`
+	}
 	if err = json.Unmarshal(content, &versioned); err != nil {
 		return nil, err
 	}

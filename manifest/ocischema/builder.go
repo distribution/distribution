@@ -5,8 +5,8 @@ import (
 	"errors"
 
 	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/manifest"
 	"github.com/opencontainers/go-digest"
+	"github.com/opencontainers/image-spec/specs-go"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
@@ -58,10 +58,8 @@ func (mb *Builder) SetMediaType(mediaType string) error {
 // Build produces a final manifest from the given references.
 func (mb *Builder) Build(ctx context.Context) (distribution.Manifest, error) {
 	m := Manifest{
-		Versioned: manifest.Versioned{
-			SchemaVersion: 2,
-			MediaType:     mb.mediaType,
-		},
+		Versioned:   specs.Versioned{SchemaVersion: 2},
+		MediaType:   mb.mediaType,
 		Layers:      make([]distribution.Descriptor, len(mb.layers)),
 		Annotations: mb.annotations,
 	}

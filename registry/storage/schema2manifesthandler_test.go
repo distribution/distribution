@@ -7,10 +7,10 @@ import (
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/internal/dcontext"
-	"github.com/distribution/distribution/v3/manifest"
 	"github.com/distribution/distribution/v3/manifest/schema2"
 	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
 	"github.com/opencontainers/go-digest"
+	"github.com/opencontainers/image-spec/specs-go"
 )
 
 func TestVerifyManifestForeignLayer(t *testing.T) {
@@ -45,11 +45,9 @@ func TestVerifyManifestForeignLayer(t *testing.T) {
 	}
 
 	template := schema2.Manifest{
-		Versioned: manifest.Versioned{
-			SchemaVersion: 2,
-			MediaType:     schema2.MediaTypeManifest,
-		},
-		Config: config,
+		Versioned: specs.Versioned{SchemaVersion: 2},
+		MediaType: schema2.MediaTypeManifest,
+		Config:    config,
 	}
 
 	type testcase struct {
@@ -176,10 +174,8 @@ func TestVerifyManifestBlobLayerAndConfig(t *testing.T) {
 	}
 
 	template := schema2.Manifest{
-		Versioned: manifest.Versioned{
-			SchemaVersion: 2,
-			MediaType:     schema2.MediaTypeManifest,
-		},
+		Versioned: specs.Versioned{SchemaVersion: 2},
+		MediaType: schema2.MediaTypeManifest,
 	}
 
 	checkFn := func(m schema2.Manifest, rerr error) {
