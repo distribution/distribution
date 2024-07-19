@@ -1,0 +1,28 @@
+{
+  "branches": [
+    "main",
+    "+([0-9])?(.{+([0-9]),x}).x",
+    "next",
+    { name: "alpha", prerelease: true },
+    { name: "beta", prerelease: true },
+    { name: "rc", prerelease: true },
+  ],
+  "plugins": [
+    [
+      "@semantic-release/commit-analyzer",
+      {
+        "preset": "conventionalcommits"
+      }
+    ],
+    "@semantic-release/release-notes-generator",
+    [
+      "@semantic-release/github",
+      {
+        "assets": [
+          { "path": "bin/*.tar.gz" },
+          { "path": "bin/*.sha256" }
+        ]
+      }
+    ]
+  ]
+}

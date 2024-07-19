@@ -1,0 +1,51 @@
+name: release-validation
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - synchronize
+
+permissions:
+  contents: read # to fetch code (actions/checkout)
+  pull-requests: read # to fetch PR title (amannn/action-semantic-pull-request)
+
+jobs:
+  validate-pr-title:
+    name: Validate PR title
+    runs-on: ubuntu-latest
+    steps:
+      - uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  check-release: # make sure commits are valid for a target branch
+    name: Check valid release version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # needed since semantic release checks this permission even in dry-run mode
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.base.ref }}
+      - name: setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+      - name: install semantic release
+        run: npm install -g semantic-release@22.0.5 conventional-changelog-conventionalcommits@7.0.2
+      - name: temporarily merge PR branch
+        run: |
+          git config --global user.name github-actions
+          git config --global user.email github-actions@github.com
+          git merge --no-ff origin/${{ github.event.pull_request.head.ref }} --message "${{ github.event.pull_request.title }}"
+      - name: semantic release dry run
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          unset GITHUB_EVENT_PATH
+          unset GITHUB_ACTIONS
+          unset GITHUB_EVENT_NAME
+          semantic-release --dry-run --ci false --semantic-version 22.0.5
