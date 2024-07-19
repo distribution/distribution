@@ -874,19 +874,19 @@ func (d *driver) List(ctx context.Context, opath string) ([]string, error) {
 			directories = append(directories, strings.Replace(commonPrefix[0:len(commonPrefix)-1], d.s3Path(""), prefix, 1))
 		}
 
-		if *resp.IsTruncated {
-			resp, err = d.S3.ListObjectsV2WithContext(ctx, &s3.ListObjectsV2Input{
-				Bucket:            aws.String(d.Bucket),
-				Prefix:            aws.String(d.s3Path(path)),
-				Delimiter:         aws.String("/"),
-				MaxKeys:           aws.Int64(listMax),
-				ContinuationToken: resp.NextContinuationToken,
-			})
-			if err != nil {
-				return nil, err
-			}
-		} else {
+		if resp.IsTruncated == nil || !*resp.IsTruncated {
 			break
+		}
+
+		resp, err = d.S3.ListObjectsV2WithContext(ctx, &s3.ListObjectsV2Input{
+			Bucket:            aws.String(d.Bucket),
+			Prefix:            aws.String(d.s3Path(path)),
+			Delimiter:         aws.String("/"),
+			MaxKeys:           aws.Int64(listMax),
+			ContinuationToken: resp.NextContinuationToken,
+		})
+		if err != nil {
+			return nil, err
 		}
 	}
 
