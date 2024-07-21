@@ -21,7 +21,7 @@ import (
 // init handles registering the token auth backend.
 func init() {
 	if err := auth.Register("token", auth.InitFunc(newAccessController)); err != nil {
-		logrus.Errorf("tailed to register token auth: %v", err)
+		logrus.Errorf("failed to register token auth: %v", err)
 	}
 }
 
