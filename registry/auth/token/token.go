@@ -162,7 +162,7 @@ func (t *Token) Verify(verifyOpts VerifyOptions) (*ClaimSet, error) {
 }
 
 // VerifySigningKey attempts to verify and return the signing key which was used to sign the token.
-func (t *Token) VerifySigningKey(verifyOpts VerifyOptions) (signingKey crypto.PublicKey, err error) {
+func (t *Token) VerifySigningKey(verifyOpts VerifyOptions) (crypto.PublicKey, error) {
 	if len(t.JWT.Headers) == 0 {
 		return nil, ErrInvalidToken
 	}
@@ -172,26 +172,27 @@ func (t *Token) VerifySigningKey(verifyOpts VerifyOptions) (signingKey crypto.Pu
 	// verifying the first one in the list only at the moment.
 	header := t.JWT.Headers[0]
 
-	signingKey, err = verifyCertChain(header, verifyOpts.Roots)
-	// NOTE(milosgajdos): if the x5c header is missing
-	// the token may have been signed by a JWKS.
-	if err != nil && err != jose.ErrMissingX5cHeader {
-		return
-	}
-
-	switch {
-	case header.JSONWebKey != nil:
-		signingKey, err = verifyJWK(header, verifyOpts)
-	case len(header.KeyID) > 0:
-		signingKey = verifyOpts.TrustedKeys[header.KeyID]
-		if signingKey == nil {
-			err = fmt.Errorf("token signed by untrusted key with ID: %q", header.KeyID)
+	signingKey, err := verifyCertChain(header, verifyOpts.Roots)
+	if err != nil {
+		// NOTE(milosgajdos): if the x5c header is missing
+		// the token may have been signed by a JWKS.
+		if errors.Is(err, jose.ErrMissingX5cHeader) {
+			switch {
+			case header.JSONWebKey != nil:
+				return verifyJWK(header, verifyOpts)
+			case header.KeyID != "":
+				if signingKey, ok := verifyOpts.TrustedKeys[header.KeyID]; ok {
+					return signingKey, nil
+				}
+				return nil, fmt.Errorf("token signed by untrusted key with ID: %q", header.KeyID)
+			default:
+				return nil, ErrInvalidToken
+			}
 		}
-	default:
-		err = ErrInvalidToken
+		return nil, err
 	}
 
-	return
+	return signingKey, nil
 }
 
 func verifyCertChain(header jose.Header, roots *x509.CertPool) (signingKey crypto.PublicKey, err error) {
