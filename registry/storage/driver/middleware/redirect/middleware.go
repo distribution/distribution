@@ -14,7 +14,7 @@ import (
 
 func init() {
 	if err := storagemiddleware.Register("redirect", newRedirectStorageMiddleware); err != nil {
-		logrus.Errorf("tailed to register redirect storage middleware: %v", err)
+		logrus.Errorf("failed to register redirect storage middleware: %v", err)
 	}
 }
 
