@@ -2,7 +2,9 @@ package token
 
 import (
 	"crypto"
+	"crypto/sha256"
 	"crypto/x509"
+	"encoding/base32"
 	"encoding/json"
 	"encoding/pem"
 	"errors"
@@ -302,6 +304,29 @@ func getSigningAlgorithms(algos []string) ([]jose.SignatureAlgorithm, error) {
 	return signAlgVals, nil
 }
 
+// Generate and return a 'libtrust' fingerprint of the public key.
+// For an RSA key this should be:
+//   SHA256(DER encoded ASN1)
+// Then truncated to 240 bits and encoded into 12 base32 groups like so:
+//   ABCD:EFGH:IJKL:MNOP:QRST:UVWX:YZ23:4567:ABCD:EFGH:IJKL:MNOP
+func libtrustKeyIDFromPublicKey(pubKey any) string {
+	derBytes, err := x509.MarshalPKIXPublicKey(pubKey)
+	if err != nil {
+		return ""
+	}
+	dgst := sha256.Sum256(derBytes)
+	s := base32.StdEncoding.EncodeToString(dgst[:30])
+	var builder strings.Builder
+	var i int
+	for i = 0; i < len(s)/4-1; i++ {
+		start := i * 4
+		end := start + 4
+		builder.WriteString(s[start:end] + ":")
+	}
+	builder.WriteString(s[i*4:])
+	return builder.String()
+}
+
 // newAccessController creates an accessController using the given options.
 func newAccessController(options map[string]interface{}) (auth.AccessController, error) {
 	config, err := checkOptions(options)
@@ -335,11 +360,11 @@ func newAccessController(options map[string]interface{}) (auth.AccessController,
 	}
 
 	rootPool := x509.NewCertPool()
+	trustedKeys := make(map[string]crypto.PublicKey)
 	for _, rootCert := range rootCerts {
 		rootPool.AddCert(rootCert)
+		trustedKeys[libtrustKeyIDFromPublicKey(rootCert.PublicKey)] = rootCert.PublicKey
 	}
-
-	trustedKeys := make(map[string]crypto.PublicKey)
 	if jwks != nil {
 		for _, key := range jwks.Keys {
 			trustedKeys[key.KeyID] = key.Public()
