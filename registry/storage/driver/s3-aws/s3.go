@@ -786,7 +786,7 @@ func (d *driver) Writer(ctx context.Context, path string, appendParam bool) (sto
 			StorageClass:         d.getStorageClass(),
 		})
 		if err != nil {
-			return nil, err
+			return nil, parseError(path, err)
 		}
 		return d.newWriter(key, *resp.UploadId, nil), nil
 	}
@@ -880,7 +880,7 @@ func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo,
 		MaxKeys: aws.Int64(1),
 	})
 	if err != nil {
-		return nil, err
+		return nil, parseError(path, err)
 	}
 
 	if len(resp.Contents) == 1 {
@@ -1374,9 +1374,10 @@ func parseError(path string, err error) error {
 			return storagedriver.PathNotFoundError{Path: path}
 		case "QuotaExceeded":
 			return storagedriver.QuotaExceededError{}
+		case "UserSuspended":
+			return storagedriver.UserSuspendedError{}
 		}
 	}
-
 	return err
 }
 

@@ -169,6 +169,15 @@ func (err QuotaExceededError) Error() string {
 	return fmt.Sprintf("%s: quota exceeded", err.DriverName)
 }
 
+// UserSuspendedError is returned when a user is suspended.
+type UserSuspendedError struct {
+	DriverName string
+}
+
+func (err UserSuspendedError) Error() string {
+	return fmt.Sprintf("%s: user is suspended", err.DriverName)
+}
+
 // Error is a catch-all error type which captures an error string and
 // the driver type on which it occurred.
 type Error struct {
