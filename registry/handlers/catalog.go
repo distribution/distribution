@@ -74,6 +74,10 @@ func (ch *catalogHandler) GetCatalog(w http.ResponseWriter, r *http.Request) {
 	} else {
 		returnedRepositories, err := ch.App.registry.Repositories(ch.Context, repos, lastEntry)
 		if err != nil {
+			if _, ok := err.(driver.UserSuspendedError); ok {
+				ch.Errors = append(ch.Errors, errcode.ErrorCodeUnauthorized.WithMessage("user is suspended"))
+				return
+			}
 			_, pathNotFound := err.(driver.PathNotFoundError)
 			if err != io.EOF && !pathNotFound {
 				ch.Errors = append(ch.Errors, errcode.ErrorCodeUnknown.WithDetail(err))

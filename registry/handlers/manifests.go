@@ -128,6 +128,8 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 		if err != nil {
 			if _, ok := err.(distribution.ErrTagUnknown); ok {
 				imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown.WithDetail(err))
+			} else if _, ok := err.(storagedriver.UserSuspendedError); ok {
+				imh.Errors = append(imh.Errors, errcode.ErrorCodeUnauthorized.WithMessage("user is suspended"))
 			} else {
 				var handled bool
 				errs, handled := handleDisconnectionEvent(imh.Context, w, r)
@@ -396,6 +398,8 @@ func (imh *manifestHandler) PutManifest(w http.ResponseWriter, r *http.Request) 
 			imh.Errors = append(imh.Errors, errcode.ErrorCodeDenied.WithMessage("quota exceeded"))
 		case errcode.Error:
 			imh.Errors = append(imh.Errors, err)
+		case storagedriver.UserSuspendedError:
+			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnauthorized.WithMessage("user is suspended"))
 		default:
 			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 		}

@@ -6,6 +6,7 @@ import (
 	"sort"
 
 	"github.com/docker/distribution"
+	"github.com/docker/distribution/registry/api/errcode"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/opencontainers/go-digest"
 )
@@ -38,6 +39,8 @@ func (ts *tagStore) All(ctx context.Context) ([]string, error) {
 		switch err := err.(type) {
 		case storagedriver.PathNotFoundError:
 			return tags, distribution.ErrRepositoryUnknown{Name: ts.repository.Named().Name()}
+		case storagedriver.UserSuspendedError:
+			return tags, errcode.ErrorCodeUnauthorized.WithMessage("user is suspended")
 		default:
 			return tags, err
 		}

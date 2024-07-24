@@ -90,6 +90,8 @@ func (buh *blobUploadHandler) StartBlobUpload(w http.ResponseWriter, r *http.Req
 			buh.Errors = append(buh.Errors, errcode.ErrorCodeDenied.WithMessage("quota exceeded"))
 		} else if err == distribution.ErrUnsupported {
 			buh.Errors = append(buh.Errors, errcode.ErrorCodeUnsupported)
+		} else if _, ok := err.(storagedriver.UserSuspendedError); ok {
+			buh.Errors = append(buh.Errors, errcode.ErrorCodeUnauthorized.WithMessage("user is suspended"))
 		} else {
 			buh.Errors = append(buh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 		}
@@ -116,6 +118,8 @@ func (buh *blobUploadHandler) GetUploadStatus(w http.ResponseWriter, r *http.Req
 		if err != nil {
 			if err == distribution.ErrBlobUploadUnknown {
 				buh.Errors = append(buh.Errors, v2.ErrorCodeBlobUploadUnknown.WithDetail(err))
+			} else if _, ok := err.(storagedriver.UserSuspendedError); ok {
+				buh.Errors = append(buh.Errors, errcode.ErrorCodeUnauthorized.WithMessage("user is suspended"))
 			} else {
 				buh.Errors = append(buh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 			}
@@ -177,6 +181,8 @@ func (buh *blobUploadHandler) PatchBlobData(w http.ResponseWriter, r *http.Reque
 			buh.Errors = append(buh.Errors, errcode.ErrorCodeDenied.WithMessage("quota exceeded"))
 		case ErrorClientDisconnected:
 			buh.Errors = append(buh.Errors, err.CodeWithMessage())
+		case storagedriver.UserSuspendedError:
+			buh.Errors = append(buh.Errors, errcode.ErrorCodeUnauthorized.WithMessage("user is suspended"))
 		default:
 			buh.Errors = append(buh.Errors, errcode.ErrorCodeUnknown.WithDetail(err.Error()))
 		}
@@ -233,6 +239,8 @@ func (buh *blobUploadHandler) BlobUploadComplete(w http.ResponseWriter, r *http.
 			buh.Errors = append(buh.Errors, errcode.ErrorCodeDenied.WithMessage("quota exceeded"))
 		case ErrorClientDisconnected:
 			buh.Errors = append(buh.Errors, err.CodeWithMessage())
+		case storagedriver.UserSuspendedError:
+			buh.Errors = append(buh.Errors, errcode.ErrorCodeUnauthorized.WithMessage("user is suspended"))
 		default:
 			buh.Errors = append(buh.Errors, errcode.ErrorCodeUnknown.WithDetail(err.Error()))
 		}
@@ -254,6 +262,8 @@ func (buh *blobUploadHandler) BlobUploadComplete(w http.ResponseWriter, r *http.
 			buh.Errors = append(buh.Errors, errcode.ErrorCodeDenied.WithMessage("quota exceeded"))
 		case errcode.Error:
 			buh.Errors = append(buh.Errors, err)
+		case storagedriver.UserSuspendedError:
+			buh.Errors = append(buh.Errors, errcode.ErrorCodeUnauthorized.WithMessage("user is suspended"))
 		default:
 			switch err {
 			case distribution.ErrAccessDenied:

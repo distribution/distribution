@@ -3,13 +3,14 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/gorilla/handlers"
-	"github.com/opencontainers/go-digest"
-
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/api/errcode"
 	v2 "github.com/docker/distribution/registry/api/v2"
+	storagedriver "github.com/docker/distribution/registry/storage/driver"
+
+	"github.com/gorilla/handlers"
+	"github.com/opencontainers/go-digest"
 )
 
 // blobDispatcher uses the request context to build a blobHandler.
@@ -61,6 +62,8 @@ func (bh *blobHandler) GetBlob(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if err == distribution.ErrBlobUnknown {
 			bh.Errors = append(bh.Errors, v2.ErrorCodeBlobUnknown.WithDetail(bh.Digest))
+		} else if _, ok := err.(storagedriver.UserSuspendedError); ok {
+			bh.Errors = append(bh.Errors, errcode.ErrorCodeUnauthorized.WithMessage("user is suspended"))
 		} else {
 			bh.Errors = append(bh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 		}
