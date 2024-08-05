@@ -169,6 +169,10 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 
 	for repo, dgsts := range deleteLayerSet {
 		for _, dgst := range dgsts {
+			emit("%s: layer link eligible for deletion: %s", repo, dgst)
+			if opts.DryRun {
+				continue
+			}
 			err = vacuum.RemoveLayer(repo, dgst)
 			if err != nil {
 				return fmt.Errorf("failed to delete layer link %s of repo %s: %v", dgst, repo, err)
