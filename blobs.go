@@ -46,7 +46,7 @@ func (err ErrBlobInvalidDigest) Error() string {
 // instead of initiating an upload session.
 type ErrBlobMounted struct {
 	From       reference.Canonical
-	Descriptor Descriptor
+	Descriptor v1.Descriptor
 }
 
 func (err ErrBlobMounted) Error() string {
@@ -58,32 +58,9 @@ func (err ErrBlobMounted) Error() string {
 // store, a descriptor can be used to fetch, store and target any kind of
 // blob. The struct also describes the wire protocol format. Fields should
 // only be added but never changed.
-type Descriptor struct {
-	// MediaType describe the type of the content. All text based formats are
-	// encoded as utf-8.
-	MediaType string `json:"mediaType,omitempty"`
-
-	// Digest uniquely identifies the content. A byte stream can be verified
-	// against this digest.
-	Digest digest.Digest `json:"digest,omitempty"`
-
-	// Size in bytes of content.
-	Size int64 `json:"size,omitempty"`
-
-	// URLs contains the source URLs of this content.
-	URLs []string `json:"urls,omitempty"`
-
-	// Annotations contains arbitrary metadata relating to the targeted content.
-	Annotations map[string]string `json:"annotations,omitempty"`
-
-	// Platform describes the platform which the image in the manifest runs on.
-	// This should only be used when referring to a manifest.
-	Platform *v1.Platform `json:"platform,omitempty"`
-
-	// NOTE: Before adding a field here, please ensure that all
-	// other options have been exhausted. Much of the type relationships
-	// depend on the simplicity of this type.
-}
+//
+// Descriptor is an alias for [v1.Descriptor].
+type Descriptor = v1.Descriptor
 
 // BlobStatter makes blob descriptors available by digest. The service may
 // provide a descriptor of a different digest if the provided digest is not
