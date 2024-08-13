@@ -600,10 +600,26 @@ type Proxy struct {
 	// Password of the hub user
 	Password string `yaml:"password"`
 
+	// Exec specifies a custom exec-based command to retrieve credentials.
+	// If set, Username and Password are ignored.
+	Exec *ExecConfig `yaml:"exec,omitempty"`
+
 	// TTL is the expiry time of the content and will be cleaned up when it expires
 	// if not set, defaults to 7 * 24 hours
 	// If set to zero, will never expire cache
 	TTL *time.Duration `yaml:"ttl,omitempty"`
+}
+
+type ExecConfig struct {
+	// Command is the command to execute.
+	Command string `yaml:"command"`
+
+	// Lifetime is the expiry period of the credentials. The credentials
+	// returned by the command is reused through the configured lifetime, then
+	// the command will be re-executed to retrieve new credentials.
+	// If set to zero, the command will be executed for every request.
+	// If not set, the command will only be executed once.
+	Lifetime *time.Duration `yaml:"lifetime,omitempty"`
 }
 
 type Validation struct {

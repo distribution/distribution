@@ -288,6 +288,9 @@ proxy:
   remoteurl: https://registry-1.docker.io
   username: [username]
   password: [password]
+  exec:
+    command: docker-credential-helper
+    lifetime: 1h
   ttl: 168h
 validation:
   manifests:
@@ -1160,7 +1163,7 @@ proxy:
 ```
 
 The `proxy` structure allows a registry to be configured as a pull-through cache
-to Docker Hub. See
+to an upstream registry such as Docker Hub. See
 [mirror](../recipes/mirror.md)
 for more information. Pushing to a registry configured as a pull-through cache
 is unsupported.
@@ -1168,13 +1171,28 @@ is unsupported.
 | Parameter | Required | Description                                           |
 |-----------|----------|-------------------------------------------------------|
 | `remoteurl`| yes     | The URL for the repository on Docker Hub.             |
-| `username` | no      | The username registered with Docker Hub which has access to the repository. |
-| `password` | no      | The password used to authenticate to Docker Hub using the username specified in `username`. |
 | `ttl`      | no      | Expire proxy cache configured in "storage" after this time. Cache 168h(7 days) by default, set to 0 to disable cache expiration, The suffix is one of `ns`, `us`, `ms`, `s`, `m`, or `h`. If you specify a value but omit the suffix, the value is interpreted as a number of nanoseconds. |
 
+To enable pulling private repositories (e.g. `batman/robin`), specify one of the
+following authentication methods for the pull-through cache to authenticate with
+the upstream registry via the [v2 Distribution registry authentication
+scheme](https://distribution.github.io/distribution/spec/auth/token/).]
 
-To enable pulling private repositories (e.g. `batman/robin`) specify the
-username (such as `batman`) and the password for that username.
+### `username` and `password`
+
+The username and password used to authenticate with the upstream registry to
+access the private repositories.
+
+### `exec`
+
+Run a custom exec-based [Docker credential helper](https://github.com/docker/docker-credential-helpers)
+to retrieve the credentials to authenticate with the upstream registry.
+
+| Parameter | Required | Description                                           |
+|-----------|----------|-------------------------------------------------------|
+| `command` | yes      | The command to execute.                               |
+| `lifetime`| no       | The expiry period of the credentials. The credentials returned by the command is reused through the configured lifetime, then the command will be re-executed to retrieve new credentials. If set to zero, the command will be executed for every request. If not set, the command will only be executed once. |
+
 
 > **Note**: These private repositories are stored in the proxy cache's storage.
 > Take appropriate measures to protect access to the proxy cache.
