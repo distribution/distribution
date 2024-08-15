@@ -22,6 +22,12 @@ permissions:
 
 jobs:
   test:
+    env:
+      # Setting GOTOOLCHAIN to local tells go
+      # to to use the bundled Go version rather
+      # than fetching the tolchain according to
+      # toolchain directive found in go.mod.
+      GOTOOLCHAIN: local
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
