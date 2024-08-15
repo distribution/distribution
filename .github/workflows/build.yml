@@ -25,7 +25,7 @@ jobs:
     env:
       # Setting GOTOOLCHAIN to local tells go
       # to to use the bundled Go version rather
-      # than fetching the tolchain according to
+      # than fetching the toolchain according to
       # toolchain directive found in go.mod.
       GOTOOLCHAIN: local
     runs-on: ubuntu-latest
