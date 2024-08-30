@@ -209,7 +209,7 @@ func populate(t *testing.T, te *testEnv, blobCount, size, numUnique int) {
 		for j := 0; j < blobCount/numUnique; j++ {
 			desc, err := te.store.remoteStore.Put(te.ctx, "", bytes)
 			if err != nil {
-				t.Fatalf("Put in store")
+				t.Fatal("Put in store")
 			}
 
 			inRemote = append(inRemote, desc)
@@ -279,7 +279,7 @@ func TestProxyStoreStat(t *testing.T) {
 	for _, d := range te.inRemote {
 		_, err := te.store.Stat(te.ctx, d.Digest)
 		if err != nil {
-			t.Fatalf("Error stating proxy store")
+			t.Fatal("Error stating proxy store")
 		}
 	}
 
@@ -444,7 +444,7 @@ func testProxyStoreServe(t *testing.T, te *testEnv, numClients int) {
 
 				err = te.store.ServeBlob(te.ctx, w, r, remoteBlob.Digest)
 				if err != nil {
-					t.Error(err.Error())
+					t.Error(err)
 					return
 				}
 
@@ -452,7 +452,7 @@ func testProxyStoreServe(t *testing.T, te *testEnv, numClients int) {
 				bodyBytes, err := io.ReadAll(resp.Body)
 				resp.Body.Close()
 				if err != nil {
-					t.Error(err.Error())
+					t.Error(err)
 					return
 				}
 				localDigest := digest.FromBytes(bodyBytes)
@@ -513,7 +513,7 @@ func testProxyStoreServe(t *testing.T, te *testEnv, numClients int) {
 
 		err = te.store.ServeBlob(te.ctx, w, r, dr.Digest)
 		if err != nil {
-			t.Fatal(err.Error())
+			t.Fatal(err)
 		}
 
 		dl := digest.FromBytes(w.Body.Bytes())

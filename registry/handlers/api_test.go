@@ -119,7 +119,7 @@ func TestCatalogAPI(t *testing.T) {
 
 	// No pagination should be returned
 	if resp.Header.Get("Link") != "" {
-		t.Fatalf("repositories has more data when none expected")
+		t.Fatal("repositories has more data when none expected")
 	}
 
 	for _, image := range allCatalog {
@@ -157,7 +157,7 @@ func TestCatalogAPI(t *testing.T) {
 	// fail if there's no pagination
 	link := resp.Header.Get("Link")
 	if link == "" {
-		t.Fatalf("repositories has less data than expected")
+		t.Fatal("repositories has less data than expected")
 	}
 	// -----------------------------------
 	// Case No. 2.1: Second page (n internally will be min(100, maxEntries))
@@ -221,7 +221,7 @@ func TestCatalogAPI(t *testing.T) {
 	// fail if there's no pagination
 	link = resp.Header.Get("Link")
 	if link == "" {
-		t.Fatalf("repositories has less data than expected")
+		t.Fatal("repositories has less data than expected")
 	}
 
 	// -----------------------------------
@@ -287,7 +287,7 @@ func TestCatalogAPI(t *testing.T) {
 	// fail if there's no pagination
 	link = resp.Header.Get("Link")
 	if link == "" {
-		t.Fatalf("repositories has less data than expected")
+		t.Fatal("repositories has less data than expected")
 	}
 
 	// -----------------------------------
@@ -612,7 +612,7 @@ func checkLink(t *testing.T, urlStr string, numEntries int, last string) url.Val
 	matches := re.FindStringSubmatch(urlStr)
 
 	if len(matches) != 2 {
-		t.Fatalf("Catalog link address response was incorrect")
+		t.Fatal("Catalog link address response was incorrect")
 	}
 	linkURL, _ := url.Parse(matches[1])
 	urlValues := linkURL.Query()
@@ -1037,7 +1037,7 @@ func testBlobAPI(t *testing.T, env *testEnv, args blobArgs) *testEnv {
 	}
 
 	if !verifier.Verified() {
-		t.Fatalf("response body did not pass verification")
+		t.Fatal("response body did not pass verification")
 	}
 
 	// ----------------
@@ -1107,7 +1107,7 @@ func testBlobDelete(t *testing.T, env *testEnv, args blobArgs) {
 	ref, _ := reference.WithDigest(imageName, layerDigest)
 	layerURL, err := env.builder.BuildBlobURL(ref)
 	if err != nil {
-		t.Fatal(err.Error())
+		t.Fatal(err)
 	}
 	// ---------------
 	// Delete a layer
@@ -1201,7 +1201,7 @@ func TestDeleteDisabled(t *testing.T) {
 	ref, _ := reference.WithDigest(imageName, layerDigest)
 	layerURL, err := env.builder.BuildBlobURL(ref)
 	if err != nil {
-		t.Fatalf("Error building blob URL")
+		t.Fatal("Error building blob URL")
 	}
 	uploadURLBase, _ := startPushLayer(t, env, imageName)
 	pushLayer(t, env.builder, imageName, layerDigest, uploadURLBase, layerFile)
@@ -1229,7 +1229,7 @@ func TestDeleteReadOnly(t *testing.T) {
 	ref, _ := reference.WithDigest(imageName, layerDigest)
 	layerURL, err := env.builder.BuildBlobURL(ref)
 	if err != nil {
-		t.Fatalf("Error building blob URL")
+		t.Fatal("Error building blob URL")
 	}
 	uploadURLBase, _ := startPushLayer(t, env, imageName)
 	pushLayer(t, env.builder, imageName, layerDigest, uploadURLBase, layerFile)
@@ -1764,7 +1764,7 @@ func testManifestAPISchema2(t *testing.T, env *testEnv, imageName reference.Name
 	}
 
 	if !bytes.Equal(fetchedCanonical, canonical) {
-		t.Fatalf("manifests do not match")
+		t.Fatal("manifests do not match")
 	}
 
 	// ---------------
@@ -1822,7 +1822,7 @@ func testManifestAPISchema2(t *testing.T, env *testEnv, imageName reference.Name
 	}
 
 	if !bytes.Equal(fetchedCanonical, canonical) {
-		t.Fatalf("manifests do not match")
+		t.Fatal("manifests do not match")
 	}
 
 	// Get by name with etag, gives 304
@@ -1997,7 +1997,7 @@ func testManifestAPIManifestList(t *testing.T, env *testEnv, args manifestArgs) 
 	}
 
 	if !bytes.Equal(fetchedCanonical, canonical) {
-		t.Fatalf("manifest lists do not match")
+		t.Fatal("manifest lists do not match")
 	}
 
 	// ---------------
@@ -2029,7 +2029,7 @@ func testManifestAPIManifestList(t *testing.T, env *testEnv, args manifestArgs) 
 	}
 
 	if !bytes.Equal(fetchedCanonical, canonical) {
-		t.Fatalf("manifests do not match")
+		t.Fatal("manifests do not match")
 	}
 
 	// Get by name with etag, gives 304
@@ -2389,7 +2389,7 @@ func pushLayer(t *testing.T, ub *v2.URLBuilder, name reference.Named, dgst diges
 	checkResponse(t, "putting monolithic chunk", resp, http.StatusCreated)
 
 	if err != nil {
-		t.Fatalf("error generating sha256 digest of body")
+		t.Fatal("error generating sha256 digest of body")
 	}
 
 	sha256Dgst := digester.Digest()
@@ -2497,7 +2497,7 @@ func pushChunk(t *testing.T, ub *v2.URLBuilder, name reference.Named, uploadURLB
 	checkResponse(t, "putting chunk", resp, http.StatusAccepted)
 
 	if err != nil {
-		t.Fatalf("error generating sha256 digest of body")
+		t.Fatal("error generating sha256 digest of body")
 	}
 
 	checkHeaders(t, resp, http.Header{
@@ -2540,7 +2540,7 @@ func checkBodyHasErrorCodes(t *testing.T, msg string, resp *http.Response, error
 	}
 
 	if len(errs) == 0 {
-		t.Fatalf("expected errors in response")
+		t.Fatal("expected errors in response")
 	}
 
 	// TODO(stevvooe): Shoot. The error setup is not working out. The content-
@@ -2843,7 +2843,7 @@ func TestProxyManifestGetByTag(t *testing.T) {
 	// Create another manifest in the remote with the same image/tag pair
 	newDigest := createRepository(truthEnv, t, imageName.Name(), tag)
 	if dgst == newDigest {
-		t.Fatalf("non-random test data")
+		t.Fatal("non-random test data")
 	}
 
 	// fetch it with the same proxy URL as before.  Ensure the updated content is at the same tag

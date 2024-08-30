@@ -110,7 +110,7 @@ func testManifestStorage(t *testing.T, options ...RegistryOption) {
 	for i := 0; i < 2; i++ {
 		rs, dgst, err := testutil.CreateRandomTarFile()
 		if err != nil {
-			t.Fatalf("unexpected error generating test layer file")
+			t.Fatal("unexpected error generating test layer file")
 		}
 
 		testLayers[dgst] = rs
@@ -157,7 +157,7 @@ func testManifestStorage(t *testing.T, options ...RegistryOption) {
 	}
 
 	if !exists {
-		t.Fatalf("manifest should exist")
+		t.Fatal("manifest should exist")
 	}
 
 	fromStore, err := ms.Get(ctx, manifestDigest)
@@ -167,7 +167,7 @@ func testManifestStorage(t *testing.T, options ...RegistryOption) {
 
 	fetchedManifest, ok := fromStore.(*schema2.DeserializedManifest)
 	if !ok {
-		t.Fatalf("unexpected manifest type from signedstore")
+		t.Fatal("unexpected manifest type from signedstore")
 	}
 	_, pl, err := fetchedManifest.Payload()
 	if err != nil {
@@ -194,7 +194,7 @@ func testManifestStorage(t *testing.T, options ...RegistryOption) {
 
 	byDigestManifest, ok := fetchedByDigest.(*schema2.DeserializedManifest)
 	if !ok {
-		t.Fatalf("unexpected manifest type from signedstore")
+		t.Fatal("unexpected manifest type from signedstore")
 	}
 
 	_, byDigestCanonical, err := byDigestManifest.Payload()
@@ -222,7 +222,7 @@ func testManifestStorage(t *testing.T, options ...RegistryOption) {
 	}
 
 	if !bytes.Equal(receivedPL, pl) {
-		t.Fatalf("payloads are not equal")
+		t.Fatal("payloads are not equal")
 	}
 
 	// Test deleting manifests
@@ -233,7 +233,7 @@ func testManifestStorage(t *testing.T, options ...RegistryOption) {
 
 	exists, err = ms.Exists(ctx, dgst)
 	if err != nil {
-		t.Fatalf("Error querying manifest existence")
+		t.Fatal("Error querying manifest existence")
 	}
 	if exists {
 		t.Errorf("Deleted manifest should not exist")
@@ -262,7 +262,7 @@ func testManifestStorage(t *testing.T, options ...RegistryOption) {
 
 	exists, err = ms.Exists(ctx, dgst)
 	if err != nil {
-		t.Fatalf("Error querying manifest existence")
+		t.Fatal("Error querying manifest existence")
 	}
 	if !exists {
 		t.Errorf("Restored manifest should exist")

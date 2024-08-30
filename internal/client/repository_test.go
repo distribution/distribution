@@ -394,7 +394,7 @@ func TestBlobExistsNoContentLength(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !strings.Contains(err.Error(), "missing content-length heade") {
-		t.Fatalf("Expected missing content-length error message")
+		t.Fatal("Expected missing content-length error message")
 	}
 }
 
@@ -1468,10 +1468,10 @@ func TestObtainsErrorForMissingTag(t *testing.T) {
 
 	_, err = tagService.Get(ctx, "1.0.0")
 	if err == nil {
-		t.Fatalf("Expected an error")
+		t.Fatal("Expected an error")
 	}
 	if !strings.Contains(err.Error(), "manifest unknown") {
-		t.Fatalf("Expected unknown manifest error message")
+		t.Fatal("Expected unknown manifest error message")
 	}
 }
 
@@ -1495,10 +1495,10 @@ func TestObtainsManifestForTagWithoutHeaders(t *testing.T) {
 
 	desc, err := tagService.Get(ctx, "1.0.0")
 	if err != nil {
-		t.Fatalf("Expected no error")
+		t.Fatal("Expected no error")
 	}
 	if desc.Digest != dgst {
-		t.Fatalf("Unexpected digest")
+		t.Fatal("Unexpected digest")
 	}
 }
 
@@ -1657,7 +1657,7 @@ func TestCatalog(t *testing.T) {
 	}
 
 	if numFilled != 3 {
-		t.Fatalf("Got wrong number of repos")
+		t.Fatal("Got wrong number of repos")
 	}
 }
 
@@ -1689,7 +1689,7 @@ func TestCatalogInParts(t *testing.T) {
 	}
 
 	if numFilled != 2 {
-		t.Fatalf("Got wrong number of repos")
+		t.Fatal("Got wrong number of repos")
 	}
 
 	numFilled, err = r.Repositories(ctx, entries, "baz")
@@ -1698,7 +1698,7 @@ func TestCatalogInParts(t *testing.T) {
 	}
 
 	if numFilled != 1 {
-		t.Fatalf("Got wrong number of repos")
+		t.Fatal("Got wrong number of repos")
 	}
 }
 

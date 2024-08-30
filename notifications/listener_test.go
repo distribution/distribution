@@ -178,12 +178,12 @@ func checkTestRepository(t *testing.T, repository distribution.Repository, remov
 
 	sm, err := schema2.FromStruct(m)
 	if err != nil {
-		t.Fatal(err.Error())
+		t.Fatal(err)
 	}
 
 	manifests, err := repository.Manifests(ctx)
 	if err != nil {
-		t.Fatal(err.Error())
+		t.Fatal(err)
 	}
 
 	var digestPut digest.Digest
@@ -193,12 +193,12 @@ func checkTestRepository(t *testing.T, repository distribution.Repository, remov
 
 	_, canonical, err := sm.Payload()
 	if err != nil {
-		t.Fatal(err.Error())
+		t.Fatal(err)
 	}
 
 	dgst := digest.FromBytes(canonical)
 	if dgst != digestPut {
-		t.Fatalf("mismatching digest from payload and put")
+		t.Fatal("mismatching digest from payload and put")
 	}
 
 	if err := repository.Tags(ctx).Tag(ctx, tag, distribution.Descriptor{Digest: dgst}); err != nil {

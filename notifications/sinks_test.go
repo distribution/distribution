@@ -51,7 +51,7 @@ func TestEventQueue(t *testing.T) {
 	}
 
 	if !ts.closed {
-		t.Fatalf("sink should have been closed")
+		t.Fatal("sink should have been closed")
 	}
 
 	if metrics.Events != nevents {
@@ -162,13 +162,13 @@ func checkClose(t *testing.T, sink events.Sink) {
 
 	// second close should not crash but should return an error.
 	if err := sink.Close(); err == nil {
-		t.Fatalf("no error on double close")
+		t.Fatal("no error on double close")
 	}
 
 	// Write after closed should be an error
 	if err := sink.Write(Event{}); err == nil {
-		t.Fatalf("write after closed did not have an error")
+		t.Fatal("write after closed did not have an error")
 	} else if err != ErrSinkClosed {
-		t.Fatalf("error should be ErrSinkClosed")
+		t.Fatal("error should be ErrSinkClosed")
 	}
 }

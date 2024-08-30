@@ -461,7 +461,7 @@ func TestDelete(t *testing.T) {
 
 			if tc.err != nil {
 				if err == nil {
-					t.Fatalf("expected error")
+					t.Fatal("expected error")
 				}
 				if !tc.err(err) {
 					t.Fatalf("error does not match expected: %s", err)
@@ -743,10 +743,10 @@ func TestWalk(t *testing.T) {
 				return tc.fn(fileInfo)
 			}, tc.options...)
 			if tc.err && err == nil {
-				t.Fatalf("expected err")
+				t.Fatal("expected err")
 			}
 			if !tc.err && err != nil {
-				t.Fatal(err.Error())
+				t.Fatal(err)
 			}
 			compareWalked(t, tc.expected, walked)
 		})
@@ -876,7 +876,7 @@ func TestListObjectsV2(t *testing.T) {
 	sort.Strings(subPaths)
 	sort.Strings(result)
 	if !reflect.DeepEqual(subPaths, result) {
-		t.Fatalf("unexpected list result")
+		t.Fatal("unexpected list result")
 	}
 
 	var walkPaths []string
@@ -884,11 +884,11 @@ func TestListObjectsV2(t *testing.T) {
 		walkPaths = append(walkPaths, fileInfo.Path())
 		if fileInfo.Path() == path.Dir(subDirPath) {
 			if !fileInfo.IsDir() {
-				t.Fatalf("unexpected walking file info")
+				t.Fatal("unexpected walking file info")
 			}
 		} else {
 			if fileInfo.IsDir() || fileInfo.Size() != int64(len(fileInfo.Path())) {
-				t.Fatalf("unexpected walking file info")
+				t.Fatal("unexpected walking file info")
 			}
 		}
 		return nil
@@ -900,7 +900,7 @@ func TestListObjectsV2(t *testing.T) {
 	sort.Strings(walkPaths)
 	sort.Strings(subPaths)
 	if !reflect.DeepEqual(subPaths, walkPaths) {
-		t.Fatalf("unexpected walking paths")
+		t.Fatal("unexpected walking paths")
 	}
 
 	if err := d.Delete(ctx, prefix); err != nil {

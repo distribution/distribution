@@ -178,7 +178,7 @@ func TestTagLookup(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(tags) != 0 {
-		t.Fatalf("Lookup returned > 0 tags from empty store")
+		t.Fatal("Lookup returned > 0 tags from empty store")
 	}
 
 	err = tagStore.Tag(ctx, "a", descA)

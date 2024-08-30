@@ -75,7 +75,7 @@ func TestWalkFileRemoved(t *testing.T) {
 		t.Errorf("unexpected path set during walk: %s", infos)
 	}
 	if err != nil {
-		t.Fatal(err.Error())
+		t.Fatal(err)
 	}
 }
 
@@ -303,10 +303,10 @@ func TestWalkFallback(t *testing.T) {
 				return tc.fn(fileInfo)
 			}, tc.options...)
 			if tc.err && err == nil {
-				t.Fatalf("expected err")
+				t.Fatal("expected err")
 			}
 			if !tc.err && err != nil {
-				t.Fatal(err.Error())
+				t.Fatal(err)
 			}
 			compareWalked(t, tc.expected, walked)
 		})

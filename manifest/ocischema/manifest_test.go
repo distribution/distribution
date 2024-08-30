@@ -157,7 +157,7 @@ func TestManifestUnmarshal(t *testing.T) {
 		t.Fatalf("manifest annotation not equal:\nexpected:\n%v\nactual:\n%v\n", deserialized.Annotations, descriptor.Annotations)
 	}
 	if len(descriptor.Annotations) != 1 {
-		t.Fatalf("manifest index annotation length should be 1")
+		t.Fatal("manifest index annotation length should be 1")
 	}
 	if descriptor.Size != int64(len([]byte(expectedManifestSerialization))) {
 		t.Fatalf("manifest size is not correct:\nexpected:\n%d\nactual:\n%v\n", int64(len([]byte(expectedManifestSerialization))), descriptor.Size)
@@ -185,7 +185,7 @@ func manifestMediaTypeTest(mediaType string, shouldError bool) func(*testing.T) 
 
 		if shouldError {
 			if err == nil {
-				t.Fatalf("bad content type should have produced error")
+				t.Fatal("bad content type should have produced error")
 			}
 		} else {
 			if err != nil {
