@@ -175,7 +175,7 @@ func TestStopRestore(t *testing.T) {
 
 	err := s.Start()
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	s.add(ref1, 300*timeUnit, entryTypeBlob)
 	s.add(ref2, 100*timeUnit, entryTypeBlob)
@@ -184,7 +184,7 @@ func TestStopRestore(t *testing.T) {
 	// state will be written to fs
 	err = s.Stop()
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	time.Sleep(10 * time.Millisecond)
 

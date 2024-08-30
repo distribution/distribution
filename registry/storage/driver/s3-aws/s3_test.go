@@ -508,7 +508,7 @@ func TestDelete(t *testing.T) {
 			}
 
 			if len(issues) > 0 {
-				t.Fatalf(strings.Join(issues, "; \n\t"))
+				t.Fatal(strings.Join(issues, "; \n\t"))
 			}
 		})
 	}
@@ -746,7 +746,7 @@ func TestWalk(t *testing.T) {
 				t.Fatalf("expected err")
 			}
 			if !tc.err && err != nil {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 			compareWalked(t, tc.expected, walked)
 		})

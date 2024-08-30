@@ -108,7 +108,7 @@ func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestE
 
 	manifestDigest, err := populateRepo(ctx, t, truthRepo, name, tag)
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	localRegistry, err := storage.NewRegistry(ctx, inmemory.New(),
