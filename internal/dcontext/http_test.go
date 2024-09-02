@@ -164,7 +164,7 @@ func TestWithResponseWriter(t *testing.T) {
 	rw.(http.Flusher).Flush()
 
 	if !trw.flushed {
-		t.Fatalf("response writer not flushed")
+		t.Fatal("response writer not flushed")
 	}
 
 	// Write another status and make sure context is correct. This normally

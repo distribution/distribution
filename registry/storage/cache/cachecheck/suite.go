@@ -28,7 +28,7 @@ func checkBlobDescriptorCacheEmptyRepository(ctx context.Context, t *testing.T, 
 
 	_, err := provider.RepositoryScoped("")
 	if err == nil {
-		t.Fatalf("expected an error when asking for invalid repo")
+		t.Fatal("expected an error when asking for invalid repo")
 	}
 
 	cache, err := provider.RepositoryScoped("foo/bar")
@@ -49,7 +49,7 @@ func checkBlobDescriptorCacheEmptyRepository(ctx context.Context, t *testing.T, 
 		Size:      10,
 		MediaType: "application/octet-stream",
 	}); err == nil {
-		t.Fatalf("expected error setting value on invalid descriptor")
+		t.Fatal("expected error setting value on invalid descriptor")
 	}
 
 	if _, err := cache.Stat(ctx, ""); err != digest.ErrDigestInvalidFormat {

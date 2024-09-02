@@ -99,7 +99,7 @@ func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestE
 	}
 	tr, err := truthRepo.Manifests(ctx)
 	if err != nil {
-		t.Fatal(err.Error())
+		t.Fatal(err)
 	}
 	truthManifests := statsManifest{
 		manifests: tr,
@@ -108,7 +108,7 @@ func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestE
 
 	manifestDigest, err := populateRepo(ctx, t, truthRepo, name, tag)
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err)
 	}
 
 	localRegistry, err := storage.NewRegistry(ctx, inmemory.New(),
@@ -122,7 +122,7 @@ func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestE
 	}
 	lr, err := localRepo.Manifests(ctx, storage.SkipLayerVerification())
 	if err != nil {
-		t.Fatal(err.Error())
+		t.Fatal(err)
 	}
 
 	localManifests := statsManifest{
@@ -165,7 +165,7 @@ func populateRepo(ctx context.Context, t *testing.T, repository distribution.Rep
 	for i := 0; i < 2; i++ {
 		rs, dgst, err := testutil.CreateRandomTarFile()
 		if err != nil {
-			t.Fatalf("unexpected error generating test layer file")
+			t.Fatal("unexpected error generating test layer file")
 		}
 
 		if err := testutil.PushBlob(ctx, repository, rs, dgst); err != nil {
@@ -175,11 +175,11 @@ func populateRepo(ctx context.Context, t *testing.T, repository distribution.Rep
 
 	ms, err := repository.Manifests(ctx)
 	if err != nil {
-		t.Fatal(err.Error())
+		t.Fatal(err)
 	}
 	sm, err := schema2.FromStruct(m)
 	if err != nil {
-		t.Fatal(err.Error())
+		t.Fatal(err)
 	}
 	dgst, err := ms.Put(ctx, sm)
 	if err != nil {
@@ -202,7 +202,7 @@ func TestProxyManifests(t *testing.T) {
 	// Stat - must check local and remote
 	exists, err := env.manifests.Exists(ctx, env.manifestDigest)
 	if err != nil {
-		t.Fatalf("Error checking existence")
+		t.Fatal("Error checking existence")
 	}
 	if !exists {
 		t.Errorf("Unexpected non-existent manifest")
@@ -270,7 +270,7 @@ func TestProxyManifestsWithoutScheduler(t *testing.T) {
 	ctx := context.Background()
 	exists, err := env.manifests.Exists(ctx, env.manifestDigest)
 	if err != nil {
-		t.Fatalf("Error checking existence")
+		t.Fatal("Error checking existence")
 	}
 	if !exists {
 		t.Errorf("Unexpected non-existent manifest")

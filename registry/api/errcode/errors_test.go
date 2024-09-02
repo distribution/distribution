@@ -169,7 +169,7 @@ func TestErrorsManagement(t *testing.T) {
 	e1 = ErrorCodeTest3.WithArgs("test1")
 	e2 := e1.WithArgs("test2")
 	if &e1 == &e2 {
-		t.Fatalf("args: e2 and e1 should not be the same, but they are")
+		t.Fatal("args: e2 and e1 should not be the same, but they are")
 	}
 	if e2.Message != `Sorry "test2" isn't valid` {
 		t.Fatalf("e2 had wrong message: %q", e2.Message)
@@ -180,7 +180,7 @@ func TestErrorsManagement(t *testing.T) {
 	e1 = ErrorCodeTest3.WithDetail("stuff1")
 	e2 = e1.WithDetail("stuff2")
 	if &e1 == &e2 {
-		t.Fatalf("detail: e2 and e1 should not be the same, but they are")
+		t.Fatal("detail: e2 and e1 should not be the same, but they are")
 	}
 	if e2.Detail != `stuff2` {
 		t.Fatalf("e2 had wrong detail: %q", e2.Detail)

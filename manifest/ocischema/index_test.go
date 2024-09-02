@@ -146,7 +146,7 @@ func TestOCIManifestIndexUnmarshal(t *testing.T) {
 		t.Fatalf("manifest index annotation not equal:\nexpected:\n%v\nactual:\n%v\n", deserialized.Annotations, descriptor.Annotations)
 	}
 	if len(descriptor.Annotations) != 2 {
-		t.Fatalf("manifest index annotation length should be 2")
+		t.Fatal("manifest index annotation length should be 2")
 	}
 	if descriptor.Size != int64(len([]byte(expectedOCIImageIndexSerialization))) {
 		t.Fatalf("manifest index size is not correct:\nexpected:\n%d\nactual:\n%v\n", int64(len([]byte(expectedOCIImageIndexSerialization))), descriptor.Size)
@@ -175,7 +175,7 @@ func indexMediaTypeTest(contentType string, mediaType string, shouldError bool) 
 
 		if shouldError {
 			if err == nil {
-				t.Fatalf("bad content type should have produced error")
+				t.Fatal("bad content type should have produced error")
 			}
 		} else {
 			if err != nil {

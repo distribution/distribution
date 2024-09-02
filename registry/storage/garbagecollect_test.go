@@ -27,7 +27,7 @@ func createRegistry(t *testing.T, driver driver.StorageDriver, options ...Regist
 	options = append(options, EnableDelete)
 	registry, err := NewRegistry(ctx, driver, options...)
 	if err != nil {
-		t.Fatalf("Failed to construct namespace")
+		t.Fatal("Failed to construct namespace")
 	}
 	return registry
 }
@@ -63,7 +63,7 @@ func allManifests(t *testing.T, manifestService distribution.ManifestService) ma
 	allManMap := make(map[digest.Digest]struct{})
 	manifestEnumerator, ok := manifestService.(distribution.ManifestEnumerator)
 	if !ok {
-		t.Fatalf("unable to convert ManifestService into ManifestEnumerator")
+		t.Fatal("unable to convert ManifestService into ManifestEnumerator")
 	}
 	err := manifestEnumerator.Enumerate(ctx, func(dgst digest.Digest) error {
 		allManMap[dgst] = struct{}{}
@@ -558,7 +558,7 @@ func TestDeletionHasEffect(t *testing.T) {
 
 	// check that the image1 manifest and all the layers are still in blobs
 	if _, ok := blobs[image1.manifestDigest]; !ok {
-		t.Fatalf("First manifest is missing")
+		t.Fatal("First manifest is missing")
 	}
 
 	for layer := range image1.layers {
@@ -751,15 +751,15 @@ func TestTaggedManifestlistWithUntaggedManifest(t *testing.T) {
 	}
 
 	if _, ok := after[image1.manifestDigest]; !ok {
-		t.Fatalf("First manifest is missing")
+		t.Fatal("First manifest is missing")
 	}
 
 	if _, ok := after[image2.manifestDigest]; !ok {
-		t.Fatalf("Second manifest is missing")
+		t.Fatal("Second manifest is missing")
 	}
 
 	if _, ok := after[dgst]; !ok {
-		t.Fatalf("Manifest list is missing")
+		t.Fatal("Manifest list is missing")
 	}
 }
 
@@ -858,15 +858,15 @@ func TestUnTaggedManifestlistWithTaggedManifest(t *testing.T) {
 	afterManifests := allManifests(t, manifestService)
 
 	if _, ok := after[dgst]; ok {
-		t.Fatalf("Untagged manifestlist still exists")
+		t.Fatal("Untagged manifestlist still exists")
 	}
 
 	if _, ok := afterManifests[image1.manifestDigest]; !ok {
-		t.Fatalf("First manifest is missing")
+		t.Fatal("First manifest is missing")
 	}
 
 	if _, ok := afterManifests[image2.manifestDigest]; !ok {
-		t.Fatalf("Second manifest is missing")
+		t.Fatal("Second manifest is missing")
 	}
 }
 

@@ -98,7 +98,7 @@ func TestGet(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(local, remoteDesc) {
-		t.Fatalf("unexpected descriptor pulled through")
+		t.Fatal("unexpected descriptor pulled through")
 	}
 
 	// Manually overwrite remote tag
@@ -134,12 +134,12 @@ func TestGet(t *testing.T) {
 
 	_, err = proxyTags.localTags.Get(ctx, remoteTag)
 	if err == nil {
-		t.Fatalf("Expected error getting Untag'd tag")
+		t.Fatal("Expected error getting Untag'd tag")
 	}
 
 	_, err = proxyTags.remoteTags.Get(ctx, remoteTag)
 	if err != nil {
-		t.Fatalf("remote tag should not be untagged with proxyTag.Untag")
+		t.Fatal("remote tag should not be untagged with proxyTag.Untag")
 	}
 
 	_, err = proxyTags.Get(ctx, remoteTag)

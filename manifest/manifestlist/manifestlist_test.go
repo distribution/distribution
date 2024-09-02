@@ -146,7 +146,7 @@ func mediaTypeTest(contentType string, mediaType string, shouldError bool) func(
 
 		if shouldError {
 			if err == nil {
-				t.Fatalf("bad content type should have produced error")
+				t.Fatal("bad content type should have produced error")
 			}
 		} else {
 			if err != nil {

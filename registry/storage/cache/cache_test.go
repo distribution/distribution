@@ -37,7 +37,7 @@ func TestCacheSet(t *testing.T) {
 	}
 
 	if len(cache.sets) != 1 || len(cache.sets[dgst]) == 0 {
-		t.Fatalf("Expected cache set")
+		t.Fatal("Expected cache set")
 	}
 	if cache.sets[dgst][0].Digest != desc.Digest {
 		t.Fatalf("Unexpected descriptor %v, expected %v", cache.sets[dgst][0], desc)
@@ -85,7 +85,7 @@ func TestCacheError(t *testing.T) {
 	}
 
 	if len(cache.sets) > 0 {
-		t.Fatalf("Set should not be called after stat error")
+		t.Fatal("Set should not be called after stat error")
 	}
 }
 

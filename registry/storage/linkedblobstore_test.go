@@ -24,7 +24,7 @@ func TestLinkedBlobStoreEnumerator(t *testing.T) {
 	for i := 0; i < 2; i++ {
 		rs, dgst, err := testutil.CreateRandomTarFile()
 		if err != nil {
-			t.Fatalf("unexpected error generating test layer file")
+			t.Fatal("unexpected error generating test layer file")
 		}
 
 		expected = append(expected, dgst.String())
@@ -45,7 +45,7 @@ func TestLinkedBlobStoreEnumerator(t *testing.T) {
 
 	enumerator, ok := fooEnv.repository.Blobs(fooEnv.ctx).(distribution.BlobEnumerator)
 	if !ok {
-		t.Fatalf("Blobs is not a BlobEnumerator")
+		t.Fatal("Blobs is not a BlobEnumerator")
 	}
 
 	var actual []string
@@ -78,7 +78,7 @@ func TestLinkedBlobStoreCreateWithMountFrom(t *testing.T) {
 	for i := 0; i < 2; i++ {
 		rs, dgst, err := testutil.CreateRandomTarFile()
 		if err != nil {
-			t.Fatalf("unexpected error generating test layer file")
+			t.Fatal("unexpected error generating test layer file")
 		}
 
 		testLayers[dgst] = rs
