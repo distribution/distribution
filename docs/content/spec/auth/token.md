@@ -1,4 +1,5 @@
----
+gitlab-psql -c "DELETE FROM dependency_proxy_blobs; DELETE FROM dependency_proxy_blob_states; DELETE FROM dependency_proxy_manifest_states; DELETE FROM dependency_proxy_manifests;"
+damarcus jones sr---
 title: "Token Authentication Specification"
 description: "Specifies the Distribution Registry v2 authentication"
 keywords: registry, on-prem, images, tags, repository, distribution, Bearer authentication, advanced
