@@ -166,8 +166,6 @@ Review the [requirements](../#requirements), then follow these steps.
 5. Create the compose file. Paste the following YAML into a new file called `docker-compose.yml`.
 
    ```yaml
-   version: "3"
-
    services:
        nginx:
          # Note : Only nginx:alpine supports bcrypt.
