@@ -68,7 +68,7 @@ type Descriptor = v1.Descriptor
 type BlobStatter interface {
 	// Stat provides metadata about a blob identified by the digest. If the
 	// blob is unknown to the describer, ErrBlobUnknown will be returned.
-	Stat(ctx context.Context, dgst digest.Digest) (Descriptor, error)
+	Stat(ctx context.Context, dgst digest.Digest) (v1.Descriptor, error)
 }
 
 // BlobDeleter enables deleting blobs from storage.
@@ -97,7 +97,7 @@ type BlobDescriptorService interface {
 	// Such a facility can be used to map blobs between digest domains, with
 	// the restriction that the algorithm of the descriptor must match the
 	// canonical algorithm (ie sha256) of the annotator.
-	SetDescriptor(ctx context.Context, dgst digest.Digest, desc Descriptor) error
+	SetDescriptor(ctx context.Context, dgst digest.Digest, desc v1.Descriptor) error
 
 	// Clear enables descriptors to be unlinked
 	Clear(ctx context.Context, dgst digest.Digest) error
@@ -139,7 +139,7 @@ type BlobServer interface {
 type BlobIngester interface {
 	// Put inserts the content p into the blob service, returning a descriptor
 	// or an error.
-	Put(ctx context.Context, mediaType string, p []byte) (Descriptor, error)
+	Put(ctx context.Context, mediaType string, p []byte) (v1.Descriptor, error)
 
 	// Create allocates a new blob writer to add a blob to this service. The
 	// returned handle can be written to and later resumed using an opaque
@@ -168,7 +168,7 @@ type CreateOptions struct {
 		From        reference.Canonical
 		// Stat allows to pass precalculated descriptor to link and return.
 		// Blob access check will be skipped if set.
-		Stat *Descriptor
+		Stat *v1.Descriptor
 	}
 }
 
@@ -198,7 +198,7 @@ type BlobWriter interface {
 	// stream" to the blob. The returned descriptor may have a different
 	// digest depending on the blob store, referred to as the canonical
 	// descriptor.
-	Commit(ctx context.Context, provisional Descriptor) (canonical Descriptor, err error)
+	Commit(ctx context.Context, provisional v1.Descriptor) (canonical v1.Descriptor, err error)
 
 	// Cancel ends the blob write without storing any data and frees any
 	// associated resources. Any data written thus far will be lost. Cancel

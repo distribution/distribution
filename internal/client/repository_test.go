@@ -274,7 +274,7 @@ func TestBlobResume(t *testing.T) {
 		t.Fatalf("Unexpected ReadFrom length: %d; expected: %d", n, len(b1))
 	}
 
-	blob, err := upload.Commit(ctx, distribution.Descriptor{
+	blob, err := upload.Commit(ctx, v1.Descriptor{
 		Digest: dgst,
 		Size:   int64(len(b1)),
 	})
@@ -538,7 +538,7 @@ func TestBlobUploadChunked(t *testing.T) {
 		}
 	}
 
-	blob, err := upload.Commit(ctx, distribution.Descriptor{
+	blob, err := upload.Commit(ctx, v1.Descriptor{
 		Digest: dgst,
 		Size:   int64(len(b1)),
 	})
@@ -646,7 +646,7 @@ func TestBlobUploadMonolithic(t *testing.T) {
 		t.Fatalf("Unexpected ReadFrom length: %d; expected: %d", n, len(b1))
 	}
 
-	blob, err := upload.Commit(ctx, distribution.Descriptor{
+	blob, err := upload.Commit(ctx, v1.Descriptor{
 		Digest: dgst,
 		Size:   int64(len(b1)),
 	})
@@ -752,7 +752,7 @@ func TestBlobUploadMonolithicDockerUploadUUIDFromURL(t *testing.T) {
 		t.Fatalf("Unexpected ReadFrom length: %d; expected: %d", n, len(b1))
 	}
 
-	blob, err := upload.Commit(ctx, distribution.Descriptor{
+	blob, err := upload.Commit(ctx, v1.Descriptor{
 		Digest: dgst,
 		Size:   int64(len(b1)),
 	})
@@ -917,10 +917,10 @@ func TestBlobMount(t *testing.T) {
 }
 
 func newRandomOCIManifest(t *testing.T, blobCount int) (*ocischema.Manifest, digest.Digest, []byte) {
-	layers := make([]distribution.Descriptor, blobCount)
+	layers := make([]v1.Descriptor, blobCount)
 	for i := 0; i < blobCount; i++ {
 		dgst, blob := newRandomBlob((i % 5) * 16)
-		layers[i] = distribution.Descriptor{
+		layers[i] = v1.Descriptor{
 			MediaType: v1.MediaTypeImageLayer,
 			Digest:    dgst,
 			Size:      int64(len(blob)),
@@ -930,7 +930,7 @@ func newRandomOCIManifest(t *testing.T, blobCount int) (*ocischema.Manifest, dig
 	m := ocischema.Manifest{
 		Versioned: specs.Versioned{SchemaVersion: 2},
 		MediaType: v1.MediaTypeImageManifest,
-		Config: distribution.Descriptor{
+		Config: v1.Descriptor{
 			Digest:    "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
 			Size:      123,
 			MediaType: v1.MediaTypeImageConfig,

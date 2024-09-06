@@ -8,25 +8,26 @@ import (
 	"testing"
 
 	"github.com/distribution/distribution/v3"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 type mockTagStore struct {
-	mapping map[string]distribution.Descriptor
+	mapping map[string]v1.Descriptor
 	sync.Mutex
 	distribution.TagService
 }
 
-func (m *mockTagStore) Get(ctx context.Context, tag string) (distribution.Descriptor, error) {
+func (m *mockTagStore) Get(ctx context.Context, tag string) (v1.Descriptor, error) {
 	m.Lock()
 	defer m.Unlock()
 
 	if d, ok := m.mapping[tag]; ok {
 		return d, nil
 	}
-	return distribution.Descriptor{}, distribution.ErrTagUnknown{}
+	return v1.Descriptor{}, distribution.ErrTagUnknown{}
 }
 
-func (m *mockTagStore) Tag(ctx context.Context, tag string, desc distribution.Descriptor) error {
+func (m *mockTagStore) Tag(ctx context.Context, tag string, desc v1.Descriptor) error {
 	m.Lock()
 	defer m.Unlock()
 
@@ -57,12 +58,12 @@ func (m *mockTagStore) All(ctx context.Context) ([]string, error) {
 	return tags, nil
 }
 
-func testProxyTagService(local, remote map[string]distribution.Descriptor) *proxyTagService {
+func testProxyTagService(local, remote map[string]v1.Descriptor) *proxyTagService {
 	if local == nil {
-		local = make(map[string]distribution.Descriptor)
+		local = make(map[string]v1.Descriptor)
 	}
 	if remote == nil {
-		remote = make(map[string]distribution.Descriptor)
+		remote = make(map[string]v1.Descriptor)
 	}
 	return &proxyTagService{
 		localTags:      &mockTagStore{mapping: local},
@@ -72,9 +73,9 @@ func testProxyTagService(local, remote map[string]distribution.Descriptor) *prox
 }
 
 func TestGet(t *testing.T) {
-	remoteDesc := distribution.Descriptor{Size: 42}
+	remoteDesc := v1.Descriptor{Size: 42}
 	remoteTag := "remote"
-	proxyTags := testProxyTagService(map[string]distribution.Descriptor{remoteTag: remoteDesc}, nil)
+	proxyTags := testProxyTagService(map[string]v1.Descriptor{remoteTag: remoteDesc}, nil)
 
 	ctx := context.Background()
 
@@ -102,7 +103,7 @@ func TestGet(t *testing.T) {
 	}
 
 	// Manually overwrite remote tag
-	newRemoteDesc := distribution.Descriptor{Size: 43}
+	newRemoteDesc := v1.Descriptor{Size: 43}
 	err = proxyTags.remoteTags.Tag(ctx, remoteTag, newRemoteDesc)
 	if err != nil {
 		t.Fatal(err)
@@ -152,7 +153,7 @@ func TestGet(t *testing.T) {
 	}
 
 	// Add another tag.  Ensure both tags appear in 'All'
-	err = proxyTags.remoteTags.Tag(ctx, "funtag", distribution.Descriptor{Size: 42})
+	err = proxyTags.remoteTags.Tag(ctx, "funtag", v1.Descriptor{Size: 42})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -14,6 +14,7 @@ import (
 	"github.com/distribution/distribution/v3/testutil"
 	"github.com/distribution/reference"
 	"github.com/opencontainers/go-digest"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 type image struct {
@@ -250,7 +251,7 @@ func TestDeleteManifestIfTagNotFound(t *testing.T) {
 
 	manifestEnumerator, _ := manifestService.(distribution.ManifestEnumerator)
 	err = manifestEnumerator.Enumerate(ctx, func(dgst digest.Digest) error {
-		return repo.Tags(ctx).Tag(ctx, "test", distribution.Descriptor{Digest: dgst})
+		return repo.Tags(ctx).Tag(ctx, "test", v1.Descriptor{Digest: dgst})
 	})
 	if err != nil {
 		t.Fatalf("manifest enumeration failed: %v", err)
@@ -306,7 +307,7 @@ func TestDeleteManifestIndexWithDanglingReferences(t *testing.T) {
 	image1 := uploadRandomOCIImage(t, repo)
 	image2 := uploadRandomOCIImage(t, repo)
 
-	ii, _ := ocischema.FromDescriptors([]distribution.Descriptor{
+	ii, _ := ocischema.FromDescriptors([]v1.Descriptor{
 		{Digest: image1.manifestDigest}, {Digest: image2.manifestDigest},
 	}, map[string]string{})
 
@@ -315,7 +316,7 @@ func TestDeleteManifestIndexWithDanglingReferences(t *testing.T) {
 		t.Fatalf("manifest upload failed: %v", err)
 	}
 
-	err = repo.Tags(ctx).Tag(ctx, "test", distribution.Descriptor{Digest: id})
+	err = repo.Tags(ctx).Tag(ctx, "test", v1.Descriptor{Digest: id})
 	if err != nil {
 		t.Fatalf("Failed to delete tag: %v", err)
 	}
@@ -359,7 +360,7 @@ func TestDeleteManifestIndexIfTagNotFound(t *testing.T) {
 	image1 := uploadRandomOCIImage(t, repo)
 	image2 := uploadRandomOCIImage(t, repo)
 
-	ii, _ := ocischema.FromDescriptors([]distribution.Descriptor{
+	ii, _ := ocischema.FromDescriptors([]v1.Descriptor{
 		{Digest: image1.manifestDigest}, {Digest: image2.manifestDigest},
 	}, map[string]string{})
 
@@ -368,7 +369,7 @@ func TestDeleteManifestIndexIfTagNotFound(t *testing.T) {
 		t.Fatalf("manifest upload failed: %v", err)
 	}
 
-	err = repo.Tags(ctx).Tag(ctx, "test", distribution.Descriptor{Digest: d4})
+	err = repo.Tags(ctx).Tag(ctx, "test", v1.Descriptor{Digest: d4})
 	if err != nil {
 		t.Fatalf("Failed to delete tag: %v", err)
 	}
@@ -466,7 +467,7 @@ func TestGCWithUnknownRepository(t *testing.T) {
 	repo := makeRepository(t, registry, "nonexistentrepo")
 	image := uploadRandomSchema2Image(t, repo)
 
-	err := repo.Tags(ctx).Tag(ctx, "image", distribution.Descriptor{Digest: image.manifestDigest})
+	err := repo.Tags(ctx).Tag(ctx, "image", v1.Descriptor{Digest: image.manifestDigest})
 	if err != nil {
 		t.Fatalf("Failed to tag descriptor: %v", err)
 	}
@@ -729,7 +730,7 @@ func TestTaggedManifestlistWithUntaggedManifest(t *testing.T) {
 		t.Fatalf("Failed to add manifest list: %v", err)
 	}
 
-	err = repo.Tags(ctx).Tag(ctx, "test", distribution.Descriptor{Digest: dgst})
+	err = repo.Tags(ctx).Tag(ctx, "test", v1.Descriptor{Digest: dgst})
 	if err != nil {
 		t.Fatalf("Failed to delete tag: %v", err)
 	}
@@ -821,12 +822,12 @@ func TestUnTaggedManifestlistWithTaggedManifest(t *testing.T) {
 	image1 := uploadRandomSchema2Image(t, repo)
 	image2 := uploadRandomSchema2Image(t, repo)
 
-	err = repo.Tags(ctx).Tag(ctx, "image1", distribution.Descriptor{Digest: image1.manifestDigest})
+	err = repo.Tags(ctx).Tag(ctx, "image1", v1.Descriptor{Digest: image1.manifestDigest})
 	if err != nil {
 		t.Fatalf("Failed to delete tag: %v", err)
 	}
 
-	err = repo.Tags(ctx).Tag(ctx, "image2", distribution.Descriptor{Digest: image2.manifestDigest})
+	err = repo.Tags(ctx).Tag(ctx, "image2", v1.Descriptor{Digest: image2.manifestDigest})
 	if err != nil {
 		t.Fatalf("Failed to delete tag: %v", err)
 	}

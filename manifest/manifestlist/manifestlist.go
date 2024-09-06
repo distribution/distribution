@@ -35,17 +35,17 @@ func init() {
 	}
 }
 
-func unmarshalManifestList(b []byte) (distribution.Manifest, distribution.Descriptor, error) {
+func unmarshalManifestList(b []byte) (distribution.Manifest, v1.Descriptor, error) {
 	m := &DeserializedManifestList{}
 	if err := m.UnmarshalJSON(b); err != nil {
-		return nil, distribution.Descriptor{}, err
+		return nil, v1.Descriptor{}, err
 	}
 
 	if m.MediaType != MediaTypeManifestList {
-		return nil, distribution.Descriptor{}, fmt.Errorf("mediaType in manifest list should be '%s' not '%s'", MediaTypeManifestList, m.MediaType)
+		return nil, v1.Descriptor{}, fmt.Errorf("mediaType in manifest list should be '%s' not '%s'", MediaTypeManifestList, m.MediaType)
 	}
 
-	return m, distribution.Descriptor{
+	return m, v1.Descriptor{
 		Digest:    digest.FromBytes(b),
 		Size:      int64(len(b)),
 		MediaType: MediaTypeManifestList,
@@ -81,7 +81,7 @@ type PlatformSpec struct {
 
 // A ManifestDescriptor references a platform-specific manifest.
 type ManifestDescriptor struct {
-	distribution.Descriptor
+	v1.Descriptor
 
 	// Platform specifies which platform the manifest pointed to by the
 	// descriptor runs on.
@@ -101,8 +101,8 @@ type ManifestList struct {
 
 // References returns the distribution descriptors for the referenced image
 // manifests.
-func (m ManifestList) References() []distribution.Descriptor {
-	dependencies := make([]distribution.Descriptor, len(m.Manifests))
+func (m ManifestList) References() []v1.Descriptor {
+	dependencies := make([]v1.Descriptor, len(m.Manifests))
 	for i := range m.Manifests {
 		dependencies[i] = m.Manifests[i].Descriptor
 		dependencies[i].Platform = &v1.Platform{

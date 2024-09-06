@@ -96,12 +96,12 @@ func testManifestStorage(t *testing.T, options ...RegistryOption) {
 	m := &schema2.Manifest{
 		Versioned: specs.Versioned{SchemaVersion: 2},
 		MediaType: schema2.MediaTypeManifest,
-		Config: distribution.Descriptor{
+		Config: v1.Descriptor{
 			Digest:    digest.FromBytes(sampleConfig),
 			Size:      int64(len(sampleConfig)),
 			MediaType: schema2.MediaTypeImageConfig,
 		},
-		Layers: []distribution.Descriptor{},
+		Layers: []v1.Descriptor{},
 	}
 
 	// Build up some test layers and add them to the manifest, saving the
@@ -114,7 +114,7 @@ func testManifestStorage(t *testing.T, options ...RegistryOption) {
 		}
 
 		testLayers[dgst] = rs
-		layer := distribution.Descriptor{
+		layer := v1.Descriptor{
 			Digest:    dgst,
 			Size:      6323,
 			MediaType: schema2.MediaTypeLayer,
@@ -133,10 +133,10 @@ func testManifestStorage(t *testing.T, options ...RegistryOption) {
 			t.Fatalf("unexpected error copying to upload: %v", err)
 		}
 
-		if _, err := wr.Commit(env.ctx, distribution.Descriptor{Digest: dgst}); err != nil {
+		if _, err := wr.Commit(env.ctx, v1.Descriptor{Digest: dgst}); err != nil {
 			t.Fatalf("unexpected error finishing upload: %v", err)
 		}
-		if err := builder.AppendReference(distribution.Descriptor{Digest: dgst, MediaType: schema2.MediaTypeLayer}); err != nil {
+		if err := builder.AppendReference(v1.Descriptor{Digest: dgst, MediaType: schema2.MediaTypeLayer}); err != nil {
 			t.Fatalf("unexpected error appending references: %v", err)
 		}
 	}
@@ -336,7 +336,7 @@ func testOCIManifestStorage(t *testing.T, testname string, includeMediaTypes boo
 		OS:           "CP/M",
 	}
 
-	mfstDescriptors := []distribution.Descriptor{
+	mfstDescriptors := []v1.Descriptor{
 		createOciManifestDescriptor(t, testname, mfst, platformSpec),
 	}
 
@@ -460,7 +460,7 @@ func TestIndexManifestStorageWithoutImageCheck(t *testing.T) {
 		OS:           "CP/M",
 	}
 
-	ociManifestDescriptors := []distribution.Descriptor{
+	ociManifestDescriptors := []v1.Descriptor{
 		createOciManifestDescriptor(t, t.Name(), manifest, ociPlatformSpec),
 	}
 
@@ -547,7 +547,7 @@ func TestIndexManifestStorageWithSelectivePlatforms(t *testing.T) {
 		OS:           "CP/M",
 	}
 
-	manifestDescriptors := []distribution.Descriptor{
+	manifestDescriptors := []v1.Descriptor{
 		createOciManifestDescriptor(t, t.Name(), amdManifest, amdPlatformSpec),
 		createOciManifestDescriptor(t, t.Name(), armManifest, armPlatformSpec),
 		createOciManifestDescriptor(t, t.Name(), atariManifest, atariPlatformSpec),
@@ -616,11 +616,11 @@ func createRandomImage(t *testing.T, testname string, imageMediaType string, blo
 			t.Fatalf("%s: unexpected error copying to upload: %v", testname, err)
 		}
 
-		if _, err := wr.Commit(ctx, distribution.Descriptor{Digest: dgst}); err != nil {
+		if _, err := wr.Commit(ctx, v1.Descriptor{Digest: dgst}); err != nil {
 			t.Fatalf("%s: unexpected error finishing upload: %v", testname, err)
 		}
 
-		if err := builder.AppendReference(distribution.Descriptor{Digest: dgst, MediaType: v1.MediaTypeImageLayer}); err != nil {
+		if err := builder.AppendReference(v1.Descriptor{Digest: dgst, MediaType: v1.MediaTypeImageLayer}); err != nil {
 			t.Fatalf("%s unexpected error appending references: %v", testname, err)
 		}
 	}
@@ -629,14 +629,14 @@ func createRandomImage(t *testing.T, testname string, imageMediaType string, blo
 }
 
 // createOciManifestDescriptor builds a manifest descriptor from a manifest and a platform descriptor
-func createOciManifestDescriptor(t *testing.T, testname string, manifest distribution.Manifest, platformSpec *v1.Platform) distribution.Descriptor {
+func createOciManifestDescriptor(t *testing.T, testname string, manifest distribution.Manifest, platformSpec *v1.Platform) v1.Descriptor {
 	manifestMediaType, manifestPayload, err := manifest.Payload()
 	if err != nil {
 		t.Fatalf("%s: unexpected error getting manifest payload: %v", testname, err)
 	}
 	manifestDigest := digest.FromBytes(manifestPayload)
 
-	return distribution.Descriptor{
+	return v1.Descriptor{
 		Digest:    manifestDigest,
 		Size:      int64(len(manifestPayload)),
 		MediaType: manifestMediaType,
@@ -656,7 +656,7 @@ func createManifestListDescriptor(t *testing.T, testname string, manifest distri
 	manifestDigest := digest.FromBytes(manifestPayload)
 
 	return manifestlist.ManifestDescriptor{
-		Descriptor: distribution.Descriptor{
+		Descriptor: v1.Descriptor{
 			Digest:    manifestDigest,
 			Size:      int64(len(manifestPayload)),
 			MediaType: manifestMediaType,
@@ -701,7 +701,7 @@ func TestLinkPathFuncs(t *testing.T) {
 	}
 }
 
-func ociIndexFromDesriptorsWithMediaType(descriptors []distribution.Descriptor, mediaType string) (*ocischema.DeserializedImageIndex, error) {
+func ociIndexFromDesriptorsWithMediaType(descriptors []v1.Descriptor, mediaType string) (*ocischema.DeserializedImageIndex, error) {
 	manifest, err := ocischema.FromDescriptors(descriptors, nil)
 	if err != nil {
 		return nil, err

@@ -18,6 +18,7 @@ import (
 	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
 	"github.com/distribution/reference"
 	"github.com/opencontainers/go-digest"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 var (
@@ -34,7 +35,7 @@ func init() {
 	randSource = *rand.New(rand.NewSource(42))
 }
 
-func (sbs statsBlobStore) Put(ctx context.Context, mediaType string, p []byte) (distribution.Descriptor, error) {
+func (sbs statsBlobStore) Put(ctx context.Context, mediaType string, p []byte) (v1.Descriptor, error) {
 	sbsMu.Lock()
 	sbs.stats["put"]++
 	sbsMu.Unlock()
@@ -82,7 +83,7 @@ func (sbs statsBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter, 
 	return sbs.blobs.ServeBlob(ctx, w, r, dgst)
 }
 
-func (sbs statsBlobStore) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
+func (sbs statsBlobStore) Stat(ctx context.Context, dgst digest.Digest) (v1.Descriptor, error) {
 	sbsMu.Lock()
 	sbs.stats["stat"]++
 	sbsMu.Unlock()
@@ -100,7 +101,7 @@ func (sbs statsBlobStore) Delete(ctx context.Context, dgst digest.Digest) error 
 
 type testEnv struct {
 	numUnique int
-	inRemote  []distribution.Descriptor
+	inRemote  []v1.Descriptor
 	store     proxyBlobStore
 	ctx       context.Context
 }
@@ -202,7 +203,7 @@ func makeBlob(size int) []byte {
 }
 
 func populate(t *testing.T, te *testEnv, blobCount, size, numUnique int) {
-	var inRemote []distribution.Descriptor
+	var inRemote []v1.Descriptor
 
 	for i := 0; i < numUnique; i++ {
 		bytes := makeBlob(size)

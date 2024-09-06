@@ -18,6 +18,7 @@ import (
 	"github.com/distribution/reference"
 	"github.com/opencontainers/go-digest"
 	"github.com/opencontainers/image-spec/specs-go"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 type statsManifest struct {
@@ -158,7 +159,7 @@ func populateRepo(ctx context.Context, t *testing.T, repository distribution.Rep
 	m := schema2.Manifest{
 		Versioned: specs.Versioned{SchemaVersion: 2},
 		MediaType: schema2.MediaTypeManifest,
-		Config: distribution.Descriptor{
+		Config: v1.Descriptor{
 			MediaType: "foo/bar",
 			Digest:    configDigest,
 		},

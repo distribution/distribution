@@ -9,6 +9,7 @@ import (
 	"github.com/distribution/reference"
 	"github.com/hashicorp/golang-lru/arc/v2"
 	"github.com/opencontainers/go-digest"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 const (
@@ -26,7 +27,7 @@ type descriptorCacheKey struct {
 }
 
 type inMemoryBlobDescriptorCacheProvider struct {
-	lru *arc.ARCCache[descriptorCacheKey, distribution.Descriptor]
+	lru *arc.ARCCache[descriptorCacheKey, v1.Descriptor]
 }
 
 // NewInMemoryBlobDescriptorCacheProvider returns a new mapped-based cache for
@@ -35,7 +36,7 @@ func NewInMemoryBlobDescriptorCacheProvider(size int) cache.BlobDescriptorCacheP
 	if size <= 0 {
 		size = math.MaxInt
 	}
-	lruCache, err := arc.NewARC[descriptorCacheKey, distribution.Descriptor](size)
+	lruCache, err := arc.NewARC[descriptorCacheKey, v1.Descriptor](size)
 	if err != nil {
 		// NewARC can only fail if size is <= 0, so this unreachable
 		panic(err)
@@ -62,9 +63,9 @@ func (imbdcp *inMemoryBlobDescriptorCacheProvider) RepositoryScoped(repo string)
 	}, nil
 }
 
-func (imbdcp *inMemoryBlobDescriptorCacheProvider) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
+func (imbdcp *inMemoryBlobDescriptorCacheProvider) Stat(ctx context.Context, dgst digest.Digest) (v1.Descriptor, error) {
 	if err := dgst.Validate(); err != nil {
-		return distribution.Descriptor{}, err
+		return v1.Descriptor{}, err
 	}
 
 	key := descriptorCacheKey{
@@ -74,7 +75,7 @@ func (imbdcp *inMemoryBlobDescriptorCacheProvider) Stat(ctx context.Context, dgs
 	if ok {
 		return descriptor, nil
 	}
-	return distribution.Descriptor{}, distribution.ErrBlobUnknown
+	return v1.Descriptor{}, distribution.ErrBlobUnknown
 }
 
 func (imbdcp *inMemoryBlobDescriptorCacheProvider) Clear(ctx context.Context, dgst digest.Digest) error {
@@ -85,7 +86,7 @@ func (imbdcp *inMemoryBlobDescriptorCacheProvider) Clear(ctx context.Context, dg
 	return nil
 }
 
-func (imbdcp *inMemoryBlobDescriptorCacheProvider) SetDescriptor(ctx context.Context, dgst digest.Digest, desc distribution.Descriptor) error {
+func (imbdcp *inMemoryBlobDescriptorCacheProvider) SetDescriptor(ctx context.Context, dgst digest.Digest, desc v1.Descriptor) error {
 	_, err := imbdcp.Stat(ctx, dgst)
 	if err == distribution.ErrBlobUnknown {
 		if dgst.Algorithm() != desc.Digest.Algorithm() && dgst != desc.Digest {
@@ -121,9 +122,9 @@ type repositoryScopedInMemoryBlobDescriptorCache struct {
 	parent *inMemoryBlobDescriptorCacheProvider // allows lazy allocation of repo's map
 }
 
-func (rsimbdcp *repositoryScopedInMemoryBlobDescriptorCache) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
+func (rsimbdcp *repositoryScopedInMemoryBlobDescriptorCache) Stat(ctx context.Context, dgst digest.Digest) (v1.Descriptor, error) {
 	if err := dgst.Validate(); err != nil {
-		return distribution.Descriptor{}, err
+		return v1.Descriptor{}, err
 	}
 
 	key := descriptorCacheKey{
@@ -134,7 +135,7 @@ func (rsimbdcp *repositoryScopedInMemoryBlobDescriptorCache) Stat(ctx context.Co
 	if ok {
 		return descriptor, nil
 	}
-	return distribution.Descriptor{}, distribution.ErrBlobUnknown
+	return v1.Descriptor{}, distribution.ErrBlobUnknown
 }
 
 func (rsimbdcp *repositoryScopedInMemoryBlobDescriptorCache) Clear(ctx context.Context, dgst digest.Digest) error {
@@ -146,7 +147,7 @@ func (rsimbdcp *repositoryScopedInMemoryBlobDescriptorCache) Clear(ctx context.C
 	return nil
 }
 
-func (rsimbdcp *repositoryScopedInMemoryBlobDescriptorCache) SetDescriptor(ctx context.Context, dgst digest.Digest, desc distribution.Descriptor) error {
+func (rsimbdcp *repositoryScopedInMemoryBlobDescriptorCache) SetDescriptor(ctx context.Context, dgst digest.Digest, desc v1.Descriptor) error {
 	if err := dgst.Validate(); err != nil {
 		return err
 	}
