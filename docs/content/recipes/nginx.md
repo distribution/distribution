@@ -191,7 +191,7 @@ Review the [requirements](../#requirements), then follow these steps.
 Now, start your stack:
 
 ```consonle
-$ docker-compose up -d
+$ docker compose up -d
 ```
 
 Login with a "push" authorized user (using `testuser` and `testpassword`), then
