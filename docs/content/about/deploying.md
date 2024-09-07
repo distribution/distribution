@@ -512,7 +512,7 @@ Start your registry by issuing the following command in the directory containing
 the `docker-compose.yml` file:
 
 ```console
-$ docker-compose up -d
+$ docker compose up -d
 ```
 
 ## Considerations for air-gapped registries
