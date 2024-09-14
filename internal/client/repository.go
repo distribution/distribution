@@ -349,6 +349,10 @@ func (t *tags) Lookup(ctx context.Context, digest distribution.Descriptor) ([]st
 	panic("not implemented")
 }
 
+func (t *tags) List(ctx context.Context, limit int, last string) ([]string, error) {
+	panic("not implemented")
+}
+
 func (t *tags) Tag(ctx context.Context, tag string, desc distribution.Descriptor) error {
 	panic("not implemented")
 }

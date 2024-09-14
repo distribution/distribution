@@ -2,8 +2,11 @@ package storage
 
 import (
 	"context"
+	"errors"
+	"io"
 	"path"
 	"sort"
+	"strings"
 	"sync"
 
 	"github.com/opencontainers/go-digest"
@@ -228,4 +231,86 @@ func (ts *tagStore) ManifestDigests(ctx context.Context, tag string) ([]digest.D
 		return nil, err
 	}
 	return dgsts, nil
+}
+
+// List returns the tags for the repository.
+func (ts *tagStore) List(ctx context.Context, limit int, last string) ([]string, error) {
+	filledBuffer := false
+	foundTags := 0
+	var tags []string
+
+	if limit == 0 {
+		return tags, errors.New("attempted to list 0 tags")
+	}
+
+	root, err := pathFor(manifestTagsPathSpec{
+		name: ts.repository.Named().Name(),
+	})
+	if err != nil {
+		return tags, err
+	}
+
+	startAfter := ""
+	if last != "" {
+		startAfter, err = pathFor(manifestTagPathSpec{
+			name: ts.repository.Named().Name(),
+			tag:  last,
+		})
+		if err != nil {
+			return tags, err
+		}
+	}
+
+	err = ts.blobStore.driver.Walk(ctx, root, func(fileInfo storagedriver.FileInfo) error {
+		return handleTag(fileInfo, root, last, func(tagPath string) error {
+			tags = append(tags, tagPath)
+			foundTags += 1
+			// if we've filled our slice, no need to walk any further
+			if limit > 0 && foundTags == limit {
+				filledBuffer = true
+				return storagedriver.ErrFilledBuffer
+			}
+			return nil
+		})
+	}, storagedriver.WithStartAfterHint(startAfter))
+
+	if err != nil {
+		switch err := err.(type) {
+		case storagedriver.PathNotFoundError:
+			return tags, distribution.ErrRepositoryUnknown{Name: ts.repository.Named().Name()}
+		default:
+			return tags, err
+		}
+	}
+
+	if filledBuffer {
+		// There are potentially more tags to list
+		return tags, nil
+	}
+
+	// We didn't fill the buffer, so that's the end of the list of tags
+	return tags, io.EOF
+}
+
+// handleTag calls function fn with a tag path if fileInfo
+// has a path of a tag under root and that it is lexographically
+// after last. Otherwise, it will return ErrSkipDir or ErrFilledBuffer.
+// These should be used with Walk to do handling with repositories in a
+// storage.
+func handleTag(fileInfo storagedriver.FileInfo, root, last string, fn func(tagPath string) error) error {
+	filePath := fileInfo.Path()
+
+	// lop the base path off
+	tag := filePath[len(root)+1:]
+	parts := strings.SplitN(tag, "/", 2)
+	if len(parts) > 1 {
+		return storagedriver.ErrSkipDir
+	}
+
+	if lessPath(last, tag) {
+		if err := fn(tag); err != nil {
+			return err
+		}
+	}
+	return storagedriver.ErrSkipDir
 }
