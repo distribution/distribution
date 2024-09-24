@@ -3,10 +3,13 @@ package handlers
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"mime"
 	"net/http"
 	"strings"
 	"sync"
+
+	"github.com/distribution/distribution/v3/manifest/tdfs"
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/internal/dcontext"
@@ -73,14 +76,16 @@ type manifestHandler struct {
 	*Context
 
 	// One of tag or digest gets set, depending on what is present in context.
-	Tag    string
-	Digest digest.Digest
+	Tag        string
+	Partitions []tdfs.Partition
+	Digest     digest.Digest
 }
 
 // GetManifest fetches the image manifest from the storage backend, if it exists.
 func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) {
 	dcontext.GetLogger(imh).Debug("GetImageManifest")
 	manifests, err := imh.Repository.Manifests(imh)
+	blobstore := imh.Repository.Blobs(imh)
 	if err != nil {
 		imh.Errors = append(imh.Errors, err)
 		return
@@ -117,6 +122,14 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 
 	if imh.Tag != "" {
 		tags := imh.Repository.Tags(imh)
+
+		// Remove semantical partitioning if one provided in the tag
+		tag, partitions := tdfs.CheckTagPartitions(imh.Tag)
+		if len(partitions) > 0 {
+			imh.Tag = tag
+			imh.Partitions = partitions
+		}
+
 		desc, err := tags.Get(imh, imh.Tag)
 		if err != nil {
 			if _, ok := err.(distribution.ErrTagUnknown); ok {
@@ -127,6 +140,7 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 		imh.Digest = desc.Digest
+
 	}
 
 	if etagMatch(r, imh.Digest.String()) {
@@ -209,6 +223,57 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 	ct, p, err := manifest.Payload()
 	if err != nil {
 		return
+	}
+
+	// perform 2dfs partitioning if index requested and partitions provided
+	if partitionedOciManifest, ok := manifest.(*ocischema.DeserializedImageIndex); ok && len(imh.Partitions) > 0 {
+		log.Default().Printf("Partitioning index %s\n", imh.Digest)
+
+		//for each manifest in the index, partition it and upload it to the store
+		for i, manifestDescriptor := range partitionedOciManifest.Manifests {
+			submanifest, err := manifests.Get(imh, manifestDescriptor.Digest, options...)
+
+			if err != nil {
+				if _, ok := err.(distribution.ErrManifestUnknownRevision); ok {
+					imh.Errors = append(imh.Errors, errcode.ErrorCodeManifestUnknown.WithDetail(err))
+				} else {
+					imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
+				}
+				return
+			}
+
+			if ociSubManifest, isOci := submanifest.(*ocischema.DeserializedManifest); isOci {
+
+				partitioned, err := tdfs.ConvertTdfsManifestToOciManifest(imh, ociSubManifest, blobstore, imh.Partitions)
+				if err != nil {
+					imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
+					return
+				}
+				_, b, _ := partitioned.Payload()
+
+				//upload new menifest
+				digest, err := manifests.Put(imh, partitioned)
+				if err != nil {
+					imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
+					return
+				}
+
+				manifestDescriptor.Digest = digest
+				manifestDescriptor.Size = int64(len(b))
+				partitionedOciManifest.Manifests[i] = manifestDescriptor
+
+			}
+
+		}
+		imh.Digest = digest.FromBytes(p)
+		bytes, err := tdfs.ConvertPartitionedIndexToOciIndex(partitionedOciManifest)
+		if err != nil {
+			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
+			return
+		}
+
+		//return the index with partitiond manifests
+		p = bytes
 	}
 
 	w.Header().Set("Content-Type", ct)
