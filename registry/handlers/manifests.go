@@ -249,7 +249,11 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 					imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 					return
 				}
-				_, b, _ := partitioned.Payload()
+				mediaType, b, err := partitioned.Payload()
+				if err != nil {
+					imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
+					return
+				}
 
 				//upload new menifest
 				digest, err := manifests.Put(imh, partitioned)
@@ -258,27 +262,46 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 					return
 				}
 
-				manifestDescriptor.Digest = digest
-				manifestDescriptor.Size = int64(len(b))
-				partitionedOciManifest.Manifests[i] = manifestDescriptor
+				partitionedOciManifest.Manifests[i] = distribution.Descriptor{
+					Digest:    digest,
+					Size:      int64(len(b)),
+					MediaType: mediaType,
+				}
+				log.Default().Printf("Saved partitioned manifest %s\n", digest)
 
 			}
 
 		}
-		imh.Digest = digest.FromBytes(p)
+
+		// Generate new index with partition
 		bytes, err := tdfs.ConvertPartitionedIndexToOciIndex(partitionedOciManifest)
+		imh.Digest = digest.FromBytes(bytes)
 		if err != nil {
 			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 			return
 		}
+		newIndex, _, err := distribution.UnmarshalManifest(v1.MediaTypeImageIndex, bytes)
+		if err != nil {
+			imh.Errors = append(imh.Errors, errcode.ErrorCodeManifestInvalid.WithMessage("Unable to marshal newly generated manifest"))
+			return
+		}
 
-		//return the index with partitiond manifests
-		p = bytes
+		// Upload new index if not existing
+		if exists, _ := manifests.Exists(imh, imh.Digest); !exists {
+			imh.Digest, err = manifests.Put(imh, newIndex)
+			if err != nil {
+				log.Default().Printf("[ERROR PUT]: %s \n", err.Error())
+				imh.Errors = append(imh.Errors, errcode.ErrorCodeManifestInvalid.WithMessage("Unable to save newly generated manifest"))
+				return
+			}
+		}
+
+		_, p, _ = newIndex.Payload()
 	}
 
 	w.Header().Set("Content-Type", ct)
 	w.Header().Set("Content-Length", fmt.Sprint(len(p)))
-	w.Header().Set("Docker-Content-Digest", imh.Digest.String())
+	//w.Header().Set("Docker-Content-Digest", imh.Digest.String())
 	w.Header().Set("Etag", fmt.Sprintf(`"%s"`, imh.Digest))
 
 	if r.Method == http.MethodHead {

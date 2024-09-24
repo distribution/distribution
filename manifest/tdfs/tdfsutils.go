@@ -103,7 +103,7 @@ func ConvertTdfsManifestToOciManifest(ctx context.Context, tdfsManifest *ocische
 	//select partitions
 	for _, layer := range tdfsManifest.Layers {
 		if layer.MediaType == MediaTypeTdfsLayer {
-			log.Default().Printf("Converting layer %s\n", layer.Digest)
+			log.Default().Printf("Converting tdfs layer %s\n", layer.Digest)
 			layerContent, err := blobService.Get(ctx, layer.Digest)
 			if err != nil {
 				log.Default().Printf("Error getting layer %s\n", layer.Digest)
