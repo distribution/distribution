@@ -144,6 +144,7 @@ func ConvertTdfsManifestToOciManifest(ctx context.Context, tdfsManifest *ocische
 		for _, p := range partitionAllotment {
 			blob, err := blobService.Stat(ctx, digest.Digest(fmt.Sprintf("sha256:%s", p.Digest)))
 			if err != nil {
+				log.Default().Printf("Unable to find allotment %s\n", p.Digest)
 				return nil, err
 			}
 			fmt.Printf("Partition %s [CREATING]\n", p.Digest)
@@ -154,6 +155,7 @@ func ConvertTdfsManifestToOciManifest(ctx context.Context, tdfsManifest *ocische
 			})
 			config.RootFS.DiffIDs = append(config.RootFS.DiffIDs, digest.Digest(fmt.Sprintf("sha256:%s", p.DiffID)))
 		}
+		log.Default().Printf("Allotments added!\n")
 	}
 
 	newConfig, err := json.Marshal(config)
