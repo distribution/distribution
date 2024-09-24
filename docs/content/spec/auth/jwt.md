@@ -12,7 +12,7 @@ Web Token schema that `distribution/distribution` has adopted to implement the
 client-opaque Bearer token issued by an authentication service and
 understood by the registry.
 
-This document borrows heavily from the [JSON Web Token Draft Spec](https://tools.ietf.org/html/draft-ietf-oauth-json-web-token-32)
+This document borrows heavily from the [JSON Web Token Spec: RFC7519](https://datatracker.ietf.org/doc/html/rfc7519)
 
 ## Getting a Bearer Token
 
@@ -63,14 +63,19 @@ Token has 3 main parts:
 
 1.  Headers
 
-    The header of a JSON Web Token is a standard JOSE header. The "typ" field
-    will be "JWT" and it will also contain the "alg" which identifies the
-    signing algorithm used to produce the signature. It also must have a "kid"
-    field, representing the ID of the key which was used to sign the token.
+    The header of a JSON Web Token is a standard JOSE header compliant with
+    [Section 5 of RFC7519](https://datatracker.ietf.org/doc/html/rfc7515#section-5).
 
-    It specifies that this object is going to be a JSON Web token signed using
-    the key with the given ID using the Elliptic Curve signature algorithm
-    using a SHA256 hash.
+    It **must** have:
+
+    * `alg` **(Algorithm)**: Identifies the signing algorithm used to produce the signature.
+    * `typ` **(Type)**: Must be equal to `JWT` as recommended by [Section 5.1 RFC7519](https://datatracker.ietf.org/doc/html/rfc7519#section-5.1)
+
+    It should have at least one of:
+
+    * `kid` **(KeyID)**: Represents the ID of the key which was used to sign the token.
+    * `jwk` **(JWK)**: Represents the public key used to sign the token, compliant with [RFC7517](https://datatracker.ietf.org/doc/html/rfc7517)
+    * `x5c` **(X.509 Certificate Chain)**: Represents the chain of certificates used to sign the token.
 
 2.  Claim Set
 
@@ -226,7 +231,7 @@ Token has 3 main parts:
 
     This is then used as the payload to a the `ES256` signature algorithm
     specified in the JOSE header and specified fully in [Section 3.4 of the JSON Web Algorithms (JWA)
-    draft specification](https://tools.ietf.org/html/draft-ietf-jose-json-web-algorithms-38#section-3.4)
+    specification](https://datatracker.ietf.org/doc/html/rfc7518)
 
     This example signature will use the following ECDSA key for the server:
 
@@ -281,6 +286,12 @@ This is also described in [Section 2.1 of RFC 6750: The OAuth 2.0 Authorization 
 The registry must now verify the token presented by the user by inspecting the
 claim set within. The registry will:
 
+- Ensure that the certificate chain provided (in the `x5c` header) is valid.
+  - If it fails (eg. `x5c` header not present), then the registry will either:
+    - If provided, verify the provided JWK (in the `jwt` header) in the JWT is
+      known or trusted.
+    - If provided, verify that the provided KeyID (in the `kid` header) is a
+      known (as per configured in `auth.token.jwks` config).
 - Ensure that the issuer (`iss` claim) is an authority it trusts.
 - Ensure that the registry identifies as the audience (`aud` claim).
 - Check that the current time is between the `nbf` and `exp` claim times.

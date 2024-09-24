@@ -16,7 +16,8 @@ This document outlines the v2 Distribution registry authentication scheme:
 3. The registry client makes a request to the authorization service for a
    Bearer token.
 4. The authorization service returns an opaque Bearer token representing the
-   client's authorized access.
+   client's authorized access. The token must comply with the structure
+   described in the [Token Authentication Implementation page](./jwt.md).
 5. The client retries the original request with the Bearer token embedded in
    the request's Authorization header.
 6. The Registry authorizes the client by validating the Bearer token and the
