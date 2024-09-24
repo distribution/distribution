@@ -51,7 +51,7 @@ func CheckTagPartitions(tag string) (string, []Partition) {
 				continue
 			}
 			partitions = append(partitions, part)
-			log.Default().Printf("[PARTITIONING...] Added partition %s \n", match)
+			log.Default().Printf("[PARTITIONING...] Added partition %s \n", part)
 		}
 	}
 	return onlyTag, partitions
@@ -115,6 +115,7 @@ func ConvertTdfsManifestToOciManifest(ctx context.Context, tdfsManifest *ocische
 				return nil, err
 			}
 			if len(partitionAllotment) == 0 {
+				log.Default().Printf("Adding field!!\n")
 				if field != nil {
 					for allotment := range field.IterateAllotments() {
 						//skip empty allotments
@@ -123,6 +124,7 @@ func ConvertTdfsManifestToOciManifest(ctx context.Context, tdfsManifest *ocische
 						}
 						for _, p := range partitions {
 							if allotment.Row >= p.x1 && allotment.Row <= p.x2 && allotment.Col >= p.y1 && allotment.Col <= p.y2 {
+								log.Default().Printf("Added partition %d,%d,%d,%d \n", p.x1, p.y1, p.x2, p.y2)
 								partitionAllotment = append(partitionAllotment, allotment)
 								//TODO remove duplicated
 							}
@@ -131,6 +133,7 @@ func ConvertTdfsManifestToOciManifest(ctx context.Context, tdfsManifest *ocische
 				}
 			}
 		} else {
+			log.Default().Printf("Appended layer %s\n", layer.Digest)
 			newLayers = append(newLayers, layer)
 		}
 	}
