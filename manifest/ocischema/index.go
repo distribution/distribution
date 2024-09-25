@@ -129,11 +129,7 @@ func (m *DeserializedImageIndex) UnmarshalJSON(b []byte) error {
 // MarshalJSON returns the contents of canonical. If canonical is empty,
 // marshals the inner contents.
 func (m *DeserializedImageIndex) MarshalJSON() ([]byte, error) {
-	if len(m.canonical) > 0 {
-		return m.canonical, nil
-	}
-
-	return nil, errors.New("JSON representation not initialized in DeserializedImageIndex")
+	return json.Marshal(m.ImageIndex)
 }
 
 // Payload returns the raw content of the manifest list. The contents can be

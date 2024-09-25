@@ -1,5 +1,34 @@
 # Changelog
 
+## [2.12.3](https://github.com/googleapis/gax-go/compare/v2.12.2...v2.12.3) (2024-03-14)
+
+
+### Bug Fixes
+
+* bump protobuf dep to v1.33 ([#333](https://github.com/googleapis/gax-go/issues/333)) ([2892b22](https://github.com/googleapis/gax-go/commit/2892b22c1ae8a70dec3448d82e634643fe6c1be2))
+
+## [2.12.2](https://github.com/googleapis/gax-go/compare/v2.12.1...v2.12.2) (2024-02-23)
+
+
+### Bug Fixes
+
+* **v2/callctx:** fix SetHeader race by cloning header map ([#326](https://github.com/googleapis/gax-go/issues/326)) ([534311f](https://github.com/googleapis/gax-go/commit/534311f0f163d101f30657736c0e6f860e9c39dc))
+
+## [2.12.1](https://github.com/googleapis/gax-go/compare/v2.12.0...v2.12.1) (2024-02-13)
+
+
+### Bug Fixes
+
+* add XGoogFieldMaskHeader constant ([#321](https://github.com/googleapis/gax-go/issues/321)) ([666ee08](https://github.com/googleapis/gax-go/commit/666ee08931041b7fed56bed7132649785b2d3dfe))
+
+## [2.12.0](https://github.com/googleapis/gax-go/compare/v2.11.0...v2.12.0) (2023-06-26)
+
+
+### Features
+
+* **v2/callctx:** add new callctx package ([#291](https://github.com/googleapis/gax-go/issues/291)) ([11503ed](https://github.com/googleapis/gax-go/commit/11503ed98df4ae1bbdedf91ff64d47e63f187d68))
+* **v2:** add BuildHeaders and InsertMetadataIntoOutgoingContext to header  ([#290](https://github.com/googleapis/gax-go/issues/290)) ([6a4b89f](https://github.com/googleapis/gax-go/commit/6a4b89f5551a40262e7c3caf2e1bdc7321b76ea1))
+
 ## [2.11.0](https://github.com/googleapis/gax-go/compare/v2.10.0...v2.11.0) (2023-06-13)
 
 
