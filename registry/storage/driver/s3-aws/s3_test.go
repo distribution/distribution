@@ -514,6 +514,86 @@ func TestDelete(t *testing.T) {
 	}
 }
 
+func TestWalkEmptyUploadsDir(t *testing.T) {
+	skipCheck(t)
+
+	ctx := dcontext.Background()
+
+	drvr, err := s3DriverConstructor("s3walktest", s3.StorageClassStandard)
+	if err != nil {
+		t.Fatalf("unexpected error creating driver with standard storage: %v", err)
+	}
+
+	fileset := []string{
+		"/docker/registry/v2/blobs/sha256/04/046909",
+		"/docker/registry/v2/blobs/sha256/07/071a45",
+		"/docker/registry/v2/repositories/testns/testimg/_layers/sha256/2a43dc",
+		"/docker/registry/v2/repositories/testns/testimg/_layers/sha256/3ae7e8",
+		"/docker/registry/v2/repositories/testns/testimg/_manifests/revisions/sha256/3ae7e8",
+		"/docker/registry/v2/repositories/testns/testimg/_uploads/",
+	}
+
+	// create file structure matching fileset above.
+	// we use the s3 sdk directly because the driver doesn't allow creation
+	// of empty directories, which we need to simulate cases when purgeuploads
+	// leaves behind empty directories.
+	created := make([]string, 0, len(fileset))
+	d := drvr.baseEmbed.Base.StorageDriver.(*driver)
+	for _, p := range fileset {
+		_, err := d.S3.PutObjectWithContext(ctx, &s3.PutObjectInput{
+			Bucket:               aws.String(d.Bucket),
+			Key:                  aws.String(d.s3Path(p)),
+			ContentType:          d.getContentType(),
+			ACL:                  d.getACL(),
+			ServerSideEncryption: d.getEncryptionMode(),
+			SSEKMSKeyId:          d.getSSEKMSKeyID(),
+			StorageClass:         d.getStorageClass(),
+			Body:                 bytes.NewReader([]byte("content " + p)),
+		})
+		if err != nil {
+			fmt.Printf("unable to create file %s: %s\n", p, err)
+			continue
+		}
+		created = append(created, p)
+	}
+
+	// use a custom cleanup here because we create an empty dir during this test's
+	// setup, and the regular driver.Delete will error when trying to delete it.
+	defer func() {
+		s3Objects := make([]*s3.ObjectIdentifier, 0, len(fileset))
+		for _, p := range created {
+			s3Objects = append(s3Objects, &s3.ObjectIdentifier{
+				Key: aws.String(d.s3Path(p)),
+			})
+		}
+		resp, err := d.S3.DeleteObjectsWithContext(ctx, &s3.DeleteObjectsInput{
+			Bucket: aws.String(d.Bucket),
+			Delete: &s3.Delete{
+				Objects: s3Objects,
+				Quiet:   aws.Bool(false),
+			},
+		})
+		if err != nil {
+			t.Logf("DeleteObjectsWithContext resp: %+v", resp)
+			t.Fatalf("cleanup failed: %s", err)
+		}
+	}()
+
+	err = drvr.Walk(ctx, "/docker/registry/v2", func(fileInfo storagedriver.FileInfo) error {
+		// attempt to split filepath into dir and filename, just like purgeuploads would.
+		filePath := fileInfo.Path()
+		_, file := path.Split(filePath)
+		if len(file) == 0 {
+			t.Logf("fileInfo.Path(): %s", fileInfo.Path())
+			t.Fatalf("File part of fileInfo.Path() had zero length, this shouldn't happen.")
+		}
+		return nil
+	}, func(*storagedriver.WalkOptions) {})
+	if err != nil {
+		t.Fatalf("driver.Walk failed: %s", err)
+	}
+}
+
 func TestWalk(t *testing.T) {
 	skipCheck(t)
 
