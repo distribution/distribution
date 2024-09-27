@@ -192,7 +192,7 @@ EOF
 Now, start your stack:
 
 ```console
-$ docker-compose up -d
+$ docker compose up -d
 ```
 
 Log in with a "push" authorized user (using `testuserpush` and `testpasswordpush`), then tag and push your first image:
