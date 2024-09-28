@@ -594,6 +594,11 @@ type Proxy struct {
 	// RemoteURL is the URL of the remote registry
 	RemoteURL string `yaml:"remoteurl"`
 
+	// UpstreamAuth configures the use of basic auth for the proxy registry upstream
+	// if set, proxy registry will use the username and password provided in the request to authenticate
+	// against the upstream registry
+	UpstreamAuth UpstreamAuth `yaml:"upstreamauth"`
+
 	// Username of the hub user
 	Username string `yaml:"username"`
 
@@ -604,6 +609,10 @@ type Proxy struct {
 	// if not set, defaults to 7 * 24 hours
 	// If set to zero, will never expire cache
 	TTL *time.Duration `yaml:"ttl,omitempty"`
+}
+
+type UpstreamAuth struct {
+	Enabled bool `yaml:"enabled"`
 }
 
 type Validation struct {
