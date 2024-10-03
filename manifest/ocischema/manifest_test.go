@@ -3,6 +3,7 @@ package ocischema
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/distribution/distribution/v3/manifest/schema2"
 	"reflect"
 	"testing"
 
@@ -38,6 +39,14 @@ const expectedManifestSerialization = `{
       "hot": "potato"
    }
 }`
+
+var (
+	emptyJsonDescriptor = distribution.Descriptor{
+		MediaType: v1.DescriptorEmptyJSON.MediaType,
+		Size:      v1.DescriptorEmptyJSON.Size,
+		Digest:    v1.DescriptorEmptyJSON.Digest,
+	}
+)
 
 func makeTestManifest(mediaType string) Manifest {
 	return Manifest{
@@ -242,4 +251,211 @@ func TestValidateManifest(t *testing.T) {
 			t.Error("index should not be valid")
 		}
 	})
+}
+
+func TestArtifactManifest(t *testing.T) {
+	for name, test := range map[string]struct {
+		manifest             Manifest
+		expectValid          bool
+		expectedArtifactType string
+	}{
+		"not_artifact": {
+			manifest: Manifest{
+				Versioned: specs.Versioned{
+					SchemaVersion: 2,
+				},
+				MediaType: v1.MediaTypeImageManifest,
+				Config: distribution.Descriptor{
+					MediaType: v1.MediaTypeImageConfig,
+					Size:      200,
+					Digest:    "sha256:4de6702c739d8c9ed907f4c031fd0abc54ee1bf372603a585e139730772cc0b8",
+				},
+				Layers: []distribution.Descriptor{
+					{
+						MediaType: v1.MediaTypeImageLayerGzip,
+						Size:      23423,
+						Digest:    "sha256:ff1b4a27562d8ffc821b4d7368818ad7c759cfc2068b7adf0d2712315d67359a",
+					},
+				},
+			},
+			expectValid:          true,
+			expectedArtifactType: v1.MediaTypeImageConfig,
+		},
+		"typical_artifact": {
+			manifest: Manifest{
+				Versioned: specs.Versioned{
+					SchemaVersion: 2,
+				},
+				Config: distribution.Descriptor{
+					MediaType: "application/vnd.example.thing",
+					Size:      200,
+					Digest:    "sha256:4de6702c739d8c9ed907f4c031fd0abc54ee1bf372603a585e139730772cc0b8",
+				},
+				Layers: []distribution.Descriptor{
+					{
+						MediaType: v1.MediaTypeImageLayerGzip,
+						Size:      23423,
+						Digest:    "sha256:ff1b4a27562d8ffc821b4d7368818ad7c759cfc2068b7adf0d2712315d67359a",
+					},
+				},
+			},
+			expectValid:          true,
+			expectedArtifactType: "application/vnd.example.thing",
+		},
+		"also_typical_artifact": {
+			manifest: Manifest{
+				Versioned: specs.Versioned{
+					SchemaVersion: 2,
+				},
+				ArtifactType: "application/vnd.example.sbom",
+				Config: distribution.Descriptor{
+					MediaType: v1.MediaTypeImageConfig,
+					Size:      200,
+					Digest:    "sha256:4de6702c739d8c9ed907f4c031fd0abc54ee1bf372603a585e139730772cc0b8",
+				},
+				Layers: []distribution.Descriptor{
+					{
+						MediaType: v1.MediaTypeImageLayerGzip,
+						Size:      23423,
+						Digest:    "sha256:ff1b4a27562d8ffc821b4d7368818ad7c759cfc2068b7adf0d2712315d67359a",
+					},
+				},
+			},
+			expectValid:          true,
+			expectedArtifactType: "application/vnd.example.sbom",
+		},
+		"configless_artifact": {
+			manifest: Manifest{
+				Versioned: specs.Versioned{
+					SchemaVersion: 2,
+				},
+				ArtifactType: "application/vnd.example.catgif",
+				Config:       emptyJsonDescriptor,
+				Layers: []distribution.Descriptor{
+					{
+						MediaType: "image/gif",
+						Size:      23423,
+						Digest:    "sha256:ff1b4a27562d8ffc821b4d7368818ad7c759cfc2068b7adf0d2712315d67359a",
+					},
+				},
+			},
+			expectValid:          true,
+			expectedArtifactType: "application/vnd.example.catgif",
+		},
+		"invalid_artifact": {
+			manifest: Manifest{
+				Versioned: specs.Versioned{
+					SchemaVersion: 2,
+				},
+				Config: emptyJsonDescriptor, // This MUST have an artifactType
+				Layers: []distribution.Descriptor{
+					{
+						MediaType: "image/gif",
+						Size:      23423,
+						Digest:    "sha256:ff1b4a27562d8ffc821b4d7368818ad7c759cfc2068b7adf0d2712315d67359a",
+					},
+				},
+			},
+			expectValid: false,
+		},
+		"annotation_artifact": {
+			manifest: Manifest{
+				Versioned: specs.Versioned{
+					SchemaVersion: 2.,
+				},
+				ArtifactType: "application/vnd.example.comment",
+				Config:       emptyJsonDescriptor,
+				Layers: []distribution.Descriptor{
+					emptyJsonDescriptor,
+				},
+				Annotations: map[string]string{
+					"com.example.data": "payload",
+				},
+			},
+			expectValid:          true,
+			expectedArtifactType: "application/vnd.example.comment",
+		},
+		"valid_subject": {
+			manifest: Manifest{
+				Versioned: specs.Versioned{
+					SchemaVersion: 2,
+				},
+				ArtifactType: "application/vnd.example.comment",
+				Config:       emptyJsonDescriptor,
+				Layers: []distribution.Descriptor{
+					emptyJsonDescriptor,
+				},
+				Subject: &distribution.Descriptor{
+					MediaType: v1.MediaTypeImageManifest,
+					Size:      365,
+					Digest:    "sha256:05b3abf2579a5eb66403cd78be557fd860633a1fe2103c7642030defe32c657f",
+				},
+				Annotations: map[string]string{
+					"com.example.data": "payload",
+				},
+			},
+			expectValid:          true,
+			expectedArtifactType: "application/vnd.example.comment",
+		},
+		"invalid_subject": {
+			manifest: Manifest{
+				Versioned: specs.Versioned{
+					SchemaVersion: 2,
+				},
+				ArtifactType: "application/vnd.example.comment",
+				Config:       emptyJsonDescriptor,
+				Layers: []distribution.Descriptor{
+					emptyJsonDescriptor,
+				},
+				Subject: &distribution.Descriptor{
+					MediaType: v1.MediaTypeImageLayerGzip, // The subject is a manifest
+					Size:      365,
+					Digest:    "sha256:05b3abf2579a5eb66403cd78be557fd860633a1fe2103c7642030defe32c657f",
+				},
+				Annotations: map[string]string{
+					"com.example.data": "payload",
+				},
+			},
+			expectValid: false,
+		},
+		"docker_manifest_valid_as_subject": {
+			manifest: Manifest{
+				Versioned: specs.Versioned{
+					SchemaVersion: 2,
+				},
+				ArtifactType: "application/vnd.example.comment",
+				Config:       emptyJsonDescriptor,
+				Layers: []distribution.Descriptor{
+					emptyJsonDescriptor,
+				},
+				Subject: &distribution.Descriptor{
+					MediaType: schema2.MediaTypeManifest,
+					Size:      365,
+					Digest:    "sha256:05b3abf2579a5eb66403cd78be557fd860633a1fe2103c7642030defe32c657f",
+				},
+				Annotations: map[string]string{
+					"com.example.data": "payload",
+				},
+			},
+			expectValid:          true,
+			expectedArtifactType: "application/vnd.example.comment",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			dm, err := FromStruct(test.manifest)
+			if err != nil {
+				t.Fatalf("Error making DeserializedManifest from struct: %s", err)
+			}
+			m, _, err := distribution.UnmarshalManifest(v1.MediaTypeImageManifest, dm.canonical)
+			if test.expectValid != (nil == err) {
+				t.Fatalf("expectValid=%t but got err=%v", test.expectValid, err)
+			}
+			if err != nil {
+				return
+			}
+			if artifactType := m.(distribution.Referrer).Type(); artifactType != test.expectedArtifactType {
+				t.Errorf("Expected artifactType to be %q but got %q", test.expectedArtifactType, artifactType)
+			}
+		})
+	}
 }

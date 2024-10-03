@@ -58,9 +58,16 @@ type Manifest struct {
 	// Config references the image configuration as a blob.
 	Config v1.Descriptor `json:"config"`
 
+	// ArtifactType is the type of an artifact when the manifest is used for an
+	// artifact.
+	ArtifactType string `json:"artifactType,omitempty"`
+
 	// Layers lists descriptors for the layers referenced by the
 	// configuration.
 	Layers []v1.Descriptor `json:"layers"`
+
+	// Subject is the descriptor of a manifest referred to by this manifest.
+	Subject *distribution.Descriptor `json:"subject,omitempty"`
 
 	// Annotations contains arbitrary metadata for the image manifest.
 	Annotations map[string]string `json:"annotations,omitempty"`
@@ -116,6 +123,21 @@ func (m *DeserializedManifest) UnmarshalJSON(b []byte) error {
 			v1.MediaTypeImageManifest, mfst.MediaType)
 	}
 
+	if mfst.Config.MediaType == v1.MediaTypeEmptyJSON && mfst.ArtifactType == "" {
+		return fmt.Errorf("if config.mediaType is '%s' then artifactType must be set", v1.MediaTypeEmptyJSON)
+	}
+
+	// The subject if specified must be a manifest. This is validated here
+	// rather than in the storage manifest Put handler because the subject does
+	// not have to exist, so there is nothing to validate in the manifest store.
+	// If a non-compliant client provided the digest of a blob then this
+	// registry would still indicate that the referred manifest does not exist.
+	if mfst.Subject != nil {
+		if !distribution.ManifestMediaTypeSupported(mfst.Subject.MediaType) {
+			return fmt.Errorf("subject.mediaType must be a manifest, not '%s'", mfst.Subject.MediaType)
+		}
+	}
+
 	m.Manifest = mfst
 
 	return nil
@@ -135,6 +157,20 @@ func (m *DeserializedManifest) MarshalJSON() ([]byte, error) {
 // calculate the content identifier.
 func (m *DeserializedManifest) Payload() (string, []byte, error) {
 	return v1.MediaTypeImageManifest, m.canonical, nil
+}
+
+// Subject returns a pointer to the subject of this manifest or nil if there is
+// none
+func (m *DeserializedManifest) Subject() *distribution.Descriptor {
+	return m.Manifest.Subject
+}
+
+// Type returns the artifactType of the manifest
+func (m *DeserializedManifest) Type() string {
+	if m.ArtifactType == "" {
+		return m.Config.MediaType
+	}
+	return m.ArtifactType
 }
 
 // validateManifest returns an error if the byte slice is invalid JSON or if it
