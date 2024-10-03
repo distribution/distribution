@@ -377,9 +377,9 @@ or a token service. If the load balancer has health checks, it is recommended
 to configure it to consider a 401 response as healthy and any other as down.
 This secures your registry by ensuring that configuration problems with
 authentication don't accidentally expose an unprotected registry. If you're
-using a less sophisticated load balancer, such as Amazon's Elastic Load
-Balancer, that doesn't allow one to change the healthy response code, health
-checks can be directed at "/", which always returns a `200 OK` response.
+using a less sophisticated load balancer that doesn't allow one to change
+the healthy response code, health checks can be directed at "/", which always
+returns a `200 OK` response.
 
 ## Restricting access
 
