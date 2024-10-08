@@ -223,21 +223,20 @@ var (
 
 const (
 	manifestBody = `{
-   "name": <name>,
-   "tag": <tag>,
-   "fsLayers": [
-      {
-         "blobSum": "<digest>"
-      },
-      ...
-    ]
-   ],
-   "history": <v1 images>,
-   "signature": <JWS>
+    "name": <name>,
+    "tag": <tag>,
+    "fsLayers": [
+        {
+            "blobSum": "<digest>"
+        },
+        ...
+    ],
+    "history": <v1 images>,
+    "signature": <JWS>
 }`
 
 	errorsBody = `{
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -640,7 +639,8 @@ var routeDescriptors = []RouteDescriptor{
 								Body: BodyDescriptor{
 									ContentType: "application/json",
 									Format: `{
-    "errors:" [{
+    "errors": [
+        {
             "code": "BLOB_UNKNOWN",
             "message": "blob unknown to registry",
             "detail": {
@@ -1567,7 +1567,7 @@ var routeDescriptors = []RouteDescriptor{
 	"repositories": [
 		<name>,
 		...
-	]
+	],
 }`,
 								},
 							},
@@ -1586,7 +1586,7 @@ var routeDescriptors = []RouteDescriptor{
 	"repositories": [
 		<name>,
 		...
-	]
+	],
 	"next": "<url>?last=<name>&n=<last value of n>"
 }`,
 								},
