@@ -478,7 +478,7 @@ func (imh *manifestHandler) DeleteManifest(w http.ResponseWriter, r *http.Reques
 	}
 
 	tagService := imh.Repository.Tags(imh)
-	referencedTags, err := tagService.Lookup(imh, distribution.Descriptor{Digest: imh.Digest})
+	referencedTags, err := tagService.Lookup(imh, v1.Descriptor{Digest: imh.Digest})
 	if err != nil {
 		imh.Errors = append(imh.Errors, err)
 		return

@@ -8,9 +8,8 @@ import (
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/manifest/manifestlist"
-	"github.com/opencontainers/image-spec/specs-go"
-
 	"github.com/opencontainers/go-digest"
+	"github.com/opencontainers/image-spec/specs-go"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
@@ -44,13 +43,13 @@ func makeTestManifest(mediaType string) Manifest {
 	return Manifest{
 		Versioned: specs.Versioned{SchemaVersion: 2},
 		MediaType: mediaType,
-		Config: distribution.Descriptor{
+		Config: v1.Descriptor{
 			MediaType:   v1.MediaTypeImageConfig,
 			Digest:      "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
 			Size:        985,
 			Annotations: map[string]string{"apple": "orange"},
 		},
-		Layers: []distribution.Descriptor{
+		Layers: []v1.Descriptor{
 			{
 				MediaType:   v1.MediaTypeImageLayerGzip,
 				Digest:      "sha256:62d8908bee94c202b2d35224a221aaa2058318bfa9879fa541efaecba272331b",
@@ -217,12 +216,12 @@ func TestManifestMediaTypes(t *testing.T) {
 
 func TestValidateManifest(t *testing.T) {
 	mfst := Manifest{
-		Config: distribution.Descriptor{Size: 1},
-		Layers: []distribution.Descriptor{{Size: 2}},
+		Config: v1.Descriptor{Size: 1},
+		Layers: []v1.Descriptor{{Size: 2}},
 	}
 	index := manifestlist.ManifestList{
 		Manifests: []manifestlist.ManifestDescriptor{
-			{Descriptor: distribution.Descriptor{Size: 3}},
+			{Descriptor: v1.Descriptor{Size: 3}},
 		},
 	}
 	t.Run("valid", func(t *testing.T) {

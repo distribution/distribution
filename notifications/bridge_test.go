@@ -30,7 +30,7 @@ var (
 	request      = RequestRecord{}
 	tag          = "latest"
 	artifactType = "application/vnd.example.sbom.v1"
-	cfg          = distribution.Descriptor{
+	cfg          = v1.Descriptor{
 		MediaType: artifactType,
 		Size:      100,
 		Digest:    "cfgdgst",

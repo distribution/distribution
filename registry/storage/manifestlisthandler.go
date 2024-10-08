@@ -9,6 +9,7 @@ import (
 	"github.com/distribution/distribution/v3/manifest/manifestlist"
 	"github.com/distribution/distribution/v3/manifest/ocischema"
 	"github.com/opencontainers/go-digest"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 // manifestListHandler is a ManifestHandler that covers schema2 manifest lists.
@@ -104,7 +105,7 @@ func (ms *manifestListHandler) verifyManifest(ctx context.Context, mnfst distrib
 }
 
 // platformMustExist checks if a descriptor within an index should be validated as existing before accepting the manifest into the registry.
-func (ms *manifestListHandler) platformMustExist(descriptor distribution.Descriptor) bool {
+func (ms *manifestListHandler) platformMustExist(descriptor v1.Descriptor) bool {
 	// If there are no image platforms configured to validate, we must check the existence of all child images.
 	if len(ms.validateImageIndexes.imagePlatforms) == 0 {
 		return true

@@ -11,19 +11,19 @@ import (
 )
 
 type mockBlobService struct {
-	descriptors map[digest.Digest]distribution.Descriptor
+	descriptors map[digest.Digest]v1.Descriptor
 	distribution.BlobService
 }
 
-func (bs *mockBlobService) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
+func (bs *mockBlobService) Stat(ctx context.Context, dgst digest.Digest) (v1.Descriptor, error) {
 	if descriptor, ok := bs.descriptors[dgst]; ok {
 		return descriptor, nil
 	}
-	return distribution.Descriptor{}, distribution.ErrBlobUnknown
+	return v1.Descriptor{}, distribution.ErrBlobUnknown
 }
 
-func (bs *mockBlobService) Put(ctx context.Context, mediaType string, p []byte) (distribution.Descriptor, error) {
-	d := distribution.Descriptor{
+func (bs *mockBlobService) Put(ctx context.Context, mediaType string, p []byte) (v1.Descriptor, error) {
+	d := v1.Descriptor{
 		Digest:    digest.FromBytes(p),
 		Size:      int64(len(p)),
 		MediaType: "application/octet-stream",
@@ -90,7 +90,7 @@ func TestBuilder(t *testing.T) {
 }`)
 	configDigest := digest.FromBytes(imgJSON)
 
-	descriptors := []distribution.Descriptor{
+	descriptors := []v1.Descriptor{
 		{
 			MediaType:   v1.MediaTypeImageLayerGzip,
 			Digest:      digest.Digest("sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"),
@@ -110,7 +110,7 @@ func TestBuilder(t *testing.T) {
 	}
 	annotations := map[string]string{"hot": "potato"}
 
-	bs := &mockBlobService{descriptors: make(map[digest.Digest]distribution.Descriptor)}
+	bs := &mockBlobService{descriptors: make(map[digest.Digest]v1.Descriptor)}
 	builder := NewManifestBuilder(bs, imgJSON, annotations)
 
 	for _, d := range descriptors {
@@ -151,7 +151,7 @@ func TestBuilder(t *testing.T) {
 	}
 
 	references := manifest.References()
-	expected := append([]distribution.Descriptor{manifest.Target()}, descriptors...)
+	expected := append([]v1.Descriptor{manifest.Target()}, descriptors...)
 	if !reflect.DeepEqual(references, expected) {
 		t.Fatal("References() does not match the descriptors added")
 	}

@@ -7,6 +7,7 @@ import (
 	"github.com/distribution/distribution/v3/internal/dcontext"
 	prometheus "github.com/distribution/distribution/v3/metrics"
 	"github.com/opencontainers/go-digest"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 type cachedBlobStatter struct {
@@ -32,7 +33,7 @@ func NewCachedBlobStatter(cache distribution.BlobDescriptorService, backend dist
 	}
 }
 
-func (cbds *cachedBlobStatter) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
+func (cbds *cachedBlobStatter) Stat(ctx context.Context, dgst digest.Digest) (v1.Descriptor, error) {
 	cacheRequestCount.Inc(1)
 
 	// try getting from cache
@@ -75,7 +76,7 @@ func (cbds *cachedBlobStatter) Clear(ctx context.Context, dgst digest.Digest) er
 	return nil
 }
 
-func (cbds *cachedBlobStatter) SetDescriptor(ctx context.Context, dgst digest.Digest, desc distribution.Descriptor) error {
+func (cbds *cachedBlobStatter) SetDescriptor(ctx context.Context, dgst digest.Digest, desc v1.Descriptor) error {
 	if err := cbds.cache.SetDescriptor(ctx, dgst, desc); err != nil {
 		dcontext.GetLoggerWithField(ctx, "blob", dgst).WithError(err).Error("error from cache setting desc")
 	}

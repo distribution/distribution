@@ -30,17 +30,17 @@ func init() {
 	}
 }
 
-func unmarshalOCISchema(b []byte) (distribution.Manifest, distribution.Descriptor, error) {
+func unmarshalOCISchema(b []byte) (distribution.Manifest, v1.Descriptor, error) {
 	if err := validateManifest(b); err != nil {
-		return nil, distribution.Descriptor{}, err
+		return nil, v1.Descriptor{}, err
 	}
 
 	m := &DeserializedManifest{}
 	if err := m.UnmarshalJSON(b); err != nil {
-		return nil, distribution.Descriptor{}, err
+		return nil, v1.Descriptor{}, err
 	}
 
-	return m, distribution.Descriptor{
+	return m, v1.Descriptor{
 		MediaType:   v1.MediaTypeImageManifest,
 		Digest:      digest.FromBytes(b),
 		Size:        int64(len(b)),
@@ -56,26 +56,26 @@ type Manifest struct {
 	MediaType string `json:"mediaType,omitempty"`
 
 	// Config references the image configuration as a blob.
-	Config distribution.Descriptor `json:"config"`
+	Config v1.Descriptor `json:"config"`
 
 	// Layers lists descriptors for the layers referenced by the
 	// configuration.
-	Layers []distribution.Descriptor `json:"layers"`
+	Layers []v1.Descriptor `json:"layers"`
 
 	// Annotations contains arbitrary metadata for the image manifest.
 	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 // References returns the descriptors of this manifests references.
-func (m Manifest) References() []distribution.Descriptor {
-	references := make([]distribution.Descriptor, 0, 1+len(m.Layers))
+func (m Manifest) References() []v1.Descriptor {
+	references := make([]v1.Descriptor, 0, 1+len(m.Layers))
 	references = append(references, m.Config)
 	references = append(references, m.Layers...)
 	return references
 }
 
 // Target returns the target of this manifest.
-func (m Manifest) Target() distribution.Descriptor {
+func (m Manifest) Target() v1.Descriptor {
 	return m.Config
 }
 

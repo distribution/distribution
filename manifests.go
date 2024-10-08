@@ -6,6 +6,7 @@ import (
 	"mime"
 
 	"github.com/opencontainers/go-digest"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 // Manifest represents a registry object specifying a set of
@@ -13,13 +14,13 @@ import (
 type Manifest interface {
 	// References returns a list of objects which make up this manifest.
 	// A reference is anything which can be represented by a
-	// distribution.Descriptor. These can consist of layers, resources or other
+	// Descriptor. These can consist of layers, resources or other
 	// manifests.
 	//
 	// While no particular order is required, implementations should return
 	// them from highest to lowest priority. For example, one might want to
 	// return the base layer before the top layer.
-	References() []Descriptor
+	References() []v1.Descriptor
 
 	// Payload provides the serialized format of the manifest, in addition to
 	// the media type.
@@ -54,7 +55,7 @@ type ManifestEnumerator interface {
 // described, not simply descriptors.
 type Describable interface {
 	// Descriptor returns the descriptor.
-	Descriptor() Descriptor
+	Descriptor() v1.Descriptor
 }
 
 // ManifestMediaTypes returns the supported media types for manifests.
@@ -68,13 +69,13 @@ func ManifestMediaTypes() (mediaTypes []string) {
 }
 
 // UnmarshalFunc implements manifest unmarshalling a given MediaType
-type UnmarshalFunc func([]byte) (Manifest, Descriptor, error)
+type UnmarshalFunc func([]byte) (Manifest, v1.Descriptor, error)
 
 var mappings = make(map[string]UnmarshalFunc)
 
 // UnmarshalManifest looks up manifest unmarshal functions based on
 // MediaType
-func UnmarshalManifest(ctHeader string, p []byte) (Manifest, Descriptor, error) {
+func UnmarshalManifest(ctHeader string, p []byte) (Manifest, v1.Descriptor, error) {
 	// Need to look up by the actual media type, not the raw contents of
 	// the header. Strip semicolons and anything following them.
 	var mediaType string
@@ -82,7 +83,7 @@ func UnmarshalManifest(ctHeader string, p []byte) (Manifest, Descriptor, error) 
 		var err error
 		mediaType, _, err = mime.ParseMediaType(ctHeader)
 		if err != nil {
-			return nil, Descriptor{}, err
+			return nil, v1.Descriptor{}, err
 		}
 	}
 
@@ -90,7 +91,7 @@ func UnmarshalManifest(ctHeader string, p []byte) (Manifest, Descriptor, error) 
 	if !ok {
 		unmarshalFunc, ok = mappings[""]
 		if !ok {
-			return nil, Descriptor{}, fmt.Errorf("unsupported manifest media type and no default available: %s", mediaType)
+			return nil, v1.Descriptor{}, fmt.Errorf("unsupported manifest media type and no default available: %s", mediaType)
 		}
 	}
 

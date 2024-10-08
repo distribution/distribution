@@ -9,6 +9,7 @@ import (
 	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/opencontainers/go-digest"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 // blobStore implements the read side of the blob store interface over a
@@ -59,7 +60,7 @@ func (bs *blobStore) Open(ctx context.Context, dgst digest.Digest) (io.ReadSeekC
 // Put stores the content p in the blob store, calculating the digest. If the
 // content is already present, only the digest will be returned. This should
 // only be used for small objects, such as manifests. This implemented as a convenience for other Put implementations
-func (bs *blobStore) Put(ctx context.Context, mediaType string, p []byte) (distribution.Descriptor, error) {
+func (bs *blobStore) Put(ctx context.Context, mediaType string, p []byte) (v1.Descriptor, error) {
 	dgst := digest.FromBytes(p)
 	desc, err := bs.statter.Stat(ctx, dgst)
 	if err == nil {
@@ -68,16 +69,16 @@ func (bs *blobStore) Put(ctx context.Context, mediaType string, p []byte) (distr
 	} else if err != distribution.ErrBlobUnknown {
 		dcontext.GetLogger(ctx).Errorf("blobStore: error stating content (%v): %v", dgst, err)
 		// real error, return it
-		return distribution.Descriptor{}, err
+		return v1.Descriptor{}, err
 	}
 
 	bp, err := bs.path(dgst)
 	if err != nil {
-		return distribution.Descriptor{}, err
+		return v1.Descriptor{}, err
 	}
 
 	// TODO(stevvooe): Write out mediatype here, as well.
-	return distribution.Descriptor{
+	return v1.Descriptor{
 		Size: int64(len(p)),
 
 		// NOTE(stevvooe): The central blob store firewalls media types from
@@ -161,21 +162,21 @@ var _ distribution.BlobDescriptorService = &blobStatter{}
 // Stat implements BlobStatter.Stat by returning the descriptor for the blob
 // in the main blob store. If this method returns successfully, there is
 // strong guarantee that the blob exists and is available.
-func (bs *blobStatter) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
+func (bs *blobStatter) Stat(ctx context.Context, dgst digest.Digest) (v1.Descriptor, error) {
 	path, err := pathFor(blobDataPathSpec{
 		digest: dgst,
 	})
 	if err != nil {
-		return distribution.Descriptor{}, err
+		return v1.Descriptor{}, err
 	}
 
 	fi, err := bs.driver.Stat(ctx, path)
 	if err != nil {
 		switch err := err.(type) {
 		case driver.PathNotFoundError:
-			return distribution.Descriptor{}, distribution.ErrBlobUnknown
+			return v1.Descriptor{}, distribution.ErrBlobUnknown
 		default:
-			return distribution.Descriptor{}, err
+			return v1.Descriptor{}, err
 		}
 	}
 
@@ -184,14 +185,14 @@ func (bs *blobStatter) Stat(ctx context.Context, dgst digest.Digest) (distributi
 		// calculated a blob path and then detected a directory. We log the
 		// error and then error on the side of not knowing about the blob.
 		dcontext.GetLogger(ctx).Warnf("blob path should not be a directory: %q", path)
-		return distribution.Descriptor{}, distribution.ErrBlobUnknown
+		return v1.Descriptor{}, distribution.ErrBlobUnknown
 	}
 
 	// TODO(stevvooe): Add method to resolve the mediatype. We can store and
 	// cache a "global" media type for the blob, even if a specific repo has a
 	// mediatype that overrides the main one.
 
-	return distribution.Descriptor{
+	return v1.Descriptor{
 		Size: fi.Size(),
 
 		// NOTE(stevvooe): The central blob store firewalls media types from
@@ -206,6 +207,6 @@ func (bs *blobStatter) Clear(ctx context.Context, dgst digest.Digest) error {
 	return distribution.ErrUnsupported
 }
 
-func (bs *blobStatter) SetDescriptor(ctx context.Context, dgst digest.Digest, desc distribution.Descriptor) error {
+func (bs *blobStatter) SetDescriptor(ctx context.Context, dgst digest.Digest, desc v1.Descriptor) error {
 	return distribution.ErrUnsupported
 }
