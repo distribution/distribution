@@ -1314,6 +1314,44 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 	return nil
 }
 
+// BulkDelete objects provided in the paths
+func (d *driver) BulkDelete(ctx context.Context, path []string) (*storagedriver.BulkDeleteOutput, error) {
+	s := d.s3Client(ctx)
+	s3Objects := make([]*s3.ObjectIdentifier, 0, len(path))
+
+	for i := 0; i < len(path); i++ {
+		s3Objects = append(s3Objects, &s3.ObjectIdentifier{
+			Key: aws.String(d.s3Path(path[i])),
+		})
+	}
+
+	resp, err := s.DeleteObjects(&s3.DeleteObjectsInput{
+		Bucket: aws.String(d.Bucket),
+		Delete: &s3.Delete{
+			Objects: s3Objects,
+			Quiet:   aws.Bool(false),
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var bulkDeleteOutput storagedriver.BulkDeleteOutput
+
+	for _, deletedObject := range resp.Deleted {
+		bulkDeleteOutput.DeletedObjects = append(bulkDeleteOutput.DeletedObjects, *deletedObject.Key)
+	}
+
+	for _, erroredObject := range resp.Errors {
+		bulkDeleteOutput.ErroredObjects = append(bulkDeleteOutput.ErroredObjects, storagedriver.ErroredObject{
+			ObjectKey:    *erroredObject.Key,
+			ErrorMessage: *erroredObject.Message,
+		})
+	}
+
+	return &bulkDeleteOutput, nil
+}
+
 // directoryDiff finds all directories that are not in common between
 // the previous and current paths in sorted order.
 //
@@ -1704,4 +1742,88 @@ func (w *writer) flushPart() error {
 	w.readyPart = w.pendingPart
 	w.pendingPart = nil
 	return nil
+}
+
+type DriverV2 struct {
+	storagedriver.StorageDriverV2
+}
+
+func NewDriverV2(params DriverParameters) (*DriverV2, error) {
+
+	s3obj := params.S3
+	if s3obj == nil {
+		if !params.V4Auth &&
+			(params.RegionEndpoint == "" ||
+				strings.Contains(params.RegionEndpoint, "s3.amazonaws.com")) {
+			return nil, fmt.Errorf("on Amazon S3 this storage driver can only be used with v4 authentication")
+		}
+
+		awsConfig := aws.NewConfig()
+
+		if params.AccessKey != "" && params.SecretKey != "" {
+			creds := credentials.NewStaticCredentials(
+				params.AccessKey,
+				params.SecretKey,
+				params.SessionToken,
+			)
+			awsConfig.WithCredentials(creds)
+		}
+
+		if params.RegionEndpoint != "" {
+			awsConfig.WithEndpoint(params.RegionEndpoint)
+			awsConfig.WithS3ForcePathStyle(params.ForcePathStyle)
+		}
+
+		awsConfig.WithS3UseAccelerate(params.Accelerate)
+		awsConfig.WithRegion(params.Region)
+		awsConfig.WithDisableSSL(!params.Secure)
+		if params.UseDualStack {
+			awsConfig.UseDualStackEndpoint = endpoints.DualStackEndpointStateEnabled
+		}
+
+		if params.SkipVerify {
+			httpTransport := &http.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			}
+			awsConfig.WithHTTPClient(&http.Client{
+				Transport: httpTransport,
+			})
+		}
+
+		sess, err := session.NewSession(awsConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create new session with aws config: %v", err)
+		}
+
+		if params.UserAgent != "" {
+			sess.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler(params.UserAgent))
+		}
+
+		s3obj := s3.New(sess)
+
+		// enable S3 compatible signature v2 signing instead
+		if !params.V4Auth {
+			setv2Handlers(s3obj)
+		}
+	}
+
+	originalDriver := &driver{
+		S3:                          s3obj,
+		Bucket:                      params.Bucket,
+		ChunkSize:                   params.ChunkSize,
+		Encrypt:                     params.Encrypt,
+		KeyID:                       params.KeyID,
+		MultipartCopyChunkSize:      params.MultipartCopyChunkSize,
+		MultipartCopyMaxConcurrency: params.MultipartCopyMaxConcurrency,
+		MultipartCopyThresholdSize:  params.MultipartCopyThresholdSize,
+		MultipartCombineSmallPart:   params.MultipartCombineSmallPart,
+		RootDirectory:               params.RootDirectory,
+		StorageClass:                params.StorageClass,
+		ObjectACL:                   params.ObjectACL,
+		LogS3APIRequests:            params.LogS3APIRequests,
+		LogS3APIResponseHeaders:     params.LogS3APIResponseHeaders,
+	}
+
+	// Return a new instance of DriverV2 that embeds the original driver
+	return &DriverV2{originalDriver}, nil
 }
