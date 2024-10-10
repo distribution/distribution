@@ -26,6 +26,7 @@ jobs:
           - lint
           - validate-vendor
           - validate-git
+          - binaries
     steps:
       -
         name: Checkout
@@ -36,3 +37,13 @@ jobs:
           make ${{ matrix.target }}
         env:
           COMMIT_RANGE: ${{ format('{0}..{1}', github.sha, 'HEAD') }}
+
+      -
+        name: Validate docs
+        if: matrix.target == 'binaries'
+        run: |
+          ./bin/registry-api-descriptor-template ./docs/content/spec/api.md.tmpl > /tmp/api.md
+          echo "Ensure that you have run the following before pushing your commits:
+          make binaries
+          ./bin/registry-api-descriptor-template ./docs/content/spec/api.md.tmpl > ./docs/content/spec/api.md"
+          diff docs/content/spec/api.md /tmp/api.md > /dev/null 2>&1
