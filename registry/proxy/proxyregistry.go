@@ -114,7 +114,15 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 		}
 	}
 
-	cs, b, err := configureAuth(config.Username, config.Password, config.RemoteURL)
+	cs, b, err := func() (auth.CredentialStore, auth.CredentialStore, error) {
+		switch {
+		case config.Exec != nil:
+			cs, err := configureExecAuth(*config.Exec)
+			return cs, cs, err
+		default:
+			return configureAuth(config.Username, config.Password, config.RemoteURL)
+		}
+	}()
 	if err != nil {
 		return nil, err
 	}
