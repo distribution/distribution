@@ -31,6 +31,7 @@ type Parameters struct {
 	ServiceURL             string      `mapstructure:"serviceurl"`
 	CopyStatusPollMaxRetry int         `mapstructure:"copy_status_poll_max_retry"`
 	CopyStatusPollDelay    string      `mapstructure:"copy_status_poll_delay"`
+	DisableKeepAlives      bool        `mapstructure:"disablekeepalives"`
 }
 
 func NewParameters(parameters map[string]interface{}) (*Parameters, error) {
