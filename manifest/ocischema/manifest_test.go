@@ -3,9 +3,10 @@ package ocischema
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/distribution/distribution/v3/manifest/schema2"
 	"reflect"
 	"testing"
+
+	"github.com/distribution/distribution/v3/manifest/schema2"
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/manifest/manifestlist"
