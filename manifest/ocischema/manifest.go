@@ -67,7 +67,7 @@ type Manifest struct {
 	Layers []v1.Descriptor `json:"layers"`
 
 	// Subject is the descriptor of a manifest referred to by this manifest.
-	Subject *distribution.Descriptor `json:"subject,omitempty"`
+	Subject *v1.Descriptor `json:"subject,omitempty"`
 
 	// Annotations contains arbitrary metadata for the image manifest.
 	Annotations map[string]string `json:"annotations,omitempty"`
