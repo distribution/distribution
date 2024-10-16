@@ -7,11 +7,11 @@ title: About Registry
 A registry is a storage and content delivery system, holding named container
 images and other content, available in different tagged versions.
 
-  > Example: the image `distribution/registry`, with tags `2.0` and `2.1`.
+  > Example: the image `distribution/registry`, with tags `2.8` and `3.0`.
 
 Users interact with a registry by pushing and pulling images.
 
-  > Example: `docker pull registry-1.docker.io/distribution/registry:2.1`.
+  > Example: `docker pull registry-1.docker.io/distribution/registry:3.0`.
 
 Storage itself is delegated to drivers. The default storage driver is the local
 posix filesystem, which is suitable for development or small deployments.
