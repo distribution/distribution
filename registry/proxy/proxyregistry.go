@@ -32,6 +32,7 @@ type proxyingRegistry struct {
 	remoteURL      url.URL
 	authChallenger authChallenger
 	basicAuth      auth.CredentialStore
+	upstreamAuth   bool
 }
 
 // NewRegistryPullThroughCache creates a registry acting as a pull through cache
@@ -129,7 +130,8 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 			cm:        challenge.NewSimpleManager(),
 			cs:        cs,
 		},
-		basicAuth: b,
+		basicAuth:    b,
+		upstreamAuth: config.UpstreamAuth.Enabled,
 	}, nil
 }
 
@@ -142,11 +144,34 @@ func (pr *proxyingRegistry) Repositories(ctx context.Context, repos []string, la
 }
 
 func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named) (distribution.Repository, error) {
-	c := pr.authChallenger
+	var authChallenger authChallenger
+	var basicHandler auth.AuthenticationHandler
+	var creds auth.CredentialStore
+
+	if pr.upstreamAuth {
+		username := GetUpstreamAuthUser(ctx)
+		password := GetUpstreamAuthPassword(ctx)
+
+		creds, basicAuth, err := configureAuth(username, password, pr.remoteURL.String())
+		if err != nil {
+			return nil, err
+		}
+
+		basicHandler = auth.NewBasicHandler(basicAuth)
+		authChallenger = &remoteAuthChallenger{
+			remoteURL: pr.remoteURL,
+			cm:        challenge.NewSimpleManager(),
+			cs:        creds,
+		}
+	} else {
+		authChallenger = pr.authChallenger
+		creds = authChallenger.credentialStore()
+		basicHandler = auth.NewBasicHandler(pr.basicAuth)
+	}
 
 	tkopts := auth.TokenHandlerOptions{
 		Transport:   http.DefaultTransport,
-		Credentials: c.credentialStore(),
+		Credentials: creds,
 		Scopes: []auth.Scope{
 			auth.RepositoryScope{
 				Repository: name.Name(),
@@ -157,9 +182,9 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named
 	}
 
 	tr := transport.NewTransport(http.DefaultTransport,
-		auth.NewAuthorizer(c.challengeManager(),
+		auth.NewAuthorizer(authChallenger.challengeManager(),
 			auth.NewTokenHandlerWithOptions(tkopts),
-			auth.NewBasicHandler(pr.basicAuth)))
+			basicHandler))
 
 	localRepo, err := pr.embedded.Repository(ctx, name)
 	if err != nil {
@@ -187,22 +212,22 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named
 			scheduler:      pr.scheduler,
 			ttl:            pr.ttl,
 			repositoryName: name,
-			authChallenger: pr.authChallenger,
+			authChallenger: authChallenger,
 		},
 		manifests: &proxyManifestStore{
 			repositoryName:  name,
-			localManifests:  localManifests, // Options?
+			localManifests:  localManifests,
 			remoteManifests: remoteManifests,
 			ctx:             ctx,
 			scheduler:       pr.scheduler,
 			ttl:             pr.ttl,
-			authChallenger:  pr.authChallenger,
+			authChallenger:  authChallenger,
 		},
 		name: name,
 		tags: &proxyTagService{
 			localTags:      localRepo.Tags(ctx),
 			remoteTags:     remoteRepo.Tags(ctx),
-			authChallenger: pr.authChallenger,
+			authChallenger: authChallenger,
 		},
 	}, nil
 }
