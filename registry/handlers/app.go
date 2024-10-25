@@ -709,6 +709,12 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 				}
 				return
 			}
+
+			// add basic auth to the context for proxy registry auth usage
+			username, password, _ := r.BasicAuth()
+			context.Context = proxy.WithUpstreamAuthUser(context.Context, username)
+			context.Context = proxy.WithUpstreamAuthPassword(context.Context, password)
+
 			repository, err := app.registry.Repository(context, nameRef)
 			if err != nil {
 				dcontext.GetLogger(context).Errorf("error resolving repository: %v", err)
