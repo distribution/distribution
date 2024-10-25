@@ -151,11 +151,41 @@ func FromParameters(ctx context.Context, parameters map[string]interface{}) (sto
 		}
 	}
 
+	disableKeepAlivesParam := false
+	disableKeepAlives := parameters["disablekeepalives"]
+	switch disableKeepAlives := disableKeepAlives.(type) {
+	case string:
+		b, err := strconv.ParseBool(disableKeepAlives)
+		if err != nil {
+			return nil, fmt.Errorf("the disablekeepalives parameter should be a boolean")
+		}
+		disableKeepAlivesParam = b
+	case bool:
+		disableKeepAlivesParam = disableKeepAlives
+	case nil:
+		// do nothing
+	default:
+		return nil, fmt.Errorf("the disablekeepalives parameter should be a boolean")
+	}
+
+	httpTransportModified := false
+	httpTransport := http.DefaultTransport.(*http.Transport).Clone()
+
+	if disableKeepAlivesParam {
+		httpTransport.DisableKeepAlives = true
+		httpTransportModified = true
+	}
+
 	var ts oauth2.TokenSource
 	jwtConf := new(jwt.Config)
 	var err error
 	var gcs *storage.Client
 	var options []option.ClientOption
+	if httpTransportModified {
+		options = append(options, option.WithHTTPClient(&http.Client{
+			Transport: httpTransport,
+		}))
+	}
 	if keyfile, ok := parameters["keyfile"]; ok {
 		jsonKey, err := os.ReadFile(fmt.Sprint(keyfile))
 		if err != nil {

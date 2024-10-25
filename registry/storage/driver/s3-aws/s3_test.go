@@ -29,22 +29,23 @@ var (
 
 func init() {
 	var (
-		accessKey      = os.Getenv("AWS_ACCESS_KEY")
-		secretKey      = os.Getenv("AWS_SECRET_KEY")
-		bucket         = os.Getenv("S3_BUCKET")
-		encrypt        = os.Getenv("S3_ENCRYPT")
-		keyID          = os.Getenv("S3_KEY_ID")
-		secure         = os.Getenv("S3_SECURE")
-		skipVerify     = os.Getenv("S3_SKIP_VERIFY")
-		v4Auth         = os.Getenv("S3_V4_AUTH")
-		region         = os.Getenv("AWS_REGION")
-		objectACL      = os.Getenv("S3_OBJECT_ACL")
-		regionEndpoint = os.Getenv("REGION_ENDPOINT")
-		forcePathStyle = os.Getenv("AWS_S3_FORCE_PATH_STYLE")
-		sessionToken   = os.Getenv("AWS_SESSION_TOKEN")
-		useDualStack   = os.Getenv("S3_USE_DUALSTACK")
-		accelerate     = os.Getenv("S3_ACCELERATE")
-		logLevel       = os.Getenv("S3_LOGLEVEL")
+		accessKey         = os.Getenv("AWS_ACCESS_KEY")
+		secretKey         = os.Getenv("AWS_SECRET_KEY")
+		bucket            = os.Getenv("S3_BUCKET")
+		encrypt           = os.Getenv("S3_ENCRYPT")
+		keyID             = os.Getenv("S3_KEY_ID")
+		secure            = os.Getenv("S3_SECURE")
+		skipVerify        = os.Getenv("S3_SKIP_VERIFY")
+		disableKeepAlives = os.Getenv("S3_DISABLE_KEEP_ALIVES")
+		v4Auth            = os.Getenv("S3_V4_AUTH")
+		region            = os.Getenv("AWS_REGION")
+		objectACL         = os.Getenv("S3_OBJECT_ACL")
+		regionEndpoint    = os.Getenv("REGION_ENDPOINT")
+		forcePathStyle    = os.Getenv("AWS_S3_FORCE_PATH_STYLE")
+		sessionToken      = os.Getenv("AWS_SESSION_TOKEN")
+		useDualStack      = os.Getenv("S3_USE_DUALSTACK")
+		accelerate        = os.Getenv("S3_ACCELERATE")
+		logLevel          = os.Getenv("S3_LOGLEVEL")
 	)
 
 	var err error
@@ -68,6 +69,14 @@ func init() {
 		skipVerifyBool := false
 		if skipVerify != "" {
 			skipVerifyBool, err = strconv.ParseBool(skipVerify)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		disableKeepAlivesBool := false
+		if disableKeepAlives != "" {
+			disableKeepAlivesBool, err = strconv.ParseBool(disableKeepAlives)
 			if err != nil {
 				return nil, err
 			}
@@ -112,6 +121,7 @@ func init() {
 			keyID,
 			secureBool,
 			skipVerifyBool,
+			disableKeepAlivesBool,
 			v4Bool,
 			minChunkSize,
 			defaultMultipartCopyChunkSize,
