@@ -1,0 +1,57 @@
+{{- $source := ($.Page.Resources.ByType "image").GetMatch (printf "%s" (.Get "name")) }}
+{{- $customAlt := .Get "alt" }}
+{{- $customSize := .Get "size" | lower }}
+{{- $customAnchor := default "smart" (.Get "anchor") | title }}
+{{- $data := newScratch }}
+
+{{- with $source }}
+  {{- $caption := default .Title $customAlt }}
+  {{- $isSVG := (eq .MediaType.SubType "svg") }}
+  {{- $origin := . -}}
+
+  {{- if $isSVG }}
+    {{- $data.SetInMap "size" "tiny" "160" }}
+    {{- $data.SetInMap "size" "small" "300" }}
+    {{- $data.SetInMap "size" "medium" "600" }}
+    {{- $data.SetInMap "size" "large" "900" }}
+  {{- else }}
+    {{- $data.SetInMap "size" "tiny" (printf "160x160 %s" $customAnchor) }}
+    {{- $data.SetInMap "size" "small" (printf "300x300 %s" $customAnchor) }}
+    {{- $data.SetInMap "size" "medium" (printf "600x600 %s" $customAnchor) }}
+    {{- $data.SetInMap "size" "large" (printf "900x900 %s" $customAnchor) }}
+  {{- end -}}
+
+  <div class="flex justify-center">
+    <figure
+      class="gdoc-markdown__figure gdoc-markdown__figure--round">
+      <a class="gdoc-markdown__link--raw" href="{{ .Permalink }}">
+        <picture>
+          {{- $size := $data.Get "size" }}
+          {{- if not $isSVG }}
+            {{- if ne $customSize "origin" }}
+            <source
+              {{- if $customSize }}
+                srcset="{{ ($origin.Fill (index $size $customSize)).Permalink }}"
+              {{- else }}
+                srcset="{{ ($origin.Fill (index $size "small")).Permalink }} 600w, {{ ($origin.Fill (index $size "medium")).Permalink }} 1200w" sizes="100vw"
+              {{- end }}
+            />
+            {{- end }}
+          {{- end }}
+          <img
+          {{- if $isSVG }}
+            src="{{ $origin.Permalink }}" width="{{ index $size (default "medium" $customSize) }}"
+          {{- else }}
+            {{- if eq $customSize "origin" }}
+              src="{{ $origin.Permalink }}"
+            {{- else }}
+              src="{{ ($origin.Fill (index $size "large")).Permalink }}"
+            {{- end }}
+            alt="{{ $caption }}"
+          {{- end }}
+          />
+        </picture>
+      </a>
+    </figure>
+  </div>
+{{- end }}

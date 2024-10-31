@@ -5,7 +5,7 @@ description = "Hugo theme made for documentation"
 homepage = "https://geekdocs.de/"
 demosite = "https://geekdocs.de/"
 tags = ["docs", "documentation", "responsive", "simple"]
-min_version = "0.112.0"
+min_version = "0.124"
 
 [author]
     name = "Robert Kaussow"

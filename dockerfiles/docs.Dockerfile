@@ -7,7 +7,7 @@ FROM golang:${GO_VERSION}-alpine${ALPINE_VERSION} AS base
 RUN apk add --no-cache git
 
 FROM base AS hugo
-ARG HUGO_VERSION=0.119.0
+ARG HUGO_VERSION=0.136.5
 RUN --mount=type=cache,target=/go/mod/pkg \
     go install github.com/gohugoio/hugo@v${HUGO_VERSION}
 

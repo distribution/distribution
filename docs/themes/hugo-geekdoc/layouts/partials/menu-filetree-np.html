@@ -1,0 +1,107 @@
+{{ $current := . }}
+{{ $site := .Site }}
+{{ $current.Scratch.Set "prev" false }}
+{{ $current.Scratch.Set "getNext" false }}
+
+{{ $current.Scratch.Set "nextPage" false }}
+{{ $current.Scratch.Set "prevPage" false }}
+
+{{ template "menu-filetree-np" dict "sect" .Site.Home.Sections "current" $current "site" $site }}
+
+{{ define "menu-filetree-np" }}
+  {{ $current := .current }}
+  {{ $site := .site }}
+
+  {{ $sortBy := (default "title" .current.Site.Params.geekdocFileTreeSortBy | lower) }}
+  {{ range .sect.GroupBy "Weight" }}
+    {{ $rangeBy := .ByTitle }}
+
+    {{ if eq $sortBy "title" }}
+      {{ $rangeBy = .ByTitle }}
+    {{ else if eq $sortBy "linktitle" }}
+      {{ $rangeBy = .ByLinkTitle }}
+    {{ else if eq $sortBy "date" }}
+      {{ $rangeBy = .ByDate }}
+    {{ else if eq $sortBy "publishdate" }}
+      {{ $rangeBy = .ByPublishDate }}
+    {{ else if eq $sortBy "expirydate" }}
+      {{ $rangeBy = .ByExpiryDate }}
+    {{ else if eq $sortBy "lastmod" }}
+      {{ $rangeBy = .ByLastmod }}
+    {{ else if eq $sortBy "title_reverse" }}
+      {{ $rangeBy = .ByTitle.Reverse }}
+    {{ else if eq $sortBy "linktitle_reverse" }}
+      {{ $rangeBy = .ByLinkTitle.Reverse }}
+    {{ else if eq $sortBy "date_reverse" }}
+      {{ $rangeBy = .ByDate.Reverse }}
+    {{ else if eq $sortBy "publishdate_reverse" }}
+      {{ $rangeBy = .ByPublishDate.Reverse }}
+    {{ else if eq $sortBy "expirydate_reverse" }}
+      {{ $rangeBy = .ByExpiryDate.Reverse }}
+    {{ else if eq $sortBy "lastmod_reverse" }}
+      {{ $rangeBy = .ByLastmod.Reverse }}
+    {{ end }}
+
+    {{ range $rangeBy }}
+      {{ $current.Scratch.Set "current" $current }}
+      {{ $current.Scratch.Set "site" $site }}
+
+      {{ if not .Params.geekdocHidden }}
+        {{ $numberOfPages := (add (len .Pages) (len .Sections)) }}
+        {{ $site := $current.Scratch.Get "site" }}
+        {{ $this := . }}
+        {{ $current := $current.Scratch.Get "current" }}
+
+        {{ $current.Scratch.Set "refName" (partial "utils/title" .) }}
+        {{ $name := $current.Scratch.Get "refName" }}
+
+        {{ if $current.Scratch.Get "getNext" }}
+          {{ if or $this.Content $this.Params.geekdocFlatSection }}
+            {{ $current.Scratch.Set "nextPage" (dict "name" $name "this" $this) }}
+            {{ $current.Scratch.Set "getNext" false }}
+          {{ end }}
+        {{ end }}
+
+        {{ if eq $current.RelPermalink $this.RelPermalink }}
+          {{ $current.Scratch.Set "prevPage" ($current.Scratch.Get "prev") }}
+          {{ $current.Scratch.Set "getNext" true }}
+        {{ end }}
+
+        {{ if or $this.Content $this.Params.geekdocFlatSection }}
+          {{ $current.Scratch.Set "prev" (dict "name" $name "this" $this) }}
+        {{ end }}
+
+        {{ $sub := and (ne $numberOfPages 0) (not .Params.geekdocFlatSection) }}
+        {{ if $sub }}
+          {{ template "menu-filetree-np" dict "sect" .Pages "current" $current }}
+        {{ end }}
+      {{ end }}
+    {{ end }}
+
+  {{ end }}
+{{ end }}
+
+<span class="gdoc-page__nav">
+  {{ with ($current.Scratch.Get "prevPage") }}
+    <a
+      class="gdoc-page__nav--prev flex align-center"
+      href="{{ .this.RelPermalink }}"
+      title="{{ .name }}"
+    >
+      <i class="gdoc-icon">gdoc_arrow_left_alt</i>
+      {{ .name }}
+    </a>
+  {{ end }}
+</span>
+<span class="gdoc-page__nav">
+  {{ with ($current.Scratch.Get "nextPage") }}
+    <a
+      class="gdoc-page__nav--next flex align-center"
+      href="{{ .this.RelPermalink }}"
+      title="{{ .name }}"
+    >
+      {{ .name }}
+      <i class="gdoc-icon">gdoc_arrow_right_alt</i>
+    </a>
+  {{ end }}
+</span>

@@ -1,8 +1,10 @@
+{{- $current := . }}
 {{- $tocLevels := default (default 6 .Site.Params.geekdocToC) .Page.Params.geekdocToC }}
+{{- $sortBy := (default (default "title" .Site.Params.geekdocFileTreeSortBy) (.Get "sortBy") | lower) }}
 
 {{- if $tocLevels }}
   <div class="gdoc-toc gdoc-toc__level--{{ $tocLevels }}">
-    {{ template "toc-tree" dict "sect" .Page.Pages }}
+    {{ template "toc-tree" dict "sect" .Page.Pages "current" $current "sortBy" $sortBy }}
   </div>
 {{- end }}
 
@@ -10,8 +12,36 @@
 <!-- templates -->
 {{- define "toc-tree" }}
   <ul>
-    {{- range .sect.GroupBy "Weight" }}
-      {{- range .ByTitle }}
+    {{ range .sect.GroupBy "Weight" }}
+      {{ $rangeBy := .ByTitle }}
+
+      {{ if eq $.sortBy "title" }}
+        {{ $rangeBy = .ByTitle }}
+      {{ else if eq $.sortBy "linktitle" }}
+        {{ $rangeBy = .ByLinkTitle }}
+      {{ else if eq $.sortBy "date" }}
+        {{ $rangeBy = .ByDate }}
+      {{ else if eq $.sortBy "publishdate" }}
+        {{ $rangeBy = .ByPublishDate }}
+      {{ else if eq $.sortBy "expirydate" }}
+        {{ $rangeBy = .ByExpiryDate }}
+      {{ else if eq $.sortBy "lastmod" }}
+        {{ $rangeBy = .ByLastmod }}
+      {{ else if eq $.sortBy "title_reverse" }}
+        {{ $rangeBy = .ByTitle.Reverse }}
+      {{ else if eq $.sortBy "linktitle_reverse" }}
+        {{ $rangeBy = .ByLinkTitle.Reverse }}
+      {{ else if eq $.sortBy "date_reverse" }}
+        {{ $rangeBy = .ByDate.Reverse }}
+      {{ else if eq $.sortBy "publishdate_reverse" }}
+        {{ $rangeBy = .ByPublishDate.Reverse }}
+      {{ else if eq $.sortBy "expirydate_reverse" }}
+        {{ $rangeBy = .ByExpiryDate.Reverse }}
+      {{ else if eq $.sortBy "lastmod_reverse" }}
+        {{ $rangeBy = .ByLastmod.Reverse }}
+      {{ end }}
+
+      {{ range $rangeBy }}
         {{- if or (not .Params.geekdocHidden) (not (default true .Params.geekdocHiddenTocTree)) }}
           <li>
             {{- if or .Content .Params.geekdocFlatSection }}
