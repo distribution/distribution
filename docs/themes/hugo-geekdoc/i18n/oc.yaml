@@ -1,0 +1,53 @@
+---
+edit_page: Modificar la pagina
+
+nav_navigation: Navegacion
+nav_tags: Etiquetas
+nav_more: Mai
+nav_top: Tornar ennaut
+
+form_placeholder_search: Cercar
+
+error_page_title: Perdut ? Cap de problèma
+error_message_title: Perdut ?
+error_message_code: Error 404
+error_message_text: >
+  Sembla que cercatz quicòm que se pòt pas trobat. Vos’n fagatz pas vos podèm
+  tornar a la <a class="gdoc-error__link" href="{{ . }}">pagina d’acuèlh</a>.
+
+button_toggle_dark: Alternar lo mòde escur/clar/auto
+button_nav_open: Dobrir la navegacion
+button_nav_close: Tampar la navegacion
+button_menu_open: Dobrir la barra de menú
+button_menu_close: Tampar la barra de menú
+button_homepage: Tornar a la pagina d’acuèlh
+
+title_anchor_prefix: "Ancorar a:"
+
+posts_read_more: Legir la publicacion complèta
+posts_read_time:
+  one: "Una minuta de lectura"
+  other: "{{ . }} minutas de lectura"
+posts_update_prefix: Actualizada lo
+posts_count:
+  one: "Una publicacion"
+  other: "{{ . }} publicacions"
+posts_tagged_with: Totas las publicacions amb '{{ . }}'
+
+footer_build_with: >
+  Construch amb <a href="https://gohugo.io/" class="gdoc-footer__link">Hugo</a> e
+  <svg class="gdoc-icon gdoc_heart"><use xlink:href="#gdoc_heart"></use></svg>
+footer_legal_notice: Mencions legalas
+footer_privacy_policy: politica de confidencialitat
+footer_content_license_prefix: >
+  Contengut sota licéncia
+
+language_switch_no_tranlation_prefix: "Pagina non traducha :"
+
+propertylist_required: requerit
+propertylist_optional: opcional
+propertylist_default: per defaut
+
+pagination_page_prev: prec.
+pagination_page_next: seg.
+pagination_page_state: "{{ .PageNumber }}/{{ .TotalPages }}"

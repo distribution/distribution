@@ -1,0 +1,52 @@
+---
+edit_page: ገጹን ማስተካከያ
+
+nav_navigation: መሄጃ
+nav_tags: መለያዎች
+nav_more: ተጨማሪ
+nav_top: ወደ ላይ ተመለስ
+
+form_placeholder_search: ፈልግ
+
+error_page_title: ጠፋብዎት? አይጨነቁ።
+error_message_title: ጠፋብዎት?
+error_message_code: አልተገኘም
+error_message_text: >
+  ገጹን ማግኘት አልተቻለም፤ ነገር ግን አይጨነቁ፤ በዚህ <a class="gdoc-error__link" href="{{ . }}">ገጽ</a> መመለስ ይችላሉ።
+
+button_toggle_dark: ብሩህ/ጨለማ መቀያየሪያ
+button_nav_open: መሄጃውን ክፈት
+button_nav_close: መሄጃውን ዝጋ
+button_menu_open: ምርጫዎችን ክፈት
+button_menu_close: ምርጫዎችን ዝጋ
+button_homepage: ወደ መጀመሪያ ገጽ ተመለስ
+
+title_anchor_prefix: "ማያያዣ ወደ:"
+
+posts_read_more: ሙሉውን ያንብቡ
+posts_read_time:
+  one: "ለማንበብ አንድ ደቂቃ"
+  other: "{{ . }} ደቂቃዎች ለማንበብ"
+posts_update_prefix: መጨረሻ የዘመነው
+posts_count:
+  one: "አንድ ጽሑፍ"
+  other: "{{ . }} ጽሑፎች"
+posts_tagged_with: ከ '{{ . }}' ጋር የተዛመዱ ጽሑፎች በሙሉ
+
+footer_build_with: >
+  በ <a href="https://gohugo.io/" class="gdoc-footer__link">Hugo</a> የተገነባ ከ
+  <svg class="gdoc-icon gdoc_heart"><use xlink:href="#gdoc_heart"></use></svg> ጋር
+footer_legal_notice: ሕጋዊ መረጃዎች
+footer_privacy_policy: ስለ መረጃዎ አያያዝ ያለን አቋም
+footer_content_license_prefix: >
+  ስለ ይዘቱ ባለመብትነት መረጃ
+
+language_switch_no_tranlation_prefix: "ያልተተረጐመ ገጽ:"
+
+propertylist_required: ግድ የሚያስፈልግ
+propertylist_optional: ግድ ያልሆነ
+propertylist_default: በባዶ ፈንታ
+
+pagination_page_prev: ያለፈው
+pagination_page_next: ቀጣይ
+pagination_page_state: "{{ .PageNumber }}/{{ .TotalPages }}"

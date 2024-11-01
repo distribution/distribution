@@ -11,7 +11,8 @@
         {{- $properties = (sort $properties . $order) }}
       {{- end }}
       {{- range $properties }}
-        <dt class="flex flex-wrap align-center gdoc-props__meta"{{ if $showAnchor }} id="{{ anchorize .name }}"{{ end }}>
+        {{- $uniqueAnchor := anchorize (printf "%s-%s" $name .name) | safeHTML }}
+        <dt class="flex flex-wrap align-center gdoc-props__meta"{{ if $showAnchor }} id="{{ $uniqueAnchor }}"{{ end }}>
           <span class="gdoc-props__title">{{ .name }}</span>
           {{- if .required }}
             <span class="gdoc-props__tag warning">{{ i18n "propertylist_required" | lower }}</span>
@@ -32,7 +33,7 @@
             {{- end }}
           {{- end }}
           {{- if $showAnchor }}
-          <a data-clipboard-text="{{ .Page.Permalink }}#{{ anchorize .name | safeHTML }}" class="gdoc-page__anchor clip flex align-center" title="{{ i18n "title_anchor_prefix" }} {{ .name | safeHTML }}" aria-label="{{ i18n "title_anchor_prefix" }} {{ .name | safeHTML }}" href="#{{ anchorize .name | safeHTML }}">
+          <a data-clipboard-text="{{ .Page.Permalink }}#{{ $uniqueAnchor }}" class="gdoc-page__anchor clip flex align-center" title="{{ i18n "title_anchor_prefix" }} {{ .name | safeHTML }}" aria-label="{{ i18n "title_anchor_prefix" }} {{ .name | safeHTML }}" href="#{{ $uniqueAnchor }}">
             <svg class="gdoc-icon gdoc_link"><use xlink:href="#gdoc_link"></use></svg>
           </a>
           {{- end }}
