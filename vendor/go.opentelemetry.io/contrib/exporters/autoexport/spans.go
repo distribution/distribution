@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package autoexport // import "go.opentelemetry.io/contrib/exporters/autoexport"
 
@@ -24,6 +13,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
+const otelExporterOTLPTracesProtoEnvKey = "OTEL_EXPORTER_OTLP_TRACES_PROTOCOL"
+
 // SpanOption applies an autoexport configuration option.
 type SpanOption = option[trace.SpanExporter]
 
@@ -34,8 +25,8 @@ type Option = SpanOption
 
 // WithFallbackSpanExporter sets the fallback exporter to use when no exporter
 // is configured through the OTEL_TRACES_EXPORTER environment variable.
-func WithFallbackSpanExporter(exporter trace.SpanExporter) SpanOption {
-	return withFallback[trace.SpanExporter](exporter)
+func WithFallbackSpanExporter(spanExporterFactory func(ctx context.Context) (trace.SpanExporter, error)) SpanOption {
+	return withFallbackFactory[trace.SpanExporter](spanExporterFactory)
 }
 
 // NewSpanExporter returns a configured [go.opentelemetry.io/otel/sdk/trace.SpanExporter]
@@ -53,6 +44,9 @@ func WithFallbackSpanExporter(exporter trace.SpanExporter) SpanOption {
 //   - "http/protobuf" (default) -  protobuf-encoded data over HTTP connection;
 //     see: [go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp]
 //
+// OTEL_EXPORTER_OTLP_TRACES_PROTOCOL defines OTLP exporter's transport protocol for the traces signal;
+// supported values are the same as OTEL_EXPORTER_OTLP_PROTOCOL.
+//
 // An error is returned if an environment value is set to an unhandled value.
 //
 // Use [RegisterSpanExporter] to handle more values of OTEL_TRACES_EXPORTER.
@@ -60,13 +54,13 @@ func WithFallbackSpanExporter(exporter trace.SpanExporter) SpanOption {
 // Use [WithFallbackSpanExporter] option to change the returned exporter
 // when OTEL_TRACES_EXPORTER is unset or empty.
 //
-// Use [IsNoneSpanExporter] to check if the retured exporter is a "no operation" exporter.
+// Use [IsNoneSpanExporter] to check if the returned exporter is a "no operation" exporter.
 func NewSpanExporter(ctx context.Context, opts ...SpanOption) (trace.SpanExporter, error) {
 	return tracesSignal.create(ctx, opts...)
 }
 
 // RegisterSpanExporter sets the SpanExporter factory to be used when the
-// OTEL_TRACES_EXPORTERS environment variable contains the exporter name. This
+// OTEL_TRACES_EXPORTER environment variable contains the exporter name. This
 // will panic if name has already been registered.
 func RegisterSpanExporter(name string, factory func(context.Context) (trace.SpanExporter, error)) {
 	must(tracesSignal.registry.store(name, factory))
@@ -76,7 +70,12 @@ var tracesSignal = newSignal[trace.SpanExporter]("OTEL_TRACES_EXPORTER")
 
 func init() {
 	RegisterSpanExporter("otlp", func(ctx context.Context) (trace.SpanExporter, error) {
-		proto := os.Getenv(otelExporterOTLPProtoEnvKey)
+		proto := os.Getenv(otelExporterOTLPTracesProtoEnvKey)
+		if proto == "" {
+			proto = os.Getenv(otelExporterOTLPProtoEnvKey)
+		}
+
+		// Fallback to default, http/protobuf.
 		if proto == "" {
 			proto = "http/protobuf"
 		}

@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package autoexport // import "go.opentelemetry.io/contrib/exporters/autoexport"
 
@@ -32,9 +21,9 @@ type registry[T any] struct {
 }
 
 var (
-	// errUnknownExporter is returned when an unknown exporter name is used in
-	// the OTEL_*_EXPORTER environment variables.
-	errUnknownExporter = errors.New("unknown exporter")
+	// errUnknownExporterProducer is returned when an unknown exporter name is used in
+	// the OTEL_*_EXPORTER or OTEL_METRICS_PRODUCERS environment variables.
+	errUnknownExporterProducer = errors.New("unknown exporter or metrics producer")
 
 	// errInvalidOTLPProtocol is returned when an invalid protocol is used in
 	// the OTEL_EXPORTER_OTLP_PROTOCOL environment variable.
@@ -46,7 +35,7 @@ var (
 
 // load returns tries to find the exporter factory with the key and
 // then execute the factory, returning the created SpanExporter.
-// errUnknownExporter is returned if the registration is missing and the error from
+// errUnknownExporterProducer is returned if the registration is missing and the error from
 // executing the factory if not nil.
 func (r *registry[T]) load(ctx context.Context, key string) (T, error) {
 	r.mu.Lock()
@@ -54,7 +43,7 @@ func (r *registry[T]) load(ctx context.Context, key string) (T, error) {
 	factory, ok := r.names[key]
 	if !ok {
 		var zero T
-		return zero, errUnknownExporter
+		return zero, errUnknownExporterProducer
 	}
 	return factory(ctx)
 }
