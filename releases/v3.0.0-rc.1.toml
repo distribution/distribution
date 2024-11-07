@@ -1,0 +1,234 @@
+# commit to be tagged for new release
+commit = "HEAD"
+
+project_name = "registry"
+github_repo = "distribution/distribution"
+
+# previous release
+previous = "v3.0.0-beta.1"
+
+pre_release = true
+
+preface = """\
+Welcome to the 3.0.0-rc.1 release of registry!
+
+This is the first stable release candidate of registry.
+It contains various updates and bug fixes with a few minor feature additions.
+
+See the changelog below for the full list of changes.
+
+### Deprecated
+
+* ManifestBuilder interface [3886](https://github.com/distribution/distribution/pull/3886)
+* Versioned in favor of oci.Versioned [3887](https://github.com/distribution/distribution/pull/3887)
+
+### Notable Changes
+
+* Attempt HeadObject on Stat call first before failing over to List in S3 driver
+* Use a consistent multipart chunk size in S3 driver
+* Build artifacts and images for linux/riscv64
+* Fix token verification chain in auth
+
+### Changes
+
+<details><summary>96 commits</summary>
+<p>
+
+  * [`d67b46a0`](https://github.com/distribution/distribution/commit/d67b46a05be84764c249b5fc97b267bd2c3c9ec5) Bump dependencies (#4498)
+  * [`3ac22856`](https://github.com/distribution/distribution/commit/3ac2285631c4cf600dec74e8dac5d149e5d965e3) Bump otel dependencies
+  * [`bd52394e`](https://github.com/distribution/distribution/commit/bd52394e81c60db7793c5d715d75d6c7688bfee3) Update lint.Dockerfile
+  * [`3996413f`](https://github.com/distribution/distribution/commit/3996413f4657387a1615ff812bea9758318e5e7c) Bump google storage module
+  * [`1c26d98f`](https://github.com/distribution/distribution/commit/1c26d98fbe47d756540b534d0f1f2284ab1e4585) Bump dependencies
+  * [`f7236ab0`](https://github.com/distribution/distribution/commit/f7236ab04105c876bf379ebd42f00edfd6e799f6) feat: support custom exec-based credential helper in proxy mode (#4438)
+  * [`eed9400d`](https://github.com/distribution/distribution/commit/eed9400d263f7a4b489e2fe607ec0f2761e3c5d0) feat: support custom exec-based credential helper in proxy mode
+  * [`099201ad`](https://github.com/distribution/distribution/commit/099201addeaebb8779dc3c547970e05fb093fb2a) fix(registry/storage/driver/s3-aws): use a consistent multipart chunk size (#4424)
+  * [`5ee5aaa0`](https://github.com/distribution/distribution/commit/5ee5aaa058c53bf881327164c323eadca85d0766) fix(registry/storage/driver/s3-aws): use a consistent multipart chunk size
+  * [`85e99bce`](https://github.com/distribution/distribution/commit/85e99bce34aa0b4d5a95c2e60e128e68995fcbef) docs: update hugo and theme versions (#4499)
+  * [`da2f24e2`](https://github.com/distribution/distribution/commit/da2f24e2054605c89c353286f70bcc65d4626c52) docs: update hugo and theme versions
+  * [`c427f845`](https://github.com/distribution/distribution/commit/c427f845035d28faab65a9218407293bd917e7d5) ci: fix GHA CI build matrix (#4436)
+  * [`b9b96d9d`](https://github.com/distribution/distribution/commit/b9b96d9dfac06d64b9c20186c631c0930277485f) Bump Go version in Dockerfiles
+  * [`6df0fd94`](https://github.com/distribution/distribution/commit/6df0fd941cfa12f1d23d8048ee09cc66086ef91f) Bump go version in go.mod
+  * [`88579792`](https://github.com/distribution/distribution/commit/88579792f60445d67eb8b72653b1775a8ff25940) Fix a typo in GHA build workflow comment
+  * [`be0051c4`](https://github.com/distribution/distribution/commit/be0051c4526f1962f67fbeac4ed28e2786006e9d) Run vendor on 1.21
+  * [`997c29db`](https://github.com/distribution/distribution/commit/997c29dbdab50c8be05af640c1ffc03aa2a7ddcb) ci: fix GHA CI build matrix
+  * [`bce9fcd1`](https://github.com/distribution/distribution/commit/bce9fcd135940c4be187f6fc98c2e27dad9ddcea) avoid appending directory as file path in s3 driver Walk (#4485)
+  * [`2e7482cb`](https://github.com/distribution/distribution/commit/2e7482cb8958ee07d6ce538e777fea518bbda48a) avoid appending directory as file path in s3 driver Walk
+  * [`e44d9317`](https://github.com/distribution/distribution/commit/e44d9317d01fad36d8615efac139a16d176e3c42) test s3 driver walk of empty dir
+  * [`d0eebf3a`](https://github.com/distribution/distribution/commit/d0eebf3af4fc1d5c0287e5af61147403ccb78ec2) ci: Add validation for api docs (#4481)
+  * [`3f4ec64f`](https://github.com/distribution/distribution/commit/3f4ec64f71d87d4405e8c3dec9283699acb43410) Add validate action to validate api docs Signed-off-by: Pratik <pratikgparikh@gmail.com>
+  * [`5e59a648`](https://github.com/distribution/distribution/commit/5e59a64896d1e42ac847fa499bf7fb47dd4d17be) fix existing doc first Signed-off-by: Pratik <pratikgparikh@gmail.com>
+  * [`0e850894`](https://github.com/distribution/distribution/commit/0e850894d651bbd4e47e612c387baae82c7d1e9f) replace uses of Descriptor alias (#4479)
+  * [`0ab7f326`](https://github.com/distribution/distribution/commit/0ab7f326e651981d0c73191b6e8f8fc671533c11) replace uses of Descriptor alias
+  * [`740b3110`](https://github.com/distribution/distribution/commit/740b31105e11c9fe9f23df4c4d9875605ec59c7c) Make Descriptor an alias for oci.Descriptor (#3888)
+  * [`92b483ef`](https://github.com/distribution/distribution/commit/92b483efca4f0f87562c7448e125a3c2fc2b4f19) Make Descriptor an alias for oci.Descriptor
+  * [`0bfa293e`](https://github.com/distribution/distribution/commit/0bfa293eeae4234eb23785f58a74d373f6fa38fb) docs: removed description of ELB as an example of an not sophisticated Load Balancer (#4476)
+  * [`fdb5abb9`](https://github.com/distribution/distribution/commit/fdb5abb9409131ce209251f43114dd1a27139244) docs: removed description of ELB as an example of an not sophisticated Load Balancer
+  * [`44be16a8`](https://github.com/distribution/distribution/commit/44be16a883af6cff9186ef08871f6077d4cf5ebe) TestProxyManifestsMetrics: use actual size of manifest (#4467)
+  * [`4a0e027e`](https://github.com/distribution/distribution/commit/4a0e027e4d7e128b76fe611849924749c0be3762) TestProxyManifestsMetrics: use actual size of manifest
+  * [`2c7d93a0`](https://github.com/distribution/distribution/commit/2c7d93a0b66ba1b20e163625c0ea3ed3bcdcf31f) fix: Add the token's rootcert public key to the list of known keys (#4471)
+  * [`b53946de`](https://github.com/distribution/distribution/commit/b53946ded3d24553e448262c247f0a63af944410) fix: Add the token's rootcert public key to the list of known keys
+  * [`b7461869`](https://github.com/distribution/distribution/commit/b74618692d2e4244cf5fe5504525caa28956889f) Add a note regarding redirects to pre-signed URLs (#4466)
+  * [`63cfb187`](https://github.com/distribution/distribution/commit/63cfb187294612e9fc48daec929ef68ee7fc7792) Add a note regarding redirects to pre-signed URLs
+  * [`2314320a`](https://github.com/distribution/distribution/commit/2314320a70a88dd1527b37d058066b5e7cad8afa) Remove deprecated version field (#4459)
+  * [`38553eaa`](https://github.com/distribution/distribution/commit/38553eaaf869744fdcd20391e50d512bff6e99c0) chang docker-compose to docker compose
+  * [`49fad517`](https://github.com/distribution/distribution/commit/49fad51775c9a1bbcbd8e94cee86b2577573311c) chang docker-compose to docker compose
+  * [`e41848cc`](https://github.com/distribution/distribution/commit/e41848cc974cc5a07949f4341cd0c33075d2a859) chang docker-compose to docker compose
+  * [`4615d302`](https://github.com/distribution/distribution/commit/4615d302df4eec3b6ada3ed644d57597e4556587) Remove deprecated version field
+  * [`93e6b90d`](https://github.com/distribution/distribution/commit/93e6b90d299f740c481a7998b977b58d5e800954) chore: bump golangci-lint and fix govet issues (#4454)
+  * [`a940e616`](https://github.com/distribution/distribution/commit/a940e61623159d46bf5911a551200cd870668ed9) Fix silly testing format mistakes
+  * [`170ac07a`](https://github.com/distribution/distribution/commit/170ac07a5ed81bc2d51de5fc4bc6f6b70f8be588) chore: bump golangci-lint and fix govert issues
+  * [`ba2841b0`](https://github.com/distribution/distribution/commit/ba2841b0ce1e09ab7cacddc0a003d5daac5c5a85) build(deps): bump github/codeql-action from 3.26.3 to 3.26.5 (#4446)
+  * [`44ddae31`](https://github.com/distribution/distribution/commit/44ddae31c0fcdee89c00f9bd9afed04f04bf2346) build(deps): bump github/codeql-action from 3.26.3 to 3.26.5
+  * [`6e56b3ae`](https://github.com/distribution/distribution/commit/6e56b3ae3c6556ed3a06b670134fe2db066c4cb1) Build artifacts and images for linux/riscv64 (#4444)
+  * [`b2626e06`](https://github.com/distribution/distribution/commit/b2626e062393dbf47ddaa78c7063a3a3aaf2c809) Build artifacts and images for linux/riscv64
+  * [`3da30634`](https://github.com/distribution/distribution/commit/3da306340a0f427db95652582ed2705f7ef0a012) build(deps): bump github/codeql-action from 3.26.2 to 3.26.3 (#4441)
+  * [`aabceeb9`](https://github.com/distribution/distribution/commit/aabceeb985bf9a13da581f2b5ae8a9b2cc5802d9) build(deps): bump github/codeql-action from 3.26.2 to 3.26.3
+  * [`f0826f57`](https://github.com/distribution/distribution/commit/f0826f57968d32e53f07f7b361fbabd3c4a878b7) chore: fix typo in rewrite storage middleware init (#4435)
+  * [`d8199f45`](https://github.com/distribution/distribution/commit/d8199f451bcbb815b7aa360da431240fccfd382f) chore: fix typo in rewrite storage middleware init
+  * [`fc0b89c6`](https://github.com/distribution/distribution/commit/fc0b89c6f7dd308919ce7ae78da9d4d5cb3ca207) build(deps): bump github/codeql-action from 3.26.0 to 3.26.2 (#4434)
+  * [`2f86b475`](https://github.com/distribution/distribution/commit/2f86b47531e4335335a0831d1dcd66cd17a3f507) build(deps): bump github/codeql-action from 3.26.0 to 3.26.2
+  * [`74b07a94`](https://github.com/distribution/distribution/commit/74b07a945f9672c4115f2b005299853d35e0f6fa) build(deps): bump github/codeql-action from 3.25.15 to 3.26.0 (#4431)
+  * [`64b036e0`](https://github.com/distribution/distribution/commit/64b036e085424d70b1f4a5ed9b01d47531b1a00d) build(deps): bump github/codeql-action from 3.25.15 to 3.26.0
+  * [`c4ee2c16`](https://github.com/distribution/distribution/commit/c4ee2c1693014bf73374ec2f1c03b3d19deb5f06) build(deps): bump actions/upload-artifact from 4.3.5 to 4.3.6 (#4430)
+  * [`786c5836`](https://github.com/distribution/distribution/commit/786c5836892512eaecc89dc1f040b13fff09353d) build(deps): bump actions/upload-artifact from 4.3.5 to 4.3.6
+  * [`2801004c`](https://github.com/distribution/distribution/commit/2801004c943f90f6e716f6c66564c73fb90f6d20) Use `x.y.0` format for the go module version (#4423)
+  * [`ba8e539b`](https://github.com/distribution/distribution/commit/ba8e539b03415c74d4f1ba76c4705d1e6ed8b718) Use `x.y.0` format for the go module version
+  * [`0b7e091f`](https://github.com/distribution/distribution/commit/0b7e091f89bb43643915e7ae61b3faad6998490e) build(deps): bump actions/upload-artifact from 4.3.0 to 4.3.5 (#4428)
+  * [`b3f4f327`](https://github.com/distribution/distribution/commit/b3f4f3272f99fb9d09e5ef2e723008f76dcd458c) build(deps): bump actions/upload-artifact from 4.3.0 to 4.3.5
+  * [`ad737939`](https://github.com/distribution/distribution/commit/ad737939a1f2538547b804b96a8e1c9d978b56ff) fix: skip removing layer's link file when '--dry-run' option specified (#4425)
+  * [`db5c303e`](https://github.com/distribution/distribution/commit/db5c303e7e1c422f205e546da6beeb420c9fa02e) fix: skip removing layer's link file when '--dry-run' option spcified
+  * [`6ced2412`](https://github.com/distribution/distribution/commit/6ced2412074936e92ede47eb20149fc0743e59b4) build(deps): bump actions/configure-pages from 4 to 5 (#4409)
+  * [`a8d423dc`](https://github.com/distribution/distribution/commit/a8d423dc75328a681541aa1cb7ba40967c9635e1) build(deps): bump actions/configure-pages from 4 to 5
+  * [`2728ce00`](https://github.com/distribution/distribution/commit/2728ce00bd959c598ffcc51ab340b7cc584568ce) build(deps): bump ossf/scorecard-action from 2.3.3 to 2.4.0 (#4422)
+  * [`b6016d78`](https://github.com/distribution/distribution/commit/b6016d788f83c430505a694890aaddda5082d759) build(deps): bump ossf/scorecard-action from 2.3.3 to 2.4.0
+  * [`6adbec77`](https://github.com/distribution/distribution/commit/6adbec777ff5f3fc5a50537ac2c138f7cc1f325d) build(deps): bump github/codeql-action from 2.22.12 to 3.25.15 (#4426)
+  * [`32e5b044`](https://github.com/distribution/distribution/commit/32e5b044f4b7f440bc73b175261dba192bde37d4) build(deps): bump github/codeql-action from 2.22.12 to 3.25.15
+  * [`f0bd0f68`](https://github.com/distribution/distribution/commit/f0bd0f68992377b068f2861eaa0bdfabb3e540a4) auth: fix token verification chain (#4415)
+  * [`70e0d885`](https://github.com/distribution/distribution/commit/70e0d8850c91d4f165728f904b5d47df636fed09) auth: fix token verification chain
+  * [`3fe707de`](https://github.com/distribution/distribution/commit/3fe707de5c94160f40b41454e0fd0b91921d0176) chore: fix typos returned in some errors (#4414)
+  * [`91eda593`](https://github.com/distribution/distribution/commit/91eda593ef4afd679c54a1a3cfa3761aeb9f56dd) chore: fix typos returned in some errors
+  * [`0c4d6223`](https://github.com/distribution/distribution/commit/0c4d6223744c3d58e043feae5a0baf4e58dcfea0) build(deps): bump ossf/scorecard-action from 2.3.1 to 2.3.3 (#4416)
+  * [`f072af95`](https://github.com/distribution/distribution/commit/f072af95732074aee702ff7842f572cc11f8f83a) build(deps): bump ossf/scorecard-action from 2.3.1 to 2.3.3
+  * [`21f32916`](https://github.com/distribution/distribution/commit/21f3291612301af9c5c9e6a839504ea140844b05) build(deps): bump docker/bake-action from 4 to 5 (#4410)
+  * [`d4f611df`](https://github.com/distribution/distribution/commit/d4f611dfabbbdaa5e5549318a7928c517e426976) build(deps): bump docker/bake-action from 4 to 5
+  * [`fde4b7d6`](https://github.com/distribution/distribution/commit/fde4b7d6641d050a429054e898d7983b6f845588) build(deps): bump softprops/action-gh-release from 1 to 2 (#4407)
+  * [`3fe99ca2`](https://github.com/distribution/distribution/commit/3fe99ca2c0de66a43b56a463f5afa37e17753836) build(deps): bump softprops/action-gh-release from 1 to 2
+  * [`2577121f`](https://github.com/distribution/distribution/commit/2577121fa88a73799e32b0aa1d04f5873c62c636) fix nil pointer in s3 list api (#4412)
+  * [`8619a11f`](https://github.com/distribution/distribution/commit/8619a11f73b92b9f5307a7b3c040f09dfbed6f61) fix nil pointer in s3 list api
+  * [`25261987`](https://github.com/distribution/distribution/commit/252619876af36ec194d918b8fd87fba018c4971b) fix logic for handling regionEndpoint (#4341)
+  * [`eb6123f5`](https://github.com/distribution/distribution/commit/eb6123f5eda25dd530b3fb5a160e23e79adfcb2a) fix logic for handling regionEndpoint
+  * [`33b657b5`](https://github.com/distribution/distribution/commit/33b657b5ae77768b989c2982f481a43c8bd8e9db) deprecate Versioned in favor of oci.Versioned (#3887)
+  * [`1e89cf78`](https://github.com/distribution/distribution/commit/1e89cf780cfd4eb12e003dccdff22999e3598f5d) deprecate Versioned in favor of oci.Versioned
+  * [`ed466915`](https://github.com/distribution/distribution/commit/ed46691519dfc0d75e3819ad3f920da298c0e44f) ci:bump Go version (#4402)
+  * [`c345425f`](https://github.com/distribution/distribution/commit/c345425ff501f1d1a6b1841d718a6d8e8b3def4f) ci:bump Go version
+  * [`e0503319`](https://github.com/distribution/distribution/commit/e0503319b2fbfbcbfd5a2f561a177040f052b5cf) manifest: slight cleanup of init / registration (#4403)
+  * [`3d0239ac`](https://github.com/distribution/distribution/commit/3d0239ac6fac54d3c8abb98d60721599dbeb7a0d) manifest: slight cleanup of init / registration
+  * [`753d64b6`](https://github.com/distribution/distribution/commit/753d64b6775ee456abcb9f273108b541a122fc8e) S3 driver: Attempt HeadObject on Stat first, fail over to List (#4401)
+  * [`a18cc8a6`](https://github.com/distribution/distribution/commit/a18cc8a656687d54bdeda4d93435320ad8f6211d) S3 driver: Attempt HeadObject on Stat first, fail over to List
+  * [`54cf4165`](https://github.com/distribution/distribution/commit/54cf4165d4c1eee50ef8ba383b30da5e7a542107) Descriptor: do not implement Describable interface (#3886)
+  * [`f1c8c414`](https://github.com/distribution/distribution/commit/f1c8c414080c0cec46355c02cd42a1b5304b6788) Descriptor: do not implement Describable interface
+  * [`671184e9`](https://github.com/distribution/distribution/commit/671184e9100ada8c195fd5974749aba66c28cc2f) Remove ManifestBuilder interface
+  * [`f22dd618`](https://github.com/distribution/distribution/commit/f22dd6186008ff9d35f92acc5bc5fd16ba7ef95a) vendor: github.com/opencontainers/image-spec v1.1.0 (#3889)
+  * [`9ba73406`](https://github.com/distribution/distribution/commit/9ba73406012d9649674123d1f29ae34bc4a2937c) vendor: github.com/opencontainers/image-spec v1.1.0
+</p>
+</details>
+
+### Contributors
+
+* Milos Gajdos
+* João Pereira
+* Sebastiaan van Stijn
+* Tibor
+* Flavian Missi
+* Pratik
+* Wang Yan
+* Ankur Kothiwal
+* Chun-Hung Hsiao
+* Cory Snider
+* David Karlsson
+* Ismail Alidzhikov
+* Jan-Otto Kröpke
+* Jose D. Gomez R
+* Liang Zheng
+* Matheus Macabu
+* Mikhail f. Shiryaev
+* Thomas Way
+* tomoya-kawaguchi
+
+### Dependency Changes
+
+* **cel.dev/expr**                                                                         v0.16.1 **_new_**
+* **cloud.google.com/go**                                                                  v0.110.7 -> v0.115.1
+* **cloud.google.com/go/auth**                                                             v0.9.3 **_new_**
+* **cloud.google.com/go/auth/oauth2adapt**                                                 v0.2.4 **_new_**
+* **cloud.google.com/go/compute/metadata**                                                 v0.2.3 -> v0.5.1
+* **cloud.google.com/go/iam**                                                              v1.1.1 -> v1.2.1
+* **cloud.google.com/go/monitoring**                                                       v1.21.0 **_new_**
+* **cloud.google.com/go/storage**                                                          v1.30.1 -> v1.45.0
+* **github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp**             v1.24.1 **_new_**
+* **github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric**           v0.48.1 **_new_**
+* **github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping**  v0.48.1 **_new_**
+* **github.com/aws/aws-sdk-go**                                                            v1.48.10 -> v1.55.5
+* **github.com/cenkalti/backoff/v4**                                                       v4.2.1 -> v4.3.0
+* **github.com/census-instrumentation/opencensus-proto**                                   v0.4.1 **_new_**
+* **github.com/cespare/xxhash/v2**                                                         v2.2.0 -> v2.3.0
+* **github.com/cncf/xds/go**                                                               b4127c9b8d78 **_new_**
+* **github.com/docker/docker-credential-helpers**                                          v0.8.2 **_new_**
+* **github.com/envoyproxy/go-control-plane**                                               v0.13.0 **_new_**
+* **github.com/envoyproxy/protoc-gen-validate**                                            v1.1.0 **_new_**
+* **github.com/go-logr/logr**                                                              v1.3.0 -> v1.4.2
+* **github.com/google/s2a-go**                                                             v0.1.4 -> v0.1.8
+* **github.com/googleapis/enterprise-certificate-proxy**                                   v0.2.3 -> v0.3.4
+* **github.com/googleapis/gax-go/v2**                                                      v2.11.0 -> v2.13.0
+* **github.com/grpc-ecosystem/grpc-gateway/v2**                                            v2.16.0 -> v2.22.0
+* **github.com/klauspost/compress**                                                        v1.17.4 -> v1.17.9
+* **github.com/munnerz/goautoneg**                                                         a7dc8b61c822 **_new_**
+* **github.com/opencontainers/image-spec**                                                 v1.0.2 -> v1.1.0
+* **github.com/planetscale/vtprotobuf**                                                    0393e58bdf10 **_new_**
+* **github.com/prometheus/client_golang**                                                  v1.17.0 -> v1.20.1
+* **github.com/prometheus/client_model**                                                   v0.5.0 -> v0.6.1
+* **github.com/prometheus/common**                                                         v0.44.0 -> v0.55.0
+* **github.com/prometheus/procfs**                                                         v0.11.1 -> v0.15.1
+* **go.opentelemetry.io/contrib/bridges/prometheus**                                       v0.54.0 **_new_**
+* **go.opentelemetry.io/contrib/detectors/gcp**                                            v1.29.0 **_new_**
+* **go.opentelemetry.io/contrib/exporters/autoexport**                                     v0.46.1 -> v0.54.0
+* **go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc**          v0.54.0 **_new_**
+* **go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp**                        v0.46.1 -> v0.54.0
+* **go.opentelemetry.io/otel**                                                             v1.21.0 -> v1.29.0
+* **go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp**                          v0.5.0 **_new_**
+* **go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc**                    v0.44.0 -> v1.29.0
+* **go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp**                    v0.44.0 -> v1.29.0
+* **go.opentelemetry.io/otel/exporters/otlp/otlptrace**                                    v1.21.0 -> v1.29.0
+* **go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc**                      v1.21.0 -> v1.29.0
+* **go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp**                      v1.21.0 -> v1.29.0
+* **go.opentelemetry.io/otel/exporters/prometheus**                                        v0.44.0 -> v0.51.0
+* **go.opentelemetry.io/otel/exporters/stdout/stdoutlog**                                  v0.5.0 **_new_**
+* **go.opentelemetry.io/otel/exporters/stdout/stdoutmetric**                               v0.44.0 -> v1.29.0
+* **go.opentelemetry.io/otel/exporters/stdout/stdouttrace**                                v1.21.0 -> v1.29.0
+* **go.opentelemetry.io/otel/log**                                                         v0.5.0 **_new_**
+* **go.opentelemetry.io/otel/metric**                                                      v1.21.0 -> v1.29.0
+* **go.opentelemetry.io/otel/sdk**                                                         v1.21.0 -> v1.29.0
+* **go.opentelemetry.io/otel/sdk/log**                                                     v0.5.0 **_new_**
+* **go.opentelemetry.io/otel/sdk/metric**                                                  v1.21.0 -> v1.29.0
+* **go.opentelemetry.io/otel/trace**                                                       v1.21.0 -> v1.29.0
+* **go.opentelemetry.io/proto/otlp**                                                       v1.0.0 -> v1.3.1
+* **golang.org/x/crypto**                                                                  v0.24.0 -> v0.27.0
+* **golang.org/x/net**                                                                     v0.26.0 -> v0.29.0
+* **golang.org/x/oauth2**                                                                  v0.11.0 -> v0.23.0
+* **golang.org/x/sync**                                                                    v0.7.0 -> v0.8.0
+* **golang.org/x/sys**                                                                     v0.21.0 -> v0.25.0
+* **golang.org/x/text**                                                                    v0.16.0 -> v0.18.0
+* **golang.org/x/time**                                                                    v0.6.0 **_new_**
+* **google.golang.org/api**                                                                v0.126.0 -> v0.197.0
+* **google.golang.org/genproto**                                                           b8732ec3820d -> 8af14fe29dc1
+* **google.golang.org/genproto/googleapis/api**                                            b8732ec3820d -> 8af14fe29dc1
+* **google.golang.org/genproto/googleapis/rpc**                                            b8732ec3820d -> 8af14fe29dc1
+* **google.golang.org/grpc**                                                               v1.59.0 -> v1.66.2
+* **google.golang.org/grpc/stats/opentelemetry**                                           3ffb98b2c93a **_new_**
+* **google.golang.org/protobuf**                                                           v1.33.0 -> v1.34.2
+
+Previous release can be found at [v3.0.0-beta.1](https://github.com/distribution/distribution/tree/v3.0.0-beta.1)
+
+Please try out the release binaries and report any issues at
+https://github.com/distribution/distribution/issues.
+"""
