@@ -26,20 +26,19 @@ var repositoryTTL = 24 * 7 * time.Hour
 
 // proxyingRegistry fetches content from a remote registry and caches it locally
 type proxyingRegistry struct {
-	embedded       distribution.Namespace // provides local registry functionality
-	scheduler      *scheduler.TTLExpirationScheduler
-	ttl            *time.Duration
-	remoteURL      url.URL
-	authChallenger authChallenger
-	basicAuth      auth.CredentialStore
+	embedded              distribution.Namespace // provides local registry functionality
+	scheduler             *scheduler.TTLExpirationScheduler
+	ttl                   *time.Duration
+	defaultRemoteURL      url.URL
+	defaultAuthChallenger authChallenger
+	defaultBasicAuth      auth.CredentialStore
+	remoteURLMap          map[string]url.URL
+	authChallengerMap     map[string]authChallenger
+	basicAuthMap          map[string]auth.CredentialStore
 }
 
 // NewRegistryPullThroughCache creates a registry acting as a pull through cache
 func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Namespace, driver driver.StorageDriver, config configuration.Proxy) (distribution.Namespace, error) {
-	remoteURL, err := url.Parse(config.RemoteURL)
-	if err != nil {
-		return nil, err
-	}
 
 	v := storage.NewVacuum(ctx, driver)
 
@@ -108,37 +107,70 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 			return nil
 		})
 
-		err = s.Start()
+		err := s.Start()
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	cs, b, err := func() (auth.CredentialStore, auth.CredentialStore, error) {
+	getAuth := func(username, password, remoteurl string, exec *configuration.ExecConfig) (auth.CredentialStore, auth.CredentialStore, error) {
 		switch {
-		case config.Exec != nil:
-			cs, err := configureExecAuth(*config.Exec)
+		case exec != nil:
+			cs, err := configureExecAuth(*exec)
 			return cs, cs, err
 		default:
-			return configureAuth(config.Username, config.Password, config.RemoteURL)
+			return configureAuth(username, password, remoteurl)
 		}
-	}()
-	if err != nil {
-		return nil, err
 	}
 
-	return &proxyingRegistry{
+	reg := &proxyingRegistry{
 		embedded:  registry,
 		scheduler: s,
 		ttl:       ttl,
-		remoteURL: *remoteURL,
-		authChallenger: &remoteAuthChallenger{
+	}
+	if config.RemoteURL != "" {
+		remoteURL, err := url.Parse(config.RemoteURL)
+		if err != nil {
+			return nil, err
+		}
+
+		cs, b, err := getAuth(config.Username, config.Password, config.RemoteURL, config.Exec)
+		if err != nil {
+			return nil, err
+		}
+		reg.defaultRemoteURL = *remoteURL
+		reg.defaultAuthChallenger = &remoteAuthChallenger{
 			remoteURL: *remoteURL,
 			cm:        challenge.NewSimpleManager(),
 			cs:        cs,
-		},
-		basicAuth: b,
-	}, nil
+		}
+		reg.defaultBasicAuth = b
+	}
+
+	if config.RemoteHostConfigMap != nil {
+		reg.remoteURLMap = make(map[string]url.URL)
+		reg.authChallengerMap = make(map[string]authChallenger)
+		reg.basicAuthMap = make(map[string]auth.CredentialStore)
+		for key, value := range config.RemoteHostConfigMap {
+			remoteURL, err := url.Parse(value.RemoteURL)
+			if err != nil {
+				return nil, err
+			}
+			cs, b, err := getAuth(value.Username, value.Password, value.RemoteURL, value.Exec)
+			if err != nil {
+				return nil, err
+			}
+			reg.remoteURLMap[key] = *remoteURL
+			reg.authChallengerMap[key] = &remoteAuthChallenger{
+				remoteURL: *remoteURL,
+				cm:        challenge.NewSimpleManager(),
+				cs:        cs,
+			}
+			reg.basicAuthMap[key] = b
+		}
+	}
+
+	return reg, nil
 }
 
 func (pr *proxyingRegistry) Scope() distribution.Scope {
@@ -150,11 +182,26 @@ func (pr *proxyingRegistry) Repositories(ctx context.Context, repos []string, la
 }
 
 func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named) (distribution.Repository, error) {
-	c := pr.authChallenger
+	var err error
+	localRepoName := name
+	authChallenger := pr.defaultAuthChallenger
+	registryURL := pr.defaultRemoteURL
+	basicAuth := pr.defaultBasicAuth
+	if registryHost := dcontext.GetRegistryHost(ctx); registryHost != "" {
+		if _, ok := pr.remoteURLMap[registryHost]; ok {
+			localRepoName, err = reference.WithName(fmt.Sprintf("%s/%s", registryHost, name.Name()))
+			if err != nil {
+				return nil, err
+			}
+			registryURL = pr.remoteURLMap[registryHost]
+			authChallenger = pr.authChallengerMap[registryHost]
+			basicAuth = pr.basicAuthMap[registryHost]
+		}
+	}
 
 	tkopts := auth.TokenHandlerOptions{
 		Transport:   http.DefaultTransport,
-		Credentials: c.credentialStore(),
+		Credentials: authChallenger.credentialStore(),
 		Scopes: []auth.Scope{
 			auth.RepositoryScope{
 				Repository: name.Name(),
@@ -165,11 +212,11 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named
 	}
 
 	tr := transport.NewTransport(http.DefaultTransport,
-		auth.NewAuthorizer(c.challengeManager(),
+		auth.NewAuthorizer(authChallenger.challengeManager(),
 			auth.NewTokenHandlerWithOptions(tkopts),
-			auth.NewBasicHandler(pr.basicAuth)))
+			auth.NewBasicHandler(basicAuth)))
 
-	localRepo, err := pr.embedded.Repository(ctx, name)
+	localRepo, err := pr.embedded.Repository(ctx, localRepoName)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +225,7 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named
 		return nil, err
 	}
 
-	remoteRepo, err := client.NewRepository(name, pr.remoteURL.String(), tr)
+	remoteRepo, err := client.NewRepository(name, registryURL.String(), tr)
 	if err != nil {
 		return nil, err
 	}
@@ -195,7 +242,7 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named
 			scheduler:      pr.scheduler,
 			ttl:            pr.ttl,
 			repositoryName: name,
-			authChallenger: pr.authChallenger,
+			authChallenger: authChallenger,
 		},
 		manifests: &proxyManifestStore{
 			repositoryName:  name,
@@ -204,13 +251,13 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named
 			ctx:             ctx,
 			scheduler:       pr.scheduler,
 			ttl:             pr.ttl,
-			authChallenger:  pr.authChallenger,
+			authChallenger:  authChallenger,
 		},
 		name: name,
 		tags: &proxyTagService{
 			localTags:      localRepo.Tags(ctx),
 			remoteTags:     remoteRepo.Tags(ctx),
-			authChallenger: pr.authChallenger,
+			authChallenger: authChallenger,
 		},
 	}, nil
 }

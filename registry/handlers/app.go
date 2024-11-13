@@ -96,7 +96,7 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 		Config:  config,
 		Context: ctx,
 		router:  v2.RouterWithPrefix(config.HTTP.Prefix),
-		isCache: config.Proxy.RemoteURL != "",
+		isCache: config.Proxy.RemoteURL != "" || config.Proxy.RemoteHostQueryKey != "",
 	}
 
 	// Register the handler dispatchers.
@@ -347,13 +347,12 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 	}
 
 	// configure as a pull through cache
-	if config.Proxy.RemoteURL != "" {
+	if config.Proxy.RemoteURL != "" || config.Proxy.RemoteHostQueryKey != "" {
 		app.registry, err = proxy.NewRegistryPullThroughCache(ctx, app.registry, app.driver, config.Proxy)
 		if err != nil {
 			panic(err.Error())
 		}
 		app.isCache = true
-		dcontext.GetLogger(app).Info("Registry configured as a proxy cache to ", config.Proxy.RemoteURL)
 	}
 	var ok bool
 	app.repoRemover, ok = app.registry.(distribution.RepositoryRemover)
@@ -690,8 +689,13 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 			return
 		}
 
+		// dcontext.WithValues(context)
+
 		// Add username to request logging
 		context.Context = dcontext.WithLogger(context.Context, dcontext.GetLogger(context.Context, userNameKey))
+		if registryHost, ok := r.URL.Query()["ns"]; ok {
+			context.Context = dcontext.WithRegistryHost(context.Context, registryHost[0])
+		}
 
 		// sync up context on the request.
 		r = r.WithContext(context)

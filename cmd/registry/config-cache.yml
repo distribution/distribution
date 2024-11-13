@@ -51,6 +51,10 @@ proxy:
   remoteurl: https://registry-1.docker.io
   username: username
   password: password
+  remotehostquerykey: ns
+  remotehostconfigmap:
+    registry.k8s.io:
+      remoteurl: https://registry.k8s.io
 health:
   storagedriver:
     enabled: true
