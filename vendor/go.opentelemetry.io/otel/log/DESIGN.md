@@ -26,14 +26,12 @@ This proposed design aims to:
 
 The API is published as a single `go.opentelemetry.io/otel/log` Go module.
 
-The module name is compliant with
-[Artifact Naming](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/logs/bridge-api.md#artifact-naming)
-and the package structure is the same as for Trace API and Metrics API.
-
+The package structure is similar to Trace API and Metrics API.
 The Go module consists of the following packages:
 
 - `go.opentelemetry.io/otel/log`
 - `go.opentelemetry.io/otel/log/embedded`
+- `go.opentelemetry.io/otel/log/logtest`
 - `go.opentelemetry.io/otel/log/noop`
 
 Rejected alternative:
@@ -105,16 +103,16 @@ is defined as `Record` struct  in [record.go](record.go).
 is accessed using following methods:
 
 ```go
-func (r *Record) Timestamp() time.Time 
-func (r *Record) SetTimestamp(t time.Time) 
+func (r *Record) Timestamp() time.Time
+func (r *Record) SetTimestamp(t time.Time)
 ```
 
 [`ObservedTimestamp`](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-observedtimestamp)
 is accessed using following methods:
 
 ```go
-func (r *Record) ObservedTimestamp() time.Time 
-func (r *Record) SetObservedTimestamp(t time.Time) 
+func (r *Record) ObservedTimestamp() time.Time
+func (r *Record) SetObservedTimestamp(t time.Time)
 ```
 
 [`SeverityNumber`](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-severitynumber)
@@ -253,6 +251,23 @@ Rejected alternatives:
 - [Add XYZ method to Logger](#add-xyz-method-to-logger)
 - [Rename KeyValue to Attr](#rename-keyvalue-to-attr)
 
+### Logger.Enabled
+
+The `Enabled` method implements the [`Enabled` operation](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#enabled).
+
+[`Context` associated with the `LogRecord`](https://opentelemetry.io/docs/specs/otel/context/)
+is accepted as a `context.Context` method argument.
+
+Calls to `Enabled` are supposed to be on the hot path and the list of arguments
+can be extendend in future. Therefore, in order to reduce the number of heap
+allocations and make it possible to handle new arguments, `Enabled` accepts
+a `EnabledParameters` struct, defined in [logger.go](logger.go), as the second
+method argument.
+
+The `EnabledParameters` getters are returning values using the `(value, ok)`
+idiom in order to indicate if the values were actually set by the caller or if
+there are unspecified.
+
 ### noop package
 
 The `go.opentelemetry.io/otel/log/noop` package provides
@@ -307,7 +322,7 @@ The API needs to evolve orthogonally to `slog`.
 `slog` is not compliant with the [Logs Bridge API](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/).
 and we cannot expect the Go team to make `slog` compliant with it.
 
-The interoperabilty can be achieved using [a log bridge](https://opentelemetry.io/docs/specs/otel/glossary/#log-appender--bridge).
+The interoperability can be achieved using [a log bridge](https://opentelemetry.io/docs/specs/otel/glossary/#log-appender--bridge).
 
 You can read more about OpenTelemetry Logs design on [opentelemetry.io](https://opentelemetry.io/docs/concepts/signals/logs/).
 

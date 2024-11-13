@@ -42,6 +42,10 @@ func putIndex(index map[string]int) {
 }
 
 // Record is a log record emitted by the Logger.
+//
+// Do not create instances of Record on your own in production code.
+// You can use [go.opentelemetry.io/otel/sdk/log/logtest.RecordFactory]
+// for testing purposes.
 type Record struct {
 	// Do not embed the log.Record. Attributes need to be overwrite-able and
 	// deep-copying needs to be possible.
@@ -230,7 +234,7 @@ func (r *Record) AddAttributes(attrs ...log.KeyValue) {
 		//
 		// Do not use head(attrs, r.attributeCountLimit - n) here. If
 		// (r.attributeCountLimit - n) <= 0 attrs needs to be emptied.
-		last := max(0, (r.attributeCountLimit - n))
+		last := max(0, r.attributeCountLimit-n)
 		r.addDropped(len(attrs) - last)
 		attrs = attrs[:last]
 	}

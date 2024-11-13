@@ -183,11 +183,7 @@ func WithEndpointURL(rawURL string) Option {
 	return fnOpt(func(c config) config {
 		c.endpoint = newSetting(u.Host)
 		c.path = newSetting(u.Path)
-		if u.Scheme != "https" {
-			c.insecure = newSetting(true)
-		} else {
-			c.insecure = newSetting(false)
-		}
+		c.insecure = newSetting(u.Scheme != "https")
 		return c
 	})
 }
@@ -377,7 +373,7 @@ func (s setting[T]) Resolve(fn ...resolver[T]) setting[T] {
 	return s
 }
 
-// loadEnvTLS returns a resolver that loads a *tls.Config from files defeind by
+// loadEnvTLS returns a resolver that loads a *tls.Config from files defined by
 // the OTLP TLS environment variables. This will load both the rootCAs and
 // certificates used for mTLS.
 //

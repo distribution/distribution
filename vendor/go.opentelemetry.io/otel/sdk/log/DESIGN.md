@@ -122,12 +122,12 @@ The benchmark results can be found in [the prototype](https://github.com/open-te
 
 ## Rejected alternatives
 
-### Represent both LogRecordProcessor and LogRecordExporter as Expoter
+### Represent both LogRecordProcessor and LogRecordExporter as Exporter
 
 Because the [LogRecordProcessor](https://opentelemetry.io/docs/specs/otel/logs/sdk/#logrecordprocessor)
 and the [LogRecordProcessor](https://opentelemetry.io/docs/specs/otel/logs/sdk/#logrecordexporter)
 abstractions are so similar, there was a proposal to unify them under
-single `Expoter` interface.[^3]
+single `Exporter` interface.[^3]
 
 However, introducing a `Processor` interface makes it easier
 to create custom processor decorators[^4]
@@ -170,7 +170,7 @@ parameters.
 
 [^1]: [A Guide to the Go Garbage Collector](https://tip.golang.org/doc/gc-guide)
 [^2]: [OpenTelemetry Logging](https://opentelemetry.io/docs/specs/otel/logs)
-[^3]: [Conversation on representing LogRecordProcessor and LogRecordExporter via a single Expoter interface](https://github.com/open-telemetry/opentelemetry-go/pull/4954#discussion_r1515050480)
+[^3]: [Conversation on representing LogRecordProcessor and LogRecordExporter via a single Exporter interface](https://github.com/open-telemetry/opentelemetry-go/pull/4954#discussion_r1515050480)
 [^4]: [Introduce Processor](https://github.com/pellared/opentelemetry-go/pull/9)
 [^5]: [Log record mutations do not have to be visible in next registered processors](https://github.com/open-telemetry/opentelemetry-specification/pull/4067)
 [^6]: [Profile-guided optimization](https://go.dev/doc/pgo)

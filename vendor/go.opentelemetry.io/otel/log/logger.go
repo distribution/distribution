@@ -28,29 +28,35 @@ type Logger interface {
 	//
 	// Implementations of this method need to be safe for a user to call
 	// concurrently.
+	//
+	// Notice: Emit is intended to be used by log bridges.
+	// Is should not be used for writing instrumentation.
 	Emit(ctx context.Context, record Record)
 
 	// Enabled returns whether the Logger emits for the given context and
-	// record.
+	// param.
 	//
-	// The passed record is likely to be a partial record with only the
-	// bridge-relevant information being provided (e.g a record with only the
+	// The passed param is likely to be a partial record with only the
+	// bridge-relevant information being provided (e.g a param with only the
 	// Severity set). If a Logger needs more information than is provided, it
 	// is said to be in an indeterminate state (see below).
 	//
 	// The returned value will be true when the Logger will emit for the
-	// provided context and record, and will be false if the Logger will not
+	// provided context and param, and will be false if the Logger will not
 	// emit. The returned value may be true or false in an indeterminate state.
 	// An implementation should default to returning true for an indeterminate
 	// state, but may return false if valid reasons in particular circumstances
 	// exist (e.g. performance, correctness).
 	//
-	// The record should not be held by the implementation. A copy should be
+	// The param should not be held by the implementation. A copy should be
 	// made if the record needs to be held after the call returns.
 	//
 	// Implementations of this method need to be safe for a user to call
 	// concurrently.
-	Enabled(ctx context.Context, record Record) bool
+	//
+	// Notice: Enabled is intended to be used by log bridges.
+	// Is should not be used for writing instrumentation.
+	Enabled(ctx context.Context, param EnabledParameters) bool
 }
 
 // LoggerOption applies configuration options to a [Logger].
@@ -128,4 +134,22 @@ func WithSchemaURL(schemaURL string) LoggerOption {
 		config.schemaURL = schemaURL
 		return config
 	})
+}
+
+// EnabledParameters represents payload for [Logger]'s Enabled method.
+type EnabledParameters struct {
+	severity    Severity
+	severitySet bool
+}
+
+// Severity returns the [Severity] level value, or [SeverityUndefined] if no value was set.
+// The ok result indicates whether the value was set.
+func (r *EnabledParameters) Severity() (value Severity, ok bool) {
+	return r.severity, r.severitySet
+}
+
+// SetSeverity sets the [Severity] level.
+func (r *EnabledParameters) SetSeverity(level Severity) {
+	r.severity = level
+	r.severitySet = true
 }
