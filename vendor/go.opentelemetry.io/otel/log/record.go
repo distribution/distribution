@@ -16,6 +16,9 @@ const attributesInlineCount = 5
 
 // Record represents a log record.
 type Record struct {
+	// Ensure forward compatibility by explicitly making this not comparable.
+	noCmp [0]func() //nolint: unused  // This is indeed used.
+
 	timestamp         time.Time
 	observedTimestamp time.Time
 	severity          Severity

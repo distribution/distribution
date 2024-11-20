@@ -76,7 +76,8 @@ func IntValue(v int) Value { return Int64Value(int64(v)) }
 
 // Int64Value returns a [Value] for an int64.
 func Int64Value(v int64) Value {
-	return Value{num: uint64(v), any: KindInt64}
+	// This can be later converted back to int64 (overflow not checked).
+	return Value{num: uint64(v), any: KindInt64} // nolint:gosec
 }
 
 // Float64Value returns a [Value] for a float64.
