@@ -2,7 +2,7 @@ name: Pull Request Labeler
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 on:
   pull_request_target:
@@ -16,4 +16,4 @@ jobs:
     steps:
     - uses: actions/labeler@v5
       with:
-        dot: true
+        dot: false
