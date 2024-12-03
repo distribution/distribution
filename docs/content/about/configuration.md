@@ -35,6 +35,23 @@ REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/somewhere
 This variable overrides the `/var/lib/registry` value to the `/somewhere`
 directory.
 
+In order to override elements of a list, provide the index of the element
+you wish to change as part of the path to that element. For example, to
+configure the `hosts` list under `letsencrypt`:
+
+```yaml
+http:
+  tls:
+    letsencrypt:
+      hosts: [myregistryaddress.org]
+```
+
+The corresponding environment variable would be:
+
+```sh
+REGISTRY_HTTP_TLS_LETSENCRYPT_HOSTS_0=registry.example.com
+```
+
 > **Note**: Create a base configuration file with environment variables that can
 > be configured to tweak individual values. Overriding configuration sections
 > with environment variables is not recommended.
