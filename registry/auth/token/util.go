@@ -1,13 +1,17 @@
 package token
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"crypto/sha256"
+	"crypto/x509"
+	"encoding/base32"
 	"encoding/base64"
 	"fmt"
 	"math/big"
+	"strings"
 )
 
 // actionSet is a special type of stringSet.
@@ -83,4 +87,27 @@ func GetRFC7638Thumbprint(publickey crypto.PublicKey) string {
 	}
 
 	return hashAndEncode(payload)
+}
+
+// Returns a libtrust-compatible Key ID, for backwards compatibility
+// with JWT headers expected by distribution/v2
+func GetLibtrustKeyID(publickey crypto.PublicKey) string {
+	keyBytes, err := x509.MarshalPKIXPublicKey(publickey)
+	if err != nil {
+		return ""
+	}
+
+	sum := sha256.Sum256(keyBytes)
+	b64 := strings.TrimRight(base32.StdEncoding.EncodeToString(sum[:30]), "=")
+
+	var buf bytes.Buffer
+	var i int
+	for i = 0; i < len(b64)/4-1; i++ {
+		start := i * 4
+		end := start + 4
+		buf.WriteString(b64[start:end] + ":")
+	}
+	buf.WriteString(b64[i*4:])
+
+	return buf.String()
 }

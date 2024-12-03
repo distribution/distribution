@@ -346,6 +346,9 @@ func newAccessController(options map[string]interface{}) (auth.AccessController,
 		if key := GetRFC7638Thumbprint(rootCert.PublicKey); key != "" {
 			trustedKeys[key] = rootCert.PublicKey
 		}
+		if key := GetLibtrustKeyID(rootCert.PublicKey); key != "" {
+			trustedKeys[key] = rootCert.PublicKey
+		}
 	}
 
 	if jwks != nil {
