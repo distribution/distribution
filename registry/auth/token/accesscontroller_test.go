@@ -143,8 +143,8 @@ func TestRootCertIncludedInTrustedKeys(t *testing.T) {
 	// newAccessController return type is an interface built from
 	// accessController struct. The type check can be safely ignored.
 	ac2, _ := ac.(*accessController)
-	if got := len(ac2.trustedKeys); got != 1 {
-		t.Fatalf("Unexpected number of trusted keys, expected 1 got: %d", got)
+	if got := len(ac2.trustedKeys); got != 2 {
+		t.Fatalf("Unexpected number of trusted keys, expected 2 got: %d", got)
 	}
 }
 
