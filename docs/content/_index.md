@@ -38,7 +38,7 @@ The distribution registry implements the [OCI Distribution Spec](https://github.
 Start your registry
 
 ```sh
-docker run -d -p 5000:5000 --name registry registry:2
+docker run -d -p 5000:5000 --name registry registry:3
 ```
 
 Pull (or build) some image from the hub
