@@ -23,31 +23,7 @@ type Configuration struct {
 
 	// Log supports setting various parameters related to the logging
 	// subsystem.
-	Log struct {
-		// AccessLog configures access logging.
-		AccessLog struct {
-			// Disabled disables access logging.
-			Disabled bool `yaml:"disabled,omitempty"`
-		} `yaml:"accesslog,omitempty"`
-
-		// Level is the granularity at which registry operations are logged.
-		Level Loglevel `yaml:"level,omitempty"`
-
-		// Formatter overrides the default formatter with another. Options
-		// include "text", "json" and "logstash".
-		Formatter string `yaml:"formatter,omitempty"`
-
-		// Fields allows users to specify static string fields to include in
-		// the logger context.
-		Fields map[string]interface{} `yaml:"fields,omitempty"`
-
-		// Hooks allows users to configure the log hooks, to enabling the
-		// sequent handling behavior, when defined levels of log message emit.
-		Hooks []LogHook `yaml:"hooks,omitempty"`
-
-		// ReportCaller allows user to configure the log to report the caller
-		ReportCaller bool `yaml:"reportcaller,omitempty"`
-	}
+	Log Log `yaml:"log"`
 
 	// Loglevel is the level at which registry operations are logged.
 	//
@@ -66,113 +42,7 @@ type Configuration struct {
 
 	// HTTP contains configuration parameters for the registry's http
 	// interface.
-	HTTP struct {
-		// Addr specifies the bind address for the registry instance.
-		Addr string `yaml:"addr,omitempty"`
-
-		// Net specifies the net portion of the bind address. A default empty value means tcp.
-		Net string `yaml:"net,omitempty"`
-
-		// Host specifies an externally-reachable address for the registry, as a fully
-		// qualified URL.
-		Host string `yaml:"host,omitempty"`
-
-		Prefix string `yaml:"prefix,omitempty"`
-
-		// Secret specifies the secret key which HMAC tokens are created with.
-		Secret string `yaml:"secret,omitempty"`
-
-		// RelativeURLs specifies that relative URLs should be returned in
-		// Location headers
-		RelativeURLs bool `yaml:"relativeurls,omitempty"`
-
-		// Amount of time to wait for connection to drain before shutting down when registry
-		// receives a stop signal
-		DrainTimeout time.Duration `yaml:"draintimeout,omitempty"`
-
-		// TLS instructs the http server to listen with a TLS configuration.
-		// This only support simple tls configuration with a cert and key.
-		// Mostly, this is useful for testing situations or simple deployments
-		// that require tls. If more complex configurations are required, use
-		// a proxy or make a proposal to add support here.
-		TLS struct {
-			// Certificate specifies the path to an x509 certificate file to
-			// be used for TLS.
-			Certificate string `yaml:"certificate,omitempty"`
-
-			// Key specifies the path to the x509 key file, which should
-			// contain the private portion for the file specified in
-			// Certificate.
-			Key string `yaml:"key,omitempty"`
-
-			// Specifies the CA certs for client authentication
-			// A file may contain multiple CA certificates encoded as PEM
-			ClientCAs []string `yaml:"clientcas,omitempty"`
-
-			// Client certificate authentication mode
-			// One of: request-client-cert, require-any-client-cert, verify-client-cert-if-given, require-and-verify-client-cert
-			ClientAuth ClientAuth `yaml:"clientauth,omitempty"`
-
-			// Specifies the lowest TLS version allowed
-			MinimumTLS string `yaml:"minimumtls,omitempty"`
-
-			// Specifies a list of cipher suites allowed
-			CipherSuites []string `yaml:"ciphersuites,omitempty"`
-
-			// LetsEncrypt is used to configuration setting up TLS through
-			// Let's Encrypt instead of manually specifying certificate and
-			// key. If a TLS certificate is specified, the Let's Encrypt
-			// section will not be used.
-			LetsEncrypt struct {
-				// CacheFile specifies cache file to use for lets encrypt
-				// certificates and keys.
-				CacheFile string `yaml:"cachefile,omitempty"`
-
-				// Email is the email to use during Let's Encrypt registration
-				Email string `yaml:"email,omitempty"`
-
-				// Hosts specifies the hosts which are allowed to obtain Let's
-				// Encrypt certificates.
-				Hosts []string `yaml:"hosts,omitempty"`
-
-				// DirectoryURL points to the CA directory endpoint.
-				// If empty, LetsEncrypt is used.
-				DirectoryURL string `yaml:"directoryurl,omitempty"`
-			} `yaml:"letsencrypt,omitempty"`
-		} `yaml:"tls,omitempty"`
-
-		// Headers is a set of headers to include in HTTP responses. A common
-		// use case for this would be security headers such as
-		// Strict-Transport-Security. The map keys are the header names, and
-		// the values are the associated header payloads.
-		Headers http.Header `yaml:"headers,omitempty"`
-
-		// Debug configures the http debug interface, if specified. This can
-		// include services such as pprof, expvar and other data that should
-		// not be exposed externally. Left disabled by default.
-		Debug struct {
-			// Addr specifies the bind address for the debug server.
-			Addr string `yaml:"addr,omitempty"`
-			// Prometheus configures the Prometheus telemetry endpoint.
-			Prometheus struct {
-				Enabled bool   `yaml:"enabled,omitempty"`
-				Path    string `yaml:"path,omitempty"`
-			} `yaml:"prometheus,omitempty"`
-		} `yaml:"debug,omitempty"`
-
-		// HTTP2 configuration options
-		HTTP2 struct {
-			// Specifies whether the registry should disallow clients attempting
-			// to connect via HTTP/2. If set to true, only HTTP/1.1 is supported.
-			Disabled bool `yaml:"disabled,omitempty"`
-		} `yaml:"http2,omitempty"`
-
-		H2C struct {
-			// Enables H2C (HTTP/2 Cleartext). Enable to support HTTP/2 without needing to configure TLS
-			// Useful when deploying the registry behind a load balancer (e.g. Cloud Run)
-			Enabled bool `yaml:"enabled,omitempty"`
-		} `yaml:"h2c,omitempty"`
-	} `yaml:"http,omitempty"`
+	HTTP HTTP `yaml:"http,omitempty"`
 
 	// Notifications specifies configuration about various endpoint to which
 	// registry events are dispatched.
@@ -190,17 +60,21 @@ type Configuration struct {
 	Validation Validation `yaml:"validation,omitempty"`
 
 	// Policy configures registry policy options.
-	Policy struct {
-		// Repository configures policies for repositories
-		Repository struct {
-			// Classes is a list of repository classes which the
-			// registry allows content for. This class is matched
-			// against the configuration media type inside uploaded
-			// manifests. When non-empty, the registry will enforce
-			// the class in authorized resources.
-			Classes []string `yaml:"classes"`
-		} `yaml:"repository,omitempty"`
-	} `yaml:"policy,omitempty"`
+	Policy Policy `yaml:"policy,omitempty"`
+}
+
+type Policy struct {
+	// Repository configures policies for repositories
+	Repository Repository `yaml:"repository,omitempty"`
+}
+
+type Repository struct {
+	// Classes is a list of repository classes which the
+	// registry allows content for. This class is matched
+	// against the configuration media type inside uploaded
+	// manifests. When non-empty, the registry will enforce
+	// the class in authorized resources.
+	Classes []string `yaml:"classes"`
 }
 
 // Catalog is composed of MaxEntries.
@@ -211,6 +85,154 @@ type Catalog struct {
 	// to the catalog endpoint will return at most MaxEntries entries.
 	// An empty or a negative value will set a default of 1000 maximum entries by default.
 	MaxEntries int `yaml:"maxentries,omitempty"`
+}
+
+type Log struct {
+	// AccessLog configures access logging.
+	AccessLog AccessLog `yaml:"accesslog,omitempty"`
+
+	// Level is the granularity at which registry operations are logged.
+	Level Loglevel `yaml:"level,omitempty"`
+
+	// Formatter overrides the default formatter with another. Options
+	// include "text", "json" and "logstash".
+	Formatter string `yaml:"formatter,omitempty"`
+
+	// Fields allows users to specify static string fields to include in
+	// the logger context.
+	Fields map[string]interface{} `yaml:"fields,omitempty"`
+
+	// Hooks allows users to configure the log hooks, to enabling the
+	// sequent handling behavior, when defined levels of log message emit.
+	Hooks []LogHook `yaml:"hooks,omitempty"`
+
+	// ReportCaller allows user to configure the log to report the caller
+	ReportCaller bool `yaml:"reportcaller,omitempty"`
+}
+
+type AccessLog struct {
+	// Disabled disables access logging.
+	Disabled bool `yaml:"disabled,omitempty"`
+}
+
+type HTTP struct {
+	// Addr specifies the bind address for the registry instance.
+	Addr string `yaml:"addr,omitempty"`
+
+	// Net specifies the net portion of the bind address. A default empty value means tcp.
+	Net string `yaml:"net,omitempty"`
+
+	// Host specifies an externally-reachable address for the registry, as a fully
+	// qualified URL.
+	Host string `yaml:"host,omitempty"`
+
+	Prefix string `yaml:"prefix,omitempty"`
+
+	// Secret specifies the secret key which HMAC tokens are created with.
+	Secret string `yaml:"secret,omitempty"`
+
+	// RelativeURLs specifies that relative URLs should be returned in
+	// Location headers
+	RelativeURLs bool `yaml:"relativeurls,omitempty"`
+
+	// Amount of time to wait for connection to drain before shutting down when registry
+	// receives a stop signal
+	DrainTimeout time.Duration `yaml:"draintimeout,omitempty"`
+
+	// TLS instructs the http server to listen with a TLS configuration.
+	// This only support simple tls configuration with a cert and key.
+	// Mostly, this is useful for testing situations or simple deployments
+	// that require tls. If more complex configurations are required, use
+	// a proxy or make a proposal to add support here.
+	TLS TLS `yaml:"tls,omitempty"`
+
+	// Headers is a set of headers to include in HTTP responses. A common
+	// use case for this would be security headers such as
+	// Strict-Transport-Security. The map keys are the header names, and
+	// the values are the associated header payloads.
+	Headers http.Header `yaml:"headers,omitempty"`
+
+	// Debug configures the http debug interface, if specified. This can
+	// include services such as pprof, expvar and other data that should
+	// not be exposed externally. Left disabled by default.
+	Debug Debug `yaml:"debug,omitempty"`
+
+	// HTTP2 configuration options
+	HTTP2 HTTP2 `yaml:"http2,omitempty"`
+
+	H2C H2C `yaml:"h2c,omitempty"`
+}
+
+type Debug struct {
+	// Addr specifies the bind address for the debug server.
+	Addr string `yaml:"addr,omitempty"`
+	// Prometheus configures the Prometheus telemetry endpoint.
+	Prometheus Prometheus `yaml:"prometheus,omitempty"`
+}
+
+type Prometheus struct {
+	Enabled bool   `yaml:"enabled,omitempty"`
+	Path    string `yaml:"path,omitempty"`
+}
+
+type HTTP2 struct {
+	// Specifies whether the registry should disallow clients attempting
+	// to connect via HTTP/2. If set to true, only HTTP/1.1 is supported.
+	Disabled bool `yaml:"disabled,omitempty"`
+}
+
+type H2C struct {
+	// Enables H2C (HTTP/2 Cleartext). Enable to support HTTP/2 without needing to configure TLS
+	// Useful when deploying the registry behind a load balancer (e.g. Cloud Run)
+	Enabled bool `yaml:"enabled,omitempty"`
+}
+
+type TLS struct {
+	// Certificate specifies the path to an x509 certificate file to
+	// be used for TLS.
+	Certificate string `yaml:"certificate,omitempty"`
+
+	// Key specifies the path to the x509 key file, which should
+	// contain the private portion for the file specified in
+	// Certificate.
+	Key string `yaml:"key,omitempty"`
+
+	// Specifies the CA certs for client authentication
+	// A file may contain multiple CA certificates encoded as PEM
+	ClientCAs []string `yaml:"clientcas,omitempty"`
+
+	// Client certificate authentication mode
+	// One of: request-client-cert, require-any-client-cert, verify-client-cert-if-given, require-and-verify-client-cert
+	ClientAuth ClientAuth `yaml:"clientauth,omitempty"`
+
+	// Specifies the lowest TLS version allowed
+	MinimumTLS string `yaml:"minimumtls,omitempty"`
+
+	// Specifies a list of cipher suites allowed
+	CipherSuites []string `yaml:"ciphersuites,omitempty"`
+
+	// LetsEncrypt is used to configuration setting up TLS through
+	// Let's Encrypt instead of manually specifying certificate and
+	// key. If a TLS certificate is specified, the Let's Encrypt
+	// section will not be used.
+	LetsEncrypt LetsEncrypt `yaml:"letsencrypt,omitempty"`
+}
+
+type LetsEncrypt struct {
+	// CacheFile specifies cache file to use for lets encrypt
+	// certificates and keys.
+	CacheFile string `yaml:"cachefile,omitempty"`
+
+	// Email is the email to use during Let's Encrypt registration
+	Email string `yaml:"email,omitempty"`
+
+	// Hosts specifies the hosts which are allowed to obtain Let's
+	// Encrypt certificates.
+	Hosts []string `yaml:"hosts,omitempty"`
+
+	// DirectoryURL points to the CA directory endpoint.
+	// If empty, LetsEncrypt is used.
+	DirectoryURL string `yaml:"directoryurl,omitempty"`
 }
 
 // LogHook is composed of hook Level and Type.
@@ -233,25 +255,27 @@ type LogHook struct {
 
 // MailOptions provides the configuration sections to user, for specific handler.
 type MailOptions struct {
-	SMTP struct {
-		// Addr defines smtp host address
-		Addr string `yaml:"addr,omitempty"`
-
-		// Username defines user name to smtp host
-		Username string `yaml:"username,omitempty"`
-
-		// Password defines password of login user
-		Password string `yaml:"password,omitempty"`
-
-		// Insecure defines if smtp login skips the secure certification.
-		Insecure bool `yaml:"insecure,omitempty"`
-	} `yaml:"smtp,omitempty"`
+	SMTP SMTP `yaml:"smtp,omitempty"`
 
 	// From defines mail sending address
 	From string `yaml:"from,omitempty"`
 
 	// To defines mail receiving address
 	To []string `yaml:"to,omitempty"`
+}
+
+type SMTP struct {
+	// Addr defines smtp host address
+	Addr string `yaml:"addr,omitempty"`
+
+	// Username defines user name to smtp host
+	Username string `yaml:"username,omitempty"`
+
+	// Password defines password of login user
+	Password string `yaml:"password,omitempty"`
+
+	// Insecure defines if smtp login skips the secure certification.
+	Insecure bool `yaml:"insecure,omitempty"`
 }
 
 // FileChecker is a type of entry in the health section for checking files.
@@ -305,15 +329,17 @@ type Health struct {
 	TCPCheckers []TCPChecker `yaml:"tcp,omitempty"`
 	// StorageDriver configures a health check on the configured storage
 	// driver
-	StorageDriver struct {
-		// Enabled turns on the health check for the storage driver
-		Enabled bool `yaml:"enabled,omitempty"`
-		// Interval is the duration in between checks
-		Interval time.Duration `yaml:"interval,omitempty"`
-		// Threshold is the number of times a check must fail to trigger an
-		// unhealthy state
-		Threshold int `yaml:"threshold,omitempty"`
-	} `yaml:"storagedriver,omitempty"`
+	StorageDriver StorageDriver `yaml:"storagedriver,omitempty"`
+}
+
+type StorageDriver struct {
+	// Enabled turns on the health check for the storage driver
+	Enabled bool `yaml:"enabled,omitempty"`
+	// Interval is the duration in between checks
+	Interval time.Duration `yaml:"interval,omitempty"`
+	// Threshold is the number of times a check must fail to trigger an
+	// unhealthy state
+	Threshold int `yaml:"threshold,omitempty"`
 }
 
 type Platform struct {
