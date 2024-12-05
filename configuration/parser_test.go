@@ -13,10 +13,6 @@ type localConfiguration struct {
 	Notifications []Notif `yaml:"notifications,omitempty"`
 }
 
-type Log struct {
-	Formatter string `yaml:"formatter,omitempty"`
-}
-
 type Notif struct {
 	Name string `yaml:"name"`
 }
