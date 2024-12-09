@@ -59,7 +59,7 @@ const defaultCheckInterval = 10 * time.Second
 // on this object that will be accessible from all requests. Any writable
 // fields should be protected.
 type App struct {
-	context.Context
+	Context context.Context
 
 	Config *configuration.Configuration
 
@@ -92,6 +92,8 @@ type App struct {
 // requests. The app only implements ServeHTTP and can be wrapped in other
 // handlers accordingly.
 func NewApp(ctx context.Context, config *configuration.Configuration) *App {
+	logger := dcontext.GetLogger(ctx)
+
 	app := &App{
 		Config:  config,
 		Context: ctx,
@@ -100,7 +102,7 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 	}
 
 	// Register the handler dispatchers.
-	app.register(v2.RouteNameBase, func(ctx *Context, r *http.Request) http.Handler {
+	app.register(v2.RouteNameBase, func(ctx *Context, app *App, r *http.Request) http.Handler {
 		return http.HandlerFunc(apiBase)
 	})
 	app.register(v2.RouteNameManifest, manifestDispatcher)
@@ -120,7 +122,7 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 	}
 
 	var err error
-	app.driver, err = factory.Create(app, config.Storage.Type(), storageParams)
+	app.driver, err = factory.Create(ctx, config.Storage.Type(), storageParams)
 	if err != nil {
 		// TODO(stevvooe): Move the creation of a service into a protected
 		// method, where this is created lazily. Its status can be queried via
@@ -150,9 +152,9 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 		}
 	}
 
-	startUploadPurger(app, app.driver, dcontext.GetLogger(app), purgeConfig)
+	startUploadPurger(app.Context, app.driver, logger, purgeConfig)
 
-	app.driver, err = applyStorageMiddleware(app, app.driver, config.Middleware["storage"])
+	app.driver, err = applyStorageMiddleware(ctx, app.driver, config.Middleware["storage"])
 	if err != nil {
 		panic(err)
 	}
@@ -217,7 +219,7 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 		}
 	}
 	if redirectDisabled {
-		dcontext.GetLogger(app).Infof("backend redirection disabled")
+		logger.Infof("backend redirection disabled")
 	} else {
 		options = append(options, storage.EnableRedirect)
 	}
@@ -288,15 +290,15 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 				panic("redis configuration required to use for layerinfo cache")
 			}
 			if _, ok := cc["blobdescriptorsize"]; ok {
-				dcontext.GetLogger(app).Warnf("blobdescriptorsize parameter is not supported with redis cache")
+				logger.Warnf("blobdescriptorsize parameter is not supported with redis cache")
 			}
 			cacheProvider := rediscache.NewRedisBlobDescriptorCacheProvider(app.redis)
 			localOptions := append(options, storage.BlobDescriptorCacheProvider(cacheProvider))
-			app.registry, err = storage.NewRegistry(app, app.driver, localOptions...)
+			app.registry, err = storage.NewRegistry(ctx, app.driver, localOptions...)
 			if err != nil {
 				panic("could not create registry: " + err.Error())
 			}
-			dcontext.GetLogger(app).Infof("using redis blob descriptor cache")
+			logger.Infof("using redis blob descriptor cache")
 		case "inmemory":
 			blobDescriptorSize := memorycache.DefaultSize
 			configuredSize, ok := cc["blobdescriptorsize"]
@@ -310,14 +312,14 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 
 			cacheProvider := memorycache.NewInMemoryBlobDescriptorCacheProvider(blobDescriptorSize)
 			localOptions := append(options, storage.BlobDescriptorCacheProvider(cacheProvider))
-			app.registry, err = storage.NewRegistry(app, app.driver, localOptions...)
+			app.registry, err = storage.NewRegistry(ctx, app.driver, localOptions...)
 			if err != nil {
 				panic("could not create registry: " + err.Error())
 			}
-			dcontext.GetLogger(app).Infof("using inmemory blob descriptor cache")
+			logger.Infof("using inmemory blob descriptor cache")
 		default:
 			if v != "" {
-				dcontext.GetLogger(app).Warnf("unknown cache type %q, caching disabled", config.Storage["cache"])
+				logger.Warnf("unknown cache type %q, caching disabled", config.Storage["cache"])
 			}
 		}
 	}
@@ -330,7 +332,7 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 		}
 	}
 
-	app.registry, err = applyRegistryMiddleware(app, app.registry, app.driver, config.Middleware["registry"])
+	app.registry, err = applyRegistryMiddleware(ctx, app.registry, app.driver, config.Middleware["registry"])
 	if err != nil {
 		panic(err)
 	}
@@ -343,7 +345,7 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 			panic(fmt.Sprintf("unable to configure authorization (%s): %v", authType, err))
 		}
 		app.accessController = accessController
-		dcontext.GetLogger(app).Debugf("configured %q access controller", authType)
+		logger.Debugf("configured %q access controller", authType)
 	}
 
 	// configure as a pull through cache
@@ -353,12 +355,12 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 			panic(err.Error())
 		}
 		app.isCache = true
-		dcontext.GetLogger(app).Info("Registry configured as a proxy cache to ", config.Proxy.RemoteURL)
+		logger.Info("Registry configured as a proxy cache to ", config.Proxy.RemoteURL)
 	}
 	var ok bool
 	app.repoRemover, ok = app.registry.(distribution.RepositoryRemover)
 	if !ok {
-		dcontext.GetLogger(app).Warnf("Registry does not implement RepositoryRemover. Will not be able to delete repos and tags")
+		logger.Warnf("Registry does not implement RepositoryRemover. Will not be able to delete repos and tags")
 	}
 
 	return app
@@ -399,7 +401,7 @@ func (app *App) RegisterHealthChecks(healthRegistries ...*health.Registry) {
 
 		updater := health.NewThresholdStatusUpdater(app.Config.Health.StorageDriver.Threshold)
 		healthRegistry.Register("storagedriver_"+app.Config.Storage.Type(), updater)
-		go health.Poll(app, updater, storageDriverCheck, interval)
+		go health.Poll(app.Context, updater, storageDriverCheck, interval)
 	}
 
 	for _, fileChecker := range app.Config.Health.FileCheckers {
@@ -407,10 +409,10 @@ func (app *App) RegisterHealthChecks(healthRegistries ...*health.Registry) {
 		if interval == 0 {
 			interval = defaultCheckInterval
 		}
-		dcontext.GetLogger(app).Infof("configuring file health check path=%s, interval=%d", fileChecker.File, interval/time.Second)
+		dcontext.GetLogger(app.Context).Infof("configuring file health check path=%s, interval=%d", fileChecker.File, interval/time.Second)
 		u := health.NewStatusUpdater()
 		healthRegistry.Register(fileChecker.File, u)
-		go health.Poll(app, u, checks.FileChecker(fileChecker.File), interval)
+		go health.Poll(app.Context, u, checks.FileChecker(fileChecker.File), interval)
 	}
 
 	for _, httpChecker := range app.Config.Health.HTTPCheckers {
@@ -426,10 +428,10 @@ func (app *App) RegisterHealthChecks(healthRegistries ...*health.Registry) {
 
 		checker := checks.HTTPChecker(httpChecker.URI, statusCode, httpChecker.Timeout, httpChecker.Headers)
 
-		dcontext.GetLogger(app).Infof("configuring HTTP health check uri=%s, interval=%d, threshold=%d", httpChecker.URI, interval/time.Second, httpChecker.Threshold)
+		dcontext.GetLogger(app.Context).Infof("configuring HTTP health check uri=%s, interval=%d, threshold=%d", httpChecker.URI, interval/time.Second, httpChecker.Threshold)
 		updater := health.NewThresholdStatusUpdater(httpChecker.Threshold)
 		healthRegistry.Register(httpChecker.URI, updater)
-		go health.Poll(app, updater, checker, interval)
+		go health.Poll(app.Context, updater, checker, interval)
 	}
 
 	for _, tcpChecker := range app.Config.Health.TCPCheckers {
@@ -440,10 +442,10 @@ func (app *App) RegisterHealthChecks(healthRegistries ...*health.Registry) {
 
 		checker := checks.TCPChecker(tcpChecker.Addr, tcpChecker.Timeout)
 
-		dcontext.GetLogger(app).Infof("configuring TCP health check addr=%s, interval=%d, threshold=%d", tcpChecker.Addr, interval/time.Second, tcpChecker.Threshold)
+		dcontext.GetLogger(app.Context).Infof("configuring TCP health check addr=%s, interval=%d, threshold=%d", tcpChecker.Addr, interval/time.Second, tcpChecker.Threshold)
 		updater := health.NewThresholdStatusUpdater(tcpChecker.Threshold)
 		healthRegistry.Register(tcpChecker.Addr, updater)
-		go health.Poll(app, updater, checker, interval)
+		go health.Poll(app.Context, updater, checker, interval)
 	}
 }
 
@@ -489,11 +491,11 @@ func (app *App) configureEvents(configuration *configuration.Configuration) {
 	var sinks []events.Sink
 	for _, endpoint := range configuration.Notifications.Endpoints {
 		if endpoint.Disabled {
-			dcontext.GetLogger(app).Infof("endpoint %s disabled, skipping", endpoint.Name)
+			dcontext.GetLogger(app.Context).Infof("endpoint %s disabled, skipping", endpoint.Name)
 			continue
 		}
 
-		dcontext.GetLogger(app).Infof("configuring endpoint %v (%v), timeout=%s, headers=%v", endpoint.Name, endpoint.URL, endpoint.Timeout, endpoint.Headers)
+		dcontext.GetLogger(app.Context).Infof("configuring endpoint %v (%v), timeout=%s, headers=%v", endpoint.Name, endpoint.URL, endpoint.Timeout, endpoint.Headers)
 		endpoint := notifications.NewEndpoint(endpoint.Name, endpoint.URL, notifications.EndpointConfig{
 			Timeout:           endpoint.Timeout,
 			Threshold:         endpoint.Threshold,
@@ -526,13 +528,13 @@ func (app *App) configureEvents(configuration *configuration.Configuration) {
 
 	app.events.source = notifications.SourceRecord{
 		Addr:       hostname,
-		InstanceID: dcontext.GetStringValue(app, "instance.id"),
+		InstanceID: dcontext.GetStringValue(app.Context, "instance.id"),
 	}
 }
 
 func (app *App) configureRedis(cfg *configuration.Configuration) {
 	if len(cfg.Redis.Options.Addrs) == 0 {
-		dcontext.GetLogger(app).Infof("redis not configured")
+		dcontext.GetLogger(app.Context).Infof("redis not configured")
 		return
 	}
 
@@ -569,7 +571,7 @@ func (app *App) configureRedis(cfg *configuration.Configuration) {
 
 	// Enable metrics instrumentation.
 	if err := redisotel.InstrumentMetrics(app.redis); err != nil {
-		dcontext.GetLogger(app).Errorf("failed to instrument metrics on redis: %v", err)
+		dcontext.GetLogger(app.Context).Errorf("failed to instrument metrics on redis: %v", err)
 	}
 
 	// setup expvar
@@ -597,7 +599,7 @@ func (app *App) createPool(cfg redis.UniversalOptions) redis.UniversalClient {
 
 // configureLogHook prepares logging hook parameters.
 func (app *App) configureLogHook(configuration *configuration.Configuration) {
-	entry, ok := dcontext.GetLogger(app).(*logrus.Entry)
+	entry, ok := dcontext.GetLogger(app.Context).(*logrus.Entry)
 	if !ok {
 		// somehow, we are not using logrus
 		return
@@ -635,7 +637,7 @@ func (app *App) configureSecret(configuration *configuration.Configuration) {
 			panic(fmt.Sprintf("could not generate random bytes for HTTP secret: %v", err))
 		}
 		configuration.HTTP.Secret = string(secretBytes[:])
-		dcontext.GetLogger(app).Warn("No HTTP secret provided - generated random secret. This may cause problems with uploads if multiple registries are behind a load-balancer. To provide a shared secret, fill in http.secret in the configuration file or set the REGISTRY_HTTP_SECRET environment variable.")
+		dcontext.GetLogger(app.Context).Warn("No HTTP secret provided - generated random secret. This may cause problems with uploads if multiple registries are behind a load-balancer. To provide a shared secret, fill in http.secret in the configuration file or set the REGISTRY_HTTP_SECRET environment variable.")
 	}
 }
 
@@ -656,7 +658,7 @@ func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // for the route. The dispatcher will use this to dynamically create request
 // specific handlers for each endpoint without creating a new router for each
 // request.
-type dispatchFunc func(ctx *Context, r *http.Request) http.Handler
+type dispatchFunc func(ctx *Context, app *App, r *http.Request) http.Handler
 
 // TODO(stevvooe): dispatchers should probably have some validation error
 // chain with proper error reporting.
@@ -729,12 +731,12 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 			}
 
 			// assign and decorate the authorized repository with an event bridge.
-			context.Repository, context.RepositoryRemover = notifications.Listen(
+			context.Repository, _ = notifications.Listen(
 				repository,
-				context.App.repoRemover,
+				app.repoRemover,
 				app.eventBridge(context, r))
 
-			context.Repository, err = applyRepoMiddleware(app, context.Repository, app.Config.Middleware["repository"])
+			context.Repository, err = applyRepoMiddleware(app.Context, context.Repository, app.Config.Middleware["repository"])
 			if err != nil {
 				dcontext.GetLogger(context).Errorf("error initializing repository middleware: %v", err)
 				context.Errors = append(context.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
@@ -746,7 +748,7 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 			}
 		}
 
-		dispatch(context, r).ServeHTTP(w, r)
+		dispatch(context, app, r).ServeHTTP(w, r)
 	})
 }
 
@@ -800,7 +802,6 @@ func (app *App) context(w http.ResponseWriter, r *http.Request) *Context {
 		"vars.uuid"))
 
 	context := &Context{
-		App:     app,
 		Context: ctx,
 	}
 

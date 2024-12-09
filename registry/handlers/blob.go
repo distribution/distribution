@@ -11,7 +11,7 @@ import (
 )
 
 // blobDispatcher uses the request context to build a blobHandler.
-func blobDispatcher(ctx *Context, r *http.Request) http.Handler {
+func blobDispatcher(ctx *Context, app *App, r *http.Request) http.Handler {
 	dgst, err := getDigest(ctx)
 	if err != nil {
 
@@ -36,7 +36,7 @@ func blobDispatcher(ctx *Context, r *http.Request) http.Handler {
 		http.MethodHead: http.HandlerFunc(blobHandler.GetBlob),
 	}
 
-	if !ctx.readOnly {
+	if !app.readOnly {
 		mhandler[http.MethodDelete] = http.HandlerFunc(blobHandler.DeleteBlob)
 	}
 
