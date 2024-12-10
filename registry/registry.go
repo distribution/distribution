@@ -79,6 +79,14 @@ var tlsVersions = map[string]uint16{
 	"tls1.3": tls.VersionTLS13,
 }
 
+// tlsClientAuth maps user-specified values to TLS Client Authentication constants.
+var tlsClientAuth = map[string]tls.ClientAuthType{
+	"request-client-cert":            tls.RequestClientCert,
+	"require-any-client-cert":        tls.RequireAnyClientCert,
+	"verify-client-cert-if-given":    tls.VerifyClientCertIfGiven,
+	"require-and-verify-client-cert": tls.RequireAndVerifyClientCert,
+}
+
 // defaultLogFormatter is the default formatter to use for logs.
 const defaultLogFormatter = "text"
 
@@ -298,7 +306,18 @@ func (registry *Registry) ListenAndServe() error {
 				dcontext.GetLogger(registry.app).Debugf("CA Subject: %s", string(subj))
 			}
 
-			tlsConf.ClientAuth = tls.RequireAndVerifyClientCert
+			if config.HTTP.TLS.ClientAuth != "" {
+				tlsClientAuthMod, ok := tlsClientAuth[string(config.HTTP.TLS.ClientAuth)]
+
+				if !ok {
+					return fmt.Errorf("unknown client auth mod '%s' specified for http.tls.clientauth", config.HTTP.TLS.ClientAuth)
+				}
+
+				tlsConf.ClientAuth = tlsClientAuthMod
+			} else {
+				tlsConf.ClientAuth = tls.RequireAndVerifyClientCert
+			}
+
 			tlsConf.ClientCAs = pool
 		}
 
