@@ -177,8 +177,12 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named
 	if err != nil {
 		return nil, err
 	}
-
-	remoteRepo, err := client.NewRepository(name, pr.remoteURL.String(), tr)
+	remoteUrl := pr.remoteURL.String()
+	ctxRemoteUrl := fmt.Sprint(ctx.Value("ProxyRemoteURL"))
+	if ctxRemoteUrl != "" {
+		remoteUrl = ctxRemoteUrl
+	}
+	remoteRepo, err := client.NewRepository(name, remoteUrl, tr)
 	if err != nil {
 		return nil, err
 	}

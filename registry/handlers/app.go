@@ -670,83 +670,97 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 				w.Header().Add(headerName, value)
 			}
 		}
-
-		context := app.context(w, r)
+		contextLocal := app.context(w, r)
 
 		defer func() {
 			// Automated error response handling here. Handlers may return their
 			// own errors if they need different behavior (such as range errors
 			// for layer upload).
-			if context.Errors.Len() > 0 {
-				_ = errcode.ServeJSON(w, context.Errors)
-				app.logError(context, context.Errors)
-			} else if status, ok := context.Value("http.response.status").(int); ok && status >= 200 && status <= 399 {
-				dcontext.GetResponseLogger(context).Infof("response completed")
+			if contextLocal.Errors.Len() > 0 {
+				_ = errcode.ServeJSON(w, contextLocal.Errors)
+				app.logError(contextLocal, contextLocal.Errors)
+			} else if status, ok := contextLocal.Value("http.response.status").(int); ok && status >= 200 && status <= 399 {
+				dcontext.GetResponseLogger(contextLocal).Infof("response completed")
 			}
 		}()
 
-		if err := app.authorized(w, r, context); err != nil {
-			dcontext.GetLogger(context).Warnf("error authorizing context: %v", err)
+		if err := app.authorized(w, r, contextLocal); err != nil {
+			dcontext.GetLogger(contextLocal).Warnf("error authorizing context: %v", err)
 			return
 		}
 
 		// Add username to request logging
-		context.Context = dcontext.WithLogger(context.Context, dcontext.GetLogger(context.Context, userNameKey))
+		contextLocal.Context = dcontext.WithLogger(contextLocal.Context, dcontext.GetLogger(contextLocal.Context, userNameKey))
 
 		// sync up context on the request.
-		r = r.WithContext(context)
+		r = r.WithContext(contextLocal)
 
 		if app.nameRequired(r) {
-			nameRef, err := reference.WithName(getName(context))
+			diyRemoteUrlValue := ""
+			diyRemoteUrlHeader := http.CanonicalHeaderKey("X-Remote-Repo-Url")
+			diyRemoteUrlHeaders, ok := r.Header[diyRemoteUrlHeader]
+			cc := context.Background()
+			if ok {
+				diyRemoteUrlValue = diyRemoteUrlHeaders[0]
+				app.Config.Proxy.RemoteURL = diyRemoteUrlValue
+				cc = context.WithValue(contextLocal, "ProxyRemoteURL", app.Config.Proxy.RemoteURL)
+
+			}
+			nameRef, err := reference.WithName(getName(contextLocal))
 			if err != nil {
-				dcontext.GetLogger(context).Errorf("error parsing reference from context: %v", err)
-				context.Errors = append(context.Errors, distribution.ErrRepositoryNameInvalid{
-					Name:   getName(context),
+				dcontext.GetLogger(contextLocal).Errorf("error parsing reference from context: %v", err)
+				contextLocal.Errors = append(contextLocal.Errors, distribution.ErrRepositoryNameInvalid{
+					Name:   getName(contextLocal),
 					Reason: err,
 				})
-				if err := errcode.ServeJSON(w, context.Errors); err != nil {
-					dcontext.GetLogger(context).Errorf("error serving error json: %v (from %v)", err, context.Errors)
+				if err := errcode.ServeJSON(w, contextLocal.Errors); err != nil {
+					dcontext.GetLogger(contextLocal).Errorf("error serving error json: %v (from %v)", err, contextLocal.Errors)
 				}
 				return
 			}
-			repository, err := app.registry.Repository(context, nameRef)
+			var repository distribution.Repository
+			if diyRemoteUrlValue != "" {
+				repository, err = app.registry.Repository(cc, nameRef)
+			} else {
+				repository, err = app.registry.Repository(contextLocal, nameRef)
+			}
 			if err != nil {
-				dcontext.GetLogger(context).Errorf("error resolving repository: %v", err)
+				dcontext.GetLogger(contextLocal).Errorf("error resolving repository: %v", err)
 
 				switch err := err.(type) {
 				case distribution.ErrRepositoryUnknown:
-					context.Errors = append(context.Errors, errcode.ErrorCodeNameUnknown.WithDetail(err))
+					contextLocal.Errors = append(contextLocal.Errors, errcode.ErrorCodeNameUnknown.WithDetail(err))
 				case distribution.ErrRepositoryNameInvalid:
-					context.Errors = append(context.Errors, errcode.ErrorCodeNameInvalid.WithDetail(err))
+					contextLocal.Errors = append(contextLocal.Errors, errcode.ErrorCodeNameInvalid.WithDetail(err))
 				case errcode.Error:
-					context.Errors = append(context.Errors, err)
+					contextLocal.Errors = append(contextLocal.Errors, err)
 				}
 
-				if err := errcode.ServeJSON(w, context.Errors); err != nil {
-					dcontext.GetLogger(context).Errorf("error serving error json: %v (from %v)", err, context.Errors)
+				if err := errcode.ServeJSON(w, contextLocal.Errors); err != nil {
+					dcontext.GetLogger(contextLocal).Errorf("error serving error json: %v (from %v)", err, contextLocal.Errors)
 				}
 				return
 			}
 
 			// assign and decorate the authorized repository with an event bridge.
-			context.Repository, context.RepositoryRemover = notifications.Listen(
+			contextLocal.Repository, contextLocal.RepositoryRemover = notifications.Listen(
 				repository,
-				context.App.repoRemover,
-				app.eventBridge(context, r))
+				contextLocal.App.repoRemover,
+				app.eventBridge(contextLocal, r))
 
-			context.Repository, err = applyRepoMiddleware(app, context.Repository, app.Config.Middleware["repository"])
+			contextLocal.Repository, err = applyRepoMiddleware(app, contextLocal.Repository, app.Config.Middleware["repository"])
 			if err != nil {
-				dcontext.GetLogger(context).Errorf("error initializing repository middleware: %v", err)
-				context.Errors = append(context.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
+				dcontext.GetLogger(contextLocal).Errorf("error initializing repository middleware: %v", err)
+				contextLocal.Errors = append(contextLocal.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 
-				if err := errcode.ServeJSON(w, context.Errors); err != nil {
-					dcontext.GetLogger(context).Errorf("error serving error json: %v (from %v)", err, context.Errors)
+				if err := errcode.ServeJSON(w, contextLocal.Errors); err != nil {
+					dcontext.GetLogger(contextLocal).Errorf("error serving error json: %v (from %v)", err, contextLocal.Errors)
 				}
 				return
 			}
 		}
 
-		dispatch(context, r).ServeHTTP(w, r)
+		dispatch(contextLocal, r).ServeHTTP(w, r)
 	})
 }
 
