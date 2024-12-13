@@ -34,7 +34,7 @@ jobs:
       matrix:
         go:
           - 1.22.8
-          - 1.23.2
+          - 1.23.4
         target:
           - test-coverage
           - test-cloud-storage

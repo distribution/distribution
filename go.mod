@@ -2,7 +2,7 @@ module github.com/distribution/distribution/v3
 
 go 1.22.7
 
-toolchain go1.23.2
+toolchain go1.23.4
 
 require (
 	cloud.google.com/go/storage v1.45.0
@@ -40,6 +40,7 @@ require (
 	golang.org/x/crypto v0.31.0
 	golang.org/x/net v0.30.0
 	golang.org/x/oauth2 v0.23.0
+	golang.org/x/sync v0.10.0
 	google.golang.org/api v0.197.0
 	gopkg.in/yaml.v2 v2.4.0
 )
@@ -109,7 +110,6 @@ require (
 	go.opentelemetry.io/otel/sdk/log v0.8.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v1.32.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.3.1 // indirect
-	golang.org/x/sync v0.10.0
 	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	golang.org/x/time v0.6.0 // indirect
