@@ -904,6 +904,13 @@ func setFieldValue(field reflect.Value, value interface{}) error {
 	return nil
 }
 
+const (
+	ClientAuthRequestClientCert          = "request-client-cert"
+	ClientAuthRequireAnyClientCert       = "require-any-client-cert"
+	ClientAuthVerifyClientCertIfGiven    = "verify-client-cert-if-given"
+	ClientAuthRequireAndVerifyClientCert = "require-and-verify-client-cert"
+)
+
 type ClientAuth string
 
 // UnmarshalYAML implements the yaml.Umarshaler interface
@@ -916,10 +923,10 @@ func (clientAuth *ClientAuth) UnmarshalYAML(unmarshal func(interface{}) error) e
 	}
 
 	switch clientAuthString {
-	case "request-client-cert":
-	case "require-any-client-cert":
-	case "verify-client-cert-if-given":
-	case "require-and-verify-client-cert":
+	case ClientAuthRequestClientCert:
+	case ClientAuthRequireAnyClientCert:
+	case ClientAuthVerifyClientCertIfGiven:
+	case ClientAuthRequireAndVerifyClientCert:
 	default:
 		return fmt.Errorf("invalid ClientAuth %s Must be one of: request-client-cert, require-any-client-cert, verify-client-cert-if-given, require-and-verify-client-cert", clientAuthString)
 	}

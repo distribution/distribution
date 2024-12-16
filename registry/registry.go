@@ -81,10 +81,10 @@ var tlsVersions = map[string]uint16{
 
 // tlsClientAuth maps user-specified values to TLS Client Authentication constants.
 var tlsClientAuth = map[string]tls.ClientAuthType{
-	"request-client-cert":            tls.RequestClientCert,
-	"require-any-client-cert":        tls.RequireAnyClientCert,
-	"verify-client-cert-if-given":    tls.VerifyClientCertIfGiven,
-	"require-and-verify-client-cert": tls.RequireAndVerifyClientCert,
+	configuration.ClientAuthRequestClientCert:          tls.RequestClientCert,
+	configuration.ClientAuthRequireAnyClientCert:       tls.RequireAnyClientCert,
+	configuration.ClientAuthVerifyClientCertIfGiven:    tls.VerifyClientCertIfGiven,
+	configuration.ClientAuthRequireAndVerifyClientCert: tls.RequireAndVerifyClientCert,
 }
 
 // defaultLogFormatter is the default formatter to use for logs.
