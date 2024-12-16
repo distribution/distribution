@@ -928,7 +928,7 @@ func (clientAuth *ClientAuth) UnmarshalYAML(unmarshal func(interface{}) error) e
 	case ClientAuthVerifyClientCertIfGiven:
 	case ClientAuthRequireAndVerifyClientCert:
 	default:
-		return fmt.Errorf("invalid ClientAuth %s Must be one of: request-client-cert, require-any-client-cert, verify-client-cert-if-given, require-and-verify-client-cert", clientAuthString)
+		return fmt.Errorf("invalid ClientAuth %s Must be one of: %s, %s, %s, %s", clientAuthString, ClientAuthRequestClientCert, ClientAuthRequireAnyClientCert, ClientAuthVerifyClientCertIfGiven, ClientAuthRequireAndVerifyClientCert)
 	}
 
 	*clientAuth = ClientAuth(clientAuthString)
