@@ -121,7 +121,7 @@ var configStruct = Configuration{
 			} `yaml:"letsencrypt,omitempty"`
 		}{
 			ClientCAs:  []string{"/path/to/ca.pem"},
-			ClientAuth: "verify-client-cert-if-given",
+			ClientAuth: ClientAuthVerifyClientCertIfGiven,
 		},
 		Headers: http.Header{
 			"X-Content-Type-Options": []string{"nosniff"},
