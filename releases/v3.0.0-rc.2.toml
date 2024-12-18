@@ -1,0 +1,104 @@
+# commit to be tagged for new release
+commit = "HEAD"
+
+project_name = "registry"
+github_repo = "distribution/distribution"
+
+# previous release
+previous = "v3.0.0-rc.1"
+
+pre_release = true
+
+preface = """\
+registry 3.0.0-rc.2
+
+Welcome to the v3.0.0-rc.2 release of registry!
+*This is a pre-release of registry*
+
+This is the second stable release candidate of registry.
+It contains various updates and bug fixes with a few minor feature additions.
+
+See the changelog below for the full list of changes.
+
+### Notable Changes
+
+* Upgrade Go OpenTelemetry
+* Add support for mtls auth
+* Update Go runtime and Alpine image
+
+### Changes
+<details><summary>20 commits</summary>
+<p>
+
+  * [`1c628981`](https://github.com/distribution/distribution/commit/1c628981442961ee349bf7c9d1a576fab2bdbe67) feat(configuration): support mtls auth mod (#4537)
+  * [`41a906f0`](https://github.com/distribution/distribution/commit/41a906f0c670b5bdc7f5fc9d00f02219a5d4532b) fix(configuration): replace string literals with constants in tests
+  * [`96c9a85b`](https://github.com/distribution/distribution/commit/96c9a85b62ee6ffbe7df85b6fb95f054e6a6399b) fix(configuration): replace string literals with constants in error
+  * [`328f802b`](https://github.com/distribution/distribution/commit/328f802b8e87ae1f6bd8319be2f427e588043397) fix(configuration): replace string literals with constants
+  * [`916bdeae`](https://github.com/distribution/distribution/commit/916bdeae94f200d85603a9dcec2fa1bb22b755a8) feat(configuration): support mtls auth mod
+  * [`258144d7`](https://github.com/distribution/distribution/commit/258144d70f2718d4b4086e937621cff3e8cd18e4) Update squizzi maintainer email (#4530)
+  * [`183919ce`](https://github.com/distribution/distribution/commit/183919cee521026dd602f8305de56a5ba900ef2f) Update squizzi maintainer email
+  * [`3241bc21`](https://github.com/distribution/distribution/commit/3241bc213cdf67ba53dfc5e7033549ff6e0d37ab) chore: Bump alpine image version (#4532)
+  * [`96a3daaf`](https://github.com/distribution/distribution/commit/96a3daafe907ac077d695358359f76b743410eef) Move a direct dependency to direct deps required modules
+  * [`fb3ba302`](https://github.com/distribution/distribution/commit/fb3ba302d2081082cf040a2f15f68ea2e0f5297a) chore: Bump alpine and Go versions
+  * [`b2ae9e39`](https://github.com/distribution/distribution/commit/b2ae9e398c3871f9340cb825cf507535bc2f2fdc) update xx to v1.6.1 for compatibility with alpine 3.21 and file 5.46+ (#4527)
+  * [`179e902f`](https://github.com/distribution/distribution/commit/179e902fe94d8a16119dffce6044c11bb5dedf43) update xx to v1.6.1 for compatibility with alpine 3.21 and file 5.46+
+  * [`61ee6994`](https://github.com/distribution/distribution/commit/61ee69943b5197e158bfe5518dc7240bc5ce052f) build(deps): bump golang.org/x/crypto from 0.28.0 to 0.31.0 (#4531)
+  * [`6eba54be`](https://github.com/distribution/distribution/commit/6eba54be6041f3e760abc2eb99aa199b98c407b3) build(deps): bump golang.org/x/crypto from 0.28.0 to 0.31.0
+  * [`f2658eeb`](https://github.com/distribution/distribution/commit/f2658eeb0b21dbaf77b9117242d2200aaff90a0b) docs: Explain how to configure a list through env variables (#4522)
+  * [`1d104a93`](https://github.com/distribution/distribution/commit/1d104a93991d71a14e3342bae7481032ff222d61) [docs] Explain how to configure a list through env variables
+  * [`e3007cd2`](https://github.com/distribution/distribution/commit/e3007cd2bcd9526c1c7c92edad419bd0e67531d1) Upgrade `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` (#4507)
+  * [`abbe03ef`](https://github.com/distribution/distribution/commit/abbe03efefa2f49c1dd7f73370aaa16f423eb3f3) Upgrade go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp
+  * [`a44f1fb0`](https://github.com/distribution/distribution/commit/a44f1fb058533f3f840037ebf29c0fea377ebbc6) build(deps): bump codecov/codecov-action from 4 to 5 (#4508)
+  * [`4dfab838`](https://github.com/distribution/distribution/commit/4dfab838b75c9ac3a95de044e1783554b312b756) build(deps): bump codecov/codecov-action from 4 to 5
+</p>
+</details>
+
+### Contributors
+
+* Milos Gajdos
+* Wang Yan
+* vitshev
+* Kyle Squizzato
+* Sebastiaan van Stijn
+* Victor Barbu
+* krynju
+
+### Dependency Changes
+
+* **github.com/grpc-ecosystem/grpc-gateway/v2**                          v2.22.0 -> v2.23.0
+* **github.com/klauspost/compress**                                      v1.17.9 -> v1.17.11
+* **github.com/prometheus/client_golang**                                v1.20.1 -> v1.20.5
+* **github.com/prometheus/common**                                       v0.55.0 -> v0.60.1
+* **go.opentelemetry.io/contrib/bridges/prometheus**                     v0.54.0 -> v0.57.0
+* **go.opentelemetry.io/contrib/exporters/autoexport**                   v0.54.0 -> v0.57.0
+* **go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp**      v0.54.0 -> v0.57.0
+* **go.opentelemetry.io/otel**                                           v1.29.0 -> v1.32.0
+* **go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc**        v0.8.0 **_new_**
+* **go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp**        v0.5.0 -> v0.8.0
+* **go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc**  v1.29.0 -> v1.32.0
+* **go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp**  v1.29.0 -> v1.32.0
+* **go.opentelemetry.io/otel/exporters/otlp/otlptrace**                  v1.29.0 -> v1.32.0
+* **go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc**    v1.29.0 -> v1.32.0
+* **go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp**    v1.29.0 -> v1.32.0
+* **go.opentelemetry.io/otel/exporters/prometheus**                      v0.51.0 -> v0.54.0
+* **go.opentelemetry.io/otel/exporters/stdout/stdoutlog**                v0.5.0 -> v0.8.0
+* **go.opentelemetry.io/otel/exporters/stdout/stdoutmetric**             v1.29.0 -> v1.32.0
+* **go.opentelemetry.io/otel/exporters/stdout/stdouttrace**              v1.29.0 -> v1.32.0
+* **go.opentelemetry.io/otel/log**                                       v0.5.0 -> v0.8.0
+* **go.opentelemetry.io/otel/metric**                                    v1.29.0 -> v1.32.0
+* **go.opentelemetry.io/otel/sdk**                                       v1.29.0 -> v1.32.0
+* **go.opentelemetry.io/otel/sdk/log**                                   v0.5.0 -> v0.8.0
+* **go.opentelemetry.io/otel/sdk/metric**                                v1.29.0 -> v1.32.0
+* **go.opentelemetry.io/otel/trace**                                     v1.29.0 -> v1.32.0
+* **golang.org/x/crypto**                                                v0.27.0 -> v0.31.0
+* **golang.org/x/net**                                                   v0.29.0 -> v0.30.0
+* **golang.org/x/sync**                                                  v0.8.0 -> v0.10.0
+* **golang.org/x/sys**                                                   v0.25.0 -> v0.28.0
+* **golang.org/x/text**                                                  v0.18.0 -> v0.21.0
+* **google.golang.org/genproto/googleapis/api**                          8af14fe29dc1 -> dd2ea8efbc28
+* **google.golang.org/genproto/googleapis/rpc**                          8af14fe29dc1 -> dd2ea8efbc28
+* **google.golang.org/grpc**                                             v1.66.2 -> v1.68.0
+* **google.golang.org/protobuf**                                         v1.34.2 -> v1.35.1
+
+Previous release can be found at [v3.0.0-rc.1](https://github.com/distribution/distribution/releases/tag/v3.0.0-rc.1)
+"""
