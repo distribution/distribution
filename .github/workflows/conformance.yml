@@ -46,11 +46,11 @@ jobs:
           OCI_HIDE_SKIPPED_WORKFLOWS: 1
       -
         name: Move test results
-        run: mkdir -p .out/ && mv {report.html,junit.xml} .out/
+        run: mkdir -p out/ && mv {report.html,junit.xml} out/
       -
         name: Upload test results
         uses: actions/upload-artifact@v4.5.0
         with:
           name: oci-test-results-${{ github.sha }}
-          path: .out/
+          path: out/
           if-no-files-found: error
