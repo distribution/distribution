@@ -595,6 +595,9 @@ type Middleware struct {
 
 // Proxy configures the registry as a pull through cache
 type Proxy struct {
+	RemoteHostQueryKey  string                      `yaml:"remotehostquerykey"`
+	RemoteHostConfigMap map[string]RemoteHostConfig `yaml:"remotehostconfigmap"`
+
 	// RemoteURL is the URL of the remote registry
 	RemoteURL string `yaml:"remoteurl"`
 
@@ -612,6 +615,19 @@ type Proxy struct {
 	// if not set, defaults to 7 * 24 hours
 	// If set to zero, will never expire cache
 	TTL *time.Duration `yaml:"ttl,omitempty"`
+}
+
+type RemoteHostConfig struct {
+	RemoteURL string `yaml:"remoteurl"`
+	// Username of the hub user
+	Username string `yaml:"username"`
+
+	// Password of the hub user
+	Password string `yaml:"password"`
+
+	// Exec specifies a custom exec-based command to retrieve credentials.
+	// If set, Username and Password are ignored.
+	Exec *ExecConfig `yaml:"exec,omitempty"`
 }
 
 type ExecConfig struct {
