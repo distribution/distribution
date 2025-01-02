@@ -27,8 +27,9 @@ import (
 func Test(t *testing.T) { check.TestingT(t) }
 
 var (
-	s3DriverConstructor func(rootDirectory, storageClass string) (*Driver, error)
-	skipS3              func() string
+	s3DriverConstructor   func(rootDirectory, storageClass string) (*Driver, error)
+	skipS3                func() string
+	s3DriverV2Constructor func(rootDirectory, storageClass string) (*DriverV2, error)
 )
 
 func init() {
@@ -150,6 +151,99 @@ func init() {
 		return New(parameters)
 	}
 
+	s3DriverV2Constructor = func(rootDirectory, storageClass string) (*DriverV2, error) {
+		encryptBool := false
+		if encrypt != "" {
+			encryptBool, err = strconv.ParseBool(encrypt)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		secureBool := true
+		if secure != "" {
+			secureBool, err = strconv.ParseBool(secure)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		skipVerifyBool := false
+		if skipVerify != "" {
+			skipVerifyBool, err = strconv.ParseBool(skipVerify)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		v4Bool := true
+		if v4Auth != "" {
+			v4Bool, err = strconv.ParseBool(v4Auth)
+			if err != nil {
+				return nil, err
+			}
+		}
+		forcePathStyleBool := true
+		if forcePathStyle != "" {
+			forcePathStyleBool, err = strconv.ParseBool(forcePathStyle)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		useDualStackBool := false
+		if useDualStack != "" {
+			useDualStackBool, err = strconv.ParseBool(useDualStack)
+		}
+
+		multipartCombineSmallPart := true
+		if combineSmallPart != "" {
+			multipartCombineSmallPart, err = strconv.ParseBool(combineSmallPart)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		accelerateBool := true
+		if accelerate != "" {
+			accelerateBool, err = strconv.ParseBool(accelerate)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		parameters := DriverParameters{
+			nil,
+			accessKey,
+			secretKey,
+			bucket,
+			region,
+			regionEndpoint,
+			forcePathStyleBool,
+			encryptBool,
+			keyID,
+			secureBool,
+			skipVerifyBool,
+			v4Bool,
+			minChunkSize,
+			defaultMultipartCopyChunkSize,
+			defaultMultipartCopyMaxConcurrency,
+			defaultMultipartCopyThresholdSize,
+			multipartCombineSmallPart,
+			rootDirectory,
+			storageClass,
+			driverName + "-test",
+			objectACL,
+			sessionToken,
+			useDualStackBool,
+			accelerateBool,
+			false,
+			map[string]string{},
+		}
+
+		return NewDriverV2(parameters)
+	}
+
 	// Skip S3 storage driver tests if environment variable parameters are not provided
 	skipS3 = func() string {
 		if accessKey == "" || secretKey == "" || region == "" || bucket == "" || encrypt == "" {
@@ -159,7 +253,7 @@ func init() {
 	}
 
 	testsuites.RegisterSuite(func() (storagedriver.StorageDriver, error) {
-		return s3DriverConstructor(root, s3.StorageClassStandard)
+		return s3DriverV2Constructor(root, s3.StorageClassStandard)
 	}, skipS3)
 }
 
@@ -823,6 +917,63 @@ func TestListObjectsV2(t *testing.T) {
 	if err := d.Delete(ctx, prefix); err != nil {
 		t.Fatalf("unexpected error deleting: %v", err)
 	}
+}
+
+func TestBulkDelete(t *testing.T) {
+	if skipS3() != "" {
+		t.Skip(skipS3())
+	}
+
+	rootDir := t.TempDir()
+
+	drvr, err := s3DriverV2Constructor(rootDir, s3.StorageClassStandard)
+	if err != nil {
+		t.Fatalf("unexpected error creating driver with standard storage: %v", err)
+	}
+
+	files := []string{
+		"file1",
+		"file2",
+		"file3",
+		"file4",
+	}
+
+	for _, file := range files {
+		err := drvr.PutContent(context.Background(), file, []byte("content "+file))
+		if err != nil {
+			fmt.Printf("unable to init file %s: %s\n", file, err)
+			continue
+		}
+	}
+
+	testCases := []struct {
+		desc                     string
+		deleteFiles              []string
+		expectedDeletedFiles     []string
+		expectedDeleteErrorFiles []string
+	}{
+		{
+			desc:                     "test-case-1",
+			deleteFiles:              []string{"file1", "file2"},
+			expectedDeletedFiles:     []string{"file1", "file2"},
+			expectedDeleteErrorFiles: nil,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.desc, func(t *testing.T) {
+
+			res, err := drvr.BulkDelete(context.Background(), testCase.deleteFiles)
+			if err != nil {
+				t.Fatalf("unexpected error deleting: %v", err)
+			}
+
+			if !reflect.DeepEqual(res.Deleted, testCase.expectedDeletedFiles) {
+				t.Fatalf("unexpected bulk delete result")
+			}
+		})
+	}
+
 }
 
 func compareWalked(t *testing.T, expected, walked []string) {

@@ -212,3 +212,21 @@ func (e Errors) Error() string {
 		return msg
 	}
 }
+
+// BulkDeleteOutput represent output of BulkDelete
+type BulkDeleteOutput struct {
+	DeletedObjects []string
+	ErroredObjects []ErroredObject
+}
+
+// ErroredObject represent object which encountered error during deletion
+type ErroredObject struct {
+	ObjectKey    string
+	ErrorMessage string
+}
+
+// StorageDriverV2 extends StorageDriver
+type StorageDriverV2 interface {
+	StorageDriver
+	BulkDelete(ctx context.Context, path []string) (*BulkDeleteOutput, error)
+}

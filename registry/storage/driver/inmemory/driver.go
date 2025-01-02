@@ -236,6 +236,27 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 	}
 }
 
+// BulkDelete deletes all objects passed in paths.
+func (d *driver) BulkDelete(ctx context.Context, paths []string) (*storagedriver.BulkDeleteOutput, error) {
+	var bulkDeleteOutput storagedriver.BulkDeleteOutput
+	for _, path := range paths {
+		err := d.Delete(ctx, path)
+		if err != nil {
+			if _, ok := err.(storagedriver.PathNotFoundError); !ok {
+				bulkDeleteOutput.ErroredObjects = append(bulkDeleteOutput.ErroredObjects, storagedriver.ErroredObject{
+					ObjectKey:    path,
+					ErrorMessage: err.Error(),
+				})
+				continue
+			}
+		}
+
+		bulkDeleteOutput.DeletedObjects = append(bulkDeleteOutput.DeletedObjects, path)
+
+	}
+	return &bulkDeleteOutput, nil
+}
+
 // URLFor returns a URL which may be used to retrieve the content stored at the given path.
 // May return an UnsupportedMethodErr in certain StorageDriver implementations.
 func (d *driver) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
@@ -341,4 +362,25 @@ func (w *writer) flush() {
 	w.f.WriteAt(w.buffer, int64(len(w.f.data)))
 	w.buffer = []byte{}
 	w.buffSize = 0
+}
+
+// DriverV2 embeds driver
+type DriverV2 struct {
+	storagedriver.StorageDriverV2
+}
+
+// NewV2 constructs a new DriverV2.
+func NewV2() *DriverV2 {
+	d := &driver{
+		root: &dir{
+			common: common{
+				p:   "/",
+				mod: time.Now(),
+			},
+		},
+	}
+
+	return &DriverV2{
+		d,
+	}
 }
