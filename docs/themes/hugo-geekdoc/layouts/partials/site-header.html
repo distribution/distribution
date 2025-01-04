@@ -13,7 +13,7 @@
       </label>
     {{ end }}
     <div>
-      <a class="gdoc-brand gdoc-header__link" href="{{ .Root.Site.BaseURL }}">
+      <a class="gdoc-brand gdoc-header__link" href="{{ .Root.Site.Home.Permalink }}">
         <span class="flex align-center">
           <img
             class="gdoc-brand__img"
@@ -47,7 +47,7 @@
         </span>
 
         <span class="gdoc-menu-header__home">
-          <a href="{{ .Root.Site.BaseURL }}" class="gdoc-header__link">
+          <a href="{{ .Root.Site.Home.Permalink }}" class="gdoc-header__link">
             <svg class="gdoc-icon gdoc_home">
               <title>{{ i18n "button_homepage" }}</title>
               <use xlink:href="#gdoc_home"></use>

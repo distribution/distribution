@@ -11,6 +11,7 @@ import (
 	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
 	"github.com/opencontainers/go-digest"
 	"github.com/opencontainers/image-spec/specs-go"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 func TestVerifyManifestForeignLayer(t *testing.T) {
@@ -34,13 +35,13 @@ func TestVerifyManifestForeignLayer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	foreignLayer := distribution.Descriptor{
+	foreignLayer := v1.Descriptor{
 		Digest:    "sha256:463435349086340864309863409683460843608348608934092322395278926a",
 		Size:      6323,
 		MediaType: schema2.MediaTypeForeignLayer,
 	}
 
-	emptyLayer := distribution.Descriptor{
+	emptyLayer := v1.Descriptor{
 		Digest: "",
 	}
 
@@ -51,7 +52,7 @@ func TestVerifyManifestForeignLayer(t *testing.T) {
 	}
 
 	type testcase struct {
-		BaseLayer distribution.Descriptor
+		BaseLayer v1.Descriptor
 		URLs      []string
 		Err       error
 	}
@@ -129,7 +130,7 @@ func TestVerifyManifestForeignLayer(t *testing.T) {
 		m := template
 		l := c.BaseLayer
 		l.URLs = c.URLs
-		m.Layers = []distribution.Descriptor{l}
+		m.Layers = []v1.Descriptor{l}
 		dm, err := schema2.FromStruct(m)
 		if err != nil {
 			t.Error(err)
@@ -202,7 +203,7 @@ func TestVerifyManifestBlobLayerAndConfig(t *testing.T) {
 	}
 
 	type testcase struct {
-		Desc distribution.Descriptor
+		Desc v1.Descriptor
 		URLs []string
 		Err  error
 	}
@@ -210,25 +211,25 @@ func TestVerifyManifestBlobLayerAndConfig(t *testing.T) {
 	layercases := []testcase{
 		// empty media type
 		{
-			distribution.Descriptor{},
+			v1.Descriptor{},
 			[]string{"http://foo/bar"},
 			digest.ErrDigestInvalidFormat,
 		},
 		{
-			distribution.Descriptor{},
+			v1.Descriptor{},
 			nil,
 			digest.ErrDigestInvalidFormat,
 		},
 		// unknown media type, but blob is present
 		{
-			distribution.Descriptor{
+			v1.Descriptor{
 				Digest: layer.Digest,
 			},
 			nil,
 			nil,
 		},
 		{
-			distribution.Descriptor{
+			v1.Descriptor{
 				Digest: layer.Digest,
 			},
 			[]string{"http://foo/bar"},
@@ -236,21 +237,21 @@ func TestVerifyManifestBlobLayerAndConfig(t *testing.T) {
 		},
 		// gzip layer, but invalid digest
 		{
-			distribution.Descriptor{
+			v1.Descriptor{
 				MediaType: schema2.MediaTypeLayer,
 			},
 			nil,
 			digest.ErrDigestInvalidFormat,
 		},
 		{
-			distribution.Descriptor{
+			v1.Descriptor{
 				MediaType: schema2.MediaTypeLayer,
 			},
 			[]string{"https://foo/bar"},
 			digest.ErrDigestInvalidFormat,
 		},
 		{
-			distribution.Descriptor{
+			v1.Descriptor{
 				MediaType: schema2.MediaTypeLayer,
 				Digest:    digest.Digest("invalid"),
 			},
@@ -277,7 +278,7 @@ func TestVerifyManifestBlobLayerAndConfig(t *testing.T) {
 		l := c.Desc
 		l.URLs = c.URLs
 
-		m.Layers = []distribution.Descriptor{l}
+		m.Layers = []v1.Descriptor{l}
 
 		checkFn(m, c.Err)
 	}
@@ -291,14 +292,14 @@ func TestVerifyManifestBlobLayerAndConfig(t *testing.T) {
 		},
 		// invalid digest
 		{
-			distribution.Descriptor{
+			v1.Descriptor{
 				MediaType: schema2.MediaTypeImageConfig,
 			},
 			[]string{"https://foo/bar"},
 			digest.ErrDigestInvalidFormat,
 		},
 		{
-			distribution.Descriptor{
+			v1.Descriptor{
 				MediaType: schema2.MediaTypeImageConfig,
 				Digest:    digest.Digest("invalid"),
 			},

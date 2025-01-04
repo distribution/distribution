@@ -46,9 +46,16 @@
           {{ template "main" . }}
 
 
+          {{ $showPrevNext := (default true .Site.Params.geekdocNextPrev) }}
+          {{ if $showPrevNext }}
           <div class="gdoc-page__footer flex flex-wrap justify-between">
-            {{ partial "menu-nextprev" . }}
+            {{ if .Site.Params.geekdocMenuBundle }}
+              {{ partial "menu-bundle-np" . }}
+            {{ else }}
+              {{ partial "menu-filetree-np" . }}
+            {{ end }}
           </div>
+          {{ end }}
         </div>
       </main>
 

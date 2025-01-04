@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/distribution/distribution/v3"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 // BlobDescriptorCacheProvider provides repository scoped
@@ -18,7 +19,7 @@ type BlobDescriptorCacheProvider interface {
 
 // ValidateDescriptor provides a helper function to ensure that caches have
 // common criteria for admitting descriptors.
-func ValidateDescriptor(desc distribution.Descriptor) error {
+func ValidateDescriptor(desc v1.Descriptor) error {
 	if err := desc.Digest.Validate(); err != nil {
 		return err
 	}

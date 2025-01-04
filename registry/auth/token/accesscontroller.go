@@ -238,6 +238,11 @@ func checkOptions(options map[string]interface{}) (tokenAccessOptions, error) {
 	return opts, nil
 }
 
+var (
+	rootCertFetcher func(string) ([]*x509.Certificate, error) = getRootCerts
+	jwkFetcher      func(string) (*jose.JSONWebKeySet, error) = getJwks
+)
+
 func getRootCerts(path string) ([]*x509.Certificate, error) {
 	fp, err := os.Open(path)
 	if err != nil {
@@ -316,14 +321,14 @@ func newAccessController(options map[string]interface{}) (auth.AccessController,
 	)
 
 	if config.rootCertBundle != "" {
-		rootCerts, err = getRootCerts(config.rootCertBundle)
+		rootCerts, err = rootCertFetcher(config.rootCertBundle)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	if config.jwks != "" {
-		jwks, err = getJwks(config.jwks)
+		jwks, err = jwkFetcher(config.jwks)
 		if err != nil {
 			return nil, err
 		}
@@ -334,12 +339,15 @@ func newAccessController(options map[string]interface{}) (auth.AccessController,
 		return nil, errors.New("token auth requires at least one token signing key")
 	}
 
+	trustedKeys := make(map[string]crypto.PublicKey)
 	rootPool := x509.NewCertPool()
 	for _, rootCert := range rootCerts {
 		rootPool.AddCert(rootCert)
+		if key := GetRFC7638Thumbprint(rootCert.PublicKey); key != "" {
+			trustedKeys[key] = rootCert.PublicKey
+		}
 	}
 
-	trustedKeys := make(map[string]crypto.PublicKey)
 	if jwks != nil {
 		for _, key := range jwks.Keys {
 			trustedKeys[key.KeyID] = key.Public()

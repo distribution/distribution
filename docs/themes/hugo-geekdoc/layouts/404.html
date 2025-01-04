@@ -27,7 +27,7 @@
             <div class="gdoc-error__line gdoc-error__title">{{ i18n "error_message_title" }}</div>
             <div class="gdoc-error__line gdoc-error__code">{{ i18n "error_message_code" }}</div>
             <div class="gdoc-error__line gdoc-error__help">
-              {{ i18n "error_message_text" .Site.BaseURL | safeHTML }}
+              {{ i18n "error_message_text" .Site.Home.Permalink | safeHTML }}
             </div>
           </div>
         </div>

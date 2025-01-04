@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/distribution/distribution/v3"
 	"github.com/opencontainers/go-digest"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 func TestBuilder(t *testing.T) {
@@ -110,7 +110,7 @@ func TestBuilder(t *testing.T) {
 }`)
 	configDigest := digest.FromBytes(imgJSON)
 
-	descriptors := []distribution.Descriptor{
+	descriptors := []v1.Descriptor{
 		{
 			MediaType: MediaTypeLayer,
 			Digest:    digest.Digest("sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"),
@@ -128,7 +128,7 @@ func TestBuilder(t *testing.T) {
 		},
 	}
 
-	d := distribution.Descriptor{
+	d := v1.Descriptor{
 		Digest:    digest.FromBytes(imgJSON),
 		Size:      int64(len(imgJSON)),
 		MediaType: MediaTypeImageConfig,
@@ -165,7 +165,7 @@ func TestBuilder(t *testing.T) {
 	}
 
 	references := manifest.References()
-	expected := append([]distribution.Descriptor{manifest.Target()}, descriptors...)
+	expected := append([]v1.Descriptor{manifest.Target()}, descriptors...)
 	if !reflect.DeepEqual(references, expected) {
 		t.Fatal("References() does not match the descriptors added")
 	}

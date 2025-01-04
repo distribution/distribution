@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/opencontainers/go-digest"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/internal/dcontext"
@@ -40,24 +41,24 @@ func setResponseHeaders(h http.Header, length int64, mediaType string, digest di
 	h.Set("Etag", digest.String())
 }
 
-func (pbs *proxyBlobStore) copyContent(ctx context.Context, dgst digest.Digest, writer io.Writer, h http.Header) (distribution.Descriptor, error) {
+func (pbs *proxyBlobStore) copyContent(ctx context.Context, dgst digest.Digest, writer io.Writer, h http.Header) (v1.Descriptor, error) {
 	desc, err := pbs.remoteStore.Stat(ctx, dgst)
 	if err != nil {
-		return distribution.Descriptor{}, err
+		return v1.Descriptor{}, err
 	}
 
 	setResponseHeaders(h, desc.Size, desc.MediaType, dgst)
 
 	remoteReader, err := pbs.remoteStore.Open(ctx, dgst)
 	if err != nil {
-		return distribution.Descriptor{}, err
+		return v1.Descriptor{}, err
 	}
 
 	defer remoteReader.Close()
 
 	_, err = io.CopyN(writer, remoteReader, desc.Size)
 	if err != nil {
-		return distribution.Descriptor{}, err
+		return v1.Descriptor{}, err
 	}
 
 	proxyMetrics.BlobPull(uint64(desc.Size))
@@ -146,18 +147,18 @@ func (pbs *proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter,
 	return nil
 }
 
-func (pbs *proxyBlobStore) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
+func (pbs *proxyBlobStore) Stat(ctx context.Context, dgst digest.Digest) (v1.Descriptor, error) {
 	desc, err := pbs.localStore.Stat(ctx, dgst)
 	if err == nil {
 		return desc, err
 	}
 
 	if err != distribution.ErrBlobUnknown {
-		return distribution.Descriptor{}, err
+		return v1.Descriptor{}, err
 	}
 
 	if err := pbs.authChallenger.tryEstablishChallenges(ctx); err != nil {
-		return distribution.Descriptor{}, err
+		return v1.Descriptor{}, err
 	}
 
 	return pbs.remoteStore.Stat(ctx, dgst)
@@ -186,8 +187,8 @@ func (pbs *proxyBlobStore) Get(ctx context.Context, dgst digest.Digest) ([]byte,
 }
 
 // Unsupported functions
-func (pbs *proxyBlobStore) Put(ctx context.Context, mediaType string, p []byte) (distribution.Descriptor, error) {
-	return distribution.Descriptor{}, distribution.ErrUnsupported
+func (pbs *proxyBlobStore) Put(ctx context.Context, mediaType string, p []byte) (v1.Descriptor, error) {
+	return v1.Descriptor{}, distribution.ErrUnsupported
 }
 
 func (pbs *proxyBlobStore) Create(ctx context.Context, options ...distribution.BlobCreateOption) (distribution.BlobWriter, error) {
@@ -198,8 +199,8 @@ func (pbs *proxyBlobStore) Resume(ctx context.Context, id string) (distribution.
 	return nil, distribution.ErrUnsupported
 }
 
-func (pbs *proxyBlobStore) Mount(ctx context.Context, sourceRepo reference.Named, dgst digest.Digest) (distribution.Descriptor, error) {
-	return distribution.Descriptor{}, distribution.ErrUnsupported
+func (pbs *proxyBlobStore) Mount(ctx context.Context, sourceRepo reference.Named, dgst digest.Digest) (v1.Descriptor, error) {
+	return v1.Descriptor{}, distribution.ErrUnsupported
 }
 
 func (pbs *proxyBlobStore) Open(ctx context.Context, dgst digest.Digest) (io.ReadSeekCloser, error) {

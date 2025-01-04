@@ -33,6 +33,7 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/opencontainers/go-digest"
 	"github.com/opencontainers/image-spec/specs-go"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 var headerConfig = http.Header{
@@ -1579,12 +1580,12 @@ func testManifestAPISchema2(t *testing.T, env *testEnv, imageName reference.Name
 	manifest := &schema2.Manifest{
 		Versioned: specs.Versioned{SchemaVersion: 2},
 		MediaType: schema2.MediaTypeManifest,
-		Config: distribution.Descriptor{
+		Config: v1.Descriptor{
 			Digest:    "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
 			Size:      3253,
 			MediaType: schema2.MediaTypeImageConfig,
 		},
-		Layers: []distribution.Descriptor{
+		Layers: []v1.Descriptor{
 			{
 				Digest:    "sha256:463434349086340864309863409683460843608348608934092322395278926a",
 				Size:      6323,
@@ -1902,7 +1903,7 @@ func testManifestAPIManifestList(t *testing.T, env *testEnv, args manifestArgs) 
 		MediaType: manifestlist.MediaTypeManifestList,
 		Manifests: []manifestlist.ManifestDescriptor{
 			{
-				Descriptor: distribution.Descriptor{
+				Descriptor: v1.Descriptor{
 					Digest:    "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
 					Size:      3253,
 					MediaType: schema2.MediaTypeManifest,
@@ -2637,12 +2638,12 @@ func createRepository(env *testEnv, t *testing.T, imageName string, tag string) 
 	manifest := &schema2.Manifest{
 		Versioned: specs.Versioned{SchemaVersion: 2},
 		MediaType: schema2.MediaTypeManifest,
-		Config: distribution.Descriptor{
+		Config: v1.Descriptor{
 			Digest:    "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
 			Size:      3253,
 			MediaType: schema2.MediaTypeImageConfig,
 		},
-		Layers: []distribution.Descriptor{
+		Layers: []v1.Descriptor{
 			{
 				Digest:    "sha256:463434349086340864309863409683460843608348608934092322395278926a",
 				Size:      6323,
@@ -2732,12 +2733,12 @@ func TestRegistryAsCacheMutationAPIs(t *testing.T) {
 	manifest := &schema2.Manifest{
 		Versioned: specs.Versioned{SchemaVersion: 2},
 		MediaType: schema2.MediaTypeManifest,
-		Config: distribution.Descriptor{
+		Config: v1.Descriptor{
 			Digest:    "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
 			Size:      3253,
 			MediaType: schema2.MediaTypeImageConfig,
 		},
-		Layers: []distribution.Descriptor{
+		Layers: []v1.Descriptor{
 			{
 				Digest:    "sha256:463434349086340864309863409683460843608348608934092322395278926a",
 				Size:      6323,

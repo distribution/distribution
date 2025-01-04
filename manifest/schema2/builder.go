@@ -5,25 +5,26 @@ import (
 
 	"github.com/distribution/distribution/v3"
 	"github.com/opencontainers/image-spec/specs-go"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 // Builder is a type for constructing manifests.
 type Builder struct {
 	// configDescriptor is used to describe configuration
-	configDescriptor distribution.Descriptor
+	configDescriptor v1.Descriptor
 
 	// configJSON references
 	configJSON []byte
 
 	// dependencies is a list of descriptors that gets built by successive
 	// calls to AppendReference. In case of image configuration these are layers.
-	dependencies []distribution.Descriptor
+	dependencies []v1.Descriptor
 }
 
 // NewManifestBuilder is used to build new manifests for the current schema
 // version. It takes a BlobService so it can publish the configuration blob
 // as part of the Build process.
-func NewManifestBuilder(configDescriptor distribution.Descriptor, configJSON []byte) *Builder {
+func NewManifestBuilder(configDescriptor v1.Descriptor, configJSON []byte) *Builder {
 	mb := &Builder{
 		configDescriptor: configDescriptor,
 		configJSON:       make([]byte, len(configJSON)),
@@ -38,7 +39,7 @@ func (mb *Builder) Build(ctx context.Context) (distribution.Manifest, error) {
 	m := Manifest{
 		Versioned: specs.Versioned{SchemaVersion: defaultSchemaVersion},
 		MediaType: defaultMediaType,
-		Layers:    make([]distribution.Descriptor, len(mb.dependencies)),
+		Layers:    make([]v1.Descriptor, len(mb.dependencies)),
 	}
 	copy(m.Layers, mb.dependencies)
 
@@ -48,12 +49,12 @@ func (mb *Builder) Build(ctx context.Context) (distribution.Manifest, error) {
 }
 
 // AppendReference adds a reference to the current ManifestBuilder.
-func (mb *Builder) AppendReference(ref distribution.Descriptor) error {
+func (mb *Builder) AppendReference(ref v1.Descriptor) error {
 	mb.dependencies = append(mb.dependencies, ref)
 	return nil
 }
 
 // References returns the current references added to this builder.
-func (mb *Builder) References() []distribution.Descriptor {
+func (mb *Builder) References() []v1.Descriptor {
 	return mb.dependencies
 }

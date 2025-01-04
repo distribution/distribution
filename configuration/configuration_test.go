@@ -78,11 +78,12 @@ var configStruct = Configuration{
 		RelativeURLs bool          `yaml:"relativeurls,omitempty"`
 		DrainTimeout time.Duration `yaml:"draintimeout,omitempty"`
 		TLS          struct {
-			Certificate  string   `yaml:"certificate,omitempty"`
-			Key          string   `yaml:"key,omitempty"`
-			ClientCAs    []string `yaml:"clientcas,omitempty"`
-			MinimumTLS   string   `yaml:"minimumtls,omitempty"`
-			CipherSuites []string `yaml:"ciphersuites,omitempty"`
+			Certificate  string     `yaml:"certificate,omitempty"`
+			Key          string     `yaml:"key,omitempty"`
+			ClientCAs    []string   `yaml:"clientcas,omitempty"`
+			ClientAuth   ClientAuth `yaml:"clientauth,omitempty"`
+			MinimumTLS   string     `yaml:"minimumtls,omitempty"`
+			CipherSuites []string   `yaml:"ciphersuites,omitempty"`
 			LetsEncrypt  struct {
 				CacheFile    string   `yaml:"cachefile,omitempty"`
 				Email        string   `yaml:"email,omitempty"`
@@ -106,11 +107,12 @@ var configStruct = Configuration{
 		} `yaml:"h2c,omitempty"`
 	}{
 		TLS: struct {
-			Certificate  string   `yaml:"certificate,omitempty"`
-			Key          string   `yaml:"key,omitempty"`
-			ClientCAs    []string `yaml:"clientcas,omitempty"`
-			MinimumTLS   string   `yaml:"minimumtls,omitempty"`
-			CipherSuites []string `yaml:"ciphersuites,omitempty"`
+			Certificate  string     `yaml:"certificate,omitempty"`
+			Key          string     `yaml:"key,omitempty"`
+			ClientCAs    []string   `yaml:"clientcas,omitempty"`
+			ClientAuth   ClientAuth `yaml:"clientauth,omitempty"`
+			MinimumTLS   string     `yaml:"minimumtls,omitempty"`
+			CipherSuites []string   `yaml:"ciphersuites,omitempty"`
 			LetsEncrypt  struct {
 				CacheFile    string   `yaml:"cachefile,omitempty"`
 				Email        string   `yaml:"email,omitempty"`
@@ -118,7 +120,8 @@ var configStruct = Configuration{
 				DirectoryURL string   `yaml:"directoryurl,omitempty"`
 			} `yaml:"letsencrypt,omitempty"`
 		}{
-			ClientCAs: []string{"/path/to/ca.pem"},
+			ClientCAs:  []string{"/path/to/ca.pem"},
+			ClientAuth: ClientAuthVerifyClientCertIfGiven,
 		},
 		Headers: http.Header{
 			"X-Content-Type-Options": []string{"nosniff"},
@@ -202,6 +205,7 @@ http:
   tls:
     clientcas:
       - /path/to/ca.pem
+    clientauth: verify-client-cert-if-given
   headers:
     X-Content-Type-Options: [nosniff]
 redis:
@@ -297,6 +301,7 @@ func (suite *ConfigSuite) TestParseInmemory() {
 	suite.expectedConfig.Storage = Storage{"inmemory": Parameters{}}
 	suite.expectedConfig.Log.Fields = nil
 	suite.expectedConfig.HTTP.TLS.ClientCAs = nil
+	suite.expectedConfig.HTTP.TLS.ClientAuth = ""
 	suite.expectedConfig.Redis = Redis{}
 
 	config, err := Parse(bytes.NewReader([]byte(inmemoryConfigYamlV0_1)))
@@ -318,6 +323,7 @@ func (suite *ConfigSuite) TestParseIncomplete() {
 	suite.expectedConfig.Notifications = Notifications{}
 	suite.expectedConfig.HTTP.Headers = nil
 	suite.expectedConfig.HTTP.TLS.ClientCAs = nil
+	suite.expectedConfig.HTTP.TLS.ClientAuth = ""
 	suite.expectedConfig.Redis = Redis{}
 	suite.expectedConfig.Validation.Manifests.Indexes.Platforms = ""
 
@@ -590,6 +596,7 @@ func copyConfig(config Configuration) *Configuration {
 	}
 	configCopy.HTTP.TLS.ClientCAs = make([]string, 0, len(config.HTTP.TLS.ClientCAs))
 	configCopy.HTTP.TLS.ClientCAs = append(configCopy.HTTP.TLS.ClientCAs, config.HTTP.TLS.ClientCAs...)
+	configCopy.HTTP.TLS.ClientAuth = config.HTTP.TLS.ClientAuth
 
 	configCopy.Redis = config.Redis
 	configCopy.Redis.TLS.Certificate = config.Redis.TLS.Certificate

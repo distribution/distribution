@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/distribution/distribution/v3"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 type httpBlobUpload struct {
@@ -120,11 +121,11 @@ func (hbu *httpBlobUpload) StartedAt() time.Time {
 	return hbu.startedAt
 }
 
-func (hbu *httpBlobUpload) Commit(ctx context.Context, desc distribution.Descriptor) (distribution.Descriptor, error) {
+func (hbu *httpBlobUpload) Commit(ctx context.Context, desc v1.Descriptor) (v1.Descriptor, error) {
 	// TODO(dmcgowan): Check if already finished, if so just fetch
 	req, err := http.NewRequestWithContext(hbu.ctx, http.MethodPut, hbu.location, nil)
 	if err != nil {
-		return distribution.Descriptor{}, err
+		return v1.Descriptor{}, err
 	}
 
 	values := req.URL.Query()
@@ -133,12 +134,12 @@ func (hbu *httpBlobUpload) Commit(ctx context.Context, desc distribution.Descrip
 
 	resp, err := hbu.client.Do(req)
 	if err != nil {
-		return distribution.Descriptor{}, err
+		return v1.Descriptor{}, err
 	}
 	defer resp.Body.Close()
 
 	if err := hbu.handleErrorResponse(resp); err != nil {
-		return distribution.Descriptor{}, err
+		return v1.Descriptor{}, err
 	}
 
 	return hbu.statter.Stat(ctx, desc.Digest)

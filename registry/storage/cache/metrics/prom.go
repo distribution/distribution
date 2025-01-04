@@ -9,6 +9,7 @@ import (
 	"github.com/distribution/distribution/v3/registry/storage/cache"
 	"github.com/docker/go-metrics"
 	"github.com/opencontainers/go-digest"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 type prometheusCacheProvider struct {
@@ -24,14 +25,14 @@ func NewPrometheusCacheProvider(wrap cache.BlobDescriptorCacheProvider, name, he
 	}
 }
 
-func (p *prometheusCacheProvider) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
+func (p *prometheusCacheProvider) Stat(ctx context.Context, dgst digest.Digest) (v1.Descriptor, error) {
 	start := time.Now()
 	d, e := p.BlobDescriptorCacheProvider.Stat(ctx, dgst)
 	p.latencyTimer.WithValues("Stat").UpdateSince(start)
 	return d, e
 }
 
-func (p *prometheusCacheProvider) SetDescriptor(ctx context.Context, dgst digest.Digest, desc distribution.Descriptor) error {
+func (p *prometheusCacheProvider) SetDescriptor(ctx context.Context, dgst digest.Digest, desc v1.Descriptor) error {
 	start := time.Now()
 	e := p.BlobDescriptorCacheProvider.SetDescriptor(ctx, dgst, desc)
 	p.latencyTimer.WithValues("SetDescriptor").UpdateSince(start)
@@ -43,14 +44,14 @@ type prometheusRepoCacheProvider struct {
 	latencyTimer metrics.LabeledTimer
 }
 
-func (p *prometheusRepoCacheProvider) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
+func (p *prometheusRepoCacheProvider) Stat(ctx context.Context, dgst digest.Digest) (v1.Descriptor, error) {
 	start := time.Now()
 	d, e := p.BlobDescriptorService.Stat(ctx, dgst)
 	p.latencyTimer.WithValues("RepoStat").UpdateSince(start)
 	return d, e
 }
 
-func (p *prometheusRepoCacheProvider) SetDescriptor(ctx context.Context, dgst digest.Digest, desc distribution.Descriptor) error {
+func (p *prometheusRepoCacheProvider) SetDescriptor(ctx context.Context, dgst digest.Digest, desc v1.Descriptor) error {
 	start := time.Now()
 	e := p.BlobDescriptorService.SetDescriptor(ctx, dgst, desc)
 	p.latencyTimer.WithValues("RepoSetDescriptor").UpdateSince(start)

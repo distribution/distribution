@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/opencontainers/go-digest"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/distribution/distribution/v3"
@@ -18,7 +19,7 @@ var _ distribution.TagService = &tagStore{}
 // tagStore provides methods to manage manifest tags in a backend storage driver.
 // This implementation uses the same on-disk layout as the (now deleted) tag
 // store.  This provides backward compatibility with current registry deployments
-// which only makes use of the Digest field of the returned distribution.Descriptor
+// which only makes use of the Digest field of the returned v1.Descriptor
 // but does not enable full roundtripping of Descriptor objects
 type tagStore struct {
 	repository       *repository
@@ -60,7 +61,7 @@ func (ts *tagStore) All(ctx context.Context) ([]string, error) {
 
 // Tag tags the digest with the given tag, updating the store to point at
 // the current tag. The digest must point to a manifest.
-func (ts *tagStore) Tag(ctx context.Context, tag string, desc distribution.Descriptor) error {
+func (ts *tagStore) Tag(ctx context.Context, tag string, desc v1.Descriptor) error {
 	currentPath, err := pathFor(manifestTagCurrentPathSpec{
 		name: ts.repository.Named().Name(),
 		tag:  tag,
@@ -81,26 +82,26 @@ func (ts *tagStore) Tag(ctx context.Context, tag string, desc distribution.Descr
 }
 
 // resolve the current revision for name and tag.
-func (ts *tagStore) Get(ctx context.Context, tag string) (distribution.Descriptor, error) {
+func (ts *tagStore) Get(ctx context.Context, tag string) (v1.Descriptor, error) {
 	currentPath, err := pathFor(manifestTagCurrentPathSpec{
 		name: ts.repository.Named().Name(),
 		tag:  tag,
 	})
 	if err != nil {
-		return distribution.Descriptor{}, err
+		return v1.Descriptor{}, err
 	}
 
 	revision, err := ts.blobStore.readlink(ctx, currentPath)
 	if err != nil {
 		switch err.(type) {
 		case storagedriver.PathNotFoundError:
-			return distribution.Descriptor{}, distribution.ErrTagUnknown{Tag: tag}
+			return v1.Descriptor{}, distribution.ErrTagUnknown{Tag: tag}
 		}
 
-		return distribution.Descriptor{}, err
+		return v1.Descriptor{}, err
 	}
 
-	return distribution.Descriptor{Digest: revision}, nil
+	return v1.Descriptor{Digest: revision}, nil
 }
 
 // Untag removes the tag association
@@ -137,7 +138,7 @@ func (ts *tagStore) linkedBlobStore(ctx context.Context, tag string) *linkedBlob
 
 // Lookup recovers a list of tags which refer to this digest.  When a manifest is deleted by
 // digest, tag entries which point to it need to be recovered to avoid dangling tags.
-func (ts *tagStore) Lookup(ctx context.Context, desc distribution.Descriptor) ([]string, error) {
+func (ts *tagStore) Lookup(ctx context.Context, desc v1.Descriptor) ([]string, error) {
 	allTags, err := ts.All(ctx)
 	switch err.(type) {
 	case distribution.ErrRepositoryUnknown:

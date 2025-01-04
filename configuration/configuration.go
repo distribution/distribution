@@ -109,6 +109,10 @@ type Configuration struct {
 			// A file may contain multiple CA certificates encoded as PEM
 			ClientCAs []string `yaml:"clientcas,omitempty"`
 
+			// Client certificate authentication mode
+			// One of: request-client-cert, require-any-client-cert, verify-client-cert-if-given, require-and-verify-client-cert
+			ClientAuth ClientAuth `yaml:"clientauth,omitempty"`
+
 			// Specifies the lowest TLS version allowed
 			MinimumTLS string `yaml:"minimumtls,omitempty"`
 
@@ -600,10 +604,26 @@ type Proxy struct {
 	// Password of the hub user
 	Password string `yaml:"password"`
 
+	// Exec specifies a custom exec-based command to retrieve credentials.
+	// If set, Username and Password are ignored.
+	Exec *ExecConfig `yaml:"exec,omitempty"`
+
 	// TTL is the expiry time of the content and will be cleaned up when it expires
 	// if not set, defaults to 7 * 24 hours
 	// If set to zero, will never expire cache
 	TTL *time.Duration `yaml:"ttl,omitempty"`
+}
+
+type ExecConfig struct {
+	// Command is the command to execute.
+	Command string `yaml:"command"`
+
+	// Lifetime is the expiry period of the credentials. The credentials
+	// returned by the command is reused through the configured lifetime, then
+	// the command will be re-executed to retrieve new credentials.
+	// If set to zero, the command will be executed for every request.
+	// If not set, the command will only be executed once.
+	Lifetime *time.Duration `yaml:"lifetime,omitempty"`
 }
 
 type Validation struct {
@@ -881,5 +901,37 @@ func setFieldValue(field reflect.Value, value interface{}) error {
 	default:
 		return fmt.Errorf("unsupported field type: %v", field.Type())
 	}
+	return nil
+}
+
+const (
+	ClientAuthRequestClientCert          = "request-client-cert"
+	ClientAuthRequireAnyClientCert       = "require-any-client-cert"
+	ClientAuthVerifyClientCertIfGiven    = "verify-client-cert-if-given"
+	ClientAuthRequireAndVerifyClientCert = "require-and-verify-client-cert"
+)
+
+type ClientAuth string
+
+// UnmarshalYAML implements the yaml.Umarshaler interface
+// Unmarshals a string into a ClientAuth, validating that it represents a valid ClientAuth mod
+func (clientAuth *ClientAuth) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var clientAuthString string
+	err := unmarshal(&clientAuthString)
+	if err != nil {
+		return err
+	}
+
+	switch clientAuthString {
+	case ClientAuthRequestClientCert:
+	case ClientAuthRequireAnyClientCert:
+	case ClientAuthVerifyClientCertIfGiven:
+	case ClientAuthRequireAndVerifyClientCert:
+	default:
+		return fmt.Errorf("invalid ClientAuth %s Must be one of: %s, %s, %s, %s", clientAuthString, ClientAuthRequestClientCert, ClientAuthRequireAnyClientCert, ClientAuthVerifyClientCertIfGiven, ClientAuthRequireAndVerifyClientCert)
+	}
+
+	*clientAuth = ClientAuth(clientAuthString)
+
 	return nil
 }

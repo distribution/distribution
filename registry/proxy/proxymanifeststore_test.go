@@ -18,6 +18,7 @@ import (
 	"github.com/distribution/reference"
 	"github.com/opencontainers/go-digest"
 	"github.com/opencontainers/image-spec/specs-go"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 type statsManifest struct {
@@ -27,6 +28,7 @@ type statsManifest struct {
 
 type manifestStoreTestEnv struct {
 	manifestDigest digest.Digest // digest of the signed manifest in the local storage
+	manifestSize   uint64
 	manifests      proxyManifestStore
 }
 
@@ -106,7 +108,7 @@ func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestE
 		stats:     make(map[string]int),
 	}
 
-	manifestDigest, err := populateRepo(ctx, t, truthRepo, name, tag)
+	manifestDigest, manifestSize, err := populateRepo(ctx, t, truthRepo, name, tag)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,6 +135,7 @@ func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestE
 	s := scheduler.New(ctx, inmemory.New(), "/scheduler-state.json")
 	return &manifestStoreTestEnv{
 		manifestDigest: manifestDigest,
+		manifestSize:   manifestSize,
 		manifests: proxyManifestStore{
 			ctx:             ctx,
 			localManifests:  localManifests,
@@ -144,7 +147,7 @@ func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestE
 	}
 }
 
-func populateRepo(ctx context.Context, t *testing.T, repository distribution.Repository, name, tag string) (digest.Digest, error) {
+func populateRepo(ctx context.Context, t *testing.T, repository distribution.Repository, name, tag string) (manifestDigest digest.Digest, manifestSize uint64, _ error) {
 	config := []byte(`{"name": "foo"}`)
 	configDigest := digest.FromBytes(config)
 	configReader := bytes.NewReader(config)
@@ -156,7 +159,7 @@ func populateRepo(ctx context.Context, t *testing.T, repository distribution.Rep
 	m := schema2.Manifest{
 		Versioned: specs.Versioned{SchemaVersion: 2},
 		MediaType: schema2.MediaTypeManifest,
-		Config: distribution.Descriptor{
+		Config: v1.Descriptor{
 			MediaType: "foo/bar",
 			Digest:    configDigest,
 		},
@@ -181,12 +184,17 @@ func populateRepo(ctx context.Context, t *testing.T, repository distribution.Rep
 	if err != nil {
 		t.Fatal(err)
 	}
+	smJSON, err := sm.MarshalJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	dgst, err := ms.Put(ctx, sm)
 	if err != nil {
 		t.Fatalf("unexpected errors putting manifest: %v", err)
 	}
 
-	return dgst, nil
+	return dgst, uint64(len(smJSON)), nil
 }
 
 // TestProxyManifests contains basic acceptance tests
@@ -304,11 +312,11 @@ func TestProxyManifestsMetrics(t *testing.T) {
 	if proxyMetrics.manifestMetrics.Misses != 1 {
 		t.Errorf("Expected manifestMetrics.Misses %d but got %d", 1, proxyMetrics.manifestMetrics.Misses)
 	}
-	if proxyMetrics.manifestMetrics.BytesPulled != 257 {
-		t.Errorf("Expected manifestMetrics.BytesPulled %d but got %d", 257, proxyMetrics.manifestMetrics.BytesPulled)
+	if proxyMetrics.manifestMetrics.BytesPulled != env.manifestSize {
+		t.Errorf("Expected manifestMetrics.BytesPulled %d but got %d", env.manifestSize, proxyMetrics.manifestMetrics.BytesPulled)
 	}
-	if proxyMetrics.manifestMetrics.BytesPushed != 257 {
-		t.Errorf("Expected manifestMetrics.BytesPushed %d but got %d", 257, proxyMetrics.manifestMetrics.BytesPushed)
+	if proxyMetrics.manifestMetrics.BytesPushed != env.manifestSize {
+		t.Errorf("Expected manifestMetrics.BytesPushed %d but got %d", env.manifestSize, proxyMetrics.manifestMetrics.BytesPushed)
 	}
 
 	// Get proxied - manifest comes from local
@@ -326,10 +334,10 @@ func TestProxyManifestsMetrics(t *testing.T) {
 	if proxyMetrics.manifestMetrics.Misses != 1 {
 		t.Errorf("Expected manifestMetrics.Misses %d but got %d", 1, proxyMetrics.manifestMetrics.Misses)
 	}
-	if proxyMetrics.manifestMetrics.BytesPulled != 257 {
-		t.Errorf("Expected manifestMetrics.BytesPulled %d but got %d", 257, proxyMetrics.manifestMetrics.BytesPulled)
+	if proxyMetrics.manifestMetrics.BytesPulled != env.manifestSize {
+		t.Errorf("Expected manifestMetrics.BytesPulled %d but got %d", env.manifestSize, proxyMetrics.manifestMetrics.BytesPulled)
 	}
-	if proxyMetrics.manifestMetrics.BytesPushed != 514 {
-		t.Errorf("Expected manifestMetrics.BytesPushed %d but got %d", 514, proxyMetrics.manifestMetrics.BytesPushed)
+	if proxyMetrics.manifestMetrics.BytesPushed != (env.manifestSize * 2) {
+		t.Errorf("Expected manifestMetrics.BytesPushed %d but got %d", env.manifestSize*2, proxyMetrics.manifestMetrics.BytesPushed)
 	}
 }

@@ -52,8 +52,8 @@ const expectedOCIImageIndexSerialization = `{
    }
 }`
 
-func makeTestOCIImageIndex(t *testing.T, mediaType string) ([]distribution.Descriptor, *DeserializedImageIndex) {
-	manifestDescriptors := []distribution.Descriptor{
+func makeTestOCIImageIndex(t *testing.T, mediaType string) ([]v1.Descriptor, *DeserializedImageIndex) {
+	manifestDescriptors := []v1.Descriptor{
 		{
 			MediaType: "application/vnd.oci.image.manifest.v1+json",
 			Digest:    "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
@@ -207,11 +207,11 @@ func TestIndexMediaTypes(t *testing.T) {
 
 func TestValidateIndex(t *testing.T) {
 	manifest := schema2.Manifest{
-		Config: distribution.Descriptor{Size: 1},
-		Layers: []distribution.Descriptor{{Size: 2}},
+		Config: v1.Descriptor{Size: 1},
+		Layers: []v1.Descriptor{{Size: 2}},
 	}
 	index := ImageIndex{
-		Manifests: []distribution.Descriptor{{Size: 3}},
+		Manifests: []v1.Descriptor{{Size: 3}},
 	}
 	t.Run("valid", func(t *testing.T) {
 		b, err := json.Marshal(index)

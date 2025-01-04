@@ -13,6 +13,7 @@ import (
 	"github.com/distribution/distribution/v3/testutil"
 	"github.com/distribution/reference"
 	"github.com/opencontainers/go-digest"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 func TestLinkedBlobStoreEnumerator(t *testing.T) {
@@ -38,7 +39,7 @@ func TestLinkedBlobStoreEnumerator(t *testing.T) {
 			t.Fatalf("unexpected error copying to upload: %v", err)
 		}
 
-		if _, err := wr.Commit(fooEnv.ctx, distribution.Descriptor{Digest: dgst}); err != nil {
+		if _, err := wr.Commit(fooEnv.ctx, v1.Descriptor{Digest: dgst}); err != nil {
 			t.Fatalf("unexpected error finishing upload: %v", err)
 		}
 	}
@@ -95,7 +96,7 @@ func TestLinkedBlobStoreCreateWithMountFrom(t *testing.T) {
 			t.Fatalf("unexpected error copying to upload: %v", err)
 		}
 
-		if _, err := wr.Commit(fooEnv.ctx, distribution.Descriptor{Digest: dgst}); err != nil {
+		if _, err := wr.Commit(fooEnv.ctx, v1.Descriptor{Digest: dgst}); err != nil {
 			t.Fatalf("unexpected error finishing upload: %v", err)
 		}
 	}
@@ -154,7 +155,7 @@ func TestLinkedBlobStoreCreateWithMountFrom(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		prepolutatedDescriptor := distribution.Descriptor{
+		prepolutatedDescriptor := v1.Descriptor{
 			Digest:    dgst,
 			Size:      size,
 			MediaType: "application/octet-stream",
@@ -223,16 +224,16 @@ type mockBlobDescriptorService struct {
 
 var _ distribution.BlobDescriptorService = &mockBlobDescriptorService{}
 
-func (bs *mockBlobDescriptorService) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
+func (bs *mockBlobDescriptorService) Stat(ctx context.Context, dgst digest.Digest) (v1.Descriptor, error) {
 	statter, ok := bs.BlobDescriptorService.(*linkedBlobStatter)
 	if !ok {
-		return distribution.Descriptor{}, fmt.Errorf("unexpected blob descriptor service: %T", bs.BlobDescriptorService)
+		return v1.Descriptor{}, fmt.Errorf("unexpected blob descriptor service: %T", bs.BlobDescriptorService)
 	}
 
 	name := statter.repository.Named()
 	canonical, err := reference.WithDigest(name, dgst)
 	if err != nil {
-		return distribution.Descriptor{}, fmt.Errorf("failed to make canonical reference: %v", err)
+		return v1.Descriptor{}, fmt.Errorf("failed to make canonical reference: %v", err)
 	}
 
 	bs.stats[canonical.String()]++
@@ -243,7 +244,7 @@ func (bs *mockBlobDescriptorService) Stat(ctx context.Context, dgst digest.Diges
 
 // statCrossMountCreateOptions ensures the expected options type is passed, and optionally pre-fills the cross-mount stat info
 type statCrossMountCreateOption struct {
-	desc distribution.Descriptor
+	desc v1.Descriptor
 }
 
 var _ distribution.BlobCreateOption = statCrossMountCreateOption{}

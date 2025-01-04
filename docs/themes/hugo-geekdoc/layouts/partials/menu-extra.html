@@ -27,11 +27,11 @@
       {{ if eq $target "header" }}
         <span>
           <a
-            href="{{ if .external }}
+            href="{{ if .external -}}
               {{ .ref }}
-            {{ else }}
+            {{- else -}}
               {{ relref $current .ref }}
-            {{ end }}"
+            {{- end }}"
             class="gdoc-header__link"
           >
             <svg class="gdoc-icon {{ .icon }}">
