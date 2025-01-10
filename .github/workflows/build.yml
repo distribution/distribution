@@ -67,11 +67,6 @@ jobs:
       - test
     steps:
       -
-        name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      -
         name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
@@ -118,7 +113,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       -
         name: Build artifacts
-        uses: docker/bake-action@v5
+        uses: docker/bake-action@v6
         with:
           targets: artifact-all
       -
@@ -146,11 +141,11 @@ jobs:
           if-no-files-found: error
       -
         name: Build image
-        uses: docker/bake-action@v5
+        uses: docker/bake-action@v6
         with:
           files: |
             ./docker-bake.hcl
-            ${{ steps.meta.outputs.bake-file }}
+            cwd://${{ steps.meta.outputs.bake-file }}
           targets: image-all
           push: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/') }}
       -
