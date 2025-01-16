@@ -67,6 +67,11 @@ jobs:
       - test
     steps:
       -
+        name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      -
         name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
@@ -115,6 +120,7 @@ jobs:
         name: Build artifacts
         uses: docker/bake-action@v6
         with:
+          source: .
           targets: artifact-all
       -
         name: Rename provenance
@@ -143,9 +149,10 @@ jobs:
         name: Build image
         uses: docker/bake-action@v6
         with:
+          source: .
           files: |
             ./docker-bake.hcl
-            cwd://${{ steps.meta.outputs.bake-file }}
+            ${{ steps.meta.outputs.bake-file }}
           targets: image-all
           push: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/') }}
       -
