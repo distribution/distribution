@@ -78,6 +78,16 @@ func (ec ErrorCode) WithMessage(message string) Error {
 	}
 }
 
+// WithMessage creates a new Error struct based on the passed-in info and
+// overrides the Message property.
+func (ec ErrorCode) WithMessageStatusCode(message string, statusCode int) Error {
+	return Error{
+		Code:       ec,
+		Message:    message,
+		StatusCode: statusCode,
+	}
+}
+
 // WithDetail creates a new Error struct based on the passed-in info and
 // set the Detail property appropriately
 func (ec ErrorCode) WithDetail(detail interface{}) Error {
@@ -97,10 +107,10 @@ func (ec ErrorCode) WithArgs(args ...interface{}) Error {
 
 // Error provides a wrapper around ErrorCode with extra Details provided.
 type Error struct {
-	Code    ErrorCode   `json:"code"`
-	Message string      `json:"message"`
-	Detail  interface{} `json:"detail,omitempty"`
-
+	Code       ErrorCode   `json:"code"`
+	Message    string      `json:"message"`
+	Detail     interface{} `json:"detail,omitempty"`
+	StatusCode int         `json:"statusCode"`
 	// TODO(duglin): See if we need an "args" property so we can do the
 	// variable substitution right before showing the message to the user
 }
@@ -121,9 +131,10 @@ func (e Error) Error() string {
 // some Detail info added
 func (e Error) WithDetail(detail interface{}) Error {
 	return Error{
-		Code:    e.Code,
-		Message: e.Message,
-		Detail:  detail,
+		Code:       e.Code,
+		StatusCode: e.StatusCode,
+		Message:    e.Message,
+		Detail:     detail,
 	}
 }
 
