@@ -19,7 +19,7 @@ If you have an air-gapped datacenter, see
 Use a command like the following to start the registry container:
 
 ```console
-$ docker run -d -p 5000:5000 --restart=always --name registry registry:2
+$ docker run -d -p 5000:5000 --restart=always --name registry registry:3
 ```
 
 The registry is now ready to use.
@@ -108,7 +108,7 @@ $ docker run -d \
   -p 5000:5000 \
   --restart=always \
   --name registry \
-  registry:2
+  registry:3
 ```
 
 ### Customize the published port
@@ -124,7 +124,7 @@ registry listens on port `5000` by default.
 $ docker run -d \
   -p 5001:5000 \
   --name registry-test \
-  registry:2
+  registry:3
 ```
 
 If you want to change the port the registry listens on within the container, you
@@ -136,7 +136,7 @@ $ docker run -d \
   -e REGISTRY_HTTP_ADDR=0.0.0.0:5001 \
   -p 5001:5001 \
   --name registry-test \
-  registry:2
+  registry:3
 ```
 
 
@@ -158,7 +158,7 @@ $ docker run -d \
   --restart=always \
   --name registry \
   -v /mnt/registry:/var/lib/registry \
-  registry:2
+  registry:3
 ```
 
 ### Customize the storage back-end
@@ -220,7 +220,7 @@ If you have been issued an _intermediate_ certificate instead, see
      -e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/domain.crt \
      -e REGISTRY_HTTP_TLS_KEY=/certs/domain.key \
      -p 443:443 \
-     registry:2
+     registry:3
    ```
 
 4. Docker clients can now pull from and push to your registry using its
@@ -325,7 +325,7 @@ $ docker service create \
   -e REGISTRY_HTTP_TLS_KEY=/run/secrets/domain.key \
   --publish published=443,target=443 \
   --replicas 1 \
-  registry:2
+  registry:3
 ```
 
 You can access the service on port 443 of any swarm node. Docker sends the
@@ -442,7 +442,7 @@ using htpasswd, all authentication attempts will fail.
      -v "$(pwd)"/certs:/certs \
      -e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/domain.crt \
      -e REGISTRY_HTTP_TLS_KEY=/certs/domain.key \
-     registry:2
+     registry:3
      ```
 
 4. Try to pull an image from the registry, or push an image to the registry.
@@ -489,7 +489,7 @@ invocation. Use the following example `docker-compose.yml` as a template.
 ```yaml
 registry:
   restart: always
-  image: registry:2
+  image: registry:3
   ports:
     - 5000:5000
   environment:
