@@ -36,11 +36,23 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 		return fmt.Errorf("unable to convert Namespace to RepositoryEnumerator")
 	}
 
+	// enumerate blobs
+	emit("enumerating blobs in registry")
+	blobService := registry.Blobs()
+	blobSet := make(map[digest.Digest]struct{})
+	err := blobService.Enumerate(ctx, func(dgst digest.Digest) error {
+		blobSet[dgst] = struct{}{}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("error enumerating blobs: %v", err)
+	}
+
 	// mark
 	markSet := make(map[digest.Digest]struct{})
 	deleteLayerSet := make(map[string][]digest.Digest)
 	manifestArr := make([]ManifestDel, 0)
-	err := repositoryEnumerator.Enumerate(ctx, func(repoName string) error {
+	err = repositoryEnumerator.Enumerate(ctx, func(repoName string) error {
 		emit(repoName)
 
 		var err error
@@ -144,17 +156,12 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 			}
 		}
 	}
-	blobService := registry.Blobs()
 	deleteSet := make(map[digest.Digest]struct{})
-	err = blobService.Enumerate(ctx, func(dgst digest.Digest) error {
+	for dgst := range blobSet {
 		// check if digest is in markSet. If not, delete it!
 		if _, ok := markSet[dgst]; !ok {
 			deleteSet[dgst] = struct{}{}
 		}
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("error enumerating blobs: %v", err)
 	}
 	emit("\n%d blobs marked, %d blobs and %d manifests eligible for deletion", len(markSet), len(deleteSet), len(manifestArr))
 	for dgst := range deleteSet {
