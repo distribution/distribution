@@ -190,30 +190,36 @@ func (hrs *httpReadSeeker) reader() (io.Reader, error) {
 	if resp.StatusCode >= 200 && resp.StatusCode <= 399 {
 		if hrs.readerOffset > 0 {
 			if resp.StatusCode != http.StatusPartialContent {
+				resp.Close()
 				return nil, ErrWrongCodeForByteRange
 			}
 
 			contentRange := resp.Header.Get("Content-Range")
 			if contentRange == "" {
+				resp.Close()
 				return nil, errors.New("no Content-Range header found in HTTP 206 response")
 			}
 
 			submatches := contentRangeRegexp.FindStringSubmatch(contentRange)
 			if len(submatches) < 4 {
+				resp.Close()
 				return nil, fmt.Errorf("could not parse Content-Range header: %s", contentRange)
 			}
 
 			startByte, err := strconv.ParseUint(submatches[1], 10, 64)
 			if err != nil {
+				resp.Close()
 				return nil, fmt.Errorf("could not parse start of range in Content-Range header: %s", contentRange)
 			}
 
 			if startByte != uint64(hrs.readerOffset) {
+				resp.Close()
 				return nil, fmt.Errorf("received Content-Range starting at offset %d instead of requested %d", startByte, hrs.readerOffset)
 			}
 
 			endByte, err := strconv.ParseUint(submatches[2], 10, 64)
 			if err != nil {
+				resp.Close()
 				return nil, fmt.Errorf("could not parse end of range in Content-Range header: %s", contentRange)
 			}
 
