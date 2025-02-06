@@ -218,12 +218,12 @@ func verifyJWK(header jose.Header, verifyOpts VerifyOptions) (crypto.PublicKey, 
 	// Check to see if the key includes a certificate chain.
 	if len(jwk.Certificates) == 0 {
 		// The JWK should be one of the trusted root keys.
-		trustedKey, trusted := verifyOpts.TrustedKeys[jwk.KeyID]
+		key, trusted := verifyOpts.TrustedKeys[jwk.KeyID]
 		if !trusted {
 			return nil, errors.New("untrusted JWK with no certificate chain")
 		}
 		// The JWK is one of the trusted keys.
-		return trustedKey, nil
+		return key, nil
 	}
 
 	opts := x509.VerifyOptions{
