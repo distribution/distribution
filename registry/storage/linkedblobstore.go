@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"path"
+	"reflect"
 	"time"
 
 	"github.com/distribution/distribution/v3"
@@ -331,6 +332,12 @@ func (lbs *linkedBlobStore) linkBlob(ctx context.Context, canonical v1.Descripto
 	// since we don't care about the aliases. They are generally unused except
 	// for tarsum but those versions don't care about mediatype.
 
+	if reflect.ValueOf(lbs.linkPath).Pointer() == reflect.ValueOf(blobLinkPath).Pointer() {
+		fmt.Println("b.linkPath is blobLinkPath")
+
+		return nil
+	}
+
 	// Don't make duplicate links.
 	seenDigests := make(map[digest.Digest]struct{}, len(dgsts))
 
@@ -367,6 +374,27 @@ type linkedBlobStatter struct {
 var _ distribution.BlobDescriptorService = &linkedBlobStatter{}
 
 func (lbs *linkedBlobStatter) Stat(ctx context.Context, dgst digest.Digest) (v1.Descriptor, error) {
+	if reflect.ValueOf(lbs.linkPath).Pointer() == reflect.ValueOf(blobLinkPath).Pointer() {
+		currentBlobPath, err := pathFor(blobDataPathSpec{digest: dgst})
+
+		if err != nil {
+			return v1.Descriptor{}, err
+		}
+
+		_, err = lbs.driver.Stat(ctx, currentBlobPath)
+
+		if err != nil {
+			switch err := err.(type) {
+			case driver.PathNotFoundError:
+				return v1.Descriptor{}, distribution.ErrBlobUnknown
+			default:
+				return v1.Descriptor{}, err
+			}
+		}
+
+		return lbs.blobStore.statter.Stat(ctx, dgst)
+	}
+
 	blobLinkPath, err := lbs.linkPath(lbs.repository.Named().Name(), dgst)
 	if err != nil {
 		return v1.Descriptor{}, err
@@ -394,6 +422,10 @@ func (lbs *linkedBlobStatter) Stat(ctx context.Context, dgst digest.Digest) (v1.
 }
 
 func (lbs *linkedBlobStatter) Clear(ctx context.Context, dgst digest.Digest) (err error) {
+	if reflect.ValueOf(lbs.linkPath).Pointer() == reflect.ValueOf(blobLinkPath).Pointer() {
+		return nil
+	}
+
 	blobLinkPath, err := lbs.linkPath(lbs.repository.Named().Name(), dgst)
 	if err != nil {
 		return err
@@ -415,4 +447,9 @@ func blobLinkPath(name string, dgst digest.Digest) (string, error) {
 // manifestRevisionLinkPath provides the path to the manifest revision link.
 func manifestRevisionLinkPath(name string, dgst digest.Digest) (string, error) {
 	return pathFor(manifestRevisionLinkPathSpec{name: name, revision: dgst})
+}
+
+// blobPath provides the path to the real blob
+func blobPath(name string, dgst digest.Digest) (string, error) {
+	return pathFor(blobPathSpec{digest: dgst})
 }
