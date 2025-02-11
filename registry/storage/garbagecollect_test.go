@@ -923,3 +923,64 @@ func TestTaggedManifestlistWithDeletedReference(t *testing.T) {
 		t.Fatalf("Garbage collection affected storage: %d != %d", len(after), 0)
 	}
 }
+
+func TestGetUsedBlobsReference(t *testing.T) {
+	inmemoryDriver := inmemory.New()
+
+	registry := createRegistry(t, inmemoryDriver)
+	repo := makeRepository(t, registry, "foo/untaggedlist/deleteref")
+
+	_ = uploadRandomSchema2Image(t, repo)
+	_ = uploadRandomSchema2Image(t, repo)
+	_ = uploadRandomSchema2Image(t, repo)
+	uploadRandomSchema2Image(t, repo)
+
+	// Run GC
+	blobs, err := GetUsedBlobs(dcontext.Background(), registry)
+
+	if err != nil {
+		t.Fatalf("Failed get used blobs: %v", err)
+	}
+
+	after := allBlobs(t, registry)
+
+	if len(blobs) != len(after) {
+		t.Fatalf("Garbage collection affected storage: %d != %d", len(after), 0)
+	}
+}
+
+func TestGetUsedBlobsReferenceWithoutDeleted(t *testing.T) {
+	ctx := dcontext.Background()
+	inmemoryDriver := inmemory.New()
+
+	registry := createRegistry(t, inmemoryDriver)
+	repo := makeRepository(t, registry, "foo/untaggedlist/deleteref")
+	manifestService, err := repo.Manifests(ctx)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	image1 := uploadRandomSchema2Image(t, repo)
+	_ = uploadRandomSchema2Image(t, repo)
+	_ = uploadRandomSchema2Image(t, repo)
+	_ = uploadRandomSchema2Image(t, repo)
+
+	err = manifestService.Delete(ctx, image1.manifestDigest)
+
+	if err != nil {
+		t.Fatalf("Failed to delete image: %v", err)
+	}
+
+	// Run GC
+	blobs, err := GetUsedBlobs(dcontext.Background(), registry)
+
+	if err != nil {
+		t.Fatalf("Failed get used blobs: %v", err)
+	}
+
+	after := allBlobs(t, registry)
+
+	if len(blobs) != len(after) {
+		t.Fatalf("Garbage collection affected storage: %d != %d", len(after), 0)
+	}
+}

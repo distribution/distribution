@@ -2,7 +2,6 @@ package storage
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/distribution/distribution/v3"
@@ -29,6 +28,11 @@ type ManifestDel struct {
 	Tags   []string
 }
 
+type UsedBlob struct {
+	Digest digest.Digest
+	Repo   string
+}
+
 // MarkAndSweep performs a mark and sweep of registry data
 func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, registry distribution.Namespace, opts GCOpts) error {
 	repositoryEnumerator, ok := registry.(distribution.RepositoryEnumerator)
@@ -38,7 +42,7 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 
 	// mark
 	markSet := make(map[digest.Digest]struct{})
-	deleteLayerSet := make(map[string][]digest.Digest)
+	//deleteLayerSet := make(map[string][]digest.Digest)
 	manifestArr := make([]ManifestDel, 0)
 	err := repositoryEnumerator.Enumerate(ctx, func(repoName string) error {
 		emit(repoName)
@@ -63,6 +67,7 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 			return fmt.Errorf("unable to convert ManifestService into ManifestEnumerator")
 		}
 
+		// Читаем все ревизии
 		err = manifestEnumerator.Enumerate(ctx, func(dgst digest.Digest) error {
 			if opts.RemoveUntagged {
 				// fetch all tags where this manifest is the latest one
@@ -110,24 +115,27 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 				return err
 			}
 		}
-		blobService := repository.Blobs(ctx)
-		layerEnumerator, ok := blobService.(distribution.ManifestEnumerator)
-		if !ok {
-			return errors.New("unable to convert BlobService into ManifestEnumerator")
-		}
+		// не перебираем слои
+		// если слоя нет в списке значит он принаджелит антегнутому манифесту
+		//blobService := repository.Blobs(ctx)
+		//layerEnumerator, ok := blobService.(distribution.ManifestEnumerator)
+		//if !ok {
+		//	return errors.New("unable to convert BlobService into ManifestEnumerator")
+		//}
 
-		var deleteLayers []digest.Digest
-		err = layerEnumerator.Enumerate(ctx, func(dgst digest.Digest) error {
-			if _, ok := markSet[dgst]; !ok {
-				deleteLayers = append(deleteLayers, dgst)
-			}
-			return nil
-		})
-		if len(deleteLayers) > 0 {
-			deleteLayerSet[repoName] = deleteLayers
-		}
+		//var deleteLayers []digest.Digest
+		//err = layerEnumerator.Enumerate(ctx, func(dgst digest.Digest) error {
+		//	if _, ok := markSet[dgst]; !ok {
+		//		deleteLayers = append(deleteLayers, dgst)
+		//	}
+		//	return nil
+		//})
+		//if len(deleteLayers) > 0 {
+		//	deleteLayerSet[repoName] = deleteLayers
+		//}
 		return err
 	})
+
 	if err != nil {
 		return fmt.Errorf("failed to mark: %v", err)
 	}
@@ -168,18 +176,18 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 		}
 	}
 
-	for repo, dgsts := range deleteLayerSet {
-		for _, dgst := range dgsts {
-			emit("%s: layer link eligible for deletion: %s", repo, dgst)
-			if opts.DryRun {
-				continue
-			}
-			err = vacuum.RemoveLayer(repo, dgst)
-			if err != nil {
-				return fmt.Errorf("failed to delete layer link %s of repo %s: %v", dgst, repo, err)
-			}
-		}
-	}
+	//for repo, dgsts := range deleteLayerSet {
+	//	for _, dgst := range dgsts {
+	//		emit("%s: layer link eligible for deletion: %s", repo, dgst)
+	//		if opts.DryRun {
+	//			continue
+	//		}
+	//		err = vacuum.RemoveLayer(repo, dgst)
+	//		if err != nil {
+	//			return fmt.Errorf("failed to delete layer link %s of repo %s: %v", dgst, repo, err)
+	//		}
+	//	}
+	//}
 
 	return err
 }
@@ -219,4 +227,106 @@ func markManifestReferences(dgst digest.Digest, manifestService distribution.Man
 		}
 	}
 	return nil
+}
+
+// GetUsedBlobs возвращает список blobs, которые используются в хранилище
+func GetUsedBlobs(ctx context.Context, registry distribution.Namespace) (map[UsedBlob]struct{}, []ManifestDel, error) {
+	repositoryEnumerator, ok := registry.(distribution.RepositoryEnumerator)
+	if !ok {
+		return nil, nil, fmt.Errorf("unable to convert Namespace to RepositoryEnumerator")
+	}
+
+	// markSet содержит все используемые blobs
+	markSet := make(map[UsedBlob]struct{})
+	manifestArr := make([]ManifestDel, 0)
+
+	err := repositoryEnumerator.Enumerate(ctx, func(repoName string) error {
+		named, err := reference.WithName(repoName)
+		if err != nil {
+			return fmt.Errorf("failed to parse repo name %s: %v", repoName, err)
+		}
+
+		repository, err := registry.Repository(ctx, named)
+		if err != nil {
+			return fmt.Errorf("failed to construct repository: %v", err)
+		}
+
+		manifestService, err := repository.Manifests(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to construct manifest service: %v", err)
+		}
+
+		manifestEnumerator, ok := manifestService.(distribution.ManifestEnumerator)
+		if !ok {
+			return fmt.Errorf("unable to convert ManifestService into ManifestEnumerator")
+		}
+
+		err = manifestEnumerator.Enumerate(ctx, func(dgst digest.Digest) error {
+			fmt.Printf("%s: marking blobs for %s\n", repoName, dgst)
+
+			tags, err := repository.Tags(ctx).Lookup(ctx, v1.Descriptor{Digest: dgst})
+
+			if err != nil {
+				return fmt.Errorf("failed to retrieve tags for digest %v: %v", dgst, err)
+			}
+
+			fmt.Printf("%s: marking blobs for %s tags %s\n", repoName, dgst, tags)
+
+			if len(tags) == 0 {
+				// fetch all tags from repository
+				// all of these tags could contain manifest in history
+				// which means that we need check (and delete) those references when deleting manifest
+				allTags, err := repository.Tags(ctx).All(ctx)
+				if err != nil {
+					if _, ok := err.(distribution.ErrRepositoryUnknown); ok {
+						emit("manifest tags path of repository %s does not exist", repoName)
+						return nil
+					}
+					return fmt.Errorf("failed to retrieve tags %v", err)
+				}
+				manifestArr = append(manifestArr, ManifestDel{Name: repoName, Digest: dgst, Tags: allTags})
+
+				return nil
+			}
+
+			markSet[UsedBlob{
+				Digest: dgst,
+				Repo:   repoName,
+			}] = struct{}{}
+
+			return markManifestReferences(dgst, manifestService, ctx, func(d digest.Digest) bool {
+				_, marked := markSet[UsedBlob{
+					Digest: d,
+					Repo:   repoName,
+				}]
+				if !marked {
+					markSet[UsedBlob{
+						Digest: dgst,
+						Repo:   repoName,
+					}] = struct{}{}
+				}
+				return marked
+			})
+		})
+
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	manifestBlobs := make(map[digest.Digest]struct{})
+
+	for obj := range markSet {
+		manifestBlobs[obj.Digest] = struct{}{}
+	}
+
+	manifestArr = unmarkReferencedManifest(manifestArr, manifestBlobs)
+
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to mark used blobs: %v", err)
+	}
+
+	return markSet, manifestArr, nil
 }
