@@ -1,0 +1,63 @@
+# commit to be tagged for new release
+commit = "HEAD"
+
+project_name = "registry"
+github_repo = "distribution/distribution"
+
+# previous release
+previous = "v3.0.0-rc.2"
+
+pre_release = true
+
+preface = """\
+registry 3.0.0-rc.3
+
+Welcome to the v3.0.0-rc.3 release of registry!
+*This is a pre-release!*
+
+This is the third stable release candidate of registry which fixes
+
+Please try out the release binaries and report any issues at
+https://github.com/distribution/distribution/issues.
+
+See the changelog below for the full list of changes.
+
+### Notable Changes
+
+* Fixes CVE-2025-24976
+
+### Contributors
+
+* Milos Gajdos
+* CrazyMax
+* Wang Yan
+
+### Changes
+<details><summary>17 commits</summary>
+<p>
+  * [`5ea9aa02`](https://github.com/distribution/distribution/commit/5ea9aa028db65ca5665f6af2c20ecf9dc34e5fcd) Merge commit from fork
+  * [`6ed60b0f`](https://github.com/distribution/distribution/commit/6ed60b0f4892685fc9bc5924ff2e2788d7dbbab7) Apply suggestions from code review
+  * [`53c38264`](https://github.com/distribution/distribution/commit/53c382641c9223aaa2b79793b05d444bebff0587) Remove named returns and fix linting woes
+  * [`f4a500ca`](https://github.com/distribution/distribution/commit/f4a500caf68169dccb0b54cb90523e68ee1ac2be) Fix registry token authentication bug
+  * [`939a525d`](https://github.com/distribution/distribution/commit/939a525dd5293903d82f329dc3c33c0228793c3d) Bump Go version (#4566)
+  * [`7098b3f4`](https://github.com/distribution/distribution/commit/7098b3f42c4f8907dcc6e63ea209572c0f9dd210) Bump Go version
+  * [`7271d882`](https://github.com/distribution/distribution/commit/7271d882c06246d7f91802b95f5708035aa83908) ci: fix bake build (#4555)
+  * [`4c5e3945`](https://github.com/distribution/distribution/commit/4c5e3945612b26927cfd8d500da128fb602522a4) ci: fix bake build
+  * [`3270367d`](https://github.com/distribution/distribution/commit/3270367d89f572883be9a3ac2c28dd4222df5bf7) (security): Bump golang.org/x/net module (#4542)
+  * [`38fd91a4`](https://github.com/distribution/distribution/commit/38fd91a49e13811735941ecb9f3cd3b657f6e463) (security): Bump golang.org/x/net module
+  * [`17550ead`](https://github.com/distribution/distribution/commit/17550ead969a32874a8f656d2b91e7b424c31cc2) build(deps): bump actions/upload-artifact from 4.5.0 to 4.6.0 (#4553)
+  * [`825eeb03`](https://github.com/distribution/distribution/commit/825eeb039d80de6289b97820a90b658af2312c18) build(deps): bump actions/upload-artifact from 4.5.0 to 4.6.0
+  * [`9dff0cbf`](https://github.com/distribution/distribution/commit/9dff0cbf9fa59afe07c02ba53405bbcf0ce40d8a) ci: update bake-action to v6 (#4554)
+  * [`808f0b89`](https://github.com/distribution/distribution/commit/808f0b8961e899901218c9b2bcf7a0d01e2def8f) ci: update bake-action to v6
+  * [`43291261`](https://github.com/distribution/distribution/commit/43291261fab610a7347215310dc4370e5e9a6c25) build(deps): bump actions/upload-artifact from 4.3.6 to 4.5.0 (#4538)
+  * [`f1e33060`](https://github.com/distribution/distribution/commit/f1e33060cbcccc8aa38730bf0786bdd935f2056f) Fix conformance upload issue:
+  * [`d85819c0`](https://github.com/distribution/distribution/commit/d85819c08e852dfcde5cb15834d7b79eca89428e) build(deps): bump actions/upload-artifact from 4.3.6 to 4.5.0
+</p>
+</details>
+
+### Dependency Changes
+
+* **golang.org/x/net**  v0.30.0 -> v0.33.0
+
+Previous release can be found at [v3.0.0-rc.2](https://github.com/distribution/distribution/releases/tag/v3.0.0-rc.2)
+"""
