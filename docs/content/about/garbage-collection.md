@@ -90,7 +90,7 @@ This type of garbage collection is known as stop-the-world garbage collection.
 
 Garbage collection can be run as follows
 
-`bin/registry garbage-collect [--dry-run] /path/to/config.yml`
+`bin/registry garbage-collect [--dry-run] [--delete-untagged] [--quiet] /path/to/config.yml`
 
 The garbage-collect command accepts a `--dry-run` parameter, which prints the progress
 of the mark and sweep phases without removing any data. Running with a log level of `info`
@@ -122,3 +122,8 @@ blob eligible for deletion: sha256:87192bdbe00f8f2a62527f36bb4c7c7f4eaf9307e4b87
 blob eligible for deletion: sha256:b549a9959a664038fc35c155a95742cf12297672ca0ae35735ec027d55bf4e97
 blob eligible for deletion: sha256:f251d679a7c61455f06d793e43c06786d7766c88b8c24edf242b2c08e3c3f599
 ```
+
+The `--delete-untagged` option can be used to delete manifests that are not currently referenced by a tag.
+
+The `--quiet` option suppresses any output from being printed.
+
