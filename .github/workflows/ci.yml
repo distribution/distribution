@@ -5,7 +5,6 @@ on:
   pull_request:
 
 jobs:
-
   build:
     runs-on: ubuntu-latest
     env:
@@ -19,7 +18,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
       with:
-        path: src/github.com/docker/distribution
+        path: src/github.com/goharbor/distribution
         fetch-depth: 50
 
     - name: Set up Go
@@ -34,7 +33,7 @@ jobs:
           cd /tmp && go install github.com/vbatts/git-validation@latest
 
     - name: Build
-      working-directory: ./src/github.com/docker/distribution
+      working-directory: ./src/github.com/goharbor/distribution
       run: |
         DCO_VERBOSITY=-q script/validate/dco
         GO111MODULE=on script/setup/install-dev-tools
@@ -47,4 +46,4 @@ jobs:
 
     - uses: codecov/codecov-action@v1
       with:
-        directory: ./src/github.com/docker/distribution
+        directory: ./src/github.com/goharbor/distribution

@@ -9,7 +9,7 @@ on:
   pull_request:
 
 env:
-  DOCKERHUB_SLUG: distribution/distribution
+  DOCKERHUB_SLUG: goharbor/distribution
 
 jobs:
   build:
