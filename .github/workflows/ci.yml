@@ -39,7 +39,7 @@ jobs:
         script/validate/vendor
         go build .
         #make check
-        make build
+        #make build
         make binaries
         if [ "$GOOS" = "linux" ]; then make coverage ; fi
 
