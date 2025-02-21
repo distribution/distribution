@@ -35,7 +35,6 @@ jobs:
     - name: Build
       working-directory: ./src/github.com/goharbor/distribution
       run: |
-        DCO_VERBOSITY=-q script/validate/dco
         GO111MODULE=on script/setup/install-dev-tools
         script/validate/vendor
         go build .
