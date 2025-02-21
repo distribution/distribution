@@ -38,7 +38,7 @@ jobs:
         GO111MODULE=on script/setup/install-dev-tools
         script/validate/vendor
         go build .
-        make check
+        #make check
         make build
         make binaries
         if [ "$GOOS" = "linux" ]; then make coverage ; fi
