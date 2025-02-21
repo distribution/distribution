@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/distribution/reference"
-	dcontext "github.com/docker/distribution/context"
-	"github.com/docker/distribution/registry/storage/driver"
+	dcontext "github.com/goharbor/distribution/context"
+	"github.com/goharbor/distribution/registry/storage/driver"
 )
 
 // onTTLExpiryFunc is called when a repository's TTL expires

@@ -10,14 +10,14 @@ project with a new API design, focused around security and performance.
 <img src="https://www.docker.com/sites/default/files/oyster-registry-3.png" width=200px/>
 
 [![Circle CI](https://circleci.com/gh/docker/distribution/tree/master.svg?style=svg)](https://circleci.com/gh/docker/distribution/tree/master)
-[![GoDoc](https://godoc.org/github.com/docker/distribution?status.svg)](https://godoc.org/github.com/docker/distribution)
+[![GoDoc](https://godoc.org/github.com/goharbor/distribution?status.svg)](https://godoc.org/github.com/goharbor/distribution)
 
 This repository contains the following components:
 
 |**Component**       |Description                                                                                                                                                                                         |
 |--------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **registry**       | An implementation of the [Docker Registry HTTP API V2](docs/spec/api.md) for use with docker 1.6+.                                                                                                  |
-| **libraries**      | A rich set of libraries for interacting with distribution components. Please see [godoc](https://godoc.org/github.com/docker/distribution) for details. **Note**: These libraries are **unstable**. |
+| **libraries**      | A rich set of libraries for interacting with distribution components. Please see [godoc](https://godoc.org/github.com/goharbor/distribution) for details. **Note**: These libraries are **unstable**. |
 | **specifications** | _Distribution_ related specifications are available in [docs/spec](docs/spec)                                                                                                                        |
 | **documentation**  | Docker's full documentation set is available at [docs.docker.com](https://docs.docker.com). This repository [contains the subset](docs/) related just to the registry.                                                                                                                                          |
 
@@ -103,7 +103,7 @@ avenues are available for support:
 	Issue Tracker
 	</th>
 	<td>
-	github.com/docker/distribution/issues
+	github.com/goharbor/distribution/issues
 	</td>
 </tr>
 <tr>

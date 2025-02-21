@@ -12,13 +12,12 @@ import (
 	"time"
 
 	"github.com/distribution/reference"
-	"github.com/docker/distribution"
-	"github.com/docker/distribution/registry/proxy/scheduler"
-	"github.com/docker/distribution/registry/storage"
-	"github.com/docker/distribution/registry/storage/cache/memory"
-	"github.com/docker/distribution/registry/storage/driver/filesystem"
-	"github.com/docker/distribution/registry/storage/driver/inmemory"
-	"github.com/opencontainers/go-digest"
+	"github.com/goharbor/distribution"
+	"github.com/goharbor/distribution/registry/proxy/scheduler"
+	"github.com/goharbor/distribution/registry/storage"
+	"github.com/goharbor/distribution/registry/storage/cache/memory"
+	"github.com/goharbor/distribution/registry/storage/driver/filesystem"
+	"github.com/goharbor/distribution/registry/storage/driver/inmemory"
 )
 
 var sbsMu sync.Mutex

@@ -8,15 +8,15 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/docker/distribution/configuration"
-	"github.com/docker/distribution/context"
-	"github.com/docker/distribution/registry/api/errcode"
-	v2 "github.com/docker/distribution/registry/api/v2"
-	"github.com/docker/distribution/registry/auth"
-	_ "github.com/docker/distribution/registry/auth/silly"
-	"github.com/docker/distribution/registry/storage"
-	memorycache "github.com/docker/distribution/registry/storage/cache/memory"
-	"github.com/docker/distribution/registry/storage/driver/testdriver"
+	"github.com/goharbor/distribution/configuration"
+	"github.com/goharbor/distribution/context"
+	"github.com/goharbor/distribution/registry/api/errcode"
+	v2 "github.com/goharbor/distribution/registry/api/v2"
+	"github.com/goharbor/distribution/registry/auth"
+	_ "github.com/goharbor/distribution/registry/auth/silly"
+	"github.com/goharbor/distribution/registry/storage"
+	memorycache "github.com/goharbor/distribution/registry/storage/cache/memory"
+	"github.com/goharbor/distribution/registry/storage/driver/testdriver"
 )
 
 // TestAppDispatcher builds an application with a test dispatcher and ensures

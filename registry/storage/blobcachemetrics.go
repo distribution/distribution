@@ -5,8 +5,8 @@ import (
 	"expvar"
 	"sync/atomic"
 
-	dcontext "github.com/docker/distribution/context"
-	"github.com/docker/distribution/registry/storage/cache"
+	dcontext "github.com/goharbor/distribution/context"
+	"github.com/goharbor/distribution/registry/storage/cache"
 )
 
 type blobStatCollector struct {

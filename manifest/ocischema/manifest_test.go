@@ -6,9 +6,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/docker/distribution"
-	"github.com/docker/distribution/manifest"
-	"github.com/docker/distribution/manifest/manifestlist"
+	"github.com/goharbor/distribution"
+	"github.com/goharbor/distribution/manifest"
+	"github.com/goharbor/distribution/manifest/manifestlist"
 
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )

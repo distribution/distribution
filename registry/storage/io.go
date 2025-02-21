@@ -6,7 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 
-	"github.com/docker/distribution/registry/storage/driver"
+	"github.com/goharbor/distribution/registry/storage/driver"
 )
 
 const (

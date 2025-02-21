@@ -24,8 +24,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/distribution/configuration"
-	_ "github.com/docker/distribution/registry/storage/driver/inmemory"
+	"github.com/goharbor/distribution/configuration"
+	_ "github.com/goharbor/distribution/registry/storage/driver/inmemory"
 )
 
 // Tests to ensure nextProtos returns the correct protocols when:

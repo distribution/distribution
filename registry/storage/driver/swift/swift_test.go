@@ -10,11 +10,9 @@ import (
 
 	"github.com/ncw/swift/swifttest"
 
-	"github.com/docker/distribution/context"
-	storagedriver "github.com/docker/distribution/registry/storage/driver"
-	"github.com/docker/distribution/registry/storage/driver/testsuites"
-
-	"gopkg.in/check.v1"
+	"github.com/goharbor/distribution/context"
+	storagedriver "github.com/goharbor/distribution/registry/storage/driver"
+	"github.com/goharbor/distribution/registry/storage/driver/testsuites"
 )
 
 // Hook up gocheck into the "go test" runner.

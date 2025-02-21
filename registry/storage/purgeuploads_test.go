@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/distribution/registry/storage/driver"
-	"github.com/docker/distribution/registry/storage/driver/inmemory"
-	"github.com/docker/distribution/uuid"
+	"github.com/goharbor/distribution/registry/storage/driver"
+	"github.com/goharbor/distribution/registry/storage/driver/inmemory"
+	"github.com/goharbor/distribution/uuid"
 )
 
 func testUploadFS(t *testing.T, numUploads int, repoName string, startedAt time.Time) (driver.StorageDriver, context.Context) {

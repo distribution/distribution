@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/docker/distribution"
+	"github.com/goharbor/distribution"
 )
 
 type mockTagStore struct {

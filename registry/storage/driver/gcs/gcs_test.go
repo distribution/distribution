@@ -9,14 +9,13 @@ import (
 	"os"
 	"testing"
 
-	dcontext "github.com/docker/distribution/context"
-	storagedriver "github.com/docker/distribution/registry/storage/driver"
-	"github.com/docker/distribution/registry/storage/driver/testsuites"
+	dcontext "github.com/goharbor/distribution/context"
+	storagedriver "github.com/goharbor/distribution/registry/storage/driver"
+	"github.com/goharbor/distribution/registry/storage/driver/testsuites"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/cloud/storage"
-	"gopkg.in/check.v1"
 )
 
 // Hook up gocheck into the "go test" runner.

@@ -4,9 +4,8 @@ import (
 	"context"
 	"path"
 
-	dcontext "github.com/docker/distribution/context"
-	"github.com/docker/distribution/registry/storage/driver"
-	"github.com/opencontainers/go-digest"
+	dcontext "github.com/goharbor/distribution/context"
+	"github.com/goharbor/distribution/registry/storage/driver"
 )
 
 // vacuum contains functions for cleaning up repositories and blobs

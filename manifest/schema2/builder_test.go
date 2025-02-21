@@ -5,8 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/docker/distribution"
-	"github.com/opencontainers/go-digest"
+	"github.com/goharbor/distribution"
 )
 
 type mockBlobService struct {

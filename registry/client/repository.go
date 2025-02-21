@@ -15,12 +15,11 @@ import (
 	"time"
 
 	"github.com/distribution/reference"
-	"github.com/docker/distribution"
-	v2 "github.com/docker/distribution/registry/api/v2"
-	"github.com/docker/distribution/registry/client/transport"
-	"github.com/docker/distribution/registry/storage/cache"
-	"github.com/docker/distribution/registry/storage/cache/memory"
-	"github.com/opencontainers/go-digest"
+	"github.com/goharbor/distribution"
+	v2 "github.com/goharbor/distribution/registry/api/v2"
+	"github.com/goharbor/distribution/registry/client/transport"
+	"github.com/goharbor/distribution/registry/storage/cache"
+	"github.com/goharbor/distribution/registry/storage/cache/memory"
 )
 
 // Registry provides an interface for calling Repositories, which returns a catalog of repositories.

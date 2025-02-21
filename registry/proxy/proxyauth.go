@@ -5,9 +5,9 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/docker/distribution/context"
-	"github.com/docker/distribution/registry/client/auth"
-	"github.com/docker/distribution/registry/client/auth/challenge"
+	"github.com/goharbor/distribution/context"
+	"github.com/goharbor/distribution/registry/client/auth"
+	"github.com/goharbor/distribution/registry/client/auth/challenge"
 )
 
 const challengeHeader = "Docker-Distribution-Api-Version"

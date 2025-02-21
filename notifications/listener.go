@@ -5,11 +5,10 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/docker/distribution"
+	"github.com/goharbor/distribution"
 
 	"github.com/distribution/reference"
-	dcontext "github.com/docker/distribution/context"
-	"github.com/opencontainers/go-digest"
+	dcontext "github.com/goharbor/distribution/context"
 )
 
 // ManifestListener describes a set of methods for listening to events related to manifests.

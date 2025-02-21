@@ -5,8 +5,7 @@ import (
 	"regexp"
 
 	"github.com/distribution/reference"
-	"github.com/docker/distribution/registry/api/errcode"
-	"github.com/opencontainers/go-digest"
+	"github.com/goharbor/distribution/registry/api/errcode"
 )
 
 var (

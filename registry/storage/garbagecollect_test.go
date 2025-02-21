@@ -6,13 +6,12 @@ import (
 	"testing"
 
 	"github.com/distribution/reference"
-	"github.com/docker/distribution"
-	"github.com/docker/distribution/context"
-	"github.com/docker/distribution/registry/storage/driver"
-	"github.com/docker/distribution/registry/storage/driver/inmemory"
-	"github.com/docker/distribution/testutil"
 	"github.com/docker/libtrust"
-	"github.com/opencontainers/go-digest"
+	"github.com/goharbor/distribution"
+	"github.com/goharbor/distribution/context"
+	"github.com/goharbor/distribution/registry/storage/driver"
+	"github.com/goharbor/distribution/registry/storage/driver/inmemory"
+	"github.com/goharbor/distribution/testutil"
 )
 
 type image struct {
