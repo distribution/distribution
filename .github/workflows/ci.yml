@@ -16,13 +16,13 @@ jobs:
       COMMIT_RANGE: ${{ github.event_name == 'pull_request' && format('{0}..{1}',github.event.pull_request.base.sha, github.event.pull_request.head.sha) || github.sha }}
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v4
       with:
         path: src/github.com/goharbor/distribution
         fetch-depth: 50
 
     - name: Set up Go
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v5
       with:
         go-version: 1.20.10
 
