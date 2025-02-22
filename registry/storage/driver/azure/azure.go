@@ -38,11 +38,11 @@ const (
 var _ storagedriver.StorageDriver = &driver{}
 
 type driver struct {
-	azClient               *azureClient
-	client                 *container.Client
-	rootDirectory          string
-	copyStatusPollMaxRetry int
-	copyStatusPollDelay    time.Duration
+	azClient      *azureClient
+	client        *container.Client
+	rootDirectory string
+	maxRetries    int
+	retryDelay    time.Duration
 }
 
 type baseEmbed struct {
@@ -76,18 +76,18 @@ func New(ctx context.Context, params *Parameters) (*Driver, error) {
 		return nil, err
 	}
 
-	copyStatusPollDelay, err := time.ParseDuration(params.CopyStatusPollDelay)
+	retryDelay, err := time.ParseDuration(params.RetryDelay)
 	if err != nil {
 		return nil, err
 	}
 
 	client := azClient.ContainerClient()
 	d := &driver{
-		azClient:               azClient,
-		client:                 client,
-		rootDirectory:          params.RootDirectory,
-		copyStatusPollMaxRetry: params.CopyStatusPollMaxRetry,
-		copyStatusPollDelay:    copyStatusPollDelay,
+		azClient:      azClient,
+		client:        client,
+		rootDirectory: params.RootDirectory,
+		maxRetries:    params.MaxRetries,
+		retryDelay:    retryDelay,
 	}
 	return &Driver{
 		baseEmbed: baseEmbed{
@@ -325,7 +325,7 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 
 	copyStatus := *resp.CopyStatus
 
-	if d.copyStatusPollMaxRetry == -1 && copyStatus == blob.CopyStatusTypePending {
+	if d.maxRetries == -1 && copyStatus == blob.CopyStatusTypePending {
 		if _, err := destBlobRef.AbortCopyFromURL(ctx, *resp.CopyID, nil); err != nil {
 			return err
 		}
@@ -339,7 +339,7 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 			return err
 		}
 
-		if retryCount >= d.copyStatusPollMaxRetry {
+		if retryCount >= d.maxRetries {
 			if _, err := destBlobRef.AbortCopyFromURL(ctx, *props.CopyID, nil); err != nil {
 				return err
 			}
@@ -355,7 +355,7 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 		}
 
 		if copyStatus == blob.CopyStatusTypePending {
-			time.Sleep(d.copyStatusPollDelay * time.Duration(retryCount))
+			time.Sleep(d.retryDelay * time.Duration(retryCount))
 		}
 		retryCount++
 	}
@@ -525,14 +525,16 @@ func (d *driver) newWriter(ctx context.Context, path string, size int64) storage
 		driver: d,
 		path:   path,
 		size:   new(atomic.Int64),
-		// TODO(milosgajdos): I'm not sure about the maxChunkSize
-		bw: bufio.NewWriterSize(&blockWriter{
-			ctx:    ctx,
-			client: d.client,
-			path:   path,
-		}, maxChunkSize),
 	}
 	w.size.Store(size)
+	bw := bufio.NewWriterSize(&blockWriter{
+		ctx:        ctx,
+		client:     d.client,
+		path:       path,
+		size:       w.size,
+		maxRetries: int32(d.maxRetries),
+	}, maxChunkSize)
+	w.bw = bw
 	return w
 }
 

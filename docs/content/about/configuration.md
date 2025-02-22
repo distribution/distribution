@@ -120,8 +120,8 @@ storage:
       clientid: client_id_string
       tenantid: tenant_id_string
       secret: secret_string
-    copy_status_poll_max_retry: 10
-    copy_status_poll_delay: 100ms
+    max_retries: 10
+    retry_delay: 100ms
   gcs:
     bucket: bucketname
     keyfile: /path/to/keyfile
