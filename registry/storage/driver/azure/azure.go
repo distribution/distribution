@@ -71,7 +71,7 @@ func (factory *azureDriverFactory) Create(ctx context.Context, parameters map[st
 
 // New constructs a new Driver from parameters
 func New(ctx context.Context, params *Parameters) (*Driver, error) {
-	azClient, err := newAzureClient(params)
+	azClient, err := newClient(params)
 	if err != nil {
 		return nil, err
 	}
