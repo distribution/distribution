@@ -648,6 +648,8 @@ func (bw *blockWriter) Write(p []byte) (int, error) {
 	return n, nil
 }
 
+// NOTE: this is more or less copy-pasta from the GitLab fix introduced by @vespian
+// https://gitlab.com/gitlab-org/container-registry/-/commit/959132477ef719249270b87ce2a7a05abcd6e1ed?merge_request_iid=2059
 func (bw *blockWriter) chunkUploadVerify(appendPos int64, chunk []byte) (int64, error) {
 	// NOTE(prozlach): We need to see if the chunk uploaded or not. As per
 	// the documentation, the operation __might__ have succeeded. There are
