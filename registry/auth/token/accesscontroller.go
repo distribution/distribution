@@ -228,11 +228,19 @@ func checkOptions(options map[string]interface{}) (tokenAccessOptions, error) {
 
 	signingAlgos, ok := options["signingalgorithms"]
 	if ok {
-		signingAlgorithmsVals, ok := signingAlgos.([]string)
+		signingAlgorithmsVals, ok := signingAlgos.([]interface{})
 		if !ok {
 			return opts, errors.New("signingalgorithms must be a list of signing algorithms")
 		}
-		opts.signingAlgorithms = signingAlgorithmsVals
+
+		for _, signingAlgorithmVal := range signingAlgorithmsVals {
+			signingAlgorithm, ok := signingAlgorithmVal.(string)
+			if !ok {
+				return opts, errors.New("signingalgorithms must be a list of signing algorithms")
+			}
+
+			opts.signingAlgorithms = append(opts.signingAlgorithms, signingAlgorithm)
+		}
 	}
 
 	return opts, nil
