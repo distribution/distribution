@@ -306,11 +306,11 @@ func getJwks(path string) (*jose.JSONWebKeySet, error) {
 func getSigningAlgorithms(algos []string) ([]jose.SignatureAlgorithm, error) {
 	signAlgVals := make([]jose.SignatureAlgorithm, 0, len(algos))
 	for _, alg := range algos {
-		alg, ok := signingAlgorithms[alg]
+		signAlg, ok := signingAlgorithms[alg]
 		if !ok {
 			return nil, fmt.Errorf("unsupported signing algorithm: %s", alg)
 		}
-		signAlgVals = append(signAlgVals, alg)
+		signAlgVals = append(signAlgVals, signAlg)
 	}
 	return signAlgVals, nil
 }
