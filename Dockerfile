@@ -10,10 +10,10 @@ COPY --from=xx / /
 RUN apk add --no-cache bash coreutils file git
 ENV GO111MODULE=auto
 ENV CGO_ENABLED=0
-WORKDIR /go/src/github.com/docker/distribution
+WORKDIR /go/src/github.com/goharbor/distribution
 
 FROM base AS version
-ARG PKG="github.com/docker/distribution"
+ARG PKG="github.com/goharbor/distribution"
 RUN --mount=target=. \
   VERSION=$(git describe --match 'v[0-9]*' --dirty='.m' --always --tags) REVISION=$(git rev-parse HEAD)$(if ! git diff --no-ext-diff --quiet --exit-code; then echo .m; fi); \
   echo "-X ${PKG}/version.Version=${VERSION#v} -X ${PKG}/version.Revision=${REVISION} -X ${PKG}/version.Package=${PKG}" | tee /tmp/.ldflags; \
@@ -23,7 +23,7 @@ FROM base AS build
 ARG TARGETPLATFORM
 ARG LDFLAGS="-s -w"
 ARG BUILDTAGS="include_oss,include_gcs"
-RUN --mount=type=bind,target=/go/src/github.com/docker/distribution,rw \
+RUN --mount=type=bind,target=/go/src/github.com/goharbor/distribution,rw \
     --mount=type=cache,target=/root/.cache/go-build \
     --mount=target=/go/pkg/mod,type=cache \
     --mount=type=bind,source=/tmp/.ldflags,target=/tmp/.ldflags,from=version \

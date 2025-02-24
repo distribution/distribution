@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"os"
 
-	dcontext "github.com/docker/distribution/context"
-	"github.com/docker/distribution/registry/storage"
-	"github.com/docker/distribution/registry/storage/driver/factory"
-	"github.com/docker/distribution/version"
 	"github.com/docker/libtrust"
+	dcontext "github.com/goharbor/distribution/context"
+	"github.com/goharbor/distribution/registry/storage"
+	"github.com/goharbor/distribution/registry/storage/driver/factory"
+	"github.com/goharbor/distribution/version"
 	"github.com/spf13/cobra"
 )
 

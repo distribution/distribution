@@ -6,9 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	storagedriver "github.com/docker/distribution/registry/storage/driver"
-	"github.com/docker/distribution/registry/storage/driver/testsuites"
-	. "gopkg.in/check.v1"
+	storagedriver "github.com/goharbor/distribution/registry/storage/driver"
+	"github.com/goharbor/distribution/registry/storage/driver/testsuites"
 )
 
 const (

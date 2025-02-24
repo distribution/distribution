@@ -168,6 +168,9 @@ type Configuration struct {
 		// Addr specifies the the redis instance available to the application.
 		Addr string `yaml:"addr,omitempty"`
 
+		// SentinelMasterSet specifies the the redis sentinel master set name.
+		SentinelMasterSet string `yaml:"sentinelMasterSet,omitempty"`
+
 		// Password string to use when making a connection.
 		Password string `yaml:"password,omitempty"`
 

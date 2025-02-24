@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"expvar"
 	"fmt"
 	"math"
@@ -16,30 +17,30 @@ import (
 	"strings"
 	"time"
 
+	"github.com/FZambia/sentinel"
 	"github.com/distribution/reference"
-	"github.com/docker/distribution"
-	"github.com/docker/distribution/configuration"
-	dcontext "github.com/docker/distribution/context"
-	"github.com/docker/distribution/health"
-	"github.com/docker/distribution/health/checks"
-	prometheus "github.com/docker/distribution/metrics"
-	"github.com/docker/distribution/notifications"
-	"github.com/docker/distribution/registry/api/errcode"
-	v2 "github.com/docker/distribution/registry/api/v2"
-	"github.com/docker/distribution/registry/auth"
-	registrymiddleware "github.com/docker/distribution/registry/middleware/registry"
-	repositorymiddleware "github.com/docker/distribution/registry/middleware/repository"
-	"github.com/docker/distribution/registry/proxy"
-	"github.com/docker/distribution/registry/storage"
-	memorycache "github.com/docker/distribution/registry/storage/cache/memory"
-	rediscache "github.com/docker/distribution/registry/storage/cache/redis"
-	storagedriver "github.com/docker/distribution/registry/storage/driver"
-	"github.com/docker/distribution/registry/storage/driver/factory"
-	storagemiddleware "github.com/docker/distribution/registry/storage/driver/middleware"
-	"github.com/docker/distribution/version"
-	"github.com/docker/go-metrics"
 	"github.com/docker/libtrust"
 	"github.com/garyburd/redigo/redis"
+	"github.com/goharbor/distribution"
+	"github.com/goharbor/distribution/configuration"
+	dcontext "github.com/goharbor/distribution/context"
+	"github.com/goharbor/distribution/health"
+	"github.com/goharbor/distribution/health/checks"
+	prometheus "github.com/goharbor/distribution/metrics"
+	"github.com/goharbor/distribution/notifications"
+	"github.com/goharbor/distribution/registry/api/errcode"
+	v2 "github.com/goharbor/distribution/registry/api/v2"
+	"github.com/goharbor/distribution/registry/auth"
+	registrymiddleware "github.com/goharbor/distribution/registry/middleware/registry"
+	repositorymiddleware "github.com/goharbor/distribution/registry/middleware/repository"
+	"github.com/goharbor/distribution/registry/proxy"
+	"github.com/goharbor/distribution/registry/storage"
+	memorycache "github.com/goharbor/distribution/registry/storage/cache/memory"
+	rediscache "github.com/goharbor/distribution/registry/storage/cache/redis"
+	storagedriver "github.com/goharbor/distribution/registry/storage/driver"
+	"github.com/goharbor/distribution/registry/storage/driver/factory"
+	storagemiddleware "github.com/goharbor/distribution/registry/storage/driver/middleware"
+	"github.com/goharbor/distribution/version"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 )
@@ -499,6 +500,45 @@ func (app *App) configureRedis(configuration *configuration.Configuration) {
 		return
 	}
 
+	var getRedisAddr func() (string, error)
+	var testOnBorrow func(c redis.Conn, t time.Time) error
+	if configuration.Redis.SentinelMasterSet != "" {
+		sntnl := &sentinel.Sentinel{
+			Addrs:      strings.Split(configuration.Redis.Addr, ","),
+			MasterName: configuration.Redis.SentinelMasterSet,
+			Dial: func(addr string) (redis.Conn, error) {
+				c, err := redis.DialTimeout("tcp", addr,
+					configuration.Redis.DialTimeout,
+					configuration.Redis.ReadTimeout,
+					configuration.Redis.WriteTimeout)
+				if err != nil {
+					return nil, err
+				}
+				return c, nil
+			},
+		}
+		getRedisAddr = func() (string, error) {
+			return sntnl.MasterAddr()
+		}
+		testOnBorrow = func(c redis.Conn, t time.Time) error {
+			if !sentinel.TestRole(c, "master") {
+				return errors.New("role check failed")
+			}
+			return nil
+		}
+
+	} else {
+		getRedisAddr = func() (string, error) {
+			return configuration.Redis.Addr, nil
+		}
+		testOnBorrow = func(c redis.Conn, t time.Time) error {
+			// TODO(stevvooe): We can probably do something more interesting
+			// here with the health package.
+			_, err := c.Do("PING")
+			return err
+		}
+	}
+
 	pool := &redis.Pool{
 		Dial: func() (redis.Conn, error) {
 			// TODO(stevvooe): Yet another use case for contextual timing.
@@ -514,8 +554,11 @@ func (app *App) configureRedis(configuration *configuration.Configuration) {
 				}
 			}
 
-			conn, err := redis.DialTimeout("tcp",
-				configuration.Redis.Addr,
+			redisAddr, err := getRedisAddr()
+			if err != nil {
+				return nil, err
+			}
+			conn, err := redis.DialTimeout("tcp", redisAddr,
 				configuration.Redis.DialTimeout,
 				configuration.Redis.ReadTimeout,
 				configuration.Redis.WriteTimeout)
@@ -547,16 +590,11 @@ func (app *App) configureRedis(configuration *configuration.Configuration) {
 			done(nil)
 			return conn, nil
 		},
-		MaxIdle:     configuration.Redis.Pool.MaxIdle,
-		MaxActive:   configuration.Redis.Pool.MaxActive,
-		IdleTimeout: configuration.Redis.Pool.IdleTimeout,
-		TestOnBorrow: func(c redis.Conn, t time.Time) error {
-			// TODO(stevvooe): We can probably do something more interesting
-			// here with the health package.
-			_, err := c.Do("PING")
-			return err
-		},
-		Wait: false, // if a connection is not available, proceed without cache.
+		MaxIdle:      configuration.Redis.Pool.MaxIdle,
+		MaxActive:    configuration.Redis.Pool.MaxActive,
+		IdleTimeout:  configuration.Redis.Pool.IdleTimeout,
+		TestOnBorrow: testOnBorrow,
+		Wait:         false, // if a connection is not available, proceed without cache.
 	}
 
 	app.redis = pool

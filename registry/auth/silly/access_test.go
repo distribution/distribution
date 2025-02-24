@@ -5,8 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/docker/distribution/context"
-	"github.com/docker/distribution/registry/auth"
+	"github.com/goharbor/distribution/context"
+	"github.com/goharbor/distribution/registry/auth"
 )
 
 func TestSillyAccessController(t *testing.T) {

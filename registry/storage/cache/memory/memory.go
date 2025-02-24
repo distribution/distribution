@@ -5,9 +5,8 @@ import (
 	"sync"
 
 	"github.com/distribution/reference"
-	"github.com/docker/distribution"
-	"github.com/docker/distribution/registry/storage/cache"
-	"github.com/opencontainers/go-digest"
+	"github.com/goharbor/distribution"
+	"github.com/goharbor/distribution/registry/storage/cache"
 )
 
 type inMemoryBlobDescriptorCacheProvider struct {

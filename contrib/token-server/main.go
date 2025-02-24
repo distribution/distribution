@@ -11,11 +11,11 @@ import (
 	"strings"
 	"time"
 
-	dcontext "github.com/docker/distribution/context"
-	"github.com/docker/distribution/registry/api/errcode"
-	"github.com/docker/distribution/registry/auth"
-	_ "github.com/docker/distribution/registry/auth/htpasswd"
 	"github.com/docker/libtrust"
+	dcontext "github.com/goharbor/distribution/context"
+	"github.com/goharbor/distribution/registry/api/errcode"
+	"github.com/goharbor/distribution/registry/auth"
+	_ "github.com/goharbor/distribution/registry/auth/htpasswd"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 )

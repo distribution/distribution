@@ -8,8 +8,8 @@ import (
 	"mime"
 	"net/http"
 
-	"github.com/docker/distribution/registry/api/errcode"
-	"github.com/docker/distribution/registry/client/auth/challenge"
+	"github.com/goharbor/distribution/registry/api/errcode"
+	"github.com/goharbor/distribution/registry/client/auth/challenge"
 )
 
 // ErrNoErrorsInBody is returned when an HTTP response body parses to an empty

@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/docker/distribution/configuration"
+	"github.com/goharbor/distribution/configuration"
 )
 
 // EndpointConfig covers the optional configuration parameters for an active

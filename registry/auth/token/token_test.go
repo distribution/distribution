@@ -15,9 +15,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/distribution/context"
-	"github.com/docker/distribution/registry/auth"
 	"github.com/docker/libtrust"
+	"github.com/goharbor/distribution/context"
+	"github.com/goharbor/distribution/registry/auth"
 )
 
 func makeRootKeys(numKeys int) ([]libtrust.PrivateKey, error) {

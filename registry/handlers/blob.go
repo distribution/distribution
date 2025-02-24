@@ -3,12 +3,11 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/docker/distribution"
-	"github.com/docker/distribution/context"
-	"github.com/docker/distribution/registry/api/errcode"
-	v2 "github.com/docker/distribution/registry/api/v2"
+	"github.com/goharbor/distribution"
+	"github.com/goharbor/distribution/context"
+	"github.com/goharbor/distribution/registry/api/errcode"
+	v2 "github.com/goharbor/distribution/registry/api/v2"
 	"github.com/gorilla/handlers"
-	"github.com/opencontainers/go-digest"
 )
 
 // blobDispatcher uses the request context to build a blobHandler.

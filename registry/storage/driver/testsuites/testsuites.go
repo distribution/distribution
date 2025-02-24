@@ -17,8 +17,7 @@ import (
 	"testing"
 	"time"
 
-	storagedriver "github.com/docker/distribution/registry/storage/driver"
-	"gopkg.in/check.v1"
+	storagedriver "github.com/goharbor/distribution/registry/storage/driver"
 )
 
 // Test hooks up gocheck into the "go test" runner.

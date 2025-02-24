@@ -29,7 +29,7 @@ environment.
 If a Go development environment is setup, one can use `go get` to install the
 `registry` command from the current latest:
 
-    go get github.com/docker/distribution/cmd/registry
+    go get github.com/goharbor/distribution/cmd/registry
 
 The above will install the source repository into the `GOPATH`.
 
@@ -43,17 +43,17 @@ The `registry`
 binary can then be run with the following:
 
     $ $GOPATH/bin/registry --version
-    $GOPATH/bin/registry github.com/docker/distribution v2.0.0-alpha.1+unknown
+    $GOPATH/bin/registry github.com/goharbor/distribution v2.0.0-alpha.1+unknown
 
 > __NOTE:__ While you do not need to use `go get` to checkout the distribution
 > project, for these build instructions to work, the project must be checked
 > out in the correct location in the `GOPATH`. This should almost always be
-> `$GOPATH/src/github.com/docker/distribution`.
+> `$GOPATH/src/github.com/goharbor/distribution`.
 
 The registry can be run with the default config using the following
 incantation:
 
-    $ $GOPATH/bin/registry serve $GOPATH/src/github.com/docker/distribution/cmd/registry/config-example.yml
+    $ $GOPATH/bin/registry serve $GOPATH/src/github.com/goharbor/distribution/cmd/registry/config-example.yml
     INFO[0000] endpoint local-5003 disabled, skipping        app.id=34bbec38-a91a-494a-9a3f-b72f9010081f version=v2.0.0-alpha.1+unknown
     INFO[0000] endpoint local-8083 disabled, skipping        app.id=34bbec38-a91a-494a-9a3f-b72f9010081f version=v2.0.0-alpha.1+unknown
     INFO[0000] listening on :5000                            app.id=34bbec38-a91a-494a-9a3f-b72f9010081f version=v2.0.0-alpha.1+unknown
@@ -64,7 +64,7 @@ If it is working, one should see the above log messages.
 ### Repeatable Builds
 
 For the full development experience, one should `cd` into
-`$GOPATH/src/github.com/docker/distribution`. From there, the regular `go`
+`$GOPATH/src/github.com/goharbor/distribution`. From there, the regular `go`
 commands, such as `go test`, should work per package (please see
 [Developing](#developing) if they don't work).
 
@@ -87,20 +87,20 @@ build:
     github.com/docker/libtrust
     ...
     github.com/yvasiyarov/gorelic
-    github.com/docker/distribution/registry/handlers
-    github.com/docker/distribution/cmd/registry
+    github.com/goharbor/distribution/registry/handlers
+    github.com/goharbor/distribution/cmd/registry
     + test
     ...
-    ok    github.com/docker/distribution/digest 7.875s
-    ok    github.com/docker/distribution/manifest 0.028s
-    ok    github.com/docker/distribution/notifications  17.322s
-    ?     github.com/docker/distribution/registry [no test files]
-    ok    github.com/docker/distribution/registry/api/v2  0.101s
-    ?     github.com/docker/distribution/registry/auth  [no test files]
-    ok    github.com/docker/distribution/registry/auth/silly  0.011s
+    ok    github.com/goharbor/distribution/digest 7.875s
+    ok    github.com/goharbor/distribution/manifest 0.028s
+    ok    github.com/goharbor/distribution/notifications  17.322s
+    ?     github.com/goharbor/distribution/registry [no test files]
+    ok    github.com/goharbor/distribution/registry/api/v2  0.101s
+    ?     github.com/goharbor/distribution/registry/auth  [no test files]
+    ok    github.com/goharbor/distribution/registry/auth/silly  0.011s
     ...
-    + /Users/sday/go/src/github.com/docker/distribution/bin/registry
-    + /Users/sday/go/src/github.com/docker/distribution/bin/registry-api-descriptor-template
+    + /Users/sday/go/src/github.com/goharbor/distribution/bin/registry
+    + /Users/sday/go/src/github.com/goharbor/distribution/bin/registry-api-descriptor-template
     + binaries
 
 The above provides a repeatable build using the contents of the vendor
@@ -109,7 +109,7 @@ testing and generating tagged binaries. We can verify this worked by running
 the registry binary generated in the "./bin" directory:
 
     $ ./bin/registry --version
-    ./bin/registry github.com/docker/distribution v2.0.0-alpha.2-80-g16d8b2c.m
+    ./bin/registry github.com/goharbor/distribution v2.0.0-alpha.2-80-g16d8b2c.m
 
 ### Optional build tags
 

@@ -13,9 +13,9 @@ import (
 	"strings"
 	"time"
 
-	storagedriver "github.com/docker/distribution/registry/storage/driver"
-	"github.com/docker/distribution/registry/storage/driver/base"
-	"github.com/docker/distribution/registry/storage/driver/factory"
+	storagedriver "github.com/goharbor/distribution/registry/storage/driver"
+	"github.com/goharbor/distribution/registry/storage/driver/base"
+	"github.com/goharbor/distribution/registry/storage/driver/factory"
 
 	azure "github.com/Azure/azure-sdk-for-go/storage"
 )
@@ -127,7 +127,7 @@ func (d *driver) PutContent(ctx context.Context, path string, contents []byte) e
 	}
 
 	// Historically, blobs uploaded via PutContent used to be of type AppendBlob
-	// (https://github.com/docker/distribution/pull/1438). We can't replace
+	// (https://github.com/goharbor/distribution/pull/1438). We can't replace
 	// these blobs atomically via a single "Put Blob" operation without
 	// deleting them first. Once we detect they are BlockBlob type, we can
 	// overwrite them with an atomically "Put Blob" operation.

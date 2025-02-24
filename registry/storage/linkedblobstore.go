@@ -9,11 +9,10 @@ import (
 	"time"
 
 	"github.com/distribution/reference"
-	"github.com/docker/distribution"
-	dcontext "github.com/docker/distribution/context"
-	"github.com/docker/distribution/registry/storage/driver"
-	"github.com/docker/distribution/uuid"
-	"github.com/opencontainers/go-digest"
+	"github.com/goharbor/distribution"
+	dcontext "github.com/goharbor/distribution/context"
+	"github.com/goharbor/distribution/registry/storage/driver"
+	"github.com/goharbor/distribution/uuid"
 )
 
 // linkPathFunc describes a function that can resolve a link based on the

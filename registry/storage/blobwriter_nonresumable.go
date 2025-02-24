@@ -4,7 +4,7 @@
 package storage
 
 import (
-	"github.com/docker/distribution/context"
+	"github.com/goharbor/distribution/context"
 )
 
 // resumeHashAt is a noop when resumable digest support is disabled.

@@ -98,7 +98,7 @@ It's mandatory to:
 
 Complying to these simple rules will greatly accelerate the review process, and will ensure you have a pleasant experience in contributing code to the Registry.
 
-Have a look at a great, successful contribution: the [Swift driver PR](https://github.com/docker/distribution/pull/493)
+Have a look at a great, successful contribution: the [Swift driver PR](https://github.com/goharbor/distribution/pull/493)
 
 ## Coding Style
 

@@ -4,10 +4,9 @@ import (
 	"testing"
 
 	"github.com/distribution/reference"
-	"github.com/docker/distribution/context"
-	"github.com/docker/distribution/manifest"
 	"github.com/docker/libtrust"
-	"github.com/opencontainers/go-digest"
+	"github.com/goharbor/distribution/context"
+	"github.com/goharbor/distribution/manifest"
 )
 
 func makeSignedManifest(t *testing.T, pk libtrust.PrivateKey, refs []Reference) *SignedManifest {

@@ -8,16 +8,16 @@ import (
 	"sync"
 
 	"github.com/distribution/reference"
-	"github.com/docker/distribution"
-	"github.com/docker/distribution/configuration"
-	dcontext "github.com/docker/distribution/context"
-	"github.com/docker/distribution/registry/client"
-	"github.com/docker/distribution/registry/client/auth"
-	"github.com/docker/distribution/registry/client/auth/challenge"
-	"github.com/docker/distribution/registry/client/transport"
-	"github.com/docker/distribution/registry/proxy/scheduler"
-	"github.com/docker/distribution/registry/storage"
-	"github.com/docker/distribution/registry/storage/driver"
+	"github.com/goharbor/distribution"
+	"github.com/goharbor/distribution/configuration"
+	dcontext "github.com/goharbor/distribution/context"
+	"github.com/goharbor/distribution/registry/client"
+	"github.com/goharbor/distribution/registry/client/auth"
+	"github.com/goharbor/distribution/registry/client/auth/challenge"
+	"github.com/goharbor/distribution/registry/client/transport"
+	"github.com/goharbor/distribution/registry/proxy/scheduler"
+	"github.com/goharbor/distribution/registry/storage"
+	"github.com/goharbor/distribution/registry/storage/driver"
 )
 
 // proxyingRegistry fetches content from a remote registry and caches it locally

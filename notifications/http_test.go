@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/docker/distribution/manifest/schema1"
+	"github.com/goharbor/distribution/manifest/schema1"
 )
 
 // TestHTTPSink mocks out an http endpoint and notifies it under a couple of

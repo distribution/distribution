@@ -9,10 +9,9 @@ import (
 	"testing"
 
 	"github.com/distribution/reference"
-	"github.com/docker/distribution"
-	dcontext "github.com/docker/distribution/context"
 	"github.com/docker/libtrust"
-	"github.com/opencontainers/go-digest"
+	"github.com/goharbor/distribution"
+	dcontext "github.com/goharbor/distribution/context"
 )
 
 type mockBlobService struct {

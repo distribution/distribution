@@ -5,8 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/docker/distribution"
-	"github.com/opencontainers/go-digest"
+	"github.com/goharbor/distribution"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 

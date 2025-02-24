@@ -24,7 +24,7 @@ considerations made in respect of the future of the project.
 
 ## Distribution Components
 
-Components of the Distribution Project are managed via github [milestones](https://github.com/docker/distribution/milestones). Upcoming
+Components of the Distribution Project are managed via github [milestones](https://github.com/goharbor/distribution/milestones). Upcoming
 features and bugfixes for a component will be added to the relevant milestone. If a feature or
 bugfix is not part of a milestone, it is currently unscheduled for
 implementation. 
@@ -39,7 +39,7 @@ implementation.
 The new Docker registry is the main portion of the distribution repository.
 Registry 2.0 is the first release of the next-generation registry. This was
 primarily focused on implementing the [new registry
-API](https://github.com/docker/distribution/blob/master/docs/spec/api.md),
+API](https://github.com/goharbor/distribution/blob/master/docs/spec/api.md),
 with a focus on security and performance. 
 
 Following from the Distribution project goals above, we have a set of goals
@@ -145,7 +145,7 @@ process. Once this has been explored, we integrate with the docker client.
 
 Please see the following for more detail:
 
-- https://github.com/docker/distribution/issues/206
+- https://github.com/goharbor/distribution/issues/206
 
 ##### Deletes
 
@@ -243,9 +243,9 @@ very cheap disk space for a complex deployment and operational story.
 
 Please see the following issues for more detail:
 
-- https://github.com/docker/distribution/issues/422
-- https://github.com/docker/distribution/issues/461
-- https://github.com/docker/distribution/issues/462
+- https://github.com/goharbor/distribution/issues/422
+- https://github.com/goharbor/distribution/issues/461
+- https://github.com/goharbor/distribution/issues/462
 
 ### Distribution Package 
 
@@ -263,5 +263,5 @@ just the registry.
 
 ### Project Planning
 
-An [Open-Source Planning Process](https://github.com/docker/distribution/wiki/Open-Source-Planning-Process) is used to define the Roadmap. [Project Pages](https://github.com/docker/distribution/wiki) define the goals for each Milestone and identify current progress.
+An [Open-Source Planning Process](https://github.com/goharbor/distribution/wiki/Open-Source-Planning-Process) is used to define the Roadmap. [Project Pages](https://github.com/goharbor/distribution/wiki) define the goals for each Milestone and identify current progress.
 

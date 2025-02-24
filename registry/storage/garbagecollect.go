@@ -5,9 +5,8 @@ import (
 	"fmt"
 
 	"github.com/distribution/reference"
-	"github.com/docker/distribution"
-	"github.com/docker/distribution/registry/storage/driver"
-	"github.com/opencontainers/go-digest"
+	"github.com/goharbor/distribution"
+	"github.com/goharbor/distribution/registry/storage/driver"
 )
 
 func emit(format string, a ...interface{}) {

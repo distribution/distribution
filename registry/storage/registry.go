@@ -5,10 +5,10 @@ import (
 	"regexp"
 
 	"github.com/distribution/reference"
-	"github.com/docker/distribution"
-	"github.com/docker/distribution/registry/storage/cache"
-	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/libtrust"
+	"github.com/goharbor/distribution"
+	"github.com/goharbor/distribution/registry/storage/cache"
+	storagedriver "github.com/goharbor/distribution/registry/storage/driver"
 )
 
 // registry is the top-level implementation of Registry for use in the storage
