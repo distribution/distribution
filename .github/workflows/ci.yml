@@ -35,9 +35,9 @@ jobs:
     - name: Build
       working-directory: ./src/github.com/goharbor/distribution
       run: |
-        #GO111MODULE=on script/setup/install-dev-tools
+        GO111MODULE=on script/setup/install-dev-tools
         #script/validate/vendor
-        go build .
+        #go build .
         #make check
         #make build
         make binaries
