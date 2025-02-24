@@ -197,7 +197,7 @@ func checkOptions(options map[string]interface{}) (tokenAccessOptions, error) {
 				vals = append(vals, "")
 				continue
 			}
-			return opts, fmt.Errorf("token auth requires a valid option string: %q", key)
+			return tokenAccessOptions{}, fmt.Errorf("token auth requires a valid option string: %q", key)
 		}
 		vals = append(vals, val)
 	}
@@ -208,7 +208,7 @@ func checkOptions(options map[string]interface{}) (tokenAccessOptions, error) {
 	if ok {
 		autoRedirect, ok := autoRedirectVal.(bool)
 		if !ok {
-			return opts, errors.New("token auth requires a valid option bool: autoredirect")
+			return tokenAccessOptions{}, errors.New("token auth requires a valid option bool: autoredirect")
 		}
 		opts.autoRedirect = autoRedirect
 	}
@@ -217,7 +217,7 @@ func checkOptions(options map[string]interface{}) (tokenAccessOptions, error) {
 		if ok {
 			autoRedirectPath, ok := autoRedirectPathVal.(string)
 			if !ok {
-				return opts, errors.New("token auth requires a valid option string: autoredirectpath")
+				return tokenAccessOptions{}, errors.New("token auth requires a valid option string: autoredirectpath")
 			}
 			opts.autoRedirectPath = autoRedirectPath
 		}
@@ -230,13 +230,13 @@ func checkOptions(options map[string]interface{}) (tokenAccessOptions, error) {
 	if ok {
 		signingAlgorithmsVals, ok := signingAlgos.([]interface{})
 		if !ok {
-			return opts, errors.New("signingalgorithms must be a list of signing algorithms")
+			return tokenAccessOptions{}, errors.New("signingalgorithms must be a list of signing algorithms")
 		}
 
 		for _, signingAlgorithmVal := range signingAlgorithmsVals {
 			signingAlgorithm, ok := signingAlgorithmVal.(string)
 			if !ok {
-				return opts, errors.New("signingalgorithms must be a list of signing algorithms")
+				return tokenAccessOptions{}, errors.New("signingalgorithms must be a list of signing algorithms")
 			}
 
 			opts.signingAlgorithms = append(opts.signingAlgorithms, signingAlgorithm)
