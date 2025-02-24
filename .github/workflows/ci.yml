@@ -11,7 +11,7 @@ jobs:
       BUILDTAGS: "include_oss,include_gcs"
       CGO_ENABLED: 1
       GO111MODULE: "auto"
-      GOPATH: ${{ github.workspace }}
+      GOPATH: /home/runner/work/goharbor/distribution
       GOOS: linux
       COMMIT_RANGE: ${{ github.event_name == 'pull_request' && format('{0}..{1}',github.event.pull_request.base.sha, github.event.pull_request.head.sha) || github.sha }}
 
