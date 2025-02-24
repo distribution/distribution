@@ -3,6 +3,7 @@ package memory
 import (
 	"context"
 	"math"
+	"time"
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/registry/storage/cache"
@@ -27,7 +28,8 @@ type descriptorCacheKey struct {
 }
 
 type inMemoryBlobDescriptorCacheProvider struct {
-	lru *arc.ARCCache[descriptorCacheKey, v1.Descriptor]
+	lru    *arc.ARCCache[descriptorCacheKey, v1.Descriptor]
+	access *arc.ARCCache[descriptorCacheKey, time.Time]
 }
 
 // NewInMemoryBlobDescriptorCacheProvider returns a new mapped-based cache for
@@ -41,8 +43,16 @@ func NewInMemoryBlobDescriptorCacheProvider(size int) cache.BlobDescriptorCacheP
 		// NewARC can only fail if size is <= 0, so this unreachable
 		panic(err)
 	}
+
+	accessCache, err := arc.NewARC[descriptorCacheKey, time.Time](size)
+	if err != nil {
+		// NewARC can only fail if size is <= 0, so this unreachable
+		panic(err)
+	}
+
 	return &inMemoryBlobDescriptorCacheProvider{
-		lru: lruCache,
+		lru:    lruCache,
+		access: accessCache,
 	}
 }
 
@@ -73,6 +83,9 @@ func (imbdcp *inMemoryBlobDescriptorCacheProvider) Stat(ctx context.Context, dgs
 	}
 	descriptor, ok := imbdcp.lru.Get(key)
 	if ok {
+
+		go imbdcp.setLastAccessTime(dgst)
+
 		return descriptor, nil
 	}
 	return v1.Descriptor{}, distribution.ErrBlobUnknown
@@ -82,8 +95,32 @@ func (imbdcp *inMemoryBlobDescriptorCacheProvider) Clear(ctx context.Context, dg
 	key := descriptorCacheKey{
 		digest: dgst,
 	}
+
 	imbdcp.lru.Remove(key)
+	imbdcp.access.Remove(key)
+
 	return nil
+}
+
+func (imbdcp *inMemoryBlobDescriptorCacheProvider) setLastAccessTime(dgst digest.Digest) {
+	key := descriptorCacheKey{
+		digest: dgst,
+	}
+
+	imbdcp.access.Add(key, time.Now())
+}
+
+func (imbdcp *inMemoryBlobDescriptorCacheProvider) GetLastAccessed(ctx context.Context, dgst digest.Digest) (*time.Time, error) {
+	key := descriptorCacheKey{
+		digest: dgst,
+	}
+
+	accessTime, ok := imbdcp.access.Get(key)
+	if !ok {
+		return nil, cache.ErrNoLastAccessedTime
+	}
+
+	return &accessTime, nil
 }
 
 func (imbdcp *inMemoryBlobDescriptorCacheProvider) SetDescriptor(ctx context.Context, dgst digest.Digest, desc v1.Descriptor) error {
@@ -107,7 +144,10 @@ func (imbdcp *inMemoryBlobDescriptorCacheProvider) SetDescriptor(ctx context.Con
 		key := descriptorCacheKey{
 			digest: dgst,
 		}
+
 		imbdcp.lru.Add(key, desc)
+		imbdcp.setLastAccessTime(dgst)
+
 		return nil
 	}
 	// we already know it, do nothing

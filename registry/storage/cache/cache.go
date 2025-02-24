@@ -3,10 +3,18 @@
 package cache
 
 import (
+	"context"
+	"errors"
 	"fmt"
+	"time"
 
 	"github.com/distribution/distribution/v3"
+	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
+)
+
+var (
+	ErrNoLastAccessedTime = errors.New("no last accessed time available")
 )
 
 // BlobDescriptorCacheProvider provides repository scoped
@@ -15,6 +23,7 @@ type BlobDescriptorCacheProvider interface {
 	distribution.BlobDescriptorService
 
 	RepositoryScoped(repo string) (distribution.BlobDescriptorService, error)
+	GetLastAccessed(ctx context.Context, dgst digest.Digest) (*time.Time, error)
 }
 
 // ValidateDescriptor provides a helper function to ensure that caches have

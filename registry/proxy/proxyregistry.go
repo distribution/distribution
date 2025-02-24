@@ -41,7 +41,7 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 		return nil, err
 	}
 
-	v := storage.NewVacuum(ctx, driver)
+	v := storage.NewVacuum(ctx, registry, driver)
 
 	var s *scheduler.TTLExpirationScheduler
 	var ttl *time.Duration

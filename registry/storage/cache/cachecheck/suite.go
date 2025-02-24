@@ -4,6 +4,7 @@ import (
 	"context"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/registry/storage/cache"
@@ -112,6 +113,8 @@ func checkBlobDescriptorCacheSetAndRead(ctx context.Context, t *testing.T, provi
 		t.Fatalf("unexpected descriptor: %#v != %#v", expected, desc)
 	}
 
+	statNow := time.Now()
+
 	// get at it through canonical descriptor
 	desc, err = provider.Stat(ctx, expected.Digest)
 	if err != nil {
@@ -120,6 +123,19 @@ func checkBlobDescriptorCacheSetAndRead(ctx context.Context, t *testing.T, provi
 
 	if !reflect.DeepEqual(desc, expected) {
 		t.Fatalf("unexpected descriptor: %#v != %#v", expected, desc)
+	}
+
+	lastAccess, err := provider.GetLastAccessed(ctx, localDigest)
+	if err != nil {
+		t.Fatalf("unexpected error getting last accessed time: %v", err)
+	}
+
+	if lastAccess == nil {
+		t.Fatalf("expected last accessed time to be set")
+	}
+
+	if lastAccess.Sub(statNow) > time.Second || statNow.Sub(*lastAccess) > time.Second {
+		t.Fatalf("last access time not within one second of stat: %v, %v", lastAccess, statNow)
 	}
 
 	// now, we set the repo local mediatype to something else and ensure it

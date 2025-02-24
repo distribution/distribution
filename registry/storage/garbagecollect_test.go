@@ -8,6 +8,7 @@ import (
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/distribution/distribution/v3/manifest/ocischema"
+	memorycache "github.com/distribution/distribution/v3/registry/storage/cache/memory"
 	"github.com/distribution/distribution/v3/registry/storage/driver"
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
@@ -159,6 +160,8 @@ func TestNoDeletionNoEffect(t *testing.T) {
 	ctx := dcontext.Background()
 	inmemoryDriver := inmemory.New()
 
+	cacheProvider := memorycache.NewInMemoryBlobDescriptorCacheProvider(memorycache.DefaultSize)
+
 	registry := createRegistry(t, inmemoryDriver)
 	repo := makeRepository(t, registry, "palailogos")
 	manifestService, _ := repo.Manifests(ctx)
@@ -184,7 +187,7 @@ func TestNoDeletionNoEffect(t *testing.T) {
 	before := allBlobs(t, registry)
 
 	// Run GC
-	err = MarkAndSweep(dcontext.Background(), inmemoryDriver, registry, GCOpts{
+	err = MarkAndSweep(dcontext.Background(), inmemoryDriver, cacheProvider, registry, GCOpts{
 		DryRun:         false,
 		RemoveUntagged: false,
 	})
@@ -201,6 +204,8 @@ func TestNoDeletionNoEffect(t *testing.T) {
 func TestDeleteManifestIfTagNotFound(t *testing.T) {
 	ctx := dcontext.Background()
 	inmemoryDriver := inmemory.New()
+
+	cacheProvider := memorycache.NewInMemoryBlobDescriptorCacheProvider(memorycache.DefaultSize)
 
 	registry := createRegistry(t, inmemoryDriver)
 	repo := makeRepository(t, registry, "deletemanifests")
@@ -261,7 +266,7 @@ func TestDeleteManifestIfTagNotFound(t *testing.T) {
 	before2 := allManifests(t, manifestService)
 
 	// run GC with dry-run (should not remove anything)
-	err = MarkAndSweep(dcontext.Background(), inmemoryDriver, registry, GCOpts{
+	err = MarkAndSweep(dcontext.Background(), inmemoryDriver, cacheProvider, registry, GCOpts{
 		DryRun:         true,
 		RemoveUntagged: true,
 	})
@@ -278,7 +283,7 @@ func TestDeleteManifestIfTagNotFound(t *testing.T) {
 	}
 
 	// Run GC (removes everything because no manifests with tags exist)
-	err = MarkAndSweep(dcontext.Background(), inmemoryDriver, registry, GCOpts{
+	err = MarkAndSweep(dcontext.Background(), inmemoryDriver, cacheProvider, registry, GCOpts{
 		DryRun:         false,
 		RemoveUntagged: true,
 	})
@@ -299,6 +304,8 @@ func TestDeleteManifestIfTagNotFound(t *testing.T) {
 func TestDeleteManifestIndexWithDanglingReferences(t *testing.T) {
 	ctx := dcontext.Background()
 	inmemoryDriver := inmemory.New()
+
+	cacheProvider := memorycache.NewInMemoryBlobDescriptorCacheProvider(memorycache.DefaultSize)
 
 	registry := createRegistry(t, inmemoryDriver)
 	repo := makeRepository(t, registry, "deletemanifests")
@@ -331,7 +338,7 @@ func TestDeleteManifestIndexWithDanglingReferences(t *testing.T) {
 	before2 := allManifests(t, manifestService)
 
 	// run GC (should not remove anything because of tag)
-	err = MarkAndSweep(dcontext.Background(), inmemoryDriver, registry, GCOpts{
+	err = MarkAndSweep(dcontext.Background(), inmemoryDriver, cacheProvider, registry, GCOpts{
 		DryRun:         false,
 		RemoveUntagged: true,
 	})
@@ -352,6 +359,8 @@ func TestDeleteManifestIndexWithDanglingReferences(t *testing.T) {
 func TestDeleteManifestIndexIfTagNotFound(t *testing.T) {
 	ctx := dcontext.Background()
 	inmemoryDriver := inmemory.New()
+
+	cacheProvider := memorycache.NewInMemoryBlobDescriptorCacheProvider(memorycache.DefaultSize)
 
 	registry := createRegistry(t, inmemoryDriver)
 	repo := makeRepository(t, registry, "deletemanifests")
@@ -378,7 +387,7 @@ func TestDeleteManifestIndexIfTagNotFound(t *testing.T) {
 	before2 := allManifests(t, manifestService)
 
 	// run GC (should not remove anything because of tag)
-	err = MarkAndSweep(dcontext.Background(), inmemoryDriver, registry, GCOpts{
+	err = MarkAndSweep(dcontext.Background(), inmemoryDriver, cacheProvider, registry, GCOpts{
 		DryRun:         false,
 		RemoveUntagged: true,
 	})
@@ -400,7 +409,7 @@ func TestDeleteManifestIndexIfTagNotFound(t *testing.T) {
 	}
 
 	// Run GC (removes everything because no manifests with tags exist)
-	err = MarkAndSweep(dcontext.Background(), inmemoryDriver, registry, GCOpts{
+	err = MarkAndSweep(dcontext.Background(), inmemoryDriver, cacheProvider, registry, GCOpts{
 		DryRun:         false,
 		RemoveUntagged: true,
 	})
@@ -422,6 +431,8 @@ func TestGCWithUnusedLayerLinkPath(t *testing.T) {
 	ctx := dcontext.Background()
 	d := inmemory.New()
 
+	cacheProvider := memorycache.NewInMemoryBlobDescriptorCacheProvider(memorycache.DefaultSize)
+
 	registry := createRegistry(t, d)
 	repo := makeRepository(t, registry, "unusedlayerlink")
 	image := uploadRandomSchema2Image(t, repo)
@@ -440,7 +451,7 @@ func TestGCWithUnusedLayerLinkPath(t *testing.T) {
 		}
 	}
 
-	err := MarkAndSweep(dcontext.Background(), d, registry, GCOpts{
+	err := MarkAndSweep(dcontext.Background(), d, cacheProvider, registry, GCOpts{
 		DryRun:         false,
 		RemoveUntagged: true,
 	})
@@ -463,6 +474,8 @@ func TestGCWithUnknownRepository(t *testing.T) {
 	ctx := dcontext.Background()
 	d := inmemory.New()
 
+	cacheProvider := memorycache.NewInMemoryBlobDescriptorCacheProvider(memorycache.DefaultSize)
+
 	registry := createRegistry(t, d)
 	repo := makeRepository(t, registry, "nonexistentrepo")
 	image := uploadRandomSchema2Image(t, repo)
@@ -483,7 +496,7 @@ func TestGCWithUnknownRepository(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = MarkAndSweep(dcontext.Background(), d, registry, GCOpts{
+	err = MarkAndSweep(dcontext.Background(), d, cacheProvider, registry, GCOpts{
 		DryRun:         false,
 		RemoveUntagged: true,
 	})
@@ -495,6 +508,8 @@ func TestGCWithUnknownRepository(t *testing.T) {
 func TestGCWithMissingManifests(t *testing.T) {
 	ctx := dcontext.Background()
 	d := inmemory.New()
+
+	cacheProvider := memorycache.NewInMemoryBlobDescriptorCacheProvider(memorycache.DefaultSize)
 
 	registry := createRegistry(t, d)
 	repo := makeRepository(t, registry, "testrepo")
@@ -512,7 +527,7 @@ func TestGCWithMissingManifests(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = MarkAndSweep(dcontext.Background(), d, registry, GCOpts{
+	err = MarkAndSweep(dcontext.Background(), d, cacheProvider, registry, GCOpts{
 		DryRun:         false,
 		RemoveUntagged: false,
 	})
@@ -529,6 +544,8 @@ func TestGCWithMissingManifests(t *testing.T) {
 func TestDeletionHasEffect(t *testing.T) {
 	ctx := dcontext.Background()
 	inmemoryDriver := inmemory.New()
+
+	cacheProvider := memorycache.NewInMemoryBlobDescriptorCacheProvider(memorycache.DefaultSize)
 
 	registry := createRegistry(t, inmemoryDriver)
 	repo := makeRepository(t, registry, "komnenos")
@@ -547,7 +564,7 @@ func TestDeletionHasEffect(t *testing.T) {
 	}
 
 	// Run GC
-	err := MarkAndSweep(dcontext.Background(), inmemoryDriver, registry, GCOpts{
+	err := MarkAndSweep(dcontext.Background(), inmemoryDriver, cacheProvider, registry, GCOpts{
 		DryRun:         false,
 		RemoveUntagged: false,
 	})
@@ -668,6 +685,8 @@ func TestDeletionWithSharedLayer(t *testing.T) {
 func TestOrphanBlobDeleted(t *testing.T) {
 	inmemoryDriver := inmemory.New()
 
+	cacheProvider := memorycache.NewInMemoryBlobDescriptorCacheProvider(memorycache.DefaultSize)
+
 	registry := createRegistry(t, inmemoryDriver)
 	repo := makeRepository(t, registry, "michael_z_doukas")
 
@@ -684,7 +703,7 @@ func TestOrphanBlobDeleted(t *testing.T) {
 	uploadRandomSchema2Image(t, repo)
 
 	// Run GC
-	err = MarkAndSweep(dcontext.Background(), inmemoryDriver, registry, GCOpts{
+	err = MarkAndSweep(dcontext.Background(), inmemoryDriver, cacheProvider, registry, GCOpts{
 		DryRun:         false,
 		RemoveUntagged: false,
 	})
@@ -705,6 +724,7 @@ func TestOrphanBlobDeleted(t *testing.T) {
 func TestTaggedManifestlistWithUntaggedManifest(t *testing.T) {
 	ctx := dcontext.Background()
 	inmemoryDriver := inmemory.New()
+	cacheProvider := memorycache.NewInMemoryBlobDescriptorCacheProvider(memorycache.DefaultSize)
 
 	registry := createRegistry(t, inmemoryDriver)
 	repo := makeRepository(t, registry, "foo/taggedlist/untaggedmanifest")
@@ -738,7 +758,7 @@ func TestTaggedManifestlistWithUntaggedManifest(t *testing.T) {
 	before := allBlobs(t, registry)
 
 	// Run GC
-	err = MarkAndSweep(dcontext.Background(), inmemoryDriver, registry, GCOpts{
+	err = MarkAndSweep(dcontext.Background(), inmemoryDriver, cacheProvider, registry, GCOpts{
 		DryRun:         false,
 		RemoveUntagged: true,
 	})
@@ -768,6 +788,8 @@ func TestUnTaggedManifestlistWithUntaggedManifest(t *testing.T) {
 	ctx := dcontext.Background()
 	inmemoryDriver := inmemory.New()
 
+	cacheProvider := memorycache.NewInMemoryBlobDescriptorCacheProvider(memorycache.DefaultSize)
+
 	registry := createRegistry(t, inmemoryDriver)
 	repo := makeRepository(t, registry, "foo/untaggedlist/untaggedmanifest")
 	manifestService, err := repo.Manifests(ctx)
@@ -793,7 +815,7 @@ func TestUnTaggedManifestlistWithUntaggedManifest(t *testing.T) {
 	}
 
 	// Run GC
-	err = MarkAndSweep(dcontext.Background(), inmemoryDriver, registry, GCOpts{
+	err = MarkAndSweep(dcontext.Background(), inmemoryDriver, cacheProvider, registry, GCOpts{
 		DryRun:         false,
 		RemoveUntagged: true,
 	})
@@ -811,6 +833,8 @@ func TestUnTaggedManifestlistWithUntaggedManifest(t *testing.T) {
 func TestUnTaggedManifestlistWithTaggedManifest(t *testing.T) {
 	ctx := dcontext.Background()
 	inmemoryDriver := inmemory.New()
+
+	cacheProvider := memorycache.NewInMemoryBlobDescriptorCacheProvider(memorycache.DefaultSize)
 
 	registry := createRegistry(t, inmemoryDriver)
 	repo := makeRepository(t, registry, "foo/untaggedlist/taggedmanifest")
@@ -847,7 +871,7 @@ func TestUnTaggedManifestlistWithTaggedManifest(t *testing.T) {
 	}
 
 	// Run GC
-	err = MarkAndSweep(dcontext.Background(), inmemoryDriver, registry, GCOpts{
+	err = MarkAndSweep(dcontext.Background(), inmemoryDriver, cacheProvider, registry, GCOpts{
 		DryRun:         false,
 		RemoveUntagged: true,
 	})
@@ -874,6 +898,8 @@ func TestUnTaggedManifestlistWithTaggedManifest(t *testing.T) {
 func TestTaggedManifestlistWithDeletedReference(t *testing.T) {
 	ctx := dcontext.Background()
 	inmemoryDriver := inmemory.New()
+
+	cacheProvider := memorycache.NewInMemoryBlobDescriptorCacheProvider(memorycache.DefaultSize)
 
 	registry := createRegistry(t, inmemoryDriver)
 	repo := makeRepository(t, registry, "foo/untaggedlist/deleteref")
@@ -910,7 +936,7 @@ func TestTaggedManifestlistWithDeletedReference(t *testing.T) {
 	}
 
 	// Run GC
-	err = MarkAndSweep(dcontext.Background(), inmemoryDriver, registry, GCOpts{
+	err = MarkAndSweep(dcontext.Background(), inmemoryDriver, cacheProvider, registry, GCOpts{
 		DryRun:         false,
 		RemoveUntagged: true,
 	})

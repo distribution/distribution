@@ -4,7 +4,9 @@ import (
 	"context"
 	"path"
 
+	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/internal/dcontext"
+	"github.com/distribution/distribution/v3/registry/storage/cache"
 	"github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/opencontainers/go-digest"
 )
@@ -15,15 +17,24 @@ import (
 // https://en.wikipedia.org/wiki/Consistency_model
 
 // NewVacuum creates a new Vacuum
-func NewVacuum(ctx context.Context, driver driver.StorageDriver) Vacuum {
-	return Vacuum{
+func NewVacuum(ctx context.Context, reg distribution.Namespace, driver driver.StorageDriver) Vacuum {
+	v := Vacuum{
 		ctx:    ctx,
 		driver: driver,
 	}
+
+	r, ok := reg.(*registry)
+
+	if ok {
+		v.BlobDescriptorCacheProvider = r.blobDescriptorCacheProvider
+	}
+
+	return v
 }
 
 // Vacuum removes content from the filesystem
 type Vacuum struct {
+	cache.BlobDescriptorCacheProvider
 	driver driver.StorageDriver
 	ctx    context.Context
 }
@@ -41,6 +52,12 @@ func (v Vacuum) RemoveBlob(dgst string) error {
 	}
 
 	dcontext.GetLogger(v.ctx).Infof("Deleting blob: %s", blobPath)
+
+	if v.BlobDescriptorCacheProvider != nil {
+		if err = v.BlobDescriptorCacheProvider.Clear(v.ctx, d); err != nil {
+			return err
+		}
+	}
 
 	err = v.driver.Delete(v.ctx, blobPath)
 	if err != nil {
@@ -81,6 +98,13 @@ func (v Vacuum) RemoveManifest(name string, dgst digest.Digest, tags []string) e
 		return err
 	}
 	dcontext.GetLogger(v.ctx).Infof("deleting manifest: %s", manifestPath)
+
+	if v.BlobDescriptorCacheProvider != nil {
+		if err = v.BlobDescriptorCacheProvider.Clear(v.ctx, dgst); err != nil {
+			return err
+		}
+	}
+
 	return v.driver.Delete(v.ctx, manifestPath)
 }
 

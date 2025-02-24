@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/distribution/distribution/v3"
+	"github.com/distribution/distribution/v3/registry/storage/cache"
 	"github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/reference"
 	"github.com/opencontainers/go-digest"
@@ -18,9 +20,10 @@ func emit(format string, a ...interface{}) {
 
 // GCOpts contains options for garbage collector
 type GCOpts struct {
-	DryRun         bool
-	RemoveUntagged bool
-	Quiet          bool
+	DryRun               bool
+	RemoveUntagged       bool
+	Quiet                bool
+	LastAccessedDuration time.Duration
 }
 
 // ManifestDel contains manifest structure which will be deleted
@@ -31,10 +34,15 @@ type ManifestDel struct {
 }
 
 // MarkAndSweep performs a mark and sweep of registry data
-func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, registry distribution.Namespace, opts GCOpts) error {
+func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, cacheProvider cache.BlobDescriptorCacheProvider, registry distribution.Namespace, opts GCOpts) error {
 	repositoryEnumerator, ok := registry.(distribution.RepositoryEnumerator)
 	if !ok {
 		return fmt.Errorf("unable to convert Namespace to RepositoryEnumerator")
+	}
+
+	lastAccessed := opts.LastAccessedDuration
+	if lastAccessed == 0 {
+		lastAccessed = time.Minute * 30
 	}
 
 	// mark
@@ -42,9 +50,7 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 	deleteLayerSet := make(map[string][]digest.Digest)
 	manifestArr := make([]ManifestDel, 0)
 	err := repositoryEnumerator.Enumerate(ctx, func(repoName string) error {
-		if !opts.Quiet {
-			emit(repoName)
-		}
+		emit(repoName)
 
 		var err error
 		named, err := reference.WithName(repoName)
@@ -80,9 +86,7 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 					allTags, err := repository.Tags(ctx).All(ctx)
 					if err != nil {
 						if _, ok := err.(distribution.ErrRepositoryUnknown); ok {
-							if !opts.Quiet {
-								emit("manifest tags path of repository %s does not exist", repoName)
-							}
+							emit("manifest tags path of repository %s does not exist", repoName)
 							return nil
 						}
 						return fmt.Errorf("failed to retrieve tags %v", err)
@@ -92,18 +96,14 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 				}
 			}
 			// Mark the manifest's blob
-			if !opts.Quiet {
-				emit("%s: marking manifest %s ", repoName, dgst)
-			}
+			emit("%s: marking manifest %s ", repoName, dgst)
 			markSet[dgst] = struct{}{}
 
 			return markManifestReferences(dgst, manifestService, ctx, func(d digest.Digest) bool {
 				_, marked := markSet[d]
 				if !marked {
 					markSet[d] = struct{}{}
-					if !opts.Quiet {
-						emit("%s: marking blob %s", repoName, d)
-					}
+					emit("%s: marking blob %s", repoName, d)
 				}
 				return marked
 			})
@@ -141,12 +141,29 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 		return fmt.Errorf("failed to mark: %v", err)
 	}
 
-	manifestArr = unmarkReferencedManifest(manifestArr, markSet, opts.Quiet)
+	manifestArr = unmarkReferencedManifest(manifestArr, markSet)
 
 	// sweep
-	vacuum := NewVacuum(ctx, storageDriver)
+	vacuum := NewVacuum(ctx, registry, storageDriver)
 	if !opts.DryRun {
 		for _, obj := range manifestArr {
+			lat, err := cacheProvider.GetLastAccessed(ctx, obj.Digest)
+			if err != nil && !errors.Is(err, cache.ErrNoLastAccessedTime) {
+				if !opts.Quiet {
+					emit("error getting last accessed time for %s: %v", obj.Digest, err)
+				}
+
+				continue
+			}
+
+			if lat != nil && lat.After(time.Now().Add(-lastAccessed)) {
+				if !opts.Quiet {
+					emit("manifest %s last accessed %s, skipping", obj.Digest, lat)
+				}
+
+				continue
+			}
+
 			err = vacuum.RemoveManifest(obj.Name, obj.Digest, obj.Tags)
 			if err != nil {
 				return fmt.Errorf("failed to delete manifest %s: %v", obj.Digest, err)
@@ -165,13 +182,9 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 	if err != nil {
 		return fmt.Errorf("error enumerating blobs: %v", err)
 	}
-	if !opts.Quiet {
-		emit("\n%d blobs marked, %d blobs and %d manifests eligible for deletion", len(markSet), len(deleteSet), len(manifestArr))
-	}
+	emit("\n%d blobs marked, %d blobs and %d manifests eligible for deletion", len(markSet), len(deleteSet), len(manifestArr))
 	for dgst := range deleteSet {
-		if !opts.Quiet {
-			emit("blob eligible for deletion: %s", dgst)
-		}
+		emit("blob eligible for deletion: %s", dgst)
 		if opts.DryRun {
 			continue
 		}
@@ -183,9 +196,7 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 
 	for repo, dgsts := range deleteLayerSet {
 		for _, dgst := range dgsts {
-			if !opts.Quiet {
-				emit("%s: layer link eligible for deletion: %s", repo, dgst)
-			}
+			emit("%s: layer link eligible for deletion: %s", repo, dgst)
 			if opts.DryRun {
 				continue
 			}
@@ -200,14 +211,11 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 }
 
 // unmarkReferencedManifest filters out manifest present in markSet
-func unmarkReferencedManifest(manifestArr []ManifestDel, markSet map[digest.Digest]struct{}, quietOutput bool) []ManifestDel {
+func unmarkReferencedManifest(manifestArr []ManifestDel, markSet map[digest.Digest]struct{}) []ManifestDel {
 	filtered := make([]ManifestDel, 0)
 	for _, obj := range manifestArr {
 		if _, ok := markSet[obj.Digest]; !ok {
-			if !quietOutput {
-				emit("manifest eligible for deletion: %s", obj)
-			}
-
+			emit("manifest eligible for deletion: %s", obj)
 			filtered = append(filtered, obj)
 		}
 	}

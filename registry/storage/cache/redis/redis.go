@@ -3,7 +3,9 @@ package redis
 import (
 	"context"
 	"fmt"
+	"log"
 	"strconv"
+	"time"
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/registry/storage/cache"
@@ -72,7 +74,42 @@ func (rbds *redisBlobDescriptorService) Stat(ctx context.Context, dgst digest.Di
 		return v1.Descriptor{}, err
 	}
 
-	return rbds.stat(ctx, dgst)
+	desc, err := rbds.stat(ctx, dgst)
+	if err != nil {
+		return v1.Descriptor{}, err
+	}
+
+	go rbds.setLastAccessTime(ctx, dgst)
+
+	return desc, nil
+}
+
+func (rbds *redisBlobDescriptorService) setLastAccessTime(ctx context.Context, dgst digest.Digest) {
+	// We don't need to check for existence here, as we are only updating the
+	// last access time.
+	cmd := rbds.pool.HSet(ctx, rbds.blobDescriptorHashKey(dgst), "lastaccess", strconv.FormatInt(time.Now().Unix(), 10))
+	if cmd.Err() != nil {
+		log.Println("error setting last access time:", cmd.Err())
+	}
+}
+
+func (rbds *redisBlobDescriptorService) GetLastAccessed(ctx context.Context, dgst digest.Digest) (*time.Time, error) {
+	cmd := rbds.pool.HGet(ctx, rbds.blobDescriptorHashKey(dgst), "lastaccess")
+	if cmd.Err() != nil {
+		if cmd.Err() == redis.Nil {
+			return nil, cache.ErrNoLastAccessedTime
+		}
+		log.Println("error getting last access time:", cmd.Err())
+		return nil, cmd.Err()
+	}
+
+	lastAccessTime, err := cmd.Int64()
+	if err != nil {
+		return nil, err
+	}
+
+	t := time.Unix(lastAccessTime, 0)
+	return &t, nil
 }
 
 func (rbds *redisBlobDescriptorService) Clear(ctx context.Context, dgst digest.Digest) error {
@@ -89,6 +126,7 @@ func (rbds *redisBlobDescriptorService) Clear(ctx context.Context, dgst digest.D
 	if res == 0 {
 		return distribution.ErrBlobUnknown
 	}
+
 	return nil
 }
 
@@ -146,7 +184,10 @@ func (rbds *redisBlobDescriptorService) SetDescriptor(ctx context.Context, dgst 
 }
 
 func (rbds *redisBlobDescriptorService) setDescriptor(ctx context.Context, dgst digest.Digest, desc v1.Descriptor) error {
-	cmd := rbds.pool.HMSet(ctx, rbds.blobDescriptorHashKey(dgst), "digest", desc.Digest.String(), "size", desc.Size)
+	cmd := rbds.pool.HMSet(ctx, rbds.blobDescriptorHashKey(dgst),
+		"digest", desc.Digest.String(),
+		"size", desc.Size,
+		"lastaccess", strconv.FormatInt(time.Now().Unix(), 10))
 	if cmd.Err() != nil {
 		return cmd.Err()
 	}
