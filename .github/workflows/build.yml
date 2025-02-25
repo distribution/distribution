@@ -33,8 +33,8 @@ jobs:
       fail-fast: false
       matrix:
         go:
-          - 1.22.8
-          - 1.23.2
+          - 1.22.12
+          - 1.23.6
         target:
           - test-coverage
           - test-cloud-storage
@@ -118,8 +118,9 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       -
         name: Build artifacts
-        uses: docker/bake-action@v5
+        uses: docker/bake-action@v6
         with:
+          source: .
           targets: artifact-all
       -
         name: Rename provenance
@@ -139,15 +140,16 @@ jobs:
           tree -nh ./bin
       -
         name: Upload artifacts
-        uses: actions/upload-artifact@v4.3.6
+        uses: actions/upload-artifact@v4.6.0
         with:
           name: registry
           path: ./bin/*
           if-no-files-found: error
       -
         name: Build image
-        uses: docker/bake-action@v5
+        uses: docker/bake-action@v6
         with:
+          source: .
           files: |
             ./docker-bake.hcl
             ${{ steps.meta.outputs.bake-file }}

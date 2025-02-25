@@ -229,6 +229,7 @@ http:
     clientcas:
       - /path/to/ca.pem
       - /path/to/another/ca.pem
+    clientauth: require-and-verify-client-cert
     letsencrypt:
       cachefile: /path/to/cache-file
       email: emailused@letsencrypt.com
@@ -808,6 +809,7 @@ http:
     clientcas:
       - /path/to/ca.pem
       - /path/to/another/ca.pem
+    clientauth: require-and-verify-client-cert
     minimumtls: tls1.2
     ciphersuites:
       - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
@@ -848,13 +850,14 @@ for the server. If you already have a web server running on
 the same host as the registry, you may prefer to configure TLS on that web server
 and proxy connections to the registry server.
 
-| Parameter | Required | Description                                           |
-|-----------|----------|-------------------------------------------------------|
-| `certificate`  | yes  | Absolute path to the x509 certificate file.           |
-| `key`          | yes  | Absolute path to the x509 private key file.           |
-| `clientcas`    | no   | An array of absolute paths to x509 CA files.          |
-| `minimumtls`   | no   | Minimum TLS version allowed (tls1.0, tls1.1, tls1.2, tls1.3). Defaults to tls1.2 |
-| `ciphersuites` | no   | Cipher suites allowed. Please see below for allowed values and default. |
+| Parameter      | Required | Description                                                                                                                                                                                                                                                                                                                                                                                        |
+|----------------|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `certificate`  | yes  | Absolute path to the x509 certificate file.                                                                                                                                                                                                                                                                                                                                                        |
+| `key`          | yes  | Absolute path to the x509 private key file.                                                                                                                                                                                                                                                                                                                                                        |
+| `clientcas`    | no   | An array of absolute paths to x509 CA files.                                                                                                                                                                                                                                                                                                                                                       |
+| `clientauth`   | no   | Client certificate authentication mode. This setting determines how the server handles client certificates during the TLS handshake. If clientcas is not provided, TLS Client Authentication is disabled, and the mode is ignored. Allowed (request-client-cert, require-any-client-cert, verify-client-cert-if-given, require-and-verify-client-cert). Defaults to require-and-verify-client-cert |
+| `minimumtls`   | no   | Minimum TLS version allowed (tls1.0, tls1.1, tls1.2, tls1.3). Defaults to tls1.2                                                                                                                                                                                                                                                                                                                   |
+| `ciphersuites` | no   | Cipher suites allowed. Please see below for allowed values and default.                                                                                                                                                                                                                                                                                                                            |
 
 Available cipher suites:
 - TLS_RSA_WITH_RC4_128_SHA

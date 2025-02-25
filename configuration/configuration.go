@@ -109,6 +109,10 @@ type Configuration struct {
 			// A file may contain multiple CA certificates encoded as PEM
 			ClientCAs []string `yaml:"clientcas,omitempty"`
 
+			// Client certificate authentication mode
+			// One of: request-client-cert, require-any-client-cert, verify-client-cert-if-given, require-and-verify-client-cert
+			ClientAuth ClientAuth `yaml:"clientauth,omitempty"`
+
 			// Specifies the lowest TLS version allowed
 			MinimumTLS string `yaml:"minimumtls,omitempty"`
 
@@ -897,5 +901,37 @@ func setFieldValue(field reflect.Value, value interface{}) error {
 	default:
 		return fmt.Errorf("unsupported field type: %v", field.Type())
 	}
+	return nil
+}
+
+const (
+	ClientAuthRequestClientCert          = "request-client-cert"
+	ClientAuthRequireAnyClientCert       = "require-any-client-cert"
+	ClientAuthVerifyClientCertIfGiven    = "verify-client-cert-if-given"
+	ClientAuthRequireAndVerifyClientCert = "require-and-verify-client-cert"
+)
+
+type ClientAuth string
+
+// UnmarshalYAML implements the yaml.Umarshaler interface
+// Unmarshals a string into a ClientAuth, validating that it represents a valid ClientAuth mod
+func (clientAuth *ClientAuth) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var clientAuthString string
+	err := unmarshal(&clientAuthString)
+	if err != nil {
+		return err
+	}
+
+	switch clientAuthString {
+	case ClientAuthRequestClientCert:
+	case ClientAuthRequireAnyClientCert:
+	case ClientAuthVerifyClientCertIfGiven:
+	case ClientAuthRequireAndVerifyClientCert:
+	default:
+		return fmt.Errorf("invalid ClientAuth %s Must be one of: %s, %s, %s, %s", clientAuthString, ClientAuthRequestClientCert, ClientAuthRequireAnyClientCert, ClientAuthVerifyClientCertIfGiven, ClientAuthRequireAndVerifyClientCert)
+	}
+
+	*clientAuth = ClientAuth(clientAuthString)
+
 	return nil
 }

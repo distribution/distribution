@@ -197,7 +197,7 @@ func checkOptions(options map[string]interface{}) (tokenAccessOptions, error) {
 				vals = append(vals, "")
 				continue
 			}
-			return opts, fmt.Errorf("token auth requires a valid option string: %q", key)
+			return tokenAccessOptions{}, fmt.Errorf("token auth requires a valid option string: %q", key)
 		}
 		vals = append(vals, val)
 	}
@@ -208,7 +208,7 @@ func checkOptions(options map[string]interface{}) (tokenAccessOptions, error) {
 	if ok {
 		autoRedirect, ok := autoRedirectVal.(bool)
 		if !ok {
-			return opts, errors.New("token auth requires a valid option bool: autoredirect")
+			return tokenAccessOptions{}, errors.New("token auth requires a valid option bool: autoredirect")
 		}
 		opts.autoRedirect = autoRedirect
 	}
@@ -217,7 +217,7 @@ func checkOptions(options map[string]interface{}) (tokenAccessOptions, error) {
 		if ok {
 			autoRedirectPath, ok := autoRedirectPathVal.(string)
 			if !ok {
-				return opts, errors.New("token auth requires a valid option string: autoredirectpath")
+				return tokenAccessOptions{}, errors.New("token auth requires a valid option string: autoredirectpath")
 			}
 			opts.autoRedirectPath = autoRedirectPath
 		}
@@ -228,11 +228,19 @@ func checkOptions(options map[string]interface{}) (tokenAccessOptions, error) {
 
 	signingAlgos, ok := options["signingalgorithms"]
 	if ok {
-		signingAlgorithmsVals, ok := signingAlgos.([]string)
+		signingAlgorithmsVals, ok := signingAlgos.([]interface{})
 		if !ok {
-			return opts, errors.New("signingalgorithms must be a list of signing algorithms")
+			return tokenAccessOptions{}, errors.New("signingalgorithms must be a list of signing algorithms")
 		}
-		opts.signingAlgorithms = signingAlgorithmsVals
+
+		for _, signingAlgorithmVal := range signingAlgorithmsVals {
+			signingAlgorithm, ok := signingAlgorithmVal.(string)
+			if !ok {
+				return tokenAccessOptions{}, errors.New("signingalgorithms must be a list of signing algorithms")
+			}
+
+			opts.signingAlgorithms = append(opts.signingAlgorithms, signingAlgorithm)
+		}
 	}
 
 	return opts, nil
@@ -298,11 +306,11 @@ func getJwks(path string) (*jose.JSONWebKeySet, error) {
 func getSigningAlgorithms(algos []string) ([]jose.SignatureAlgorithm, error) {
 	signAlgVals := make([]jose.SignatureAlgorithm, 0, len(algos))
 	for _, alg := range algos {
-		alg, ok := signingAlgorithms[alg]
+		signAlg, ok := signingAlgorithms[alg]
 		if !ok {
 			return nil, fmt.Errorf("unsupported signing algorithm: %s", alg)
 		}
-		signAlgVals = append(signAlgVals, alg)
+		signAlgVals = append(signAlgVals, signAlg)
 	}
 	return signAlgVals, nil
 }
