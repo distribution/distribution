@@ -16,6 +16,7 @@ const (
 	envAccountKey    = "AZURE_STORAGE_ACCOUNT_KEY"
 	envContainer     = "AZURE_STORAGE_CONTAINER"
 	envRealm         = "AZURE_STORAGE_REALM"
+	envServiceURL    = "AZURE_SERVICE_URL"
 	envRootDirectory = "AZURE_ROOT_DIRECTORY"
 )
 
@@ -28,6 +29,7 @@ func init() {
 		accountKey    string
 		container     string
 		realm         string
+		serviceURL    string
 		rootDirectory string
 	)
 
@@ -39,6 +41,7 @@ func init() {
 		{envAccountName, &accountName, false},
 		{envAccountKey, &accountKey, true},
 		{envContainer, &container, true},
+		{envServiceURL, &serviceURL, false},
 		{envRealm, &realm, true},
 		{envRootDirectory, &rootDirectory, true},
 	}
@@ -57,6 +60,7 @@ func init() {
 			"accountname":   accountName,
 			"accountkey":    accountKey,
 			"realm":         realm,
+			"serviceurl":    serviceURL,
 			"rootdirectory": rootDirectory,
 		}
 		params, err := NewParameters(parameters)
