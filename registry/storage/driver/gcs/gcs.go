@@ -14,6 +14,7 @@ package gcs
 import (
 	"bytes"
 	"context"
+	"crypto/md5"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -425,6 +426,10 @@ func (d *driver) putContent(ctx context.Context, obj *storage.ObjectHandle, cont
 	if _, err := bytes.NewReader(content).WriteTo(wc); err != nil {
 		return err
 	}
+	h := md5.New()
+	h.Write(content)
+	wc.MD5 = h.Sum(nil)
+
 	return wc.Close()
 }
 
