@@ -14,6 +14,7 @@ package gcs
 import (
 	"bytes"
 	"context"
+	"crypto/md5"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -425,6 +426,14 @@ func (d *driver) putContent(ctx context.Context, obj *storage.ObjectHandle, cont
 	if _, err := bytes.NewReader(content).WriteTo(wc); err != nil {
 		return err
 	}
+	// NOTE(milosgajdos): Apparently it's posisble to to upload 0-byte content to GCS.
+	// Setting MD5 on the Writer helps to prevent presisting that data.
+	// If set, the uploaded data is rejected if its MD5 hash does not match this field.
+	// See: https://pkg.go.dev/cloud.google.com/go/storage#ObjectAttrs
+	h := md5.New()
+	h.Write(content)
+	wc.MD5 = h.Sum(nil)
+
 	return wc.Close()
 }
 
