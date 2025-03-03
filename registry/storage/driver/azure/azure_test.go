@@ -16,6 +16,7 @@ const (
 	envAccountKey    = "AZURE_STORAGE_ACCOUNT_KEY"
 	envContainer     = "AZURE_STORAGE_CONTAINER"
 	envRealm         = "AZURE_STORAGE_REALM"
+	envServiceURL    = "AZURE_SERVICE_URL"
 	envRootDirectory = "AZURE_ROOT_DIRECTORY"
 )
 
@@ -28,6 +29,7 @@ func init() {
 		accountKey    string
 		container     string
 		realm         string
+		serviceURL    string
 		rootDirectory string
 	)
 
@@ -39,6 +41,7 @@ func init() {
 		{envAccountName, &accountName, false},
 		{envAccountKey, &accountKey, true},
 		{envContainer, &container, true},
+		{envServiceURL, &serviceURL, false},
 		{envRealm, &realm, true},
 		{envRootDirectory, &rootDirectory, true},
 	}
@@ -57,6 +60,7 @@ func init() {
 			"accountname":   accountName,
 			"accountkey":    accountKey,
 			"realm":         realm,
+			"serviceurl":    serviceURL,
 			"rootdirectory": rootDirectory,
 		}
 		params, err := NewParameters(parameters)
@@ -161,7 +165,7 @@ func TestParamParsing(t *testing.T) {
 		}
 	}
 	input := []map[string]interface{}{
-		{"accountname": "acc1", "accountkey": "k1", "container": "c1", "copy_status_poll_max_retry": 1, "copy_status_poll_delay": "10ms"},
+		{"accountname": "acc1", "accountkey": "k1", "container": "c1", "max_retries": 1, "retry_delay": "10ms"},
 		{"accountname": "acc1", "container": "c1", "credentials": map[string]interface{}{"type": "default"}},
 		{"accountname": "acc1", "container": "c1", "credentials": map[string]interface{}{"type": "client_secret", "clientid": "c1", "tenantid": "t1", "secret": "s1"}},
 	}
@@ -169,18 +173,18 @@ func TestParamParsing(t *testing.T) {
 		{
 			Container: "c1", AccountName: "acc1", AccountKey: "k1",
 			Realm: "core.windows.net", ServiceURL: "https://acc1.blob.core.windows.net",
-			CopyStatusPollMaxRetry: 1, CopyStatusPollDelay: "10ms",
+			MaxRetries: 1, RetryDelay: "10ms",
 		},
 		{
 			Container: "c1", AccountName: "acc1", Credentials: Credentials{Type: "default"},
 			Realm: "core.windows.net", ServiceURL: "https://acc1.blob.core.windows.net",
-			CopyStatusPollMaxRetry: 5, CopyStatusPollDelay: "100ms",
+			MaxRetries: 5, RetryDelay: "100ms",
 		},
 		{
 			Container: "c1", AccountName: "acc1",
 			Credentials: Credentials{Type: "client_secret", ClientID: "c1", TenantID: "t1", Secret: "s1"},
 			Realm:       "core.windows.net", ServiceURL: "https://acc1.blob.core.windows.net",
-			CopyStatusPollMaxRetry: 5, CopyStatusPollDelay: "100ms",
+			MaxRetries: 5, RetryDelay: "100ms",
 		},
 	}
 	for i, expected := range expecteds {

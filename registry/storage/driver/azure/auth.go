@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
@@ -45,49 +46,94 @@ type azureClient struct {
 	signer    signer
 }
 
-func newAzureClient(params *Parameters) (*azureClient, error) {
+func newClient(params *Parameters) (*azureClient, error) {
 	if params.AccountKey != "" {
-		cred, err := azblob.NewSharedKeyCredential(params.AccountName, params.AccountKey)
-		if err != nil {
-			return nil, err
-		}
-		client, err := azblob.NewClientWithSharedKeyCredential(params.ServiceURL, cred, nil)
-		if err != nil {
-			return nil, err
-		}
-		signer := &sharedKeySigner{
-			cred: cred,
-		}
-		return &azureClient{
-			container: params.Container,
-			client:    client,
-			signer:    signer,
-		}, nil
+		return newTokenClient(params)
 	}
+	return newSharedKeyCredentialsClient(params)
+}
 
-	var cred azcore.TokenCredential
-	var err error
-	if params.Credentials.Type == "client_secret" {
+func newTokenClient(params *Parameters) (*azureClient, error) {
+	var (
+		cred azcore.TokenCredential
+		err  error
+	)
+
+	switch params.Credentials.Type {
+	case "client_secret":
 		creds := &params.Credentials
-		if cred, err = azidentity.NewClientSecretCredential(creds.TenantID, creds.ClientID, creds.Secret, nil); err != nil {
+		cred, err = azidentity.NewClientSecretCredential(creds.TenantID, creds.ClientID, creds.Secret, nil)
+		if err != nil {
 			return nil, err
 		}
-	} else if cred, err = azidentity.NewDefaultAzureCredential(nil); err != nil {
-		return nil, err
+	default:
+		cred, err = azidentity.NewDefaultAzureCredential(nil)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	client, err := azblob.NewClient(params.ServiceURL, cred, nil)
+	azBlobOpts := &azblob.ClientOptions{
+		ClientOptions: azcore.ClientOptions{
+			PerRetryPolicies: []policy.Policy{newRetryNotificationPolicy()},
+			Logging: policy.LogOptions{
+				AllowedHeaders: []string{
+					"x-ms-error-code",
+					"Retry-After",
+					"Retry-After-Ms",
+					"If-Match",
+					"x-ms-blob-condition-appendpos",
+				},
+				AllowedQueryParams: []string{"comp"},
+			},
+		},
+	}
+	client, err := azblob.NewClient(params.ServiceURL, cred, azBlobOpts)
 	if err != nil {
 		return nil, err
 	}
-	signer := &clientTokenSigner{
-		client: client,
-		cred:   cred,
-	}
+
 	return &azureClient{
 		container: params.Container,
 		client:    client,
-		signer:    signer,
+		signer: &clientTokenSigner{
+			client: client,
+			cred:   cred,
+		},
+	}, nil
+}
+
+func newSharedKeyCredentialsClient(params *Parameters) (*azureClient, error) {
+	cred, err := azblob.NewSharedKeyCredential(params.AccountName, params.AccountKey)
+	if err != nil {
+		return nil, err
+	}
+	azBlobOpts := &azblob.ClientOptions{
+		ClientOptions: azcore.ClientOptions{
+			PerRetryPolicies: []policy.Policy{newRetryNotificationPolicy()},
+			Logging: policy.LogOptions{
+				AllowedHeaders: []string{
+					"x-ms-error-code",
+					"Retry-After",
+					"Retry-After-Ms",
+					"If-Match",
+					"x-ms-blob-condition-appendpos",
+				},
+				AllowedQueryParams: []string{"comp"},
+			},
+		},
+	}
+	client, err := azblob.NewClientWithSharedKeyCredential(params.ServiceURL, cred, azBlobOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	return &azureClient{
+		container: params.Container,
+		client:    client,
+		signer: &sharedKeySigner{
+			cred: cred,
+		},
 	}, nil
 }
 

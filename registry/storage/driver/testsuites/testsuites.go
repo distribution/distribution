@@ -1323,7 +1323,7 @@ func (suite *DriverSuite) writeReadCompareStreams(filename string, contents []by
 
 var (
 	filenameChars  = []byte("abcdefghijklmnopqrstuvwxyz0123456789")
-	separatorChars = []byte("._-")
+	separatorChars = []byte("-")
 )
 
 func randomPath(length int64) string {
