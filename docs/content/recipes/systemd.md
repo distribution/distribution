@@ -34,7 +34,7 @@ ExecStartPre=-/usr/bin/docker rm %N
 ExecStart=/usr/bin/docker run --name %N \
     -v registry:/var/lib/registry \
     -p 5000:5000 \
-    registry:2
+    registry:3
 
 [Install]
 WantedBy=multi-user.target
@@ -53,7 +53,7 @@ socket-activation of containers.
 #### Create service file
 
 ```sh
-podman create --name registry --network=none -v registry:/var/lib/registry registry:2
+podman create --name registry --network=none -v registry:/var/lib/registry registry:3
 podman generate systemd --name --new registry > registry.service
 ```
 
