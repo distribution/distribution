@@ -149,9 +149,32 @@ func (d *driver) PutContent(ctx context.Context, path string, contents []byte) e
 		}
 	}
 
-	// TODO(milosgajdos): should we set some concurrency options on UploadBuffer
-	_, err = d.client.NewBlockBlobClient(blobName).UploadBuffer(ctx, contents, nil)
-	return err
+	// Always create as AppendBlob
+	appendBlobRef := d.client.NewAppendBlobClient(blobName)
+	if _, err := appendBlobRef.Create(ctx, nil); err != nil {
+		return fmt.Errorf("failed to create append blob: %v", err)
+	}
+
+	// If we have content, append it
+	if len(contents) > 0 {
+		// Write in chunks of maxChunkSize otherwise Azure can barf
+		// when writing large piece of data in one sot:
+		// RESPONSE 413: 413 The uploaded entity blob is too large.
+		for offset := 0; offset < len(contents); offset += maxChunkSize {
+			end := offset + maxChunkSize
+			if end > len(contents) {
+				end = len(contents)
+			}
+
+			chunk := contents[offset:end]
+			_, err := appendBlobRef.AppendBlock(ctx, streaming.NopCloser(bytes.NewReader(chunk)), nil)
+			if err != nil {
+				return fmt.Errorf("failed to append content: %v", err)
+			}
+		}
+	}
+
+	return nil
 }
 
 // Reader retrieves an io.ReadCloser for the content stored at "path" with a
@@ -203,6 +226,7 @@ func (d *driver) Writer(ctx context.Context, path string, appendMode bool) (stor
 		}
 		blobExists = false
 	}
+	eTag := props.ETag
 
 	var size int64
 	if blobExists {
@@ -212,20 +236,27 @@ func (d *driver) Writer(ctx context.Context, path string, appendMode bool) (stor
 			}
 			size = *props.ContentLength
 		} else {
-			if _, err := blobRef.Delete(ctx, nil); err != nil {
-				return nil, err
+			if _, err := blobRef.Delete(ctx, nil); err != nil && !is404(err) {
+				return nil, fmt.Errorf("deleting existing blob before write: %w", err)
 			}
+			res, err := d.client.NewAppendBlobClient(blobName).Create(ctx, nil)
+			if err != nil {
+				return nil, fmt.Errorf("creating new append blob: %w", err)
+			}
+			eTag = res.ETag
 		}
 	} else {
 		if appendMode {
-			return nil, storagedriver.PathNotFoundError{Path: path}
+			return nil, storagedriver.PathNotFoundError{Path: path, DriverName: driverName}
 		}
-		if _, err = d.client.NewAppendBlobClient(blobName).Create(ctx, nil); err != nil {
-			return nil, err
+		res, err := d.client.NewAppendBlobClient(blobName).Create(ctx, nil)
+		if err != nil {
+			return nil, fmt.Errorf("creating new append blob: %w", err)
 		}
+		eTag = res.ETag
 	}
 
-	return d.newWriter(ctx, blobName, size), nil
+	return d.newWriter(ctx, blobName, size, eTag), nil
 }
 
 // Stat retrieves the FileInfo for the given path, including the current size
@@ -311,15 +342,14 @@ func (d *driver) List(ctx context.Context, path string) ([]string, error) {
 // Move moves an object stored at sourcePath to destPath, removing the original
 // object.
 func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) error {
-	sourceBlobURL, err := d.signBlobURL(ctx, sourcePath)
-	if err != nil {
-		return err
-	}
+	srcBlobRef := d.client.NewBlobClient(d.blobName(sourcePath))
+	sourceBlobURL := srcBlobRef.URL()
+
 	destBlobRef := d.client.NewBlockBlobClient(d.blobName(destPath))
 	resp, err := destBlobRef.StartCopyFromURL(ctx, sourceBlobURL, nil)
 	if err != nil {
 		if is404(err) {
-			return storagedriver.PathNotFoundError{Path: sourcePath}
+			return storagedriver.PathNotFoundError{Path: sourcePath, DriverName: "azure"}
 		}
 		return err
 	}
@@ -521,7 +551,7 @@ type writer struct {
 	cancelled bool
 }
 
-func (d *driver) newWriter(ctx context.Context, path string, size int64) storagedriver.FileWriter {
+func (d *driver) newWriter(ctx context.Context, path string, size int64, eTag *azcore.ETag) storagedriver.FileWriter {
 	w := &writer{
 		driver: d,
 		path:   path,
@@ -534,6 +564,7 @@ func (d *driver) newWriter(ctx context.Context, path string, size int64) storage
 		path:       path,
 		size:       w.size,
 		maxRetries: int32(d.maxRetries),
+		eTag:       eTag,
 	}, maxChunkSize)
 	w.bw = bw
 	return w
