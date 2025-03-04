@@ -36,7 +36,7 @@ func TestVerifyOCIManifestNonDistributableLayer(t *testing.T) {
 	nonDistributableLayer := v1.Descriptor{
 		Digest:    "sha256:463435349086340864309863409683460843608348608934092322395278926a",
 		Size:      6323,
-		MediaType: v1.MediaTypeImageLayerNonDistributableGzip, //nolint:staticcheck // ignore A1019: v1.MediaTypeImageLayerNonDistributableGzip is deprecated: Non-distributable layers are deprecated, and not recommended for future use
+		MediaType: v1.MediaTypeImageLayerNonDistributableGzip, //nolint:staticcheck // Ignore SA1019 v1.MediaTypeImageLayerNonDistributable is deprecated, it is used for backwards compatibility
 	}
 
 	emptyLayer := v1.Descriptor{
