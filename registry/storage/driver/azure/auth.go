@@ -2,6 +2,7 @@ package azure
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -47,10 +48,13 @@ type azureClient struct {
 }
 
 func newClient(params *Parameters) (*azureClient, error) {
-	if params.AccountKey != "" {
+	switch params.Credentials.Type {
+	case CredentialsTypeClientSecret:
 		return newTokenClient(params)
+	case CredentialsTypeSharedKey, CredentialsTypeDefault:
+		return newSharedKeyCredentialsClient(params)
 	}
-	return newSharedKeyCredentialsClient(params)
+	return nil, fmt.Errorf("invalid credentials type: %q", params.Credentials.Type)
 }
 
 func newTokenClient(params *Parameters) (*azureClient, error) {
@@ -60,16 +64,16 @@ func newTokenClient(params *Parameters) (*azureClient, error) {
 	)
 
 	switch params.Credentials.Type {
-	case "client_secret":
+	case CredentialsTypeClientSecret:
 		creds := &params.Credentials
 		cred, err = azidentity.NewClientSecretCredential(creds.TenantID, creds.ClientID, creds.Secret, nil)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("client secret credentials: %v", err)
 		}
 	default:
 		cred, err = azidentity.NewDefaultAzureCredential(nil)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("default credentials: %v", err)
 		}
 	}
 
@@ -90,7 +94,7 @@ func newTokenClient(params *Parameters) (*azureClient, error) {
 	}
 	client, err := azblob.NewClient(params.ServiceURL, cred, azBlobOpts)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("new azure token client: %v", err)
 	}
 
 	return &azureClient{
@@ -106,7 +110,7 @@ func newTokenClient(params *Parameters) (*azureClient, error) {
 func newSharedKeyCredentialsClient(params *Parameters) (*azureClient, error) {
 	cred, err := azblob.NewSharedKeyCredential(params.AccountName, params.AccountKey)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("shared key credentials: %v", err)
 	}
 	azBlobOpts := &azblob.ClientOptions{
 		ClientOptions: azcore.ClientOptions{
@@ -125,7 +129,7 @@ func newSharedKeyCredentialsClient(params *Parameters) (*azureClient, error) {
 	}
 	client, err := azblob.NewClientWithSharedKeyCredential(params.ServiceURL, cred, azBlobOpts)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("new azure client with shared credentials: %v", err)
 	}
 
 	return &azureClient{

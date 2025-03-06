@@ -13,11 +13,19 @@ const (
 	retryDelay   = "100ms"
 )
 
+type CredentialsType string
+
+const (
+	CredentialsTypeClientSecret = "client_secret"
+	CredentialsTypeSharedKey    = "shared_key"
+	CredentialsTypeDefault      = "default_credentials"
+)
+
 type Credentials struct {
-	Type     string `mapstructure:"type"`
-	ClientID string `mapstructure:"clientid"`
-	TenantID string `mapstructure:"tenantid"`
-	Secret   string `mapstructure:"secret"`
+	Type     CredentialsType `mapstructure:"type"`
+	ClientID string          `mapstructure:"clientid"`
+	TenantID string          `mapstructure:"tenantid"`
+	Secret   string          `mapstructure:"secret"`
 }
 
 type Parameters struct {

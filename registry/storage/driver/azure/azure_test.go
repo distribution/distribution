@@ -12,12 +12,12 @@ import (
 )
 
 const (
-	envAccountName   = "AZURE_STORAGE_ACCOUNT_NAME"
-	envAccountKey    = "AZURE_STORAGE_ACCOUNT_KEY"
-	envContainer     = "AZURE_STORAGE_CONTAINER"
-	envRealm         = "AZURE_STORAGE_REALM"
-	envServiceURL    = "AZURE_SERVICE_URL"
-	envRootDirectory = "AZURE_ROOT_DIRECTORY"
+	envAccountName     = "AZURE_STORAGE_ACCOUNT_NAME"
+	envAccountKey      = "AZURE_STORAGE_ACCOUNT_KEY"
+	envContainer       = "AZURE_STORAGE_CONTAINER"
+	envServiceURL      = "AZURE_SERVICE_URL"
+	envRootDirectory   = "AZURE_ROOT_DIRECTORY"
+	envCredentialsType = "AZURE_STORAGE_CREDENTIALS_TYPE"
 )
 
 var azureDriverConstructor func() (storagedriver.StorageDriver, error)
@@ -25,12 +25,12 @@ var skipCheck func(tb testing.TB)
 
 func init() {
 	var (
-		accountName   string
-		accountKey    string
-		container     string
-		realm         string
-		serviceURL    string
-		rootDirectory string
+		accountName     string
+		accountKey      string
+		container       string
+		serviceURL      string
+		rootDirectory   string
+		credentialsType string
 	)
 
 	config := []struct {
@@ -42,8 +42,8 @@ func init() {
 		{envAccountKey, &accountKey, true},
 		{envContainer, &container, true},
 		{envServiceURL, &serviceURL, false},
-		{envRealm, &realm, true},
 		{envRootDirectory, &rootDirectory, true},
+		{envCredentialsType, &credentialsType, true},
 	}
 
 	missing := []string{}
@@ -59,9 +59,11 @@ func init() {
 			"container":     container,
 			"accountname":   accountName,
 			"accountkey":    accountKey,
-			"realm":         realm,
 			"serviceurl":    serviceURL,
 			"rootdirectory": rootDirectory,
+			"credentials": map[string]any{
+				"type": credentialsType,
+			},
 		}
 		params, err := NewParameters(parameters)
 		if err != nil {
