@@ -15,6 +15,7 @@
 	<key>ProgramArguments</key>
 	<array>
 		<string>/usr/local/libexec/registry</string>
+                <string>serve</string>
 		<string>/Users/Shared/Registry/config.yml</string>
 	</array>
 	<key>Sockets</key>
