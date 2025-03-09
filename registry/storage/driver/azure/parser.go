@@ -8,33 +8,42 @@ import (
 )
 
 const (
-	defaultRealm                  = "core.windows.net"
-	defaultCopyStatusPollMaxRetry = 5
-	defaultCopyStatusPollDelay    = "100ms"
+	defaultRealm      = "core.windows.net"
+	defaultMaxRetries = 5
+	defaultRetryDelay = "100ms"
+)
+
+type CredentialsType string
+
+const (
+	CredentialsTypeClientSecret = "client_secret"
+	CredentialsTypeSharedKey    = "shared_key"
+	CredentialsTypeDefault      = "default_credentials"
 )
 
 type Credentials struct {
-	Type     string `mapstructure:"type"`
-	ClientID string `mapstructure:"clientid"`
-	TenantID string `mapstructure:"tenantid"`
-	Secret   string `mapstructure:"secret"`
+	Type     CredentialsType `mapstructure:"type"`
+	ClientID string          `mapstructure:"clientid"`
+	TenantID string          `mapstructure:"tenantid"`
+	Secret   string          `mapstructure:"secret"`
 }
 
-type Parameters struct {
-	Container              string      `mapstructure:"container"`
-	AccountName            string      `mapstructure:"accountname"`
-	AccountKey             string      `mapstructure:"accountkey"`
-	Credentials            Credentials `mapstructure:"credentials"`
-	ConnectionString       string      `mapstructure:"connectionstring"`
-	Realm                  string      `mapstructure:"realm"`
-	RootDirectory          string      `mapstructure:"rootdirectory"`
-	ServiceURL             string      `mapstructure:"serviceurl"`
-	CopyStatusPollMaxRetry int         `mapstructure:"copy_status_poll_max_retry"`
-	CopyStatusPollDelay    string      `mapstructure:"copy_status_poll_delay"`
+type DriverParameters struct {
+	Credentials      Credentials `mapstructure:"credentials"`
+	Container        string      `mapstructure:"container"`
+	AccountName      string      `mapstructure:"accountname"`
+	AccountKey       string      `mapstructure:"accountkey"`
+	ConnectionString string      `mapstructure:"connectionstring"`
+	Realm            string      `mapstructure:"realm"`
+	RootDirectory    string      `mapstructure:"rootdirectory"`
+	ServiceURL       string      `mapstructure:"serviceurl"`
+	MaxRetries       int         `mapstructure:"max_retries"`
+	RetryDelay       string      `mapstructure:"retry_delay"`
+	SkipVerify       bool        `mapstructure:"skipverify"`
 }
 
-func NewParameters(parameters map[string]interface{}) (*Parameters, error) {
-	params := Parameters{
+func NewParameters(parameters map[string]interface{}) (*DriverParameters, error) {
+	params := DriverParameters{
 		Realm: defaultRealm,
 	}
 	if err := mapstructure.Decode(parameters, &params); err != nil {
@@ -49,11 +58,11 @@ func NewParameters(parameters map[string]interface{}) (*Parameters, error) {
 	if params.ServiceURL == "" {
 		params.ServiceURL = fmt.Sprintf("https://%s.blob.%s", params.AccountName, params.Realm)
 	}
-	if params.CopyStatusPollMaxRetry == 0 {
-		params.CopyStatusPollMaxRetry = defaultCopyStatusPollMaxRetry
+	if params.MaxRetries == 0 {
+		params.MaxRetries = defaultMaxRetries
 	}
-	if params.CopyStatusPollDelay == "" {
-		params.CopyStatusPollDelay = defaultCopyStatusPollDelay
+	if params.RetryDelay == "" {
+		params.RetryDelay = defaultRetryDelay
 	}
 	return &params, nil
 }

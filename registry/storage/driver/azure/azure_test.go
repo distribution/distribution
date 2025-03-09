@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/rand"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -12,23 +13,29 @@ import (
 )
 
 const (
-	envAccountName   = "AZURE_STORAGE_ACCOUNT_NAME"
-	envAccountKey    = "AZURE_STORAGE_ACCOUNT_KEY"
-	envContainer     = "AZURE_STORAGE_CONTAINER"
-	envRealm         = "AZURE_STORAGE_REALM"
-	envRootDirectory = "AZURE_ROOT_DIRECTORY"
+	envCredentialsType = "AZURE_STORAGE_CREDENTIALS_TYPE"
+	envAccountName     = "AZURE_STORAGE_ACCOUNT_NAME"
+	envAccountKey      = "AZURE_STORAGE_ACCOUNT_KEY"
+	envContainer       = "AZURE_STORAGE_CONTAINER"
+	envServiceURL      = "AZURE_SERVICE_URL"
+	envRootDirectory   = "AZURE_ROOT_DIRECTORY"
+	envSkipVerify      = "AZURE_SKIP_VERIFY"
 )
 
-var azureDriverConstructor func() (storagedriver.StorageDriver, error)
-var skipCheck func(tb testing.TB)
+var (
+	azureDriverConstructor func() (storagedriver.StorageDriver, error)
+	skipCheck              func(tb testing.TB)
+)
 
 func init() {
 	var (
-		accountName   string
-		accountKey    string
-		container     string
-		realm         string
-		rootDirectory string
+		accountName     string
+		accountKey      string
+		container       string
+		serviceURL      string
+		rootDirectory   string
+		credentialsType string
+		skipVerify      string
 	)
 
 	config := []struct {
@@ -39,8 +46,10 @@ func init() {
 		{envAccountName, &accountName, false},
 		{envAccountKey, &accountKey, true},
 		{envContainer, &container, true},
-		{envRealm, &realm, true},
+		{envServiceURL, &serviceURL, false},
 		{envRootDirectory, &rootDirectory, true},
+		{envCredentialsType, &credentialsType, true},
+		{envSkipVerify, &skipVerify, true},
 	}
 
 	missing := []string{}
@@ -51,13 +60,24 @@ func init() {
 		}
 	}
 
+	skipVerifyBool, err := strconv.ParseBool(skipVerify)
+	if err != nil {
+		// NOTE(milosgajdos): if we fail to parse AZURE_SKIP_VERIFY
+		// we default to verifying TLS certs
+		skipVerifyBool = false
+	}
+
 	azureDriverConstructor = func() (storagedriver.StorageDriver, error) {
 		parameters := map[string]interface{}{
 			"container":     container,
 			"accountname":   accountName,
 			"accountkey":    accountKey,
-			"realm":         realm,
+			"serviceurl":    serviceURL,
 			"rootdirectory": rootDirectory,
+			"credentials": map[string]any{
+				"type": credentialsType,
+			},
+			"skipverify": skipVerifyBool,
 		}
 		params, err := NewParameters(parameters)
 		if err != nil {
@@ -78,7 +98,11 @@ func init() {
 
 func TestAzureDriverSuite(t *testing.T) {
 	skipCheck(t)
-	testsuites.Driver(t, azureDriverConstructor)
+	skipVerify, err := strconv.ParseBool(os.Getenv(envSkipVerify))
+	if err != nil {
+		skipVerify = false
+	}
+	testsuites.Driver(t, azureDriverConstructor, skipVerify)
 }
 
 func BenchmarkAzureDriverSuite(b *testing.B) {
@@ -161,26 +185,26 @@ func TestParamParsing(t *testing.T) {
 		}
 	}
 	input := []map[string]interface{}{
-		{"accountname": "acc1", "accountkey": "k1", "container": "c1", "copy_status_poll_max_retry": 1, "copy_status_poll_delay": "10ms"},
+		{"accountname": "acc1", "accountkey": "k1", "container": "c1", "max_retries": 1, "retry_delay": "10ms"},
 		{"accountname": "acc1", "container": "c1", "credentials": map[string]interface{}{"type": "default"}},
 		{"accountname": "acc1", "container": "c1", "credentials": map[string]interface{}{"type": "client_secret", "clientid": "c1", "tenantid": "t1", "secret": "s1"}},
 	}
-	expecteds := []Parameters{
+	expecteds := []DriverParameters{
 		{
 			Container: "c1", AccountName: "acc1", AccountKey: "k1",
 			Realm: "core.windows.net", ServiceURL: "https://acc1.blob.core.windows.net",
-			CopyStatusPollMaxRetry: 1, CopyStatusPollDelay: "10ms",
+			MaxRetries: 1, RetryDelay: "10ms",
 		},
 		{
 			Container: "c1", AccountName: "acc1", Credentials: Credentials{Type: "default"},
 			Realm: "core.windows.net", ServiceURL: "https://acc1.blob.core.windows.net",
-			CopyStatusPollMaxRetry: 5, CopyStatusPollDelay: "100ms",
+			MaxRetries: 5, RetryDelay: "100ms",
 		},
 		{
 			Container: "c1", AccountName: "acc1",
 			Credentials: Credentials{Type: "client_secret", ClientID: "c1", TenantID: "t1", Secret: "s1"},
 			Realm:       "core.windows.net", ServiceURL: "https://acc1.blob.core.windows.net",
-			CopyStatusPollMaxRetry: 5, CopyStatusPollDelay: "100ms",
+			MaxRetries: 5, RetryDelay: "100ms",
 		},
 	}
 	for i, expected := range expecteds {

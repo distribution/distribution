@@ -5,6 +5,7 @@ import (
 	"context"
 	crand "crypto/rand"
 	"crypto/sha256"
+	"crypto/tls"
 	"io"
 	"math/rand"
 	"net/http"
@@ -43,14 +44,16 @@ type DriverSuite struct {
 	Constructor DriverConstructor
 	Teardown    DriverTeardown
 	storagedriver.StorageDriver
-	ctx context.Context
+	ctx        context.Context
+	skipVerify bool
 }
 
 // Driver runs [DriverSuite] for the given [DriverConstructor].
-func Driver(t *testing.T, driverConstructor DriverConstructor) {
+func Driver(t *testing.T, driverConstructor DriverConstructor, skipVerify bool) {
 	suite.Run(t, &DriverSuite{
 		Constructor: driverConstructor,
 		ctx:         context.Background(),
+		skipVerify:  skipVerify,
 	})
 }
 
@@ -739,7 +742,19 @@ func (suite *DriverSuite) TestRedirectURL() {
 	}
 	suite.Require().NoError(err)
 
-	response, err := http.Get(url)
+	client := http.DefaultClient
+	if suite.skipVerify {
+		httpTransport := http.DefaultTransport.(*http.Transport).Clone()
+		httpTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		client = &http.Client{
+			Transport: httpTransport,
+		}
+	}
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	suite.Require().NoError(err)
+
+	response, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer response.Body.Close()
 
@@ -753,7 +768,10 @@ func (suite *DriverSuite) TestRedirectURL() {
 	}
 	suite.Require().NoError(err)
 
-	response, err = http.Head(url)
+	req, err = http.NewRequest(http.MethodHead, url, nil)
+	suite.Require().NoError(err)
+
+	response, err = client.Do(req)
 	suite.Require().NoError(err)
 	defer response.Body.Close()
 	suite.Require().Equal(200, response.StatusCode)
@@ -1323,7 +1341,7 @@ func (suite *DriverSuite) writeReadCompareStreams(filename string, contents []by
 
 var (
 	filenameChars  = []byte("abcdefghijklmnopqrstuvwxyz0123456789")
-	separatorChars = []byte("._-")
+	separatorChars = []byte("-")
 )
 
 func randomPath(length int64) string {

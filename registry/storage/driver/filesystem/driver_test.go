@@ -19,7 +19,7 @@ func newDriverConstructor(tb testing.TB) testsuites.DriverConstructor {
 }
 
 func TestFilesystemDriverSuite(t *testing.T) {
-	testsuites.Driver(t, newDriverConstructor(t))
+	testsuites.Driver(t, newDriverConstructor(t), false)
 }
 
 func BenchmarkFilesystemDriverSuite(b *testing.B) {
