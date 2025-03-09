@@ -2,7 +2,9 @@ package azure
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
+	"net/http"
 	"sync"
 	"time"
 
@@ -47,7 +49,7 @@ type azureClient struct {
 	signer    signer
 }
 
-func newClient(params *Parameters) (*azureClient, error) {
+func newClient(params *DriverParameters) (*azureClient, error) {
 	switch params.Credentials.Type {
 	case CredentialsTypeClientSecret:
 		return newTokenClient(params)
@@ -57,7 +59,7 @@ func newClient(params *Parameters) (*azureClient, error) {
 	return nil, fmt.Errorf("invalid credentials type: %q", params.Credentials.Type)
 }
 
-func newTokenClient(params *Parameters) (*azureClient, error) {
+func newTokenClient(params *DriverParameters) (*azureClient, error) {
 	var (
 		cred azcore.TokenCredential
 		err  error
@@ -92,6 +94,13 @@ func newTokenClient(params *Parameters) (*azureClient, error) {
 			},
 		},
 	}
+	if params.SkipVerify {
+		httpTransport := http.DefaultTransport.(*http.Transport).Clone()
+		httpTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		azBlobOpts.Transport = &http.Client{
+			Transport: httpTransport,
+		}
+	}
 	client, err := azblob.NewClient(params.ServiceURL, cred, azBlobOpts)
 	if err != nil {
 		return nil, fmt.Errorf("new azure token client: %v", err)
@@ -107,7 +116,7 @@ func newTokenClient(params *Parameters) (*azureClient, error) {
 	}, nil
 }
 
-func newSharedKeyCredentialsClient(params *Parameters) (*azureClient, error) {
+func newSharedKeyCredentialsClient(params *DriverParameters) (*azureClient, error) {
 	cred, err := azblob.NewSharedKeyCredential(params.AccountName, params.AccountKey)
 	if err != nil {
 		return nil, fmt.Errorf("shared key credentials: %v", err)
@@ -126,6 +135,13 @@ func newSharedKeyCredentialsClient(params *Parameters) (*azureClient, error) {
 				AllowedQueryParams: []string{"comp"},
 			},
 		},
+	}
+	if params.SkipVerify {
+		httpTransport := http.DefaultTransport.(*http.Transport).Clone()
+		httpTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		azBlobOpts.Transport = &http.Client{
+			Transport: httpTransport,
+		}
 	}
 	client, err := azblob.NewClientWithSharedKeyCredential(params.ServiceURL, cred, azBlobOpts)
 	if err != nil {

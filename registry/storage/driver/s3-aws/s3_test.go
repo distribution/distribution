@@ -154,7 +154,11 @@ func newDriverConstructor(tb testing.TB) testsuites.DriverConstructor {
 
 func TestS3DriverSuite(t *testing.T) {
 	skipCheck(t)
-	testsuites.Driver(t, newDriverConstructor(t))
+	skipVerify, err := strconv.ParseBool(os.Getenv("S3_SKIP_VERIFY"))
+	if err != nil {
+		skipVerify = false
+	}
+	testsuites.Driver(t, newDriverConstructor(t), skipVerify)
 }
 
 func BenchmarkS3DriverSuite(b *testing.B) {

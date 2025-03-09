@@ -37,7 +37,8 @@ jobs:
           - 1.23.6
         target:
           - test-coverage
-          - test-cloud-storage
+          - test-cloud-storage # TODO: rename to test-s3-storage
+          - test-azure-storage
     steps:
       -
         name: Checkout

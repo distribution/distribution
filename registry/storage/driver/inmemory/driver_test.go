@@ -12,7 +12,7 @@ func newDriverConstructor() (storagedriver.StorageDriver, error) {
 }
 
 func TestInMemoryDriverSuite(t *testing.T) {
-	testsuites.Driver(t, newDriverConstructor)
+	testsuites.Driver(t, newDriverConstructor, false)
 }
 
 func BenchmarkInMemoryDriverSuite(b *testing.B) {

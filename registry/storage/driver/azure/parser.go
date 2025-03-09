@@ -8,9 +8,9 @@ import (
 )
 
 const (
-	defaultRealm = "core.windows.net"
-	maxRetries   = 5
-	retryDelay   = "100ms"
+	defaultRealm      = "core.windows.net"
+	defaultMaxRetries = 5
+	defaultRetryDelay = "100ms"
 )
 
 type CredentialsType string
@@ -28,21 +28,22 @@ type Credentials struct {
 	Secret   string          `mapstructure:"secret"`
 }
 
-type Parameters struct {
+type DriverParameters struct {
+	Credentials      Credentials `mapstructure:"credentials"`
 	Container        string      `mapstructure:"container"`
 	AccountName      string      `mapstructure:"accountname"`
 	AccountKey       string      `mapstructure:"accountkey"`
-	Credentials      Credentials `mapstructure:"credentials"`
 	ConnectionString string      `mapstructure:"connectionstring"`
 	Realm            string      `mapstructure:"realm"`
 	RootDirectory    string      `mapstructure:"rootdirectory"`
 	ServiceURL       string      `mapstructure:"serviceurl"`
 	MaxRetries       int         `mapstructure:"max_retries"`
 	RetryDelay       string      `mapstructure:"retry_delay"`
+	SkipVerify       bool        `mapstructure:"skipverify"`
 }
 
-func NewParameters(parameters map[string]interface{}) (*Parameters, error) {
-	params := Parameters{
+func NewParameters(parameters map[string]interface{}) (*DriverParameters, error) {
+	params := DriverParameters{
 		Realm: defaultRealm,
 	}
 	if err := mapstructure.Decode(parameters, &params); err != nil {
@@ -58,10 +59,10 @@ func NewParameters(parameters map[string]interface{}) (*Parameters, error) {
 		params.ServiceURL = fmt.Sprintf("https://%s.blob.%s", params.AccountName, params.Realm)
 	}
 	if params.MaxRetries == 0 {
-		params.MaxRetries = maxRetries
+		params.MaxRetries = defaultMaxRetries
 	}
 	if params.RetryDelay == "" {
-		params.RetryDelay = retryDelay
+		params.RetryDelay = defaultRetryDelay
 	}
 	return &params, nil
 }

@@ -93,7 +93,7 @@ func newDriverConstructor(tb testing.TB) testsuites.DriverConstructor {
 
 func TestGCSDriverSuite(t *testing.T) {
 	skipCheck(t)
-	testsuites.Driver(t, newDriverConstructor(t))
+	testsuites.Driver(t, newDriverConstructor(t), false)
 }
 
 func BenchmarkGCSDriverSuite(b *testing.B) {

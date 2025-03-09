@@ -161,6 +161,27 @@ start-e2e-s3-env: ## starts E2E S3 storage test environment (S3, Redis, registry
 stop-e2e-s3-env: ## stops E2E S3 storage test environment (S3, Redis, registry)
 	$(COMPOSE) -f tests/docker-compose-e2e-cloud-storage.yml down
 
+.PHONY: test-azure-storage
+test-azure-storage: start-azure-storage run-azure-tests stop-azure-storage ## run Azure storage driver tests
+
+.PHONY: start-azure-storage
+start-azure-storage: ## start local Azure storage (Azurite)
+	$(COMPOSE) -f tests/docker-compose-azure-blob-store.yaml up azurite azurite-init -d
+
+.PHONY: stop-azure-storage
+stop-azure-storage: ## stop local Azure storage (minio)
+	$(COMPOSE) -f tests/docker-compose-azure-blob-store.yaml down
+
+.PHONY: run-azure-tests
+run-azure-tests: start-azure-storage ## run Azure storage driver integration tests
+	AZURE_SKIP_VERIFY=true \
+	AZURE_STORAGE_CREDENTIALS_TYPE="shared_key" \
+	AZURE_STORAGE_ACCOUNT_NAME=devstoreaccount1 \
+	AZURE_STORAGE_ACCOUNT_KEY="Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==" \
+	AZURE_STORAGE_CONTAINER=containername \
+	AZURE_SERVICE_URL="https://127.0.0.1:10000/devstoreaccount1" \
+	go test ${TESTFLAGS} -count=1 ./registry/storage/driver/azure/...
+
 ##@ Validate
 
 lint: ## run all linters

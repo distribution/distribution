@@ -29,12 +29,26 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
 )
 
+func init() {
+	factory.Register(driverName, &azureDriverFactory{})
+}
+
 var ErrCorruptedData = errors.New("corrupted data found in the uploaded data")
 
 const (
 	driverName   = "azure"
 	maxChunkSize = 4 * 1024 * 1024
 )
+
+type azureDriverFactory struct{}
+
+func (factory *azureDriverFactory) Create(ctx context.Context, parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
+	params, err := NewParameters(parameters)
+	if err != nil {
+		return nil, err
+	}
+	return New(ctx, params)
+}
 
 var _ storagedriver.StorageDriver = &driver{}
 
@@ -56,22 +70,8 @@ type Driver struct {
 	baseEmbed
 }
 
-func init() {
-	factory.Register(driverName, &azureDriverFactory{})
-}
-
-type azureDriverFactory struct{}
-
-func (factory *azureDriverFactory) Create(ctx context.Context, parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
-	params, err := NewParameters(parameters)
-	if err != nil {
-		return nil, err
-	}
-	return New(ctx, params)
-}
-
 // New constructs a new Driver from parameters
-func New(ctx context.Context, params *Parameters) (*Driver, error) {
+func New(ctx context.Context, params *DriverParameters) (*Driver, error) {
 	azClient, err := newClient(params)
 	if err != nil {
 		return nil, err
