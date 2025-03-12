@@ -1220,7 +1220,8 @@ func TestManifestFetchWithAccept(t *testing.T) {
 		// This test is about checking if the Accept headers are returned as expected.
 		// nolint:errcheck
 		ms.Get(ctx, dgst, distribution.WithManifestMediaTypes(testCase.mediaTypes))
-		actual := <-headers
+		actualHeaders := <-headers
+		actual := strings.Split(strings.Join(actualHeaders, ", "), ", ")
 		if testCase.sort {
 			sort.Strings(actual)
 			sort.Strings(testCase.expect)
