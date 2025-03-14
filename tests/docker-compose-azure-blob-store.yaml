@@ -1,0 +1,59 @@
+services:
+  cert-init:
+    image: alpine/mkcert
+    volumes:
+      - ./certs:/certs
+    entrypoint: /bin/sh
+    command: >
+      -c "
+      mkdir -p /certs &&
+      cd /certs &&
+      mkcert -install &&
+      mkcert 127.0.0.1 &&
+      chmod 644 /certs/127.0.0.1.pem /certs/127.0.0.1-key.pem
+      "
+
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    ports:
+      - "10000:10000"
+    volumes:
+      - ./certs:/workspace
+    command: >
+      azurite-blob
+      --blobHost 0.0.0.0
+      --oauth basic
+      --loose 0.0.0.0
+      --cert /workspace/127.0.0.1.pem
+      --key /workspace/127.0.0.1-key.pem
+    depends_on:
+      cert-init:
+        condition: service_completed_successfully
+    healthcheck:
+      # NOTE(milosgajdos): Azurite does not have a healtcheck endpoint
+      # so we are temporarilty working around it by using a simple node command.
+      # We want to make sure the API is up and running so we are deliberately
+      # ignoring that the healthcheck API request fails authorization check
+      test: [
+        "CMD",
+        "node",
+        "-e",
+        "const http = require('https'); const options = { hostname: '127.0.0.1', port: 10000, path: '/', method: 'GET', rejectUnauthorized: false }; const req = http.request(options, res => process.exit(0)); req.on('error', err => process.exit(1)); req.end();"
+      ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  azurite-init:
+    image: mcr.microsoft.com/azure-cli
+    depends_on:
+      azurite:
+        condition: service_healthy
+    volumes:
+      - ./certs:/certs
+    environment:
+      AZURE_STORAGE_CONNECTION_STRING: "DefaultEndpointsProtocol=https;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=https://azurite:10000/devstoreaccount1;"
+      AZURE_CLI_DISABLE_CONNECTION_VERIFICATION: "1"
+    entrypoint: >
+      /bin/bash -c "
+        az storage container create --name containername --connection-string \"$$AZURE_STORAGE_CONNECTION_STRING\" --debug"

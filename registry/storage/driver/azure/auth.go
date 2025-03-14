@@ -2,10 +2,14 @@ package azure
 
 import (
 	"context"
+	"crypto/tls"
+	"fmt"
+	"net/http"
 	"sync"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
@@ -45,49 +49,111 @@ type azureClient struct {
 	signer    signer
 }
 
-func newAzureClient(params *Parameters) (*azureClient, error) {
-	if params.AccountKey != "" {
-		cred, err := azblob.NewSharedKeyCredential(params.AccountName, params.AccountKey)
-		if err != nil {
-			return nil, err
-		}
-		client, err := azblob.NewClientWithSharedKeyCredential(params.ServiceURL, cred, nil)
-		if err != nil {
-			return nil, err
-		}
-		signer := &sharedKeySigner{
-			cred: cred,
-		}
-		return &azureClient{
-			container: params.Container,
-			client:    client,
-			signer:    signer,
-		}, nil
+func newClient(params *DriverParameters) (*azureClient, error) {
+	switch params.Credentials.Type {
+	case CredentialsTypeClientSecret:
+		return newTokenClient(params)
+	case CredentialsTypeSharedKey, CredentialsTypeDefault:
+		return newSharedKeyCredentialsClient(params)
 	}
+	return nil, fmt.Errorf("invalid credentials type: %q", params.Credentials.Type)
+}
 
-	var cred azcore.TokenCredential
-	var err error
-	if params.Credentials.Type == "client_secret" {
+func newTokenClient(params *DriverParameters) (*azureClient, error) {
+	var (
+		cred azcore.TokenCredential
+		err  error
+	)
+
+	switch params.Credentials.Type {
+	case CredentialsTypeClientSecret:
 		creds := &params.Credentials
-		if cred, err = azidentity.NewClientSecretCredential(creds.TenantID, creds.ClientID, creds.Secret, nil); err != nil {
-			return nil, err
+		cred, err = azidentity.NewClientSecretCredential(creds.TenantID, creds.ClientID, creds.Secret, nil)
+		if err != nil {
+			return nil, fmt.Errorf("client secret credentials: %v", err)
 		}
-	} else if cred, err = azidentity.NewDefaultAzureCredential(nil); err != nil {
-		return nil, err
+	default:
+		cred, err = azidentity.NewDefaultAzureCredential(nil)
+		if err != nil {
+			return nil, fmt.Errorf("default credentials: %v", err)
+		}
 	}
 
-	client, err := azblob.NewClient(params.ServiceURL, cred, nil)
+	azBlobOpts := &azblob.ClientOptions{
+		ClientOptions: azcore.ClientOptions{
+			PerRetryPolicies: []policy.Policy{newRetryNotificationPolicy()},
+			Logging: policy.LogOptions{
+				AllowedHeaders: []string{
+					"x-ms-error-code",
+					"Retry-After",
+					"Retry-After-Ms",
+					"If-Match",
+					"x-ms-blob-condition-appendpos",
+				},
+				AllowedQueryParams: []string{"comp"},
+			},
+		},
+	}
+	if params.SkipVerify {
+		httpTransport := http.DefaultTransport.(*http.Transport).Clone()
+		httpTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		azBlobOpts.Transport = &http.Client{
+			Transport: httpTransport,
+		}
+	}
+	client, err := azblob.NewClient(params.ServiceURL, cred, azBlobOpts)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("new azure token client: %v", err)
 	}
-	signer := &clientTokenSigner{
-		client: client,
-		cred:   cred,
-	}
+
 	return &azureClient{
 		container: params.Container,
 		client:    client,
-		signer:    signer,
+		signer: &clientTokenSigner{
+			client: client,
+			cred:   cred,
+		},
+	}, nil
+}
+
+func newSharedKeyCredentialsClient(params *DriverParameters) (*azureClient, error) {
+	cred, err := azblob.NewSharedKeyCredential(params.AccountName, params.AccountKey)
+	if err != nil {
+		return nil, fmt.Errorf("shared key credentials: %v", err)
+	}
+	azBlobOpts := &azblob.ClientOptions{
+		ClientOptions: azcore.ClientOptions{
+			PerRetryPolicies: []policy.Policy{newRetryNotificationPolicy()},
+			Logging: policy.LogOptions{
+				AllowedHeaders: []string{
+					"x-ms-error-code",
+					"Retry-After",
+					"Retry-After-Ms",
+					"If-Match",
+					"x-ms-blob-condition-appendpos",
+				},
+				AllowedQueryParams: []string{"comp"},
+			},
+		},
+	}
+	if params.SkipVerify {
+		httpTransport := http.DefaultTransport.(*http.Transport).Clone()
+		httpTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		azBlobOpts.Transport = &http.Client{
+			Transport: httpTransport,
+		}
+	}
+	client, err := azblob.NewClientWithSharedKeyCredential(params.ServiceURL, cred, azBlobOpts)
+	if err != nil {
+		return nil, fmt.Errorf("new azure client with shared credentials: %v", err)
+	}
+
+	return &azureClient{
+		container: params.Container,
+		client:    client,
+		signer: &sharedKeySigner{
+			cred: cred,
+		},
 	}, nil
 }
 
