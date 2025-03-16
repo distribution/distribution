@@ -134,7 +134,7 @@ stop-s3-storage: ## stop local s3 storage (minio)
 	$(COMPOSE) -f tests/docker-compose-storage.yml down
 
 .PHONY: reset-s3-storage
-reset-s3-storage: ## reset (stop, delete, start) local cloud storage (minio)
+reset-s3-storage: ## reset (stop, delete, start) local s3 storage (minio)
 	$(COMPOSE) -f tests/docker-compose-storage.yml down
 	@mkdir -p tests/miniodata/distribution
 	@rm -rf tests/miniodata/distribution/* tests/miniodata/.minio.sys
