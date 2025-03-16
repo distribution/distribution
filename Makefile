@@ -122,26 +122,26 @@ test-coverage: ## run unit tests and generate test coverprofiles
 		fi; \
 	done )
 
-.PHONY: test-cloud-storage
-test-cloud-storage: start-cloud-storage run-s3-tests stop-cloud-storage ## run cloud storage driver tests
+.PHONY: test-s3-storage
+test-s3-storage: start-s3-storage run-s3-tests stop-s3-storage ## run s3 storage driver tests
 
-.PHONY: start-cloud-storage
-start-cloud-storage: ## start local cloud storage (minio)
+.PHONY: start-s3-storage
+start-s3-storage: ## start local s3 storage (minio)
 	$(COMPOSE) -f tests/docker-compose-storage.yml up minio minio-init -d
 
-.PHONY: stop-cloud-storage
-stop-cloud-storage: ## stop local cloud storage (minio)
+.PHONY: stop-s3-storage
+stop-s3-storage: ## stop local s3 storage (minio)
 	$(COMPOSE) -f tests/docker-compose-storage.yml down
 
-.PHONY: reset-cloud-storage
-reset-cloud-storage: ## reset (stop, delete, start) local cloud storage (minio)
+.PHONY: reset-s3-storage
+reset-s3-storage: ## reset (stop, delete, start) local cloud storage (minio)
 	$(COMPOSE) -f tests/docker-compose-storage.yml down
 	@mkdir -p tests/miniodata/distribution
 	@rm -rf tests/miniodata/distribution/* tests/miniodata/.minio.sys
 	$(COMPOSE) -f tests/docker-compose-storage.yml up minio minio-init -d
 
 .PHONY: run-s3-tests
-run-s3-tests: start-cloud-storage ## run S3 storage driver integration tests
+run-s3-tests: start-s3-storage ## run S3 storage driver integration tests
 	AWS_ACCESS_KEY=distribution \
 	AWS_SECRET_KEY=password \
 	AWS_REGION=us-east-1 \

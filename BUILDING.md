@@ -110,7 +110,7 @@ You must have a [docker compose](https://docs.docker.com/compose/) compatible to
 
 Start the local cloud environment:
 ```
-make start-cloud-storage
+make start-s3-storage
 ```
 There is a sample registry configuration file that lets you point the registry to the started storage:
 ```
@@ -125,5 +125,5 @@ AWS_ACCESS_KEY=distribution \
 ```
 Stop the local storage when done:
 ```
-make stop-cloud-storage
+make stop-s3-storage
 ```
