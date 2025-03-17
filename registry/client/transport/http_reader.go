@@ -159,7 +159,7 @@ func (hrs *httpReadSeeker) reset() {
 	}
 }
 
-func (hrs *httpReadSeeker) reader() (io.Reader, error) {
+func (hrs *httpReadSeeker) reader() (_ io.Reader, retErr error) {
 	if hrs.err != nil {
 		return nil, hrs.err
 	}
@@ -184,42 +184,41 @@ func (hrs *httpReadSeeker) reader() (io.Reader, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		if retErr != nil {
+			_ = resp.Body.Close()
+		}
+	}()
 
 	// Normally would use client.SuccessStatus, but that would be a cyclic
 	// import
 	if resp.StatusCode >= 200 && resp.StatusCode <= 399 {
 		if hrs.readerOffset > 0 {
 			if resp.StatusCode != http.StatusPartialContent {
-				resp.Close()
 				return nil, ErrWrongCodeForByteRange
 			}
 
 			contentRange := resp.Header.Get("Content-Range")
 			if contentRange == "" {
-				resp.Close()
 				return nil, errors.New("no Content-Range header found in HTTP 206 response")
 			}
 
 			submatches := contentRangeRegexp.FindStringSubmatch(contentRange)
 			if len(submatches) < 4 {
-				resp.Close()
 				return nil, fmt.Errorf("could not parse Content-Range header: %s", contentRange)
 			}
 
 			startByte, err := strconv.ParseUint(submatches[1], 10, 64)
 			if err != nil {
-				resp.Close()
 				return nil, fmt.Errorf("could not parse start of range in Content-Range header: %s", contentRange)
 			}
 
 			if startByte != uint64(hrs.readerOffset) {
-				resp.Close()
 				return nil, fmt.Errorf("received Content-Range starting at offset %d instead of requested %d", startByte, hrs.readerOffset)
 			}
 
 			endByte, err := strconv.ParseUint(submatches[2], 10, 64)
 			if err != nil {
-				resp.Close()
 				return nil, fmt.Errorf("could not parse end of range in Content-Range header: %s", contentRange)
 			}
 
@@ -244,8 +243,11 @@ func (hrs *httpReadSeeker) reader() (io.Reader, error) {
 		}
 		hrs.rc = resp.Body
 	} else {
-		defer resp.Body.Close()
 		if hrs.errorHandler != nil {
+			// Closing the body should be handled by the existing defer,
+			// but in case a custom "errHandler" is used that doesn't return
+			// an error, we close the body regardless.
+			defer resp.Body.Close()
 			return nil, hrs.errorHandler(resp)
 		}
 		return nil, fmt.Errorf("unexpected status resolving reader: %v", resp.Status)
