@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-ARG GO_VERSION=1.23.6
+ARG GO_VERSION=1.23.7
 ARG ALPINE_VERSION=3.21
 ARG XX_VERSION=1.6.1
 

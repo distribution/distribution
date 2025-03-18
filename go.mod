@@ -1,8 +1,6 @@
 module github.com/distribution/distribution/v3
 
-go 1.22.7
-
-toolchain go1.23.4
+go 1.23.7
 
 require (
 	cloud.google.com/go/storage v1.45.0
