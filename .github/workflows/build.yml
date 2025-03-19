@@ -33,8 +33,8 @@ jobs:
       fail-fast: false
       matrix:
         go:
-          - 1.22.12
-          - 1.23.6
+          - 1.23.7
+          - 1.24.1
         target:
           - test-coverage
           - test-s3-storage
