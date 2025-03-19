@@ -142,20 +142,18 @@ type BlobDescriptorServiceFactory interface {
 
 // ReadSeekCloser is the primary reader type for blob data, combining
 // io.ReadSeeker with io.Closer.
-type ReadSeekCloser interface {
-	io.ReadSeeker
-	io.Closer
-}
+//
+// Deprecated: use [io.ReadSeekCloser].
+type ReadSeekCloser = io.ReadSeekCloser
 
 // BlobProvider describes operations for getting blob data.
 type BlobProvider interface {
 	// Get returns the entire blob identified by digest along with the descriptor.
 	Get(ctx context.Context, dgst digest.Digest) ([]byte, error)
 
-	// Open provides a ReadSeekCloser to the blob identified by the provided
-	// descriptor. If the blob is not known to the service, an error will be
-	// returned.
-	Open(ctx context.Context, dgst digest.Digest) (ReadSeekCloser, error)
+	// Open provides an [io.ReadSeekCloser] to the blob identified by the provided
+	// descriptor. If the blob is not known to the service, an error is returned.
+	Open(ctx context.Context, dgst digest.Digest) (io.ReadSeekCloser, error)
 }
 
 // BlobServer can serve blobs via http.

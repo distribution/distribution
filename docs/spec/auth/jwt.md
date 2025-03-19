@@ -159,7 +159,6 @@ Token has 3 main parts:
         </dt>
         <dd>
             An array of access entry objects with the following fields:
-
             <dl>
                 <dt>
                     <code>type</code>

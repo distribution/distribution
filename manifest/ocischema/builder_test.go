@@ -12,6 +12,7 @@ import (
 
 type mockBlobService struct {
 	descriptors map[digest.Digest]distribution.Descriptor
+	distribution.BlobService
 }
 
 func (bs *mockBlobService) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
@@ -19,14 +20,6 @@ func (bs *mockBlobService) Stat(ctx context.Context, dgst digest.Digest) (distri
 		return descriptor, nil
 	}
 	return distribution.Descriptor{}, distribution.ErrBlobUnknown
-}
-
-func (bs *mockBlobService) Get(ctx context.Context, dgst digest.Digest) ([]byte, error) {
-	panic("not implemented")
-}
-
-func (bs *mockBlobService) Open(ctx context.Context, dgst digest.Digest) (distribution.ReadSeekCloser, error) {
-	panic("not implemented")
 }
 
 func (bs *mockBlobService) Put(ctx context.Context, mediaType string, p []byte) (distribution.Descriptor, error) {
@@ -37,14 +30,6 @@ func (bs *mockBlobService) Put(ctx context.Context, mediaType string, p []byte) 
 	}
 	bs.descriptors[d.Digest] = d
 	return d, nil
-}
-
-func (bs *mockBlobService) Create(ctx context.Context, options ...distribution.BlobCreateOption) (distribution.BlobWriter, error) {
-	panic("not implemented")
-}
-
-func (bs *mockBlobService) Resume(ctx context.Context, id string) (distribution.BlobWriter, error) {
-	panic("not implemented")
 }
 
 func TestBuilder(t *testing.T) {

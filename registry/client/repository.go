@@ -135,16 +135,14 @@ func NewRepository(name reference.Named, baseURL string, transport http.RoundTri
 		return nil, err
 	}
 
-	client := &http.Client{
-		Transport:     transport,
-		CheckRedirect: checkHTTPRedirect,
-		// TODO(dmcgowan): create cookie jar
-	}
-
 	return &repository{
-		client: client,
-		ub:     ub,
-		name:   name,
+		client: &http.Client{
+			Transport:     transport,
+			CheckRedirect: checkHTTPRedirect,
+			// TODO(dmcgowan): create cookie jar
+		},
+		ub:   ub,
+		name: name,
 	}, nil
 }
 
@@ -159,16 +157,15 @@ func (r *repository) Named() reference.Named {
 }
 
 func (r *repository) Blobs(ctx context.Context) distribution.BlobStore {
-	statter := &blobStatter{
+	return &blobs{
 		name:   r.name,
 		ub:     r.ub,
 		client: r.client,
-	}
-	return &blobs{
-		name:    r.name,
-		ub:      r.ub,
-		client:  r.client,
-		statter: cache.NewCachedBlobStatter(memory.NewInMemoryBlobDescriptorCacheProvider(), statter),
+		statter: cache.NewCachedBlobStatter(memory.NewInMemoryBlobDescriptorCacheProvider(), &blobStatter{
+			name:   r.name,
+			ub:     r.ub,
+			client: r.client,
+		}),
 	}
 }
 
@@ -645,7 +642,7 @@ func (bs *blobs) Get(ctx context.Context, dgst digest.Digest) ([]byte, error) {
 	return ioutil.ReadAll(reader)
 }
 
-func (bs *blobs) Open(ctx context.Context, dgst digest.Digest) (distribution.ReadSeekCloser, error) {
+func (bs *blobs) Open(ctx context.Context, dgst digest.Digest) (io.ReadSeekCloser, error) {
 	ref, err := reference.WithDigest(bs.name, dgst)
 	if err != nil {
 		return nil, err
@@ -655,13 +652,12 @@ func (bs *blobs) Open(ctx context.Context, dgst digest.Digest) (distribution.Rea
 		return nil, err
 	}
 
-	return transport.NewHTTPReadSeeker(bs.client, blobURL,
-		func(resp *http.Response) error {
-			if resp.StatusCode == http.StatusNotFound {
-				return distribution.ErrBlobUnknown
-			}
-			return HandleErrorResponse(resp)
-		}), nil
+	return transport.NewHTTPReadSeeker(bs.client, blobURL, func(resp *http.Response) error {
+		if resp.StatusCode == http.StatusNotFound {
+			return distribution.ErrBlobUnknown
+		}
+		return HandleErrorResponse(resp)
+	}), nil
 }
 
 func (bs *blobs) ServeBlob(ctx context.Context, w http.ResponseWriter, r *http.Request, dgst digest.Digest) error {

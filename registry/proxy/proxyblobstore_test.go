@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"context"
+	"io"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
@@ -60,7 +61,7 @@ func (sbs statsBlobStore) Resume(ctx context.Context, id string) (distribution.B
 	return sbs.blobs.Resume(ctx, id)
 }
 
-func (sbs statsBlobStore) Open(ctx context.Context, dgst digest.Digest) (distribution.ReadSeekCloser, error) {
+func (sbs statsBlobStore) Open(ctx context.Context, dgst digest.Digest) (io.ReadSeekCloser, error) {
 	sbsMu.Lock()
 	sbs.stats["open"]++
 	sbsMu.Unlock()

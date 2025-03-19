@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"path"
 	"time"
@@ -59,7 +60,7 @@ func (lbs *linkedBlobStore) Get(ctx context.Context, dgst digest.Digest) ([]byte
 	return lbs.blobStore.Get(ctx, canonical.Digest)
 }
 
-func (lbs *linkedBlobStore) Open(ctx context.Context, dgst digest.Digest) (distribution.ReadSeekCloser, error) {
+func (lbs *linkedBlobStore) Open(ctx context.Context, dgst digest.Digest) (io.ReadSeekCloser, error) {
 	canonical, err := lbs.Stat(ctx, dgst) // access check
 	if err != nil {
 		return nil, err
