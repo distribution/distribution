@@ -1,0 +1,90 @@
+# commit to be tagged for new release
+commit = "HEAD"
+
+project_name = "registry"
+github_repo = "distribution/distribution"
+
+# previous release
+previous = "v3.0.0-rc.3"
+
+pre_release = true
+
+preface = """\
+registry 3.0.0-rc.4
+
+Welcome to the v3.0.0-rc.4 release of registry!
+*This is a pre-release!*
+
+This is the fourth stable release candidate of registry which fixes
+
+Please try out the release binaries and report any issues at
+https://github.com/distribution/distribution/issues.
+
+Please try out the release binaries and report any issues at
+https://github.com/distribution/distribution/issues.
+
+### Contributors
+
+* Milos Gajdos
+* evanebb
+* Rafael Fonseca
+* andy-cooper
+* Mateusz Urbanek
+* Oleg Gnusarev
+* Vadim Bauer
+
+### Changes
+<details><summary>36 commits</summary>
+<p>
+
+  * [`c6d55cb1`](https://github.com/distribution/distribution/commit/c6d55cb1a9bfbf2e7d6c98793c1ff20c87fe44d0) Fix potential resource leak by ensuring the response body is closed in HTTPReadSeeker (#4605)
+  * [`19934b8f`](https://github.com/distribution/distribution/commit/19934b8fd3fe3f1b335057ed488b433ec7b8baa9) fix: leak
+  * [`c3a97229`](https://github.com/distribution/distribution/commit/c3a972297908f07fb6dfd7b4d6129a34f67be9d2) build(deps): bump actions/upload-artifact from 4.6.1 to 4.6.2 (#4603)
+  * [`6be526be`](https://github.com/distribution/distribution/commit/6be526bec82503aeb1264299c43714930958473b) build(deps): bump actions/upload-artifact from 4.6.1 to 4.6.2
+  * [`98dd9220`](https://github.com/distribution/distribution/commit/98dd92206f26f9d57535f79cb214c86ec07978b3) build(deps): bump golang.org/x/net from 0.33.0 to 0.36.0 in the go_modules group across 1 directory (#4597)
+  * [`896fec50`](https://github.com/distribution/distribution/commit/896fec507e0255a3c173bc3993c4abc0b7c4a5c3) build(deps): bump golang.org/x/net
+  * [`fb71a0ae`](https://github.com/distribution/distribution/commit/fb71a0aefc7967b7298609f746549745a5e1b2f1) Bump Go version in prep for a release (#4601)
+  * [`d7b8fb6a`](https://github.com/distribution/distribution/commit/d7b8fb6a0ef287343747a0295f5bbec1699e1c14) Bump Go version in prep for the next release
+  * [`65f45535`](https://github.com/distribution/distribution/commit/65f455352d2f186e3023930bb3bb72820c25e6ef) Rename cloud make targets to s3 (#4600)
+  * [`26b983c7`](https://github.com/distribution/distribution/commit/26b983c75333fa6aafecab9a1cea8ddb6149ff71) More renames
+  * [`31c02216`](https://github.com/distribution/distribution/commit/31c02216006733da79fe65664316dd17de045ede) Rename cloud make targets to s3
+  * [`ebd20d3b`](https://github.com/distribution/distribution/commit/ebd20d3be77e8170a522c726f6bab03f00a2627e) Azure driver retry fix (#4576)
+  * [`2ffa1171`](https://github.com/distribution/distribution/commit/2ffa1171c2ef75394b7241ddc2a74c2130341692) Azure driver fix
+  * [`2a47e444`](https://github.com/distribution/distribution/commit/2a47e444332eb30e4c2ce26ccdeb12e69b8969fe) use cached blob statter in ManifestService if available (#4595)
+  * [`b30274f2`](https://github.com/distribution/distribution/commit/b30274f26c8f9a93731f87a7a8be73afc0527be1) use cached blob statter in ManifestService if available
+  * [`4974b855`](https://github.com/distribution/distribution/commit/4974b855f66003cdf678a350f74317838296321d) fix: remove nested structs from configuration (#4523)
+  * [`b2cc4fe1`](https://github.com/distribution/distribution/commit/b2cc4fe1c7e0392ac357fdc92066714cb9689715) fix: define types for inline structs
+  * [`565ecec5`](https://github.com/distribution/distribution/commit/565ecec5b777f3e4dd80452d60e42c832a8a92ae) Update osx-setup-guide.md and com.docker.registry.plist (#4592)
+  * [`6599be4f`](https://github.com/distribution/distribution/commit/6599be4fe9f96b709968bce066e3fa121cab8645) Update com.docker.registry.plist
+  * [`bb0253d1`](https://github.com/distribution/distribution/commit/bb0253d1df1ba9725e1965fccca798d87a6454c6) Update osx-setup-guide.md
+  * [`1b01625d`](https://github.com/distribution/distribution/commit/1b01625dae6a0a6321dadde7a30d0c3b92093a3e) Enable MD5 check on GCS driver (#4586)
+  * [`7884c712`](https://github.com/distribution/distribution/commit/7884c71297db23046eca9080479aad2c04c79375) Add code comment
+  * [`e20645c0`](https://github.com/distribution/distribution/commit/e20645c0505bb445ddb5fe827f3f4d2dbc413ff4) Enable MD5 check on GCS driver
+  * [`d9b0802d`](https://github.com/distribution/distribution/commit/d9b0802d81b48c0e759425d40a93c01e65357b36) build(deps): bump actions/upload-artifact from 4.6.0 to 4.6.1 (#4580)
+  * [`da2bbf04`](https://github.com/distribution/distribution/commit/da2bbf0441b04b46bda928db5eae3dd9a61c23fd) build(deps): bump actions/upload-artifact from 4.6.0 to 4.6.1
+  * [`27d490c4`](https://github.com/distribution/distribution/commit/27d490c4ab614e9fcc98d321ea008bf116f2af4d) build(deps): bump ossf/scorecard-action from 2.4.0 to 2.4.1 (#4579)
+  * [`484fa043`](https://github.com/distribution/distribution/commit/484fa0432acfdbdaa5d6402c6f40734ebfbbffb5) build(deps): bump ossf/scorecard-action from 2.4.0 to 2.4.1
+  * [`205d098f`](https://github.com/distribution/distribution/commit/205d098fdc46fe91cca246c26eab6f73363c6425) build(deps): bump github.com/go-jose/go-jose/v4 from 4.0.2 to 4.0.5 in the go_modules group (#4582)
+  * [`fc3dd55d`](https://github.com/distribution/distribution/commit/fc3dd55d3daaec8606fd6d88ee25fa8a3199beca) build(deps): bump github.com/go-jose/go-jose/v4 in the go_modules group
+  * [`9e96aec3`](https://github.com/distribution/distribution/commit/9e96aec357bb041bff0977b56025242b52ed8399) Fix broken signing algorithm configuration for token authentication (#4578)
+  * [`64f780f6`](https://github.com/distribution/distribution/commit/64f780f6c5ef3c118b8a46e2474a9e1bf866b331) Explicitly return zero value instead of partially filled struct
+  * [`0762a1bb`](https://github.com/distribution/distribution/commit/0762a1bb579096386ecb7be93606ae87dd3c446a) Fix error message for unsupported signing algorithm by not overriding var
+  * [`70d99154`](https://github.com/distribution/distribution/commit/70d99154ac3f6cee2c9ad2ca45724781f45326c8) Fix signing algorithm configuration for token authentication
+  * [`63d38923`](https://github.com/distribution/distribution/commit/63d3892315c817c931b88779399a8e9142899a8e) registry/storage: add option to quiet GC output. (#4560)
+  * [`2a491b35`](https://github.com/distribution/distribution/commit/2a491b35dd40decc49ba23b048a39ce649d4896e) docs/garbage-collection: document --delete-untagged and --quiet options
+  * [`a032989b`](https://github.com/distribution/distribution/commit/a032989bf9a2db9cee36eaf58231eda134f989d9) registry/storage: add option to quiet GC output.
+</p>
+</details>
+
+### Dependency Changes
+
+* **github.com/go-jose/go-jose/v4**  v4.0.2 -> v4.0.5
+* **github.com/stretchr/testify**    v1.9.0 -> v1.10.0
+* **golang.org/x/crypto**            v0.31.0 -> v0.35.0
+* **golang.org/x/net**               v0.33.0 -> v0.36.0
+* **golang.org/x/sync**              v0.10.0 -> v0.11.0
+* **golang.org/x/sys**               v0.28.0 -> v0.30.0
+* **golang.org/x/text**              v0.21.0 -> v0.22.0
+
+Previous release can be found at [v3.0.0-rc.3](https://github.com/distribution/distribution/releases/tag/v3.0.0-rc.3)
+"""
