@@ -311,8 +311,9 @@ func (t *tags) Get(ctx context.Context, tag string) (v1.Descriptor, error) {
 			return nil, err
 		}
 
-		for _, t := range distribution.ManifestMediaTypes() {
-			req.Header.Add("Accept", t)
+		mediaTypes := distribution.ManifestMediaTypes()
+		if len(mediaTypes) > 0 {
+			req.Header.Add("Accept", strings.Join(mediaTypes, ", "))
 		}
 		resp, err := t.client.Do(req)
 		return resp, err
@@ -498,8 +499,8 @@ func (ms *manifests) Get(ctx context.Context, dgst digest.Digest, options ...dis
 		return nil, err
 	}
 
-	for _, t := range mediaTypes {
-		req.Header.Add("Accept", t)
+	if len(mediaTypes) > 0 {
+		req.Header.Add("Accept", strings.Join(mediaTypes, ", "))
 	}
 
 	if _, ok := ms.etags[digestOrTag]; ok {
