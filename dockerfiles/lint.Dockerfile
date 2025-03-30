@@ -18,4 +18,5 @@ ARG BUILDTAGS
 RUN --mount=type=bind,target=. \
     --mount=type=cache,target=/root/.cache \
     --mount=from=golangci-lint,source=/usr/bin/golangci-lint,target=/usr/bin/golangci-lint \
-      golangci-lint --timeout "${TIMEOUT}" --build-tags "${BUILDTAGS}" run
+    golangci-lint config verify && \
+    golangci-lint --timeout "${TIMEOUT}" --build-tags "${BUILDTAGS}" run
