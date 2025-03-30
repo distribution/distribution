@@ -294,7 +294,7 @@ func (d *driver) RedirectURL(*http.Request, string) (string, error) {
 // Walk traverses a filesystem defined within driver, starting
 // from the given path, calling f on each file and directory
 func (d *driver) Walk(ctx context.Context, path string, f storagedriver.WalkFn, options ...func(*storagedriver.WalkOptions)) error {
-	return storagedriver.WalkFallback(ctx, d, path, f, options...)
+	return storagedriver.WalkFallback(ctx, d, d.fullPath(path), f, options...)
 }
 
 // fullPath returns the absolute path of a key within the Driver's storage.
