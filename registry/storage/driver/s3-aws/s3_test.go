@@ -166,6 +166,121 @@ func BenchmarkS3DriverSuite(b *testing.B) {
 	testsuites.BenchDriver(b, newDriverConstructor(b))
 }
 
+func TestGetS3LogLevelFromParam(t *testing.T) {
+	tests := []struct {
+		name     string
+		param    any
+		expected aws.LogLevelType
+	}{
+		// Nil case
+		{
+			name:     "nil parameter",
+			param:    nil,
+			expected: aws.LogOff,
+		},
+
+		// Boolean cases - YAML converts "off" to false
+		{
+			name:     "boolean false (from YAML off)",
+			param:    false,
+			expected: aws.LogOff,
+		},
+		{
+			name:     "boolean true",
+			param:    true,
+			expected: aws.LogOff,
+		},
+
+		// String cases - valid values
+		{
+			name:     "string off",
+			param:    "off",
+			expected: aws.LogOff,
+		},
+		{
+			name:     "string OFF uppercase",
+			param:    "OFF",
+			expected: aws.LogOff,
+		},
+		{
+			name:     "string debug",
+			param:    "debug",
+			expected: aws.LogDebug,
+		},
+		{
+			name:     "string DEBUG uppercase",
+			param:    "DEBUG",
+			expected: aws.LogDebug,
+		},
+		{
+			name:     "string debugwithsigning",
+			param:    "debugwithsigning",
+			expected: aws.LogDebugWithSigning,
+		},
+		{
+			name:     "string debugwithhttpbody",
+			param:    "debugwithhttpbody",
+			expected: aws.LogDebugWithHTTPBody,
+		},
+		{
+			name:     "string debugwithrequestretries",
+			param:    "debugwithrequestretries",
+			expected: aws.LogDebugWithRequestRetries,
+		},
+		{
+			name:     "string debugwithrequesterrors",
+			param:    "debugwithrequesterrors",
+			expected: aws.LogDebugWithRequestErrors,
+		},
+		{
+			name:     "string debugwitheventstreambody",
+			param:    "debugwitheventstreambody",
+			expected: aws.LogDebugWithEventStreamBody,
+		},
+
+		// Invalid cases
+		{
+			name:     "invalid string value",
+			param:    "invalid",
+			expected: aws.LogOff,
+		},
+		{
+			name:     "empty string",
+			param:    "",
+			expected: aws.LogOff,
+		},
+		{
+			name:     "integer value",
+			param:    42,
+			expected: aws.LogOff,
+		},
+		{
+			name:     "float value",
+			param:    42.0,
+			expected: aws.LogOff,
+		},
+		{
+			name:     "slice value",
+			param:    []string{"off"},
+			expected: aws.LogOff,
+		},
+		{
+			name:     "map value",
+			param:    map[string]string{"level": "off"},
+			expected: aws.LogOff,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getS3LogLevelFromParam(tt.param)
+			if result != tt.expected {
+				t.Errorf("getS3LogLevelFromParam(%v) = %v, want %v", tt.param, result, tt.expected)
+			}
+		})
+	}
+}
+
 func TestEmptyRootList(t *testing.T) {
 	skipCheck(t)
 
