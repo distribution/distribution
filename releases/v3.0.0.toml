@@ -7,7 +7,7 @@ github_repo = "distribution/distribution"
 # previous release
 previous = "v3.0.0-rc.4"
 
-pre_release = true
+pre_release = false
 
 preface = """\
 registry 3.0.0
