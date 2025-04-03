@@ -68,7 +68,7 @@ specify it in the `docker run` command:
 ```bash
 $ docker run -d -p 5000:5000 --restart=always --name registry \
              -v `pwd`/config.yml:/etc/distribution/config.yml \
-             registry:2
+             registry:3
 ```
 
 Use this
