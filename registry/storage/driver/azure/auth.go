@@ -51,9 +51,9 @@ type azureClient struct {
 
 func newClient(params *DriverParameters) (*azureClient, error) {
 	switch params.Credentials.Type {
-	case CredentialsTypeClientSecret:
+	case CredentialsTypeClientSecret, CredentialsTypeDefault:
 		return newTokenClient(params)
-	case CredentialsTypeSharedKey, CredentialsTypeDefault:
+	case CredentialsTypeSharedKey:
 		return newSharedKeyCredentialsClient(params)
 	}
 	return nil, fmt.Errorf("invalid credentials type: %q", params.Credentials.Type)
