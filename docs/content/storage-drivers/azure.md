@@ -25,24 +25,24 @@ An implementation of the `storagedriver.StorageDriver` interface which uses [Mic
 | Parameter                          | Required | Description                                                                                                                                                                                                                                                         |
 |:-----------------------------------|:---------|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `type`                      | yes      | Azure credentials used to authenticate with Azure blob storage (`client_secret`, `shared_key`, `default_credentials`). |
-| `clientid`                  | yes       | The unique application ID of this application in your directory. |
-| `tenantid`                  | yes       | Azure Active Directory’s global unique identifier. |
-| `secret`                    | yes       | A secret string that the application uses to prove its identity when requesting a token. |
+| `clientid`                  | no       | The unique application ID of this application in your directory. Required if not using Workload Identity. |
+| `tenantid`                  | no       | Azure Active Directory’s global unique identifier. Required if not using Workload Identity. |
+| `secret`                    | no       | A secret string that the application uses to prove its identity when requesting a token. Required if not using Workload Identity. |
 
-* `client_secret`: [used for token euthentication](https://learn.microsoft.com/en-us/azure/developer/go/sdk/authentication/authentication-overview#advantages-of-token-based-authentication)
+* `client_secret`: [used for token authentication](https://learn.microsoft.com/en-us/azure/developer/go/sdk/authentication/authentication-overview#advantages-of-token-based-authentication)
 * `shared_key`: used for shared key credentials authentication (read more [here](https://learn.microsoft.com/en-us/rest/api/storageservices/authorize-with-shared-key))
-* `default_credentials`: [default Azure credential authentication](https://learn.microsoft.com/en-us/azure/developer/go/sdk/authentication/authentication-overview#defaultazurecredential)
+* `default_credentials`: [default Azure credential authentication](https://learn.microsoft.com/en-us/azure/developer/go/sdk/authentication/authentication-overview#defaultazurecredential) (supports [workload identity](#azure-workload-identity) in AKS)
 
 ## Related information
 
 * To get information about Azure blob storage [the offical docs](https://azure.microsoft.com/en-us/services/storage/).
 * You can use Azure [Blob Service REST API](https://docs.microsoft.com/en-us/rest/api/storageservices/Blob-Service-REST-API) to [create a storage container](https://docs.microsoft.com/en-us/rest/api/storageservices/Create-Container).
 
-## Azure identity
+## Azure managed identity 
 
-In order to use managed identity to access Azure blob storage you can use [Microsoft Bicep](https://learn.microsoft.com/en-us/azure/templates/microsoft.app/managedenvironments/storages?pivots=deployment-language-bicep).
+To use managed identity to access Azure blob storage you can use [Microsoft Bicep](https://learn.microsoft.com/en-us/azure/templates/microsoft.app/managedenvironments/storages?pivots=deployment-language-bicep).
 
-The following will configure credentials that will be used by the Azure storage driver to construct AZ Identity that will be used to access the blob storage:
+The following configures credentials that the Azure storage driver will use to construct AZ Identity to access the blob storage:
 ```
 properties: {
   azure: {
@@ -54,3 +54,7 @@ properties: {
   }
 }
 ```
+
+## Azure workload identity 
+
+If running in an AKS cluster with [Azure workload identity](https://learn.microsoft.com/en-us/azure/aks/workload-identity-deploy-cluster), use the `default_credentials` type. There's no need to set the other credentials fields. The service account will need at least `Storage Blob Data Contributor` role on the storage account to read and write to it.
