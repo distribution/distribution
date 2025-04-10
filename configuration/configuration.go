@@ -8,8 +8,6 @@ import (
 	"reflect"
 	"strings"
 	"time"
-
-	"github.com/redis/go-redis/v9"
 )
 
 // Configuration is a versioned registry configuration, intended to be provided by a yaml file, and
@@ -833,10 +831,105 @@ func Parse(rd io.Reader) (*Configuration, error) {
 	return config, nil
 }
 
-// RedisOptions represents the configuration options for Redis, which are
-// provided by the redis package. This struct can be used to configure the
-// connection to Redis in a universal (clustered or standalone) setup.
-type RedisOptions = redis.UniversalOptions
+// RedisOptions represents the configuration options for Redis. This struct can be used
+// to configure the connection to Redis in a universal (clustered or standalone) setup.
+type RedisOptions struct {
+	// Addrs is either a single address or a seed list of host:port addresses
+	// of cluster/sentinel nodes.
+	Addrs []string `yaml:"addrs,omitempty"`
+
+	// ClientName will execute the `CLIENT SETNAME ClientName` command for each connection.
+	ClientName string `yaml:"clientname,omitempty"`
+
+	// DB is the database to be selected after connecting to the server.
+	// Only applicable to single-node and failover clients.
+	DB int `yaml:"db,omitempty"`
+
+	// Protocol specifies the Redis protocol version to use.
+	Protocol int `yaml:"protocol,omitempty"`
+
+	// Username for authentication (used with ACLs).
+	Username string `yaml:"username,omitempty"`
+
+	// Password for authentication.
+	Password string `yaml:"password,omitempty"`
+
+	// SentinelUsername is the username for Sentinel authentication.
+	SentinelUsername string `yaml:"sentinelusername,omitempty"`
+
+	// SentinelPassword is the password for Sentinel authentication.
+	SentinelPassword string `yaml:"sentinelpassword,omitempty"`
+
+	// MaxRetries is the maximum number of retries before giving up.
+	MaxRetries int `yaml:"maxretries,omitempty"`
+
+	// MinRetryBackoff is the minimum backoff between each retry.
+	MinRetryBackoff time.Duration `yaml:"minretrybackoff,omitempty"`
+
+	// MaxRetryBackoff is the maximum backoff between each retry.
+	MaxRetryBackoff time.Duration `yaml:"maxretrybackoff,omitempty"`
+
+	// DialTimeout is the timeout for establishing new connections.
+	DialTimeout time.Duration `yaml:"dialtimeout,omitempty"`
+
+	// ReadTimeout is the timeout for reading a single command reply.
+	ReadTimeout time.Duration `yaml:"readtimeout,omitempty"`
+
+	// WriteTimeout is the timeout for writing a single command.
+	WriteTimeout time.Duration `yaml:"writetimeout,omitempty"`
+
+	// ContextTimeoutEnabled enables wrapping operations with a context timeout.
+	ContextTimeoutEnabled bool `yaml:"contexttimeoutenabled,omitempty"`
+
+	// PoolFIFO uses FIFO mode for each node connection pool GET/PUT (default is LIFO).
+	PoolFIFO bool `yaml:"poolfifo,omitempty"`
+
+	// PoolSize is the maximum number of socket connections.
+	PoolSize int `yaml:"poolsize,omitempty"`
+
+	// PoolTimeout is the amount of time a client waits for a connection if all are busy.
+	PoolTimeout time.Duration `yaml:"pooltimeout,omitempty"`
+
+	// MinIdleConns is the minimum number of idle connections maintained in the pool.
+	MinIdleConns int `yaml:"minidleconns,omitempty"`
+
+	// MaxIdleConns is the maximum number of idle connections.
+	MaxIdleConns int `yaml:"maxidleconns,omitempty"`
+
+	// MaxActiveConns is the maximum number of active connections (cluster mode only).
+	MaxActiveConns int `yaml:"maxactiveconns,omitempty"`
+
+	// ConnMaxIdleTime is the maximum amount of time a connection can be idle.
+	ConnMaxIdleTime time.Duration `yaml:"connmaxidletime,omitempty"`
+
+	// ConnMaxLifetime is the maximum lifetime of a connection.
+	ConnMaxLifetime time.Duration `yaml:"connmaxlifetime,omitempty"`
+
+	// MaxRedirects is the maximum number of redirects to follow in cluster mode.
+	MaxRedirects int `yaml:"maxredirects,omitempty"`
+
+	// ReadOnly enables read-only mode for cluster clients.
+	ReadOnly bool `yaml:"readonly,omitempty"`
+
+	// RouteByLatency routes commands to the closest node based on latency.
+	RouteByLatency bool `yaml:"routebylatency,omitempty"`
+
+	// RouteRandomly routes commands randomly among eligible nodes.
+	RouteRandomly bool `yaml:"routerandomly,omitempty"`
+
+	// MasterName is the Sentinel master name.
+	// Only applicable for failover clients.
+	MasterName string `yaml:"mastername,omitempty"`
+
+	// DisableIdentity disables the CLIENT SETINFO command on connect.
+	DisableIdentity bool `yaml:"disableidentity,omitempty"`
+
+	// IdentitySuffix is an optional suffix for CLIENT SETINFO.
+	IdentitySuffix string `yaml:"identitysuffix,omitempty"`
+
+	// UnstableResp3 enables RESP3 features that are not finalized yet.
+	UnstableResp3 bool `yaml:"unstableresp3,omitempty"`
+}
 
 // RedisTLSOptions configures the TLS (Transport Layer Security) settings for
 // Redis connections, allowing secure communication over the network.
@@ -865,162 +958,6 @@ type Redis struct {
 	// TLS contains the TLS settings for secure communication with the Redis server.
 	// If specified, these settings will enable encryption and authentication via TLS.
 	TLS RedisTLSOptions `yaml:"tls,omitempty"`
-}
-
-func (c Redis) MarshalYAML() (interface{}, error) {
-	fields := make(map[string]interface{})
-
-	val := reflect.ValueOf(c.Options)
-	typ := val.Type()
-
-	for i := 0; i < val.NumField(); i++ {
-		field := typ.Field(i)
-		fieldValue := val.Field(i)
-
-		// ignore funcs fields in redis.UniversalOptions
-		if fieldValue.Kind() == reflect.Func {
-			continue
-		}
-
-		fields[strings.ToLower(field.Name)] = fieldValue.Interface()
-	}
-
-	// Add TLS fields if they're not empty
-	if c.TLS.Certificate != "" || c.TLS.Key != "" || len(c.TLS.ClientCAs) > 0 {
-		fields["tls"] = c.TLS
-	}
-
-	return fields, nil
-}
-
-func (c *Redis) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var fields map[string]interface{}
-	err := unmarshal(&fields)
-	if err != nil {
-		return err
-	}
-
-	val := reflect.ValueOf(&c.Options).Elem()
-	typ := val.Type()
-
-	for i := 0; i < typ.NumField(); i++ {
-		field := typ.Field(i)
-		fieldName := strings.ToLower(field.Name)
-
-		if value, ok := fields[fieldName]; ok {
-			fieldValue := val.Field(i)
-			if fieldValue.CanSet() {
-				switch field.Type {
-				case reflect.TypeOf(time.Duration(0)):
-					durationStr, ok := value.(string)
-					if !ok {
-						return fmt.Errorf("invalid duration value for field: %s", fieldName)
-					}
-					duration, err := time.ParseDuration(durationStr)
-					if err != nil {
-						return fmt.Errorf("failed to parse duration for field: %s, error: %v", fieldName, err)
-					}
-					fieldValue.Set(reflect.ValueOf(duration))
-				default:
-					if err := setFieldValue(fieldValue, value); err != nil {
-						return fmt.Errorf("failed to set value for field: %s, error: %v", fieldName, err)
-					}
-				}
-			}
-		}
-	}
-
-	// Handle TLS fields
-	if tlsData, ok := fields["tls"]; ok {
-		tlsMap, ok := tlsData.(map[interface{}]interface{})
-		if !ok {
-			return fmt.Errorf("invalid TLS data structure")
-		}
-
-		if cert, ok := tlsMap["certificate"]; ok {
-			var isString bool
-			c.TLS.Certificate, isString = cert.(string)
-			if !isString {
-				return fmt.Errorf("Redis TLS certificate must be a string")
-			}
-		}
-		if key, ok := tlsMap["key"]; ok {
-			var isString bool
-			c.TLS.Key, isString = key.(string)
-			if !isString {
-				return fmt.Errorf("Redis TLS (private) key must be a string")
-			}
-		}
-		if cas, ok := tlsMap["clientcas"]; ok {
-			caList, ok := cas.([]interface{})
-			if !ok {
-				return fmt.Errorf("invalid clientcas data structure")
-			}
-			for _, ca := range caList {
-				if caStr, ok := ca.(string); ok {
-					c.TLS.ClientCAs = append(c.TLS.ClientCAs, caStr)
-				}
-			}
-		}
-	}
-
-	return nil
-}
-
-func setFieldValue(field reflect.Value, value interface{}) error {
-	if value == nil {
-		return nil
-	}
-
-	switch field.Kind() {
-	case reflect.String:
-		stringValue, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("failed to convert value to string")
-		}
-		field.SetString(stringValue)
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		intValue, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("failed to convert value to integer")
-		}
-		field.SetInt(int64(intValue))
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		uintValue, ok := value.(uint)
-		if !ok {
-			return fmt.Errorf("failed to convert value to unsigned integer")
-		}
-		field.SetUint(uint64(uintValue))
-	case reflect.Float32, reflect.Float64:
-		floatValue, ok := value.(float64)
-		if !ok {
-			return fmt.Errorf("failed to convert value to float")
-		}
-		field.SetFloat(floatValue)
-	case reflect.Bool:
-		boolValue, ok := value.(bool)
-		if !ok {
-			return fmt.Errorf("failed to convert value to boolean")
-		}
-		field.SetBool(boolValue)
-	case reflect.Slice:
-		slice := reflect.MakeSlice(field.Type(), 0, 0)
-		valueSlice, ok := value.([]interface{})
-		if !ok {
-			return fmt.Errorf("failed to convert value to slice")
-		}
-		for _, item := range valueSlice {
-			sliceValue := reflect.New(field.Type().Elem()).Elem()
-			if err := setFieldValue(sliceValue, item); err != nil {
-				return err
-			}
-			slice = reflect.Append(slice, sliceValue)
-		}
-		field.Set(slice)
-	default:
-		return fmt.Errorf("unsupported field type: %v", field.Type())
-	}
-	return nil
 }
 
 const (
