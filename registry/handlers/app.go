@@ -536,6 +536,40 @@ func (app *App) configureRedis(cfg *configuration.Configuration) {
 		return
 	}
 
+	opts := redis.UniversalOptions{
+		Addrs:                 cfg.Redis.Options.Addrs,
+		ClientName:            cfg.Redis.Options.ClientName,
+		DB:                    cfg.Redis.Options.DB,
+		Protocol:              cfg.Redis.Options.Protocol,
+		Username:              cfg.Redis.Options.Username,
+		Password:              cfg.Redis.Options.Password,
+		SentinelUsername:      cfg.Redis.Options.SentinelUsername,
+		SentinelPassword:      cfg.Redis.Options.SentinelPassword,
+		MaxRetries:            cfg.Redis.Options.MaxRetries,
+		MinRetryBackoff:       cfg.Redis.Options.MinRetryBackoff,
+		MaxRetryBackoff:       cfg.Redis.Options.MaxRetryBackoff,
+		DialTimeout:           cfg.Redis.Options.DialTimeout,
+		ReadTimeout:           cfg.Redis.Options.ReadTimeout,
+		WriteTimeout:          cfg.Redis.Options.WriteTimeout,
+		ContextTimeoutEnabled: cfg.Redis.Options.ContextTimeoutEnabled,
+		PoolFIFO:              cfg.Redis.Options.PoolFIFO,
+		PoolSize:              cfg.Redis.Options.PoolSize,
+		PoolTimeout:           cfg.Redis.Options.PoolTimeout,
+		MinIdleConns:          cfg.Redis.Options.MinIdleConns,
+		MaxIdleConns:          cfg.Redis.Options.MaxIdleConns,
+		MaxActiveConns:        cfg.Redis.Options.MaxActiveConns,
+		ConnMaxIdleTime:       cfg.Redis.Options.ConnMaxIdleTime,
+		ConnMaxLifetime:       cfg.Redis.Options.ConnMaxLifetime,
+		MaxRedirects:          cfg.Redis.Options.MaxRedirects,
+		ReadOnly:              cfg.Redis.Options.ReadOnly,
+		RouteByLatency:        cfg.Redis.Options.RouteByLatency,
+		RouteRandomly:         cfg.Redis.Options.RouteRandomly,
+		MasterName:            cfg.Redis.Options.MasterName,
+		DisableIdentity:       cfg.Redis.Options.DisableIdentity,
+		IdentitySuffix:        cfg.Redis.Options.IdentitySuffix,
+		UnstableResp3:         cfg.Redis.Options.UnstableResp3,
+	}
+
 	// redis TLS config
 	if cfg.Redis.TLS.Certificate != "" || cfg.Redis.TLS.Key != "" {
 		var err error
@@ -562,10 +596,10 @@ func (app *App) configureRedis(cfg *configuration.Configuration) {
 			tlsConf.ClientAuth = tls.RequireAndVerifyClientCert
 			tlsConf.ClientCAs = pool
 		}
-		cfg.Redis.Options.TLSConfig = tlsConf
+		opts.TLSConfig = tlsConf
 	}
 
-	app.redis = app.createPool(cfg.Redis.Options)
+	app.redis = app.createPool(opts)
 
 	// Enable metrics instrumentation.
 	if err := redisotel.InstrumentMetrics(app.redis); err != nil {
