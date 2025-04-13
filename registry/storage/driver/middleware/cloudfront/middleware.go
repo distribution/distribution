@@ -40,7 +40,7 @@ type cloudFrontStorageMiddleware struct {
 
 var _ storagedriver.StorageDriver = &cloudFrontStorageMiddleware{}
 
-// newCloudFrontLayerHandler constructs and returns a new CloudFront
+// newCloudFrontStorageMiddleware constructs and returns a new CloudFront
 // LayerHandler implementation.
 //
 // Required options:

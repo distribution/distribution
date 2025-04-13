@@ -35,7 +35,7 @@ func withTimeoutNotification(ctx context.Context, timeout *bool) context.Context
 	return context.WithValue(ctx, timeoutNotifyContextKey, timeout)
 }
 
-// withRetryNotifier returns a context that contains a retry notifier. The
+// withRetryNotification returns a context that contains a retry notifier. The
 // retryNotificationPolicy will then invoke the callback when a retry happens
 func withRetryNotification(ctx context.Context, r retryNotificationReceiver) context.Context { // nolint: unused // may become useful at some point
 	return context.WithValue(ctx, retryNotifyContextKey, r)
