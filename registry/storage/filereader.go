@@ -6,16 +6,32 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
+	"strconv"
 
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 )
+
+var defaultBufMB = getEnvFloat("FILE_READER_BUFFER_MB", 4.0)
 
 // TODO(stevvooe): Set an optimal buffer size here. We'll have to
 // understand the latency characteristics of the underlying network to
 // set this correctly, so we may want to leave it to the driver. For
 // out of process drivers, we'll have to optimize this buffer size for
 // local communication.
-const fileReaderBufferSize = 4 * 1024 * 1024
+var fileReaderBufferSize = int(defaultBufMB * 1024 * 1024)
+
+func getEnvFloat(key string, def float64) float64 {
+	valStr := os.Getenv(key)
+	if valStr == "" {
+		return def
+	}
+	val, err := strconv.ParseFloat(valStr, 64)
+	if err != nil {
+		return def
+	}
+	return val
+}
 
 // remoteFileReader provides a read seeker interface to files stored in
 // storagedriver. Used to implement part of layer interface and will be used
