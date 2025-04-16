@@ -410,6 +410,9 @@ func (suite *DriverSuite) testContinueStreamAppend(chunkSize int64) {
 	suite.Require().NoError(err)
 	suite.Require().Equal(chunkSize, nn)
 
+	err = writer.Commit(suite.ctx)
+	suite.Require().NoError(err)
+
 	err = writer.Close()
 	suite.Require().NoError(err)
 
