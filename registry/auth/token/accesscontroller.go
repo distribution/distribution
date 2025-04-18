@@ -351,7 +351,7 @@ func newAccessController(options map[string]interface{}) (auth.AccessController,
 	rootPool := x509.NewCertPool()
 	for _, rootCert := range rootCerts {
 		rootPool.AddCert(rootCert)
-		if key := GetRFC7638Thumbprint(rootCert.PublicKey); key != "" {
+		if key := GetJWKThumbprint(rootCert.PublicKey); key != "" {
 			trustedKeys[key] = rootCert.PublicKey
 		}
 	}
