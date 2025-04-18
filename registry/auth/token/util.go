@@ -3,6 +3,7 @@ package token
 import (
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/rsa"
 	"crypto/sha256"
 	"encoding/base64"
@@ -60,7 +61,7 @@ func hashAndEncode(payload string) string {
 // [0]: https://groups.google.com/g/golang-dev/c/zBQwhm3VfvU
 //
 // The payloads are small enough to create the JSON strings manually
-func GetRFC7638Thumbprint(publickey crypto.PublicKey) string {
+func GetJWKThumbprint(publickey crypto.PublicKey) string {
 	var payload string
 
 	switch pubkey := publickey.(type) {
@@ -78,6 +79,10 @@ func GetRFC7638Thumbprint(publickey crypto.PublicKey) string {
 		y := base64.RawURLEncoding.EncodeToString(params.Gy.Bytes())
 
 		payload = fmt.Sprintf(`{"crv":"%s","kty":"EC","x":"%s","y":"%s"}`, crv, x, y)
+	case ed25519.PublicKey:
+		x := base64.RawURLEncoding.EncodeToString(pubkey)
+
+		payload = fmt.Sprintf(`{"crv":"Ed25519","kty":"OTP","x":"%s"}`, x)
 	default:
 		return ""
 	}
