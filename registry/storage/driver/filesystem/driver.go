@@ -134,19 +134,37 @@ func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
 
 // PutContent stores the []byte content at a location designated by "path".
 func (d *driver) PutContent(ctx context.Context, subPath string, contents []byte) error {
-	writer, err := d.Writer(ctx, subPath, false)
+	tempPath := subPath + ".tmp"
+
+	// Write to a temporary file to prevent partial writes.
+	writer, err := d.Writer(ctx, tempPath, false)
 	if err != nil {
 		return err
 	}
 	defer writer.Close()
+
 	_, err = io.Copy(writer, bytes.NewReader(contents))
 	if err != nil {
 		if cErr := writer.Cancel(ctx); cErr != nil {
 			return errors.Join(err, cErr)
 		}
+		// Attempt to clean up the temporary file on error.
+		_ = d.Delete(ctx, tempPath)
 		return err
 	}
-	return writer.Commit(ctx)
+
+	if err := writer.Commit(ctx); err != nil {
+		return err
+	}
+
+	// Atomically replace the target file with the temporary file.
+	if err := d.Move(ctx, tempPath, subPath); err != nil {
+		// Clean up the temporary file if rename fails.
+		_ = d.Delete(ctx, tempPath)
+		return err
+	}
+
+	return nil
 }
 
 // Reader retrieves an io.ReadCloser for the content stored at "path" with a
@@ -180,43 +198,29 @@ func (d *driver) Writer(ctx context.Context, subPath string, append bool) (stora
 		return nil, err
 	}
 
-	var (
-		fp           *os.File
-		err          error
-		offset       int64
-		tempFilePath string
-	)
+	fp, err := os.OpenFile(fullPath, os.O_WRONLY|os.O_CREATE, 0o666)
+	if err != nil {
+		return nil, err
+	}
+
+	var offset int64
 
 	if !append {
-		// Create temporary file in target directory
-		tempFile, err := os.CreateTemp(parentDir, ".tmp-")
-		if err != nil {
-			return nil, err
-		}
-		tempFilePath = tempFile.Name()
-		tempFile.Close()
-
-		// Open temp file with truncation
-		fp, err = os.OpenFile(tempFilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o666)
-		if err != nil {
-			os.Remove(tempFilePath)
-			return nil, err
-		}
-		offset = 0
-	} else {
-		fp, err = os.OpenFile(fullPath, os.O_WRONLY|os.O_CREATE, 0o666)
-		if err != nil {
-			return nil, err
-		}
-
-		offset, err = fp.Seek(0, io.SeekEnd)
+		err := fp.Truncate(0)
 		if err != nil {
 			fp.Close()
 			return nil, err
 		}
+	} else {
+		n, err := fp.Seek(0, io.SeekEnd)
+		if err != nil {
+			fp.Close()
+			return nil, err
+		}
+		offset = n
 	}
 
-	return newFileWriter(fp, offset, tempFilePath, fullPath), nil
+	return newFileWriter(fp, offset), nil
 }
 
 // Stat retrieves the FileInfo for the given path, including the current size
@@ -351,23 +355,19 @@ func (fi fileInfo) IsDir() bool {
 }
 
 type fileWriter struct {
-	file         *os.File
-	size         int64
-	bw           *bufio.Writer
-	closed       bool
-	committed    bool
-	cancelled    bool
-	tempFilePath string // Path to the temporary file (non-empty for non-append writes)
-	targetPath   string // Target path for final file
+	file      *os.File
+	size      int64
+	bw        *bufio.Writer
+	closed    bool
+	committed bool
+	cancelled bool
 }
 
-func newFileWriter(file *os.File, size int64, tempFilePath, targetPath string) *fileWriter {
+func newFileWriter(file *os.File, size int64) *fileWriter {
 	return &fileWriter{
-		file:         file,
-		size:         size,
-		bw:           bufio.NewWriter(file),
-		tempFilePath: tempFilePath,
-		targetPath:   targetPath,
+		file: file,
+		size: size,
+		bw:   bufio.NewWriter(file),
 	}
 }
 
@@ -390,7 +390,7 @@ func (fw *fileWriter) Size() int64 {
 
 func (fw *fileWriter) Close() error {
 	if fw.closed {
-		return nil // Allow multiple Close calls without error
+		return fmt.Errorf("already closed")
 	}
 
 	if err := fw.bw.Flush(); err != nil {
@@ -415,15 +415,7 @@ func (fw *fileWriter) Cancel(ctx context.Context) error {
 
 	fw.cancelled = true
 	fw.file.Close()
-
-	// Remove temporary file if it exists
-	if fw.tempFilePath != "" {
-		os.Remove(fw.tempFilePath)
-	} else {
-		os.Remove(fw.targetPath)
-	}
-
-	return nil
+	return os.Remove(fw.file.Name())
 }
 
 func (fw *fileWriter) Commit(ctx context.Context) error {
@@ -438,28 +430,9 @@ func (fw *fileWriter) Commit(ctx context.Context) error {
 	if err := fw.bw.Flush(); err != nil {
 		return err
 	}
+
 	if err := fw.file.Sync(); err != nil {
 		return err
-	}
-
-	// Close the file before renaming (required on some systems)
-	if err := fw.Close(); err != nil {
-		return err
-	}
-
-	// Handle temporary file replacement
-	if fw.tempFilePath != "" {
-		// Atomically rename temp file to target path
-		if err := os.Rename(fw.tempFilePath, fw.targetPath); err != nil {
-			os.Remove(fw.tempFilePath)
-			return err
-		}
-
-		// Sync directory to ensure rename persistence
-		if dir, err := os.Open(path.Dir(fw.targetPath)); err == nil {
-			defer dir.Close()
-			dir.Sync()
-		}
 	}
 
 	fw.committed = true
