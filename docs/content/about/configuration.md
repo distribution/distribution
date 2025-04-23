@@ -690,7 +690,7 @@ Default `signingalgorithms`:
 Additional notes on `rootcertbundle`:
 
 - The public key of this certificate will be automatically added to the list of known keys.
-- The public key will be identified by it's [RFC7638 Thumbprint](https://datatracker.ietf.org/doc/html/rfc7638).
+- The public key will be identified by its JWK Thumbprint. See [RFC 7638](https://datatracker.ietf.org/doc/html/rfc7638) and [RFC 8037](https://datatracker.ietf.org/doc/html/rfc8037) for reference.
 
 For more information about Token based authentication configuration, see the
 [specification](../spec/auth/token.md).
