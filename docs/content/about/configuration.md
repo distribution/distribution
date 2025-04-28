@@ -1275,6 +1275,7 @@ By default the registry will validate that all platform images exist when an ima
 index is uploaded to the registry. Disabling this validatation is experimental
 because other tooling that uses the registry may expect the image index to be complete.
 
+```yaml
 validation:
   manifests:
     indexes:
@@ -1282,6 +1283,7 @@ validation:
       platformlist:
       - os: linux
         architecture: amd64
+```
 
 Use these settings to configure what validation the registry performs on image
 index manifests uploaded to the registry.
