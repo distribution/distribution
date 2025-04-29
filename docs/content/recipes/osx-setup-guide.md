@@ -39,8 +39,8 @@ If you want to understand, you should read [How to Write Go Code](https://golang
 
 ```console
 $ mkdir -p $GOPATH/src/github.com/distribution
-$ git clone https://github.com/distribution/distribution.git $GOPATH/src/github.com/distribution/distribution
-$ cd $GOPATH/src/github.com/distribution/distribution
+$ git clone https://github.com/2DFS/2dfs-registry.git $GOPATH/src/github.com/2DFS/2dfs-registry
+$ cd $GOPATH/src/github.com/2DFS/2dfs-registry
 ```
 
 ## Build the binary

@@ -39,7 +39,7 @@ with a driver name and parameters map. If no such storage driver can be found,
 ## Driver contribution
 
 New storage drivers are not currently being accepted.
-See <https://github.com/distribution/distribution/issues/3988> for discussion.
+See <https://github.com/2DFS/2dfs-registry/issues/3988> for discussion.
 
 There are forks of this repo that implement custom storage drivers.
 These are not supported by the OCI distribution project.

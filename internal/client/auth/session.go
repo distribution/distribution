@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/distribution/distribution/v3/internal/client"
-	"github.com/distribution/distribution/v3/internal/client/auth/challenge"
-	"github.com/distribution/distribution/v3/internal/client/transport"
+	"github.com/2DFS/2dfs-registry/v3/internal/client"
+	"github.com/2DFS/2dfs-registry/v3/internal/client/auth/challenge"
+	"github.com/2DFS/2dfs-registry/v3/internal/client/transport"
 )
 
 var (

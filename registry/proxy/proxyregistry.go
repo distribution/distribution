@@ -10,16 +10,16 @@ import (
 
 	"github.com/distribution/reference"
 
-	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/configuration"
-	"github.com/distribution/distribution/v3/internal/client"
-	"github.com/distribution/distribution/v3/internal/client/auth"
-	"github.com/distribution/distribution/v3/internal/client/auth/challenge"
-	"github.com/distribution/distribution/v3/internal/client/transport"
-	"github.com/distribution/distribution/v3/internal/dcontext"
-	"github.com/distribution/distribution/v3/registry/proxy/scheduler"
-	"github.com/distribution/distribution/v3/registry/storage"
-	"github.com/distribution/distribution/v3/registry/storage/driver"
+	"github.com/2DFS/2dfs-registry/v3"
+	"github.com/2DFS/2dfs-registry/v3/configuration"
+	"github.com/2DFS/2dfs-registry/v3/internal/client"
+	"github.com/2DFS/2dfs-registry/v3/internal/client/auth"
+	"github.com/2DFS/2dfs-registry/v3/internal/client/auth/challenge"
+	"github.com/2DFS/2dfs-registry/v3/internal/client/transport"
+	"github.com/2DFS/2dfs-registry/v3/internal/dcontext"
+	"github.com/2DFS/2dfs-registry/v3/registry/proxy/scheduler"
+	"github.com/2DFS/2dfs-registry/v3/registry/storage"
+	"github.com/2DFS/2dfs-registry/v3/registry/storage/driver"
 )
 
 var repositoryTTL = 24 * 7 * time.Hour

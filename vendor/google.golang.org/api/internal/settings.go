@@ -59,7 +59,6 @@ type DialSettings struct {
 	ImpersonationConfig           *impersonate.Config
 	EnableDirectPath              bool
 	EnableDirectPathXds           bool
-	EnableNewAuthLibrary          bool
 	AllowNonDefaultServiceAccount bool
 	DefaultUniverseDomain         string
 	UniverseDomain                string

@@ -19,8 +19,6 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 
 	"go.opentelemetry.io/otel/trace"
-
-	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 )
 
 // Transport implements the http.RoundTripper interface and wraps
@@ -63,14 +61,12 @@ func NewTransport(base http.RoundTripper, opts ...Option) *Transport {
 
 	c := newConfig(append(defaultOpts, opts...)...)
 	t.applyConfig(c)
-	t.createMeasures()
 
 	return &t
 }
 
 func (t *Transport) applyConfig(c *config) {
 	t.tracer = c.Tracer
-	t.meter = c.Meter
 	t.propagators = c.Propagators
 	t.spanStartOptions = c.SpanStartOptions
 	t.filters = c.Filters
@@ -78,30 +74,6 @@ func (t *Transport) applyConfig(c *config) {
 	t.clientTrace = c.ClientTrace
 	t.semconv = semconv.NewHTTPClient(c.Meter)
 	t.metricAttributesFn = c.MetricAttributesFn
-}
-
-func (t *Transport) createMeasures() {
-	var err error
-	t.requestBytesCounter, err = t.meter.Int64Counter(
-		clientRequestSize,
-		metric.WithUnit("By"),
-		metric.WithDescription("Measures the size of HTTP request messages."),
-	)
-	handleErr(err)
-
-	t.responseBytesCounter, err = t.meter.Int64Counter(
-		clientResponseSize,
-		metric.WithUnit("By"),
-		metric.WithDescription("Measures the size of HTTP response messages."),
-	)
-	handleErr(err)
-
-	t.latencyMeasure, err = t.meter.Float64Histogram(
-		clientDuration,
-		metric.WithUnit("ms"),
-		metric.WithDescription("Measures the duration of outbound HTTP requests."),
-	)
-	handleErr(err)
 }
 
 func defaultTransportFormatter(_ string, r *http.Request) string {

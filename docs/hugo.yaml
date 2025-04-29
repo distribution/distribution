@@ -20,7 +20,7 @@ pygmentsCodeFences: true
 disablePathToLower: true
 
 params:
-  geekdocRepo: "https://github.com/distribution/distribution"
+  geekdocRepo: "https://github.com/2DFS/2dfs-registry"
   geekdocEditPath: edit/main/docs
   geekdocLegalNotice: "https://www.linuxfoundation.org/legal/trademark-usage"
   geekdocContentLicense:

@@ -203,9 +203,3 @@ func netProtocol(proto string) (name string, version string) {
 	name = strings.ToLower(name)
 	return name, version
 }
-
-func netProtocol(proto string) (name string, version string) {
-	name, version, _ = strings.Cut(proto, "/")
-	name = strings.ToLower(name)
-	return name, version
-}

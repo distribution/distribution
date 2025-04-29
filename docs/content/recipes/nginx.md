@@ -68,7 +68,7 @@ proxy_set_header  X-Forwarded-Proto $scheme;
 
 Otherwise Nginx resets the ELB's values, and the requests are not routed
 properly. For more information, see
-[#970](https://github.com/distribution/distribution/issues/970).
+[#970](https://github.com/2DFS/2dfs-registry/issues/970).
 
 ## Setting things up
 

@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/distribution/distribution/v3/registry/storage/cache/cachecheck"
+	"github.com/2DFS/2dfs-registry/v3/registry/storage/cache/cachecheck"
 	"github.com/redis/go-redis/v9"
 )
 

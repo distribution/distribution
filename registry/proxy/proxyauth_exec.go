@@ -9,8 +9,8 @@ import (
 	credspkg "github.com/docker/docker-credential-helpers/credentials"
 	"github.com/sirupsen/logrus"
 
-	"github.com/distribution/distribution/v3/configuration"
-	"github.com/distribution/distribution/v3/internal/client/auth"
+	"github.com/2DFS/2dfs-registry/v3/configuration"
+	"github.com/2DFS/2dfs-registry/v3/internal/client/auth"
 )
 
 type execCredentials struct {

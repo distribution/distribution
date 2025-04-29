@@ -19,7 +19,6 @@ func (f *TwoDFilesystem) AddAllotment(allotment Allotment) Field {
 	f.genAllotments(allotment.Row, allotment.Col)
 	f.Rows[allotment.Row].Allotments[allotment.Col].Digest = allotment.Digest
 	f.Rows[allotment.Row].Allotments[allotment.Col].DiffID = allotment.DiffID
-	f.Rows[allotment.Row].Allotments[allotment.Col].FileName = allotment.FileName
 	return f
 }
 

@@ -1,6 +1,6 @@
 package tracing
 
-import "github.com/distribution/distribution/v3/internal/dcontext"
+import "github.com/2DFS/2dfs-registry/v3/internal/dcontext"
 
 // loggerWriter is a custom writer that implements the io.Writer interface.
 // It is designed to redirect log messages to the Logger interface, specifically

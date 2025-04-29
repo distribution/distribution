@@ -177,7 +177,7 @@ func (x ServiceConstants_Values) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ServiceConstants_Values.Descriptor instead.
 func (ServiceConstants_Values) EnumDescriptor() ([]byte, []int) {
-	return file_google_storage_v2_storage_proto_rawDescGZIP(), []int{42, 0}
+	return file_google_storage_v2_storage_proto_rawDescGZIP(), []int{39, 0}
 }
 
 // Request message for DeleteBucket.
@@ -3968,7 +3968,7 @@ type CommonObjectRequestParams struct {
 func (x *CommonObjectRequestParams) Reset() {
 	*x = CommonObjectRequestParams{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_google_storage_v2_storage_proto_msgTypes[41]
+		mi := &file_google_storage_v2_storage_proto_msgTypes[38]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3981,7 +3981,7 @@ func (x *CommonObjectRequestParams) String() string {
 func (*CommonObjectRequestParams) ProtoMessage() {}
 
 func (x *CommonObjectRequestParams) ProtoReflect() protoreflect.Message {
-	mi := &file_google_storage_v2_storage_proto_msgTypes[41]
+	mi := &file_google_storage_v2_storage_proto_msgTypes[38]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3994,7 +3994,7 @@ func (x *CommonObjectRequestParams) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommonObjectRequestParams.ProtoReflect.Descriptor instead.
 func (*CommonObjectRequestParams) Descriptor() ([]byte, []int) {
-	return file_google_storage_v2_storage_proto_rawDescGZIP(), []int{41}
+	return file_google_storage_v2_storage_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *CommonObjectRequestParams) GetEncryptionAlgorithm() string {
@@ -4028,7 +4028,7 @@ type ServiceConstants struct {
 func (x *ServiceConstants) Reset() {
 	*x = ServiceConstants{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_google_storage_v2_storage_proto_msgTypes[42]
+		mi := &file_google_storage_v2_storage_proto_msgTypes[39]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4041,7 +4041,7 @@ func (x *ServiceConstants) String() string {
 func (*ServiceConstants) ProtoMessage() {}
 
 func (x *ServiceConstants) ProtoReflect() protoreflect.Message {
-	mi := &file_google_storage_v2_storage_proto_msgTypes[42]
+	mi := &file_google_storage_v2_storage_proto_msgTypes[39]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4054,7 +4054,7 @@ func (x *ServiceConstants) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ServiceConstants.ProtoReflect.Descriptor instead.
 func (*ServiceConstants) Descriptor() ([]byte, []int) {
-	return file_google_storage_v2_storage_proto_rawDescGZIP(), []int{42}
+	return file_google_storage_v2_storage_proto_rawDescGZIP(), []int{39}
 }
 
 // A bucket.
@@ -4189,7 +4189,7 @@ type Bucket struct {
 func (x *Bucket) Reset() {
 	*x = Bucket{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_google_storage_v2_storage_proto_msgTypes[43]
+		mi := &file_google_storage_v2_storage_proto_msgTypes[40]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4202,7 +4202,7 @@ func (x *Bucket) String() string {
 func (*Bucket) ProtoMessage() {}
 
 func (x *Bucket) ProtoReflect() protoreflect.Message {
-	mi := &file_google_storage_v2_storage_proto_msgTypes[43]
+	mi := &file_google_storage_v2_storage_proto_msgTypes[40]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4215,7 +4215,7 @@ func (x *Bucket) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Bucket.ProtoReflect.Descriptor instead.
 func (*Bucket) Descriptor() ([]byte, []int) {
-	return file_google_storage_v2_storage_proto_rawDescGZIP(), []int{43}
+	return file_google_storage_v2_storage_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *Bucket) GetName() string {
@@ -4478,7 +4478,7 @@ type BucketAccessControl struct {
 func (x *BucketAccessControl) Reset() {
 	*x = BucketAccessControl{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_google_storage_v2_storage_proto_msgTypes[44]
+		mi := &file_google_storage_v2_storage_proto_msgTypes[41]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4491,7 +4491,7 @@ func (x *BucketAccessControl) String() string {
 func (*BucketAccessControl) ProtoMessage() {}
 
 func (x *BucketAccessControl) ProtoReflect() protoreflect.Message {
-	mi := &file_google_storage_v2_storage_proto_msgTypes[44]
+	mi := &file_google_storage_v2_storage_proto_msgTypes[41]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4504,7 +4504,7 @@ func (x *BucketAccessControl) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BucketAccessControl.ProtoReflect.Descriptor instead.
 func (*BucketAccessControl) Descriptor() ([]byte, []int) {
-	return file_google_storage_v2_storage_proto_rawDescGZIP(), []int{44}
+	return file_google_storage_v2_storage_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *BucketAccessControl) GetRole() string {
@@ -4586,7 +4586,7 @@ type ChecksummedData struct {
 func (x *ChecksummedData) Reset() {
 	*x = ChecksummedData{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_google_storage_v2_storage_proto_msgTypes[45]
+		mi := &file_google_storage_v2_storage_proto_msgTypes[42]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4599,7 +4599,7 @@ func (x *ChecksummedData) String() string {
 func (*ChecksummedData) ProtoMessage() {}
 
 func (x *ChecksummedData) ProtoReflect() protoreflect.Message {
-	mi := &file_google_storage_v2_storage_proto_msgTypes[45]
+	mi := &file_google_storage_v2_storage_proto_msgTypes[42]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4612,7 +4612,7 @@ func (x *ChecksummedData) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChecksummedData.ProtoReflect.Descriptor instead.
 func (*ChecksummedData) Descriptor() ([]byte, []int) {
-	return file_google_storage_v2_storage_proto_rawDescGZIP(), []int{45}
+	return file_google_storage_v2_storage_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *ChecksummedData) GetContent() []byte {
@@ -4653,7 +4653,7 @@ type ObjectChecksums struct {
 func (x *ObjectChecksums) Reset() {
 	*x = ObjectChecksums{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_google_storage_v2_storage_proto_msgTypes[46]
+		mi := &file_google_storage_v2_storage_proto_msgTypes[43]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4666,7 +4666,7 @@ func (x *ObjectChecksums) String() string {
 func (*ObjectChecksums) ProtoMessage() {}
 
 func (x *ObjectChecksums) ProtoReflect() protoreflect.Message {
-	mi := &file_google_storage_v2_storage_proto_msgTypes[46]
+	mi := &file_google_storage_v2_storage_proto_msgTypes[43]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4679,7 +4679,7 @@ func (x *ObjectChecksums) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ObjectChecksums.ProtoReflect.Descriptor instead.
 func (*ObjectChecksums) Descriptor() ([]byte, []int) {
-	return file_google_storage_v2_storage_proto_rawDescGZIP(), []int{46}
+	return file_google_storage_v2_storage_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *ObjectChecksums) GetCrc32C() uint32 {
@@ -6092,7 +6092,7 @@ func (x *Bucket_Billing) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Bucket_Billing.ProtoReflect.Descriptor instead.
 func (*Bucket_Billing) Descriptor() ([]byte, []int) {
-	return file_google_storage_v2_storage_proto_rawDescGZIP(), []int{43, 0}
+	return file_google_storage_v2_storage_proto_rawDescGZIP(), []int{40, 0}
 }
 
 func (x *Bucket_Billing) GetRequesterPays() bool {
@@ -6158,7 +6158,7 @@ func (x *Bucket_Cors) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Bucket_Cors.ProtoReflect.Descriptor instead.
 func (*Bucket_Cors) Descriptor() ([]byte, []int) {
-	return file_google_storage_v2_storage_proto_rawDescGZIP(), []int{43, 1}
+	return file_google_storage_v2_storage_proto_rawDescGZIP(), []int{40, 1}
 }
 
 func (x *Bucket_Cors) GetOrigin() []string {
@@ -6229,7 +6229,7 @@ func (x *Bucket_Encryption) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Bucket_Encryption.ProtoReflect.Descriptor instead.
 func (*Bucket_Encryption) Descriptor() ([]byte, []int) {
-	return file_google_storage_v2_storage_proto_rawDescGZIP(), []int{43, 2}
+	return file_google_storage_v2_storage_proto_rawDescGZIP(), []int{40, 2}
 }
 
 func (x *Bucket_Encryption) GetDefaultKmsKey() string {
@@ -6281,7 +6281,7 @@ func (x *Bucket_IamConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Bucket_IamConfig.ProtoReflect.Descriptor instead.
 func (*Bucket_IamConfig) Descriptor() ([]byte, []int) {
-	return file_google_storage_v2_storage_proto_rawDescGZIP(), []int{43, 3}
+	return file_google_storage_v2_storage_proto_rawDescGZIP(), []int{40, 3}
 }
 
 func (x *Bucket_IamConfig) GetUniformBucketLevelAccess() *Bucket_IamConfig_UniformBucketLevelAccess {
@@ -6339,7 +6339,7 @@ func (x *Bucket_Lifecycle) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Bucket_Lifecycle.ProtoReflect.Descriptor instead.
 func (*Bucket_Lifecycle) Descriptor() ([]byte, []int) {
-	return file_google_storage_v2_storage_proto_rawDescGZIP(), []int{43, 4}
+	return file_google_storage_v2_storage_proto_rawDescGZIP(), []int{40, 4}
 }
 
 func (x *Bucket_Lifecycle) GetRule() []*Bucket_Lifecycle_Rule {
@@ -6391,7 +6391,7 @@ func (x *Bucket_Logging) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Bucket_Logging.ProtoReflect.Descriptor instead.
 func (*Bucket_Logging) Descriptor() ([]byte, []int) {
-	return file_google_storage_v2_storage_proto_rawDescGZIP(), []int{43, 5}
+	return file_google_storage_v2_storage_proto_rawDescGZIP(), []int{40, 5}
 }
 
 func (x *Bucket_Logging) GetLogBucket() string {
@@ -6456,7 +6456,7 @@ func (x *Bucket_RetentionPolicy) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Bucket_RetentionPolicy.ProtoReflect.Descriptor instead.
 func (*Bucket_RetentionPolicy) Descriptor() ([]byte, []int) {
-	return file_google_storage_v2_storage_proto_rawDescGZIP(), []int{43, 6}
+	return file_google_storage_v2_storage_proto_rawDescGZIP(), []int{40, 6}
 }
 
 func (x *Bucket_RetentionPolicy) GetEffectiveTime() *timestamppb.Timestamp {
@@ -6885,7 +6885,7 @@ func (x *Bucket_IamConfig_UniformBucketLevelAccess) ProtoReflect() protoreflect.
 
 // Deprecated: Use Bucket_IamConfig_UniformBucketLevelAccess.ProtoReflect.Descriptor instead.
 func (*Bucket_IamConfig_UniformBucketLevelAccess) Descriptor() ([]byte, []int) {
-	return file_google_storage_v2_storage_proto_rawDescGZIP(), []int{43, 3, 0}
+	return file_google_storage_v2_storage_proto_rawDescGZIP(), []int{40, 3, 0}
 }
 
 func (x *Bucket_IamConfig_UniformBucketLevelAccess) GetEnabled() bool {
@@ -6944,7 +6944,7 @@ func (x *Bucket_Lifecycle_Rule) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Bucket_Lifecycle_Rule.ProtoReflect.Descriptor instead.
 func (*Bucket_Lifecycle_Rule) Descriptor() ([]byte, []int) {
-	return file_google_storage_v2_storage_proto_rawDescGZIP(), []int{43, 4, 0}
+	return file_google_storage_v2_storage_proto_rawDescGZIP(), []int{40, 4, 0}
 }
 
 func (x *Bucket_Lifecycle_Rule) GetAction() *Bucket_Lifecycle_Rule_Action {
@@ -7004,7 +7004,7 @@ func (x *Bucket_Lifecycle_Rule_Action) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Bucket_Lifecycle_Rule_Action.ProtoReflect.Descriptor instead.
 func (*Bucket_Lifecycle_Rule_Action) Descriptor() ([]byte, []int) {
-	return file_google_storage_v2_storage_proto_rawDescGZIP(), []int{43, 4, 0, 0}
+	return file_google_storage_v2_storage_proto_rawDescGZIP(), []int{40, 4, 0, 0}
 }
 
 func (x *Bucket_Lifecycle_Rule_Action) GetType() string {
@@ -7102,7 +7102,7 @@ func (x *Bucket_Lifecycle_Rule_Condition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Bucket_Lifecycle_Rule_Condition.ProtoReflect.Descriptor instead.
 func (*Bucket_Lifecycle_Rule_Condition) Descriptor() ([]byte, []int) {
-	return file_google_storage_v2_storage_proto_rawDescGZIP(), []int{43, 4, 0, 1}
+	return file_google_storage_v2_storage_proto_rawDescGZIP(), []int{40, 4, 0, 1}
 }
 
 func (x *Bucket_Lifecycle_Rule_Condition) GetAgeDays() int32 {

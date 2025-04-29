@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"io"
 
-	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
+	storagedriver "github.com/2DFS/2dfs-registry/v3/registry/storage/driver"
 )
 
 // TODO(stevvooe): Set an optimal buffer size here. We'll have to

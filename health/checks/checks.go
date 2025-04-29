@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/distribution/distribution/v3/health"
+	"github.com/2DFS/2dfs-registry/v3/health"
 )
 
 // FileChecker checks the existence of a file and returns an error

@@ -848,26 +848,13 @@ func recvAndDecompress(p *parser, s *transport.Stream, dc Decompressor, maxRecei
 			out, size, err = decompress(compressor, compressed, maxReceiveMessageSize, p.bufferPool)
 		}
 		if err != nil {
-			return nil, nil, status.Errorf(codes.Internal, "grpc: failed to decompress the received message: %v", err)
+			return nil, status.Errorf(codes.Internal, "grpc: failed to decompress the received message: %v", err)
 		}
 		if size > maxReceiveMessageSize {
 			out.Free()
 			// TODO: Revisit the error code. Currently keep it consistent with java
 			// implementation.
-			return nil, nil, status.Errorf(codes.ResourceExhausted, "grpc: received message after decompression larger than max (%d vs. %d)", size, maxReceiveMessageSize)
-		}
-	} else {
-		uncompressedBuf = compressedBuf
-	}
-
-	if payInfo != nil {
-		payInfo.compressedLength = len(compressedBuf)
-		payInfo.uncompressedBytes = uncompressedBuf
-
-		cancel = func() {}
-	} else {
-		cancel = func() {
-			p.recvBufferPool.Put(&compressedBuf)
+			return nil, status.Errorf(codes.ResourceExhausted, "grpc: received message after decompression larger than max (%d vs. %d)", size, maxReceiveMessageSize)
 		}
 	} else {
 		out = compressed

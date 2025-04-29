@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/distribution/distribution/v3/manifest/schema2"
+	"github.com/2DFS/2dfs-registry/v3/manifest/schema2"
 )
 
 // TestEventJSONFormat provides silly test to detect if the event format or

@@ -45,8 +45,13 @@ cloud.google.com/go/storage/experimental
 cloud.google.com/go/storage/internal
 cloud.google.com/go/storage/internal/apiv2
 cloud.google.com/go/storage/internal/apiv2/storagepb
-# github.com/AdaLogics/go-fuzz-headers v0.0.0-20221103172237-443f56ff4ba8
-## explicit; go 1.13
+# github.com/2DFS/2dfs-builder v0.0.101
+## explicit; go 1.22.0
+github.com/2DFS/2dfs-builder/filesystem
+# github.com/2DFS/2dfs-registry/v3 v3.0.0
+## explicit; go 1.23.7
+# github.com/AdaLogics/go-fuzz-headers v0.0.0-20230811130428-ced1acdcaa24
+## explicit; go 1.20
 github.com/AdaLogics/go-fuzz-headers
 # github.com/Azure/azure-sdk-for-go/sdk/azcore v1.17.1
 ## explicit; go 1.23.0
@@ -382,7 +387,7 @@ github.com/munnerz/goautoneg
 ## explicit; go 1.13
 github.com/opencontainers/go-digest
 github.com/opencontainers/go-digest/digestset
-# github.com/opencontainers/image-spec v1.1.0
+# github.com/opencontainers/image-spec v1.1.1
 ## explicit; go 1.18
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1

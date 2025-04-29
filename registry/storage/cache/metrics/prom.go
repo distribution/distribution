@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/distribution/distribution/v3"
-	prometheus "github.com/distribution/distribution/v3/metrics"
-	"github.com/distribution/distribution/v3/registry/storage/cache"
+	"github.com/2DFS/2dfs-registry/v3"
+	prometheus "github.com/2DFS/2dfs-registry/v3/metrics"
+	"github.com/2DFS/2dfs-registry/v3/registry/storage/cache"
 	"github.com/docker/go-metrics"
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"

@@ -6,9 +6,9 @@ import (
 
 	"github.com/opencontainers/go-digest"
 
-	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/internal/dcontext"
-	"github.com/distribution/distribution/v3/registry/proxy/scheduler"
+	"github.com/2DFS/2dfs-registry/v3"
+	"github.com/2DFS/2dfs-registry/v3/internal/dcontext"
+	"github.com/2DFS/2dfs-registry/v3/registry/proxy/scheduler"
 	"github.com/distribution/reference"
 )
 

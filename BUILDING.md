@@ -26,7 +26,7 @@ development environment setup. Please follow [How to Write Go Code](https://go.d
 
 Next, fetch the code from the repository using git:
 
-    git clone https://github.com/distribution/distribution
+    git clone https://github.com/2DFS/2dfs-registry
     cd distribution
 
 If you are planning to create a pull request with changes, you may want to clone directly from your [fork](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/about-forks).
@@ -51,7 +51,7 @@ The `registry`
 binary can then be run with the following:
 
     $ ./bin/registry --version
-    ./bin/registry github.com/distribution/distribution/v3 v2.7.0-1993-g8857a194
+    ./bin/registry github.com/2DFS/2dfs-registry/v3 v2.7.0-1993-g8857a194
 
 The registry can be run with a development config using the following
 incantation:
@@ -86,7 +86,7 @@ directory. We can verify this worked by running
 the registry binary generated in the "./bin" directory:
 
     $ ./bin/registry --version
-    ./bin/registry github.com/distribution/distribution v2.0.0-alpha.2-80-g16d8b2c.m
+    ./bin/registry github.com/2DFS/2dfs-registry v2.0.0-alpha.2-80-g16d8b2c.m
 
 Run `make test` to run all of the tests.
 

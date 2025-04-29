@@ -10,7 +10,7 @@ REVISION ?= $(shell git rev-parse HEAD)$(shell if ! git diff --no-ext-diff --qui
 # default compose command
 COMPOSE ?= docker compose
 
-PKG=github.com/distribution/distribution/v3
+PKG=github.com/2DFS/2dfs-registry/v3
 
 # Project packages.
 PACKAGES=$(shell go list -tags "${BUILDTAGS}" ./... | grep -v /vendor/)

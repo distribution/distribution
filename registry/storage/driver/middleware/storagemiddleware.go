@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
+	storagedriver "github.com/2DFS/2dfs-registry/v3/registry/storage/driver"
 )
 
 // InitFunc is the type of a StorageMiddleware factory function and is

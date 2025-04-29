@@ -7,7 +7,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/distribution/distribution/v3/version"
+	"github.com/2DFS/2dfs-registry/v3/version"
 	"github.com/opencontainers/go-digest"
 
 	_ "crypto/sha256"

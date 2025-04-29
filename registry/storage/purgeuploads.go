@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	storageDriver "github.com/distribution/distribution/v3/registry/storage/driver"
+	storageDriver "github.com/2DFS/2dfs-registry/v3/registry/storage/driver"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 )

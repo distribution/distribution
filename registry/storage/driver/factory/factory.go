@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
+	storagedriver "github.com/2DFS/2dfs-registry/v3/registry/storage/driver"
 )
 
 // driverFactories stores an internal mapping between storage driver names and their respective
@@ -17,7 +17,7 @@ var driverFactories = make(map[string]StorageDriverFactory)
 // func (below) in their init() funcs, and as such they should be imported anonymously before use.
 // See below for an example of how to register and get a StorageDriver for S3
 //
-//	import _ "github.com/distribution/distribution/v3/registry/storage/driver/s3-aws"
+//	import _ "github.com/2DFS/2dfs-registry/v3/registry/storage/driver/s3-aws"
 //	s3Driver, err = factory.Create("s3", storageParams)
 //	// assuming no error, s3Driver is the StorageDriver that communicates with S3 according to storageParams
 type StorageDriverFactory interface {

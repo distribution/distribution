@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/manifest"
+	distribution "github.com/2DFS/2dfs-registry/v3"
+	"github.com/2DFS/2dfs-registry/v3/manifest"
 	"github.com/opencontainers/go-digest"
 	"github.com/opencontainers/image-spec/specs-go"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"

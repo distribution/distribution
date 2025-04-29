@@ -40,5 +40,3 @@ module-sets:
       - go.opentelemetry.io/otel/schema
 excluded-modules:
   - go.opentelemetry.io/otel/internal/tools
-  - go.opentelemetry.io/otel/sdk/log
-  - go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp

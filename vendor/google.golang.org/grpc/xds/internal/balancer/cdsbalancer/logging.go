@@ -1,5 +1,3 @@
-//go:build !grpcnotrace
-
 /*
  *
  * Copyright 2020 gRPC authors.

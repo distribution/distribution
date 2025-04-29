@@ -2,7 +2,7 @@
 
 /*
  *
- * Copyright 2020 gRPC authors.
+ * Copyright 2024 gRPC authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,19 +18,22 @@
  *
  */
 
-package cdsbalancer
+package grpc
 
 import (
-	"fmt"
+	"context"
 
-	"google.golang.org/grpc/grpclog"
-	internalgrpclog "google.golang.org/grpc/internal/grpclog"
+	t "golang.org/x/net/trace"
 )
 
-const prefix = "[cds-lb %p] "
+func newTrace(family, title string) traceLog {
+	return t.New(family, title)
+}
 
-var logger = grpclog.Component("xds")
+func newTraceContext(ctx context.Context, tr traceLog) context.Context {
+	return t.NewContext(ctx, tr)
+}
 
-func prefixLogger(p *cdsBalancer) *internalgrpclog.PrefixLogger {
-	return internalgrpclog.NewPrefixLogger(logger, fmt.Sprintf(prefix, p))
+func newTraceEventLog(family, title string) traceEventLog {
+	return t.NewEventLog(family, title)
 }

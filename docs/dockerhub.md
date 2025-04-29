@@ -5,13 +5,13 @@ This repository provides container images for the Open Source Registry implement
 
 <img src="https://raw.githubusercontent.com/distribution/distribution/main/distribution-logo.svg" width="200px" />
 
-[![Build Status](https://github.com/distribution/distribution/workflows/build/badge.svg?branch=main&event=push)](https://github.com/distribution/distribution/actions/workflows/build.yml?query=workflow%3Abuild)
-[![OCI Conformance](https://github.com/distribution/distribution/workflows/conformance/badge.svg)](https://github.com/distribution/distribution/actions?query=workflow%3Aconformance)
+[![Build Status](https://github.com/2DFS/2dfs-registry/workflows/build/badge.svg?branch=main&event=push)](https://github.com/2DFS/2dfs-registry/actions/workflows/build.yml?query=workflow%3Abuild)
+[![OCI Conformance](https://github.com/2DFS/2dfs-registry/workflows/conformance/badge.svg)](https://github.com/2DFS/2dfs-registry/actions?query=workflow%3Aconformance)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 
 ## Quick start
 
-Run the registry locally with the [default configuration](https://github.com/distribution/distribution/blob/main/cmd/registry/config-dev.yml):
+Run the registry locally with the [default configuration](https://github.com/2DFS/2dfs-registry/blob/main/cmd/registry/config-dev.yml):
 ```
 docker run -d -p 5000:5000 --restart always --name registry distribution/distribution:edge
 ```
@@ -31,7 +31,7 @@ docker tag alpine localhost:5000/alpine
 docker push localhost:5000/alpine
 ```
 
-⚠️  Beware the default configuration uses [`filesystem` storage driver](https://github.com/distribution/distribution/blob/main/docs/content/storage-drivers/filesystem.md)
+⚠️  Beware the default configuration uses [`filesystem` storage driver](https://github.com/2DFS/2dfs-registry/blob/main/docs/content/storage-drivers/filesystem.md)
 and the above example command does not mount a local filesystem volume into the running container.
 If you wish to mount the local filesystem to the `rootdirectory` of the
 `filesystem` storage driver run the following command:
@@ -50,7 +50,7 @@ docker run -d -p 5000:5000 -v $PWD/PATH/TO/config.yml:/etc/distribution/config.y
 ## Communication
 
 For async communication and long-running discussions please use issues and pull requests
-on the [GitHub repo](https://github.com/distribution/distribution).
+on the [GitHub repo](https://github.com/2DFS/2dfs-registry).
 
 For sync communication we have a #distribution channel in the [CNCF Slack](https://slack.cncf.io/)
 that everyone is welcome to join and chat about development.

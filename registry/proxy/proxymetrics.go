@@ -4,7 +4,7 @@ import (
 	"expvar"
 	"sync/atomic"
 
-	prometheus "github.com/distribution/distribution/v3/metrics"
+	prometheus "github.com/2DFS/2dfs-registry/v3/metrics"
 	"github.com/docker/go-metrics"
 )
 

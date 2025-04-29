@@ -1343,7 +1343,6 @@ func (ua *BucketAttrsToUpdate) toRawBucket() *raw.Bucket {
 		} else {
 			rb.SoftDeletePolicy = ua.SoftDeletePolicy.toRawSoftDeletePolicy()
 		}
-		rb.ForceSendFields = append(rb.ForceSendFields, "Autoclass")
 	}
 	if ua.PredefinedACL != "" {
 		// Clear ACL or the call will fail.

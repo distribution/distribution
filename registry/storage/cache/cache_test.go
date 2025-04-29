@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/distribution/distribution/v3"
+	"github.com/2DFS/2dfs-registry/v3"
 	digest "github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )

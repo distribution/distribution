@@ -1,6 +1,7 @@
+//go:build !unix && !windows
+
 /*
- *
- * Copyright 2021 gRPC authors.
+ * Copyright 2023 gRPC authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +17,13 @@
  *
  */
 
-package priority
+package internal
 
-func equalStringSlice(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
+import (
+	"net"
+)
+
+// NetDialerWithTCPKeepalive returns a vanilla net.Dialer on non-unix platforms.
+func NetDialerWithTCPKeepalive() *net.Dialer {
+	return &net.Dialer{}
 }

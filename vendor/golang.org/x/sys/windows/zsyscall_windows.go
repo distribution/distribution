@@ -1248,14 +1248,6 @@ func setEntriesInAcl(countExplicitEntries uint32, explicitEntries *EXPLICIT_ACCE
 	return
 }
 
-func GetAce(acl *ACL, aceIndex uint32, pAce **ACCESS_ALLOWED_ACE) (ret error) {
-	r0, _, _ := syscall.Syscall(procGetAce.Addr(), 3, uintptr(unsafe.Pointer(acl)), uintptr(aceIndex), uintptr(unsafe.Pointer(pAce)))
-	if r0 == 0 {
-		ret = GetLastError()
-	}
-	return
-}
-
 func SetKernelObjectSecurity(handle Handle, securityInformation SECURITY_INFORMATION, securityDescriptor *SECURITY_DESCRIPTOR) (err error) {
 	r1, _, e1 := syscall.Syscall(procSetKernelObjectSecurity.Addr(), 3, uintptr(handle), uintptr(securityInformation), uintptr(unsafe.Pointer(securityDescriptor)))
 	if r1 == 0 {

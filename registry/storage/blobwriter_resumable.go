@@ -11,7 +11,7 @@ import (
 	"path"
 	"strconv"
 
-	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
+	storagedriver "github.com/2DFS/2dfs-registry/v3/registry/storage/driver"
 	"github.com/sirupsen/logrus"
 )
 

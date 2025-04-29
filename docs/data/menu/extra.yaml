@@ -1,6 +1,6 @@
 ---
 header:
   - name: GitHub
-    ref: https://github.com/distribution/distribution/
+    ref: https://github.com/2DFS/2dfs-registry/
     icon: gdoc_github
     external: true

@@ -3,9 +3,9 @@ package notifications
 import (
 	"testing"
 
-	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/manifest/schema2"
-	v2 "github.com/distribution/distribution/v3/registry/api/v2"
+	"github.com/2DFS/2dfs-registry/v3"
+	"github.com/2DFS/2dfs-registry/v3/manifest/schema2"
+	v2 "github.com/2DFS/2dfs-registry/v3/registry/api/v2"
 	"github.com/distribution/reference"
 	events "github.com/docker/go-events"
 	"github.com/google/uuid"

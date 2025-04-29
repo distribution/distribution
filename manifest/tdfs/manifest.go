@@ -3,8 +3,8 @@ package tdfs
 import (
 	"fmt"
 
-	"github.com/distribution/distribution/v3"
-	tdfs "github.com/giobart/2dfs-builder/filesystem"
+	tdfs "github.com/2DFS/2dfs-builder/filesystem"
+	"github.com/2DFS/2dfs-registry/v3"
 	"github.com/opencontainers/go-digest"
 )
 

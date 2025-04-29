@@ -98,20 +98,6 @@ func NewKeyValuePropertyRaw(key, value string) (Property, error) {
 	if !validateBaggageValue(value) {
 		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidValue, value)
 	}
-	decodedValue, err := url.PathUnescape(value)
-	if err != nil {
-		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidValue, value)
-	}
-	return NewKeyValuePropertyRaw(key, decodedValue)
-}
-
-// NewKeyValuePropertyRaw returns a new Property for key with value.
-//
-// The passed key must be compliant with W3C Baggage specification.
-func NewKeyValuePropertyRaw(key, value string) (Property, error) {
-	if !validateKey(key) {
-		return newInvalidProperty(), fmt.Errorf("%w: %q", errInvalidKey, key)
-	}
 
 	p := Property{
 		key:      key,

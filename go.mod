@@ -1,10 +1,10 @@
-module github.com/distribution/distribution/v3
+module github.com/2DFS/2dfs-registry/v3
 
 go 1.23.7
 
 require (
 	cloud.google.com/go/storage v1.45.0
-	github.com/AdaLogics/go-fuzz-headers v0.0.0-20221103172237-443f56ff4ba8
+	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230811130428-ced1acdcaa24
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.17.1
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.8.2
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.6.0
@@ -23,11 +23,11 @@ require (
 	github.com/klauspost/compress v1.17.11
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/opencontainers/go-digest v1.0.0
-	github.com/opencontainers/image-spec v1.1.0
+	github.com/opencontainers/image-spec v1.1.1
 	github.com/redis/go-redis/extra/redisotel/v9 v9.0.5
 	github.com/redis/go-redis/v9 v9.7.3
 	github.com/sirupsen/logrus v1.9.3
-	github.com/spf13/cobra v1.8.0
+	github.com/spf13/cobra v1.8.1
 	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/contrib/exporters/autoexport v0.57.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.57.0
@@ -42,6 +42,8 @@ require (
 	google.golang.org/api v0.197.0
 	gopkg.in/yaml.v2 v2.4.0
 )
+
+require github.com/2DFS/2dfs-builder v0.0.101
 
 require (
 	cel.dev/expr v0.16.1 // indirect
@@ -61,7 +63,6 @@ require (
 	github.com/census-instrumentation/opencensus-proto v0.4.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cncf/xds/go v0.0.0-20240905190251-b4127c9b8d78 // indirect
-	github.com/cyphar/filepath-securejoin v0.2.4 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/envoyproxy/go-control-plane v0.13.0 // indirect

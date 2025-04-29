@@ -5,7 +5,7 @@ import (
 	"errors"
 	"io"
 
-	"github.com/distribution/distribution/v3/registry/storage/driver"
+	"github.com/2DFS/2dfs-registry/v3/registry/storage/driver"
 )
 
 const (

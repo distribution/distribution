@@ -50,7 +50,7 @@ func WithStartAfterHint(startAfterHint string) func(*WalkOptions) {
 // StorageDriver defines methods that a Storage Driver must implement for a
 // filesystem-like key/value object storage. Storage Drivers are automatically
 // registered via an internal registration mechanism, and generally created
-// via the StorageDriverFactory interface (https://godoc.org/github.com/distribution/distribution/registry/storage/driver/factory).
+// via the StorageDriverFactory interface (https://godoc.org/github.com/2DFS/2dfs-registry/registry/storage/driver/factory).
 // Please see the aforementioned factory package for example code showing how to get an instance
 // of a StorageDriver
 type StorageDriver interface {

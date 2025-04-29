@@ -29,10 +29,10 @@ func Revision() string {
 //
 //	<cmd> <project> <version>
 //
-// For example, a binary "registry" built from github.com/distribution/distribution
+// For example, a binary "registry" built from github.com/2DFS/2dfs-registry
 // with version "v2.0" would print the following:
 //
-//	registry github.com/distribution/distribution v2.0
+//	registry github.com/2DFS/2dfs-registry v2.0
 func FprintVersion(w io.Writer) {
 	fmt.Fprintln(w, os.Args[0], Package(), Version())
 }

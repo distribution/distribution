@@ -9,7 +9,7 @@ See https://github.com/containerd/release-tool
 
 20. Update the `.mailmap` files.
 
-30. Update the version file: `https://github.com/distribution/distribution/blob/master/version/version.go`
+30. Update the version file: `https://github.com/2DFS/2dfs-registry/blob/master/version/version.go`
 
 40. Create a signed tag.
 
@@ -26,11 +26,11 @@ hash.
 
 50. Push the signed tag
 
-60. Create a new [release](https://github.com/distribution/distribution/releases).
+60. Create a new [release](https://github.com/2DFS/2dfs-registry/releases).
 In the case of a release candidate, tick the `pre-release` checkbox. Use
 the generate release notes from the release tool
 
-70. Update the registry binary in the [distribution library image repo](https://github.com/distribution/distribution-library-image) by running the update script and  opening a pull request.
+70. Update the registry binary in the [distribution library image repo](https://github.com/2DFS/2dfs-registry-library-image) by running the update script and  opening a pull request.
 
 80. Update the official image.  Add the new version in the [official images repo](https://github.com/docker-library/official-images) by appending a new version to the `registry/registry` file with the git hash pointed to by the signed tag.  Update the major version to point to the latest version and the minor version to point to new patch release if necessary.
 e.g. to release `2.3.1`

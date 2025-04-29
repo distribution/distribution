@@ -101,7 +101,6 @@ const apiVersion = "v1"
 const basePath = "https://storage.googleapis.com/storage/v1/"
 const basePathTemplate = "https://storage.UNIVERSE_DOMAIN/storage/v1/"
 const mtlsBasePath = "https://storage.mtls.googleapis.com/storage/v1/"
-const defaultUniverseDomain = "googleapis.com"
 
 // OAuth2 scopes used by this API.
 const (
@@ -727,36 +726,6 @@ func (s BucketHierarchicalNamespace) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(NoMethod(s), s.ForceSendFields, s.NullFields)
 }
 
-// BucketHierarchicalNamespace: The bucket's hierarchical namespace
-// configuration.
-type BucketHierarchicalNamespace struct {
-	// Enabled: When set to true, hierarchical namespace is enabled for this
-	// bucket.
-	Enabled bool `json:"enabled,omitempty"`
-
-	// ForceSendFields is a list of field names (e.g. "Enabled") to
-	// unconditionally include in API requests. By default, fields with
-	// empty or default values are omitted from API requests. However, any
-	// non-pointer, non-interface field appearing in ForceSendFields will be
-	// sent to the server regardless of whether the field is empty or not.
-	// This may be used to include empty fields in Patch requests.
-	ForceSendFields []string `json:"-"`
-
-	// NullFields is a list of field names (e.g. "Enabled") to include in
-	// API requests with the JSON null value. By default, fields with empty
-	// values are omitted from API requests. However, any field with an
-	// empty value appearing in NullFields will be sent to the server as
-	// null. It is an error if a field in this list has a non-empty value.
-	// This may be used to include null fields in Patch requests.
-	NullFields []string `json:"-"`
-}
-
-func (s *BucketHierarchicalNamespace) MarshalJSON() ([]byte, error) {
-	type NoMethod BucketHierarchicalNamespace
-	raw := NoMethod(*s)
-	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
-}
-
 // BucketIamConfiguration: The bucket's IAM configuration.
 type BucketIamConfiguration struct {
 	// BucketPolicyOnly: The bucket's uniform bucket-level access configuration.
@@ -1219,43 +1188,6 @@ func (s BucketSoftDeletePolicy) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(NoMethod(s), s.ForceSendFields, s.NullFields)
 }
 
-// BucketSoftDeletePolicy: The bucket's soft delete policy, which
-// defines the period of time that soft-deleted objects will be
-// retained, and cannot be permanently deleted.
-type BucketSoftDeletePolicy struct {
-	// EffectiveTime: Server-determined value that indicates the time from
-	// which the policy, or one with a greater retention, was effective.
-	// This value is in RFC 3339 format.
-	EffectiveTime string `json:"effectiveTime,omitempty"`
-
-	// RetentionDurationSeconds: The duration in seconds that soft-deleted
-	// objects in the bucket will be retained and cannot be permanently
-	// deleted.
-	RetentionDurationSeconds int64 `json:"retentionDurationSeconds,omitempty,string"`
-
-	// ForceSendFields is a list of field names (e.g. "EffectiveTime") to
-	// unconditionally include in API requests. By default, fields with
-	// empty or default values are omitted from API requests. However, any
-	// non-pointer, non-interface field appearing in ForceSendFields will be
-	// sent to the server regardless of whether the field is empty or not.
-	// This may be used to include empty fields in Patch requests.
-	ForceSendFields []string `json:"-"`
-
-	// NullFields is a list of field names (e.g. "EffectiveTime") to include
-	// in API requests with the JSON null value. By default, fields with
-	// empty values are omitted from API requests. However, any field with
-	// an empty value appearing in NullFields will be sent to the server as
-	// null. It is an error if a field in this list has a non-empty value.
-	// This may be used to include null fields in Patch requests.
-	NullFields []string `json:"-"`
-}
-
-func (s *BucketSoftDeletePolicy) MarshalJSON() ([]byte, error) {
-	type NoMethod BucketSoftDeletePolicy
-	raw := NoMethod(*s)
-	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
-}
-
 // BucketVersioning: The bucket's versioning configuration.
 type BucketVersioning struct {
 	// Enabled: While set to true, versioning is fully enabled for this bucket.
@@ -1577,59 +1509,6 @@ type BulkRestoreObjectsRequest struct {
 func (s BulkRestoreObjectsRequest) MarshalJSON() ([]byte, error) {
 	type NoMethod BulkRestoreObjectsRequest
 	return gensupport.MarshalJSON(NoMethod(s), s.ForceSendFields, s.NullFields)
-}
-
-// BulkRestoreObjectsRequest: A bulk restore objects request.
-type BulkRestoreObjectsRequest struct {
-	// AllowOverwrite: If false (default), the restore will not overwrite
-	// live objects with the same name at the destination. This means some
-	// deleted objects may be skipped. If true, live objects will be
-	// overwritten resulting in a noncurrent object (if versioning is
-	// enabled). If versioning is not enabled, overwriting the object will
-	// result in a soft-deleted object. In either case, if a noncurrent
-	// object already exists with the same name, a live version can be
-	// written without issue.
-	AllowOverwrite bool `json:"allowOverwrite,omitempty"`
-
-	// CopySourceAcl: If true, copies the source object's ACL; otherwise,
-	// uses the bucket's default object ACL. The default is false.
-	CopySourceAcl bool `json:"copySourceAcl,omitempty"`
-
-	// MatchGlobs: Restores only the objects matching any of the specified
-	// glob(s). If this parameter is not specified, all objects will be
-	// restored within the specified time range.
-	MatchGlobs []string `json:"matchGlobs,omitempty"`
-
-	// SoftDeletedAfterTime: Restores only the objects that were
-	// soft-deleted after this time.
-	SoftDeletedAfterTime string `json:"softDeletedAfterTime,omitempty"`
-
-	// SoftDeletedBeforeTime: Restores only the objects that were
-	// soft-deleted before this time.
-	SoftDeletedBeforeTime string `json:"softDeletedBeforeTime,omitempty"`
-
-	// ForceSendFields is a list of field names (e.g. "AllowOverwrite") to
-	// unconditionally include in API requests. By default, fields with
-	// empty or default values are omitted from API requests. However, any
-	// non-pointer, non-interface field appearing in ForceSendFields will be
-	// sent to the server regardless of whether the field is empty or not.
-	// This may be used to include empty fields in Patch requests.
-	ForceSendFields []string `json:"-"`
-
-	// NullFields is a list of field names (e.g. "AllowOverwrite") to
-	// include in API requests with the JSON null value. By default, fields
-	// with empty values are omitted from API requests. However, any field
-	// with an empty value appearing in NullFields will be sent to the
-	// server as null. It is an error if a field in this list has a
-	// non-empty value. This may be used to include null fields in Patch
-	// requests.
-	NullFields []string `json:"-"`
-}
-
-func (s *BulkRestoreObjectsRequest) MarshalJSON() ([]byte, error) {
-	type NoMethod BulkRestoreObjectsRequest
-	raw := NoMethod(*s)
-	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
 // Channel: An notification channel used to watch for resource changes.
@@ -2202,106 +2081,6 @@ func (s ManagedFolders) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(NoMethod(s), s.ForceSendFields, s.NullFields)
 }
 
-// ManagedFolder: A managed folder.
-type ManagedFolder struct {
-	// Bucket: The name of the bucket containing this managed folder.
-	Bucket string `json:"bucket,omitempty"`
-
-	// CreateTime: The creation time of the managed folder in RFC 3339
-	// format.
-	CreateTime string `json:"createTime,omitempty"`
-
-	// Id: The ID of the managed folder, including the bucket name and
-	// managed folder name.
-	Id string `json:"id,omitempty"`
-
-	// Kind: The kind of item this is. For managed folders, this is always
-	// storage#managedFolder.
-	Kind string `json:"kind,omitempty"`
-
-	// Metageneration: The version of the metadata for this managed folder.
-	// Used for preconditions and for detecting changes in metadata.
-	Metageneration int64 `json:"metageneration,omitempty,string"`
-
-	// Name: The name of the managed folder. Required if not specified by
-	// URL parameter.
-	Name string `json:"name,omitempty"`
-
-	// SelfLink: The link to this managed folder.
-	SelfLink string `json:"selfLink,omitempty"`
-
-	// UpdateTime: The last update time of the managed folder metadata in
-	// RFC 3339 format.
-	UpdateTime string `json:"updateTime,omitempty"`
-
-	// ServerResponse contains the HTTP response code and headers from the
-	// server.
-	googleapi.ServerResponse `json:"-"`
-
-	// ForceSendFields is a list of field names (e.g. "Bucket") to
-	// unconditionally include in API requests. By default, fields with
-	// empty or default values are omitted from API requests. However, any
-	// non-pointer, non-interface field appearing in ForceSendFields will be
-	// sent to the server regardless of whether the field is empty or not.
-	// This may be used to include empty fields in Patch requests.
-	ForceSendFields []string `json:"-"`
-
-	// NullFields is a list of field names (e.g. "Bucket") to include in API
-	// requests with the JSON null value. By default, fields with empty
-	// values are omitted from API requests. However, any field with an
-	// empty value appearing in NullFields will be sent to the server as
-	// null. It is an error if a field in this list has a non-empty value.
-	// This may be used to include null fields in Patch requests.
-	NullFields []string `json:"-"`
-}
-
-func (s *ManagedFolder) MarshalJSON() ([]byte, error) {
-	type NoMethod ManagedFolder
-	raw := NoMethod(*s)
-	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
-}
-
-// ManagedFolders: A list of managed folders.
-type ManagedFolders struct {
-	// Items: The list of items.
-	Items []*ManagedFolder `json:"items,omitempty"`
-
-	// Kind: The kind of item this is. For lists of managed folders, this is
-	// always storage#managedFolders.
-	Kind string `json:"kind,omitempty"`
-
-	// NextPageToken: The continuation token, used to page through large
-	// result sets. Provide this value in a subsequent request to return the
-	// next page of results.
-	NextPageToken string `json:"nextPageToken,omitempty"`
-
-	// ServerResponse contains the HTTP response code and headers from the
-	// server.
-	googleapi.ServerResponse `json:"-"`
-
-	// ForceSendFields is a list of field names (e.g. "Items") to
-	// unconditionally include in API requests. By default, fields with
-	// empty or default values are omitted from API requests. However, any
-	// non-pointer, non-interface field appearing in ForceSendFields will be
-	// sent to the server regardless of whether the field is empty or not.
-	// This may be used to include empty fields in Patch requests.
-	ForceSendFields []string `json:"-"`
-
-	// NullFields is a list of field names (e.g. "Items") to include in API
-	// requests with the JSON null value. By default, fields with empty
-	// values are omitted from API requests. However, any field with an
-	// empty value appearing in NullFields will be sent to the server as
-	// null. It is an error if a field in this list has a non-empty value.
-	// This may be used to include null fields in Patch requests.
-	NullFields []string `json:"-"`
-}
-
-func (s *ManagedFolders) MarshalJSON() ([]byte, error) {
-	type NoMethod ManagedFolders
-	raw := NoMethod(*s)
-	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
-}
-
 // Notification: A subscription to receive Google PubSub notifications.
 type Notification struct {
 	// CustomAttributes: An optional list of additional attributes to attach to
@@ -2594,39 +2373,6 @@ type ObjectRetention struct {
 func (s ObjectRetention) MarshalJSON() ([]byte, error) {
 	type NoMethod ObjectRetention
 	return gensupport.MarshalJSON(NoMethod(s), s.ForceSendFields, s.NullFields)
-}
-
-// ObjectRetention: A collection of object level retention parameters.
-type ObjectRetention struct {
-	// Mode: The bucket's object retention mode, can only be Unlocked or
-	// Locked.
-	Mode string `json:"mode,omitempty"`
-
-	// RetainUntilTime: A time in RFC 3339 format until which object
-	// retention protects this object.
-	RetainUntilTime string `json:"retainUntilTime,omitempty"`
-
-	// ForceSendFields is a list of field names (e.g. "Mode") to
-	// unconditionally include in API requests. By default, fields with
-	// empty or default values are omitted from API requests. However, any
-	// non-pointer, non-interface field appearing in ForceSendFields will be
-	// sent to the server regardless of whether the field is empty or not.
-	// This may be used to include empty fields in Patch requests.
-	ForceSendFields []string `json:"-"`
-
-	// NullFields is a list of field names (e.g. "Mode") to include in API
-	// requests with the JSON null value. By default, fields with empty
-	// values are omitted from API requests. However, any field with an
-	// empty value appearing in NullFields will be sent to the server as
-	// null. It is an error if a field in this list has a non-empty value.
-	// This may be used to include null fields in Patch requests.
-	NullFields []string `json:"-"`
-}
-
-func (s *ObjectRetention) MarshalJSON() ([]byte, error) {
-	type NoMethod ObjectRetention
-	raw := NoMethod(*s)
-	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
 // ObjectAccessControl: An access-control entry.

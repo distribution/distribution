@@ -5,9 +5,9 @@ import (
 	"io"
 	"path"
 
-	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/internal/dcontext"
-	"github.com/distribution/distribution/v3/registry/storage/driver"
+	"github.com/2DFS/2dfs-registry/v3"
+	"github.com/2DFS/2dfs-registry/v3/internal/dcontext"
+	"github.com/2DFS/2dfs-registry/v3/registry/storage/driver"
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )

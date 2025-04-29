@@ -287,5 +287,5 @@ type ChannelzSecurityValue interface {
 type OtherChannelzSecurityValue struct {
 	ChannelzSecurityValue
 	Name  string
-	Value protoadapt.MessageV1
+	Value proto.Message
 }

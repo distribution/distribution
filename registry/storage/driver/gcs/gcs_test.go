@@ -7,9 +7,9 @@ import (
 	"testing"
 
 	"cloud.google.com/go/storage"
-	"github.com/distribution/distribution/v3/internal/dcontext"
-	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
-	"github.com/distribution/distribution/v3/registry/storage/driver/testsuites"
+	"github.com/2DFS/2dfs-registry/v3/internal/dcontext"
+	storagedriver "github.com/2DFS/2dfs-registry/v3/registry/storage/driver"
+	"github.com/2DFS/2dfs-registry/v3/registry/storage/driver/testsuites"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/googleapi"

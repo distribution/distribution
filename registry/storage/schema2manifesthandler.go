@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/internal/dcontext"
-	"github.com/distribution/distribution/v3/manifest/schema2"
+	distribution "github.com/2DFS/2dfs-registry/v3"
+	"github.com/2DFS/2dfs-registry/v3/internal/dcontext"
+	"github.com/2DFS/2dfs-registry/v3/manifest/schema2"
 	"github.com/opencontainers/go-digest"
 )
 

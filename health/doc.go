@@ -17,14 +17,14 @@
 //
 // To install health, just import it in your application:
 //
-//	import "github.com/distribution/distribution/v3/health"
+//	import "github.com/2DFS/2dfs-registry/v3/health"
 //
 // You can also (optionally) import "health/api" that will add two convenience
 // endpoints: "/debug/health/down" and "/debug/health/up". These endpoints add
 // "manual" checks that allow the service to quickly be brought in/out of
 // rotation.
 //
-//	import _ "github.com/distribution/distribution/v3/health/api"
+//	import _ "github.com/2DFS/2dfs-registry/v3/health/api"
 //
 //	# curl localhost:5001/debug/health
 //	{}
@@ -105,7 +105,7 @@
 // You can also use the predefined Checkers that come included with the health
 // package. First, import the checks:
 //
-//	import "github.com/distribution/distribution/v3/health/checks
+//	import "github.com/2DFS/2dfs-registry/v3/health/checks
 //
 // After that you can make use of any of the provided checks. An example of
 // using a `FileChecker` to take the application out of rotation if a certain

@@ -2,7 +2,7 @@ package version
 
 // mainpkg is the overall, canonical project import path under which the
 // package was built.
-var mainpkg = "github.com/distribution/distribution/v3"
+var mainpkg = "github.com/2DFS/2dfs-registry/v3"
 
 // version indicates which version of the binary is running. This is set to
 // the latest release tag by hand, always suffixed by "+unknown". During

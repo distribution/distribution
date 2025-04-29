@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/distribution/distribution/v3/registry/storage/driver/base"
+	"github.com/2DFS/2dfs-registry/v3/registry/storage/driver/base"
 	"github.com/stretchr/testify/require"
 )
 

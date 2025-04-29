@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/registry/api/errcode"
-	"github.com/distribution/distribution/v3/testutil"
+	"github.com/2DFS/2dfs-registry/v3"
+	"github.com/2DFS/2dfs-registry/v3/registry/api/errcode"
+	"github.com/2DFS/2dfs-registry/v3/testutil"
 )
 
 // Test implements distribution.BlobWriter

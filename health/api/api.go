@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/distribution/distribution/v3/health"
+	"github.com/2DFS/2dfs-registry/v3/health"
 )
 
 var updater = health.NewStatusUpdater()
