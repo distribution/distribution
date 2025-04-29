@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/suite"
 	"gopkg.in/yaml.v2"
 )
@@ -76,7 +75,7 @@ var configStruct = Configuration{
 		},
 	},
 	Redis: Redis{
-		Options: redis.UniversalOptions{
+		Options: RedisOptions{
 			Addrs:           []string{"localhost:6379"},
 			Username:        "alice",
 			Password:        "123456",
