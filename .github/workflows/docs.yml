@@ -13,6 +13,7 @@ on:
       - dockerfiles/docs.Dockerfile
       - docs/**
   workflow_dispatch:
+  pull_request:
 
 jobs:
   # Build job
@@ -22,28 +23,28 @@ jobs:
       contents: read
     # Build the site and upload artifacts using actions/upload-pages-artifact
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
       - name: Setup Pages
         id: pages
-        uses: actions/configure-pages@v4
+        uses: actions/configure-pages@v5
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
       - name: Build docs
-        uses: docker/bake-action@v5
+        uses: docker/bake-action@v6
         with:
-          files: |
-            docker-bake.hcl
           targets: docs-export
           provenance: false
           set: |
             *.cache-from=type=gha,scope=docs
             *.cache-to=type=gha,scope=docs,mode=max
+
       - name: Fix permissions
         run: |
           chmod -c -R +rX "./build/docs" | while read line; do
             echo "::warning title=Invalid file permissions automatically fixed::$line"
           done
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
@@ -51,6 +52,7 @@ jobs:
 
   # Deploy job
   deploy:
+    if: github.event_name != 'pull_request'
     # Add a dependency to the build job
     needs: build
 

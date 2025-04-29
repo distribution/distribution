@@ -20,7 +20,7 @@ type Builder struct {
 
 	// layers is a list of layer descriptors that gets built by successive
 	// calls to AppendReference.
-	layers []distribution.Descriptor
+	layers []v1.Descriptor
 
 	// Annotations contains arbitrary metadata relating to the targeted content.
 	annotations map[string]string
@@ -60,7 +60,7 @@ func (mb *Builder) Build(ctx context.Context) (distribution.Manifest, error) {
 	m := Manifest{
 		Versioned:   specs.Versioned{SchemaVersion: 2},
 		MediaType:   mb.mediaType,
-		Layers:      make([]distribution.Descriptor, len(mb.layers)),
+		Layers:      make([]v1.Descriptor, len(mb.layers)),
 		Annotations: mb.annotations,
 	}
 	copy(m.Layers, mb.layers)
@@ -94,12 +94,12 @@ func (mb *Builder) Build(ctx context.Context) (distribution.Manifest, error) {
 }
 
 // AppendReference adds a reference to the current ManifestBuilder.
-func (mb *Builder) AppendReference(ref distribution.Descriptor) error {
+func (mb *Builder) AppendReference(ref v1.Descriptor) error {
 	mb.layers = append(mb.layers, ref)
 	return nil
 }
 
 // References returns the current references added to this builder.
-func (mb *Builder) References() []distribution.Descriptor {
+func (mb *Builder) References() []v1.Descriptor {
 	return mb.layers
 }

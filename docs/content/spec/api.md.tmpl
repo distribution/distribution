@@ -6,8 +6,6 @@ aliases:
   - /reference/api/registry_api/
 ---
 
-# Docker Registry HTTP API V2
-
 ## Introduction
 
 The _Docker Registry HTTP API_ is the protocol to facilitate distribution of
@@ -212,7 +210,9 @@ layout of the new API is structured to support a rich authentication and
 authorization model by leveraging namespaces. All endpoints will be prefixed
 by the API version and the repository name:
 
-    /v2/<name>/
+```none
+/v2/<name>/
+```
 
 For example, an API endpoint that will work with the `library/ubuntu`
 repository, the URI prefix will be:
@@ -252,8 +252,10 @@ Actionable failure conditions, covered in detail in their relevant sections,
 are reported as part of 4xx responses, in a json response body. One or more
 errors will be returned in the following format:
 
+```none
     {
-        "errors:" [{
+        "errors": [
+            {
                 "code": <error identifier>,
                 "message": <message describing condition>,
                 "detail": <unstructured>
@@ -261,6 +263,7 @@ errors will be returned in the following format:
             ...
         ]
     }
+```
 
 The `code` field will be a unique identifier, all caps with underscores by
 convention. The `message` field will be a human readable string. The optional
@@ -281,7 +284,9 @@ section.
 A minimal endpoint, mounted at `/v2/` will provide version support information
 based on its response statuses. The request format is as follows:
 
-    GET /v2/
+```none
+GET /v2/
+```
 
 If a `200 OK` response is returned, the registry implements the V2(.1)
 registry API and the client may proceed safely with other V2 operations.
@@ -304,7 +309,7 @@ API. When this header is omitted, clients may fallback to an older API version.
 
 ### Content Digests
 
-This API design is driven heavily by [content addressability](http://en.wikipedia.org/wiki/Content-addressable_storage).
+This API design is driven heavily by [content addressability](https://en.wikipedia.org/wiki/Content-addressable_storage).
 The core of this design is the concept of a content addressable identifier. It
 uniquely identifies content by taking a collision-resistant hash of the bytes.
 Such an identifier can be independently calculated and verified by selection
@@ -402,7 +407,7 @@ the V2 registry API, keyed by their digest.
 
 The image manifest can be fetched with the following url:
 
-```
+```none
 GET /v2/<name>/manifests/<reference>
 ```
 
@@ -410,29 +415,29 @@ The `name` and `reference` parameter identify the image and are required. The
 reference may include a tag or digest.
 
 The client should include an Accept header indicating which manifest content
-types it supports. For more details on the manifest formats and their content
-types, see [manifest-v2-1.md](manifest-v2-1.md) and
-[manifest-v2-2.md](manifest-v2-2.md). In a successful response, the Content-Type
-header will indicate which manifest type is being returned.
+types it supports. For more details on the manifest format and content types,
+see [Image Manifest Version 2, Schema 2](manifest-v2-2.md).
+In a successful response, the Content-Type header will indicate which manifest type is being returned.
 
 A `404 Not Found` response will be returned if the image is unknown to the
 registry. If the image exists and the response is successful, the image
 manifest will be returned, with the following format (see
 [docker/docker#8093](https://github.com/docker/docker/issues/8093) for details):
 
-    {
-       "name": <name>,
-       "tag": <tag>,
-       "fsLayers": [
-          {
-             "blobSum": <digest>
-          },
-          ...
-        ]
-       ],
-       "history": <v1 images>,
-       "signature": <JWS>
-    }
+```none
+{
+    "name": <name>,
+    "tag": <tag>,
+    "fsLayers": [
+        {
+            "blobSum": <digest>
+        },
+        ...
+    ],
+    "history": <v1 images>,
+    "signature": <JWS>
+}
+```
 
 The client should verify the returned manifest signature for authenticity
 before fetching layers.
@@ -441,7 +446,7 @@ before fetching layers.
 
 The image manifest can be checked for existence with the following url:
 
-```
+```none
 HEAD /v2/<name>/manifests/<reference>
 ```
 
@@ -452,12 +457,11 @@ A `404 Not Found` response will be returned if the image is unknown to the
 registry. If the image exists and the response is successful the response will
 be as follows:
 
-```
+```none
 200 OK
 Content-Length: <length of manifest>
 Docker-Content-Digest: <digest>
 ```
-
 
 #### Pulling a Layer
 
@@ -496,14 +500,14 @@ Uploads are started with a POST request which returns a url that can be used
 to push data and check upload status.
 
 The `Location` header will be used to communicate the upload location after
-each request. While it won't change in the this specification, clients should
+each request. While it won't change in this specification, clients should
 use the most recent value returned by the API.
 
 ##### Starting An Upload
 
 To begin the process, a POST request should be issued in the following format:
 
-```
+```none
 POST /v2/<name>/blobs/uploads/
 ```
 
@@ -515,7 +519,7 @@ will be linked. Responses to this request are covered below.
 The existence of a layer can be checked via a `HEAD` request to the blob store
 API. The request should be formatted as follows:
 
-```
+```none
 HEAD /v2/<name>/blobs/<digest>
 ```
 
@@ -523,7 +527,7 @@ If the layer with the digest specified in `digest` is available, a 200 OK
 response will be received, with no actual body content (this is according to
 http specification). The response will look as follows:
 
-```
+```none
 200 OK
 Content-Length: <length of blob>
 Docker-Content-Digest: <digest>
@@ -539,7 +543,7 @@ for the existing registry layer, but the digests will be guaranteed to match.
 If the POST request is successful, a `202 Accepted` response will be returned
 with the upload URL in the `Location` header:
 
-```
+```none
 202 Accepted
 Location: /v2/<name>/blobs/uploads/<uuid>
 Range: bytes=0-<offset>
@@ -568,20 +572,20 @@ header, there are examples of [similar approaches](https://developers.google.com
 For an upload that just started, for an example with a 1000 byte layer file,
 the `Range` header would be as follows:
 
-```
+```none
 Range: bytes=0-0
 ```
 
 To get the status of an upload, issue a GET request to the upload URL:
 
-```
+```none
 GET /v2/<name>/blobs/uploads/<uuid>
 Host: <registry host>
 ```
 
 The response will be similar to the above, except will return 204 status:
 
-```
+```none
 204 No Content
 Location: /v2/<name>/blobs/uploads/<uuid>
 Range: bytes=0-<offset>
@@ -598,7 +602,7 @@ favored by clients that would like to avoided the complexity of chunking. To
 carry out a "monolithic" upload, one can simply put the entire content blob to
 the provided URL:
 
-```
+```none
 PUT /v2/<name>/blobs/uploads/<uuid>?digest=<digest>
 Content-Length: <size of layer>
 Content-Type: application/octet-stream
@@ -615,7 +619,7 @@ and expected responses.
 To carry out an upload of a chunk, the client can specify a range header and
 only include that part of the layer file:
 
-```
+```none
 PATCH /v2/<name>/blobs/uploads/<uuid>
 Content-Length: <size of chunk>
 Content-Range: <start of range>-<end of range>
@@ -630,7 +634,7 @@ server cannot accept the chunk, a `416 Requested Range Not Satisfiable`
 response will be returned and will include a `Range` header indicating the
 current status:
 
-```
+```none
 416 Requested Range Not Satisfiable
 Location: /v2/<name>/blobs/uploads/<uuid>
 Range: 0-<last valid range>
@@ -649,7 +653,7 @@ following conditions:
 When a chunk is accepted as part of the upload, a `202 Accepted` response will
 be returned, including a `Range` header with the current upload status:
 
-```
+```none
 202 Accepted
 Location: /v2/<name>/blobs/uploads/<uuid>
 Range: bytes=0-<offset>
@@ -664,7 +668,7 @@ request on the upload endpoint with a digest parameter. If it is not provided,
 the upload will not be considered complete. The format for the final chunk
 will be as follows:
 
-```
+```none
 PUT /v2/<name>/blobs/uploads/<uuid>?digest=<digest>
 Content-Length: <size of chunk>
 Content-Range: <start of range>-<end of range>
@@ -682,7 +686,7 @@ client if the content is rejected.
 When the last chunk is received and the layer has been validated, the client
 will receive a `201 Created` response:
 
-```
+```none
 201 Created
 Location: /v2/<name>/blobs/<digest>
 Content-Length: 0
@@ -701,7 +705,7 @@ The "digest" parameter is designed as an opaque parameter to support
 verification of a successful transfer. For example, an HTTP URI parameter
 might be as follows:
 
-```
+```none
 sha256:6c3c624b58dbbcd3c0dd82b4c53f04194d1247c6eebdaab7c610cf7d66709b3b
 ```
 
@@ -713,7 +717,7 @@ match this digest.
 An upload can be cancelled by issuing a DELETE request to the upload endpoint.
 The format will be as follows:
 
-```
+```none
 DELETE /v2/<name>/blobs/uploads/<uuid>
 ```
 
@@ -729,7 +733,7 @@ to, removing the need to upload a blob already known to the registry. To issue
 a blob mount instead of an upload, a POST request should be issued in the
 following format:
 
-```
+```none
 POST /v2/<name>/blobs/uploads/?mount=<digest>&from=<repository name>
 Content-Length: 0
 ```
@@ -737,7 +741,7 @@ Content-Length: 0
 If the blob is successfully mounted, the client will receive a `201 Created`
 response:
 
-```
+```none
 201 Created
 Location: /v2/<name>/blobs/<digest>
 Content-Length: 0
@@ -754,7 +758,7 @@ If a mount fails due to invalid repository or digest arguments, the registry
 will fall back to the standard upload behavior and return a `202 Accepted` with
 the upload URL in the `Location` header:
 
-```
+```none
 202 Accepted
 Location: /v2/<name>/blobs/uploads/<uuid>
 Range: bytes=0-<offset>
@@ -765,9 +769,11 @@ Docker-Upload-UUID: <uuid>
 This behavior is consistent with older versions of the registry, which do not
 recognize the repository mount query parameters.
 
-Note: a client may issue a HEAD request to check existence of a blob in a source
+{{ "{{< hint type=note >}}" }}
+A client may issue a HEAD request to check existence of a blob in a source
 repository to distinguish between the registry not supporting blob mounts and
 the blob not existing in the expected repository.
+{{ "{{< /hint >}}" }}
 
 ##### Errors
 
@@ -789,13 +795,17 @@ client must restart the upload process.
 A layer may be deleted from the registry via its `name` and `digest`. A
 delete may be issued with the following request format:
 
-    DELETE /v2/<name>/blobs/<digest>
+```none
+DELETE /v2/<name>/blobs/<digest>
+```
 
 If the blob exists and has been successfully deleted, the following response
 will be issued:
 
-    202 Accepted
-    Content-Length: None
+```none
+202 Accepted
+Content-Length: None
+```
 
 If the blob had already been deleted or did not exist, a `404 Not Found`
 response will be issued instead.
@@ -808,28 +818,29 @@ then the complete images will not be resolvable.
 Once all of the layers for an image are uploaded, the client can upload the
 image manifest. An image can be pushed using the following request format:
 
-    PUT /v2/<name>/manifests/<reference>
-    Content-Type: <manifest media type>
+```none
+PUT /v2/<name>/manifests/<reference>
+Content-Type: <manifest media type>
 
-    {
-       "name": <name>,
-       "tag": <tag>,
-       "fsLayers": [
-          {
-             "blobSum": <digest>
-          },
-          ...
-        ]
-       ],
-       "history": <v1 images>,
-       "signature": <JWS>,
-       ...
-    }
+{
+    "name": <name>,
+    "tag": <tag>,
+    "fsLayers": [
+        {
+            "blobSum": <digest>
+        },
+        ...
+    ],
+    "history": <v1 images>,
+    "signature": <JWS>,
+    ...
+}
+```
 
 The `name` and `reference` fields of the response body must match those
 specified in the URL. The `reference` field may be a "tag" or a "digest". The
 content type should match the type of the manifest being uploaded, as specified
-in [manifest-v2-1.md](manifest-v2-1.md) and [manifest-v2-2.md](manifest-v2-2.md).
+in [Image Manifest Version 2, Schema 2](manifest-v2-2.md).
 
 If there is a problem with pushing the manifest, a relevant 4xx response will
 be returned with a JSON error message. Please see the
@@ -841,17 +852,20 @@ returned. The `detail` field of the error response will have a `digest` field
 identifying the missing blob. An error is returned for each unknown blob. The
 response format is as follows:
 
-    {
-        "errors:" [{
-                "code": "BLOB_UNKNOWN",
-                "message": "blob unknown to registry",
-                "detail": {
-                    "digest": <digest>
-                }
-            },
-            ...
-        ]
-    }
+```none
+{
+    "errors": [
+        {
+            "code": "BLOB_UNKNOWN",
+            "message": "blob unknown to registry",
+            "detail": {
+                "digest": <digest>
+            }
+        },
+        ...
+    ]
+}
+```
 
 ### Listing Repositories
 
@@ -862,21 +876,21 @@ available through the _catalog_.
 
 The catalog for a given registry can be retrieved with the following request:
 
-```
+```none
 GET /v2/_catalog
 ```
 
 The response will be in the following format:
 
-```
+```none
 200 OK
 Content-Type: application/json
 
 {
-  "repositories": [
-    <name>,
-    ...
-  ]
+    "repositories": [
+        <name>,
+        ...
+    ]
 }
 ```
 
@@ -906,7 +920,7 @@ Paginated catalog results can be retrieved by adding an `n` parameter to the
 request URL, declaring that the response should be limited to `n` results.
 Starting a paginated flow begins as follows:
 
-```
+```none
 GET /v2/_catalog?n=<integer>
 ```
 
@@ -914,16 +928,16 @@ The above specifies that a catalog response should be returned, from the start o
 the result set, ordered lexically, limiting the number of results to `n`. The
 response to such a request would look as follows:
 
-```
+```none
 200 OK
 Content-Type: application/json
 Link: <<url>?n=<n from the request>&last=<last repository in response>>; rel="next"
 
 {
-  "repositories": [
-    <name>,
-    ...
-  ]
+    "repositories": [
+        <name>,
+        ...
+    ]
 }
 ```
 
@@ -950,7 +964,7 @@ to skip forward in the catalog.
 To get the next result set, a client would issue the request as follows, using
 the URL encoded in the described `Link` header:
 
-```
+```none
 GET /v2/_catalog?n=<n from the request>&last=<last repository value from previous response>
 ```
 
@@ -965,7 +979,7 @@ entries.
 The behavior of `last` is quite simple when demonstrated with an example. Let
 us say the registry has the following repositories:
 
-```
+```none
 a
 b
 c
@@ -976,7 +990,7 @@ If the value of `n` is 2, _a_ and _b_ will be returned on the first response.
 The `Link` header returned on the response will have `n` set to 2 and last set
 to _b_:
 
-```
+```none
 Link: <<url>?n=2&last=b>; rel="next"
 ```
 
@@ -1016,7 +1030,7 @@ any differences.
 
 Starting a paginated flow may begin as follows:
 
-```
+```none
 GET /v2/<name>/tags/list?n=<integer>
 ```
 
@@ -1024,17 +1038,17 @@ The above specifies that a tags response should be returned, from the start of
 the result set, ordered lexically, limiting the number of results to `n`. The
 response to such a request would look as follows:
 
-```
+```none
 200 OK
 Content-Type: application/json
 Link: <<url>?n=<n from the request>&last=<last tag value from previous response>>; rel="next"
 
 {
-  "name": <name>,
-  "tags": [
-    <tag>,
-    ...
-  ]
+    "name": <name>,
+    "tags": [
+        <tag>,
+        ...
+    ]
 }
 ```
 
@@ -1042,7 +1056,7 @@ To get the next result set, a client would issue the request as follows, using
 the value encoded in the [RFC5988](https://tools.ietf.org/html/rfc5988) `Link`
 header:
 
-```
+```none
 GET /v2/<name>/tags/list?n=<n from the request>&last=<last tag value from previous response>
 ```
 
@@ -1074,23 +1088,27 @@ response will be issued instead.
 
     Accept: application/vnd.docker.distribution.manifest.v2+json
 
-> for more details, see: [compatibility.md](../compatibility.md#content-addressable-storage-cas)
+> for more details, see: [compatibility](../about/compatibility.md#content-addressable-storage-cas)
 
 ## Detail
 
-> **Note**: This section is still under construction. For the purposes of
-> implementation, if any details below differ from the described request flows
-> above, the section below should be corrected. When they match, this note
-> should be removed.
+{{ "{{< hint type=note >}}" }}
+This section is still under construction. For the purposes of
+implementation, if any details below differ from the described request flows
+above, the section below should be corrected. When they match, this note
+should be removed.
+{{ "{{< /hint >}}" }}
 
 The behavior of the endpoints are covered in detail in this section, organized
 by route and entity. All aspects of the request and responses are covered,
 including headers, parameters and body formats. Examples of requests and their
 corresponding responses, with success and failure, are enumerated.
 
-> **Note**: The sections on endpoint detail are arranged with an example
-> request, a description of the request, followed by information about that
-> request.
+{{ "{{< hint type=note >}}" }}
+The sections on endpoint detail are arranged with an example
+request, a description of the request, followed by information about that
+request.
+{{ "{{< /hint >}}" }}
 
 A list of methods and URIs are covered in the table below:
 
@@ -1098,7 +1116,6 @@ A list of methods and URIs are covered in the table below:
 |------|----|------|-----------|
 {{range $route := .RouteDescriptors}}{{range $method := .Methods}}| {{$method.Method}} | `{{$route.Path|prettygorilla}}` | {{$route.Entity}} | {{$method.Description}} |
 {{end}}{{end}}
-
 The detail for each endpoint is covered in the following sections.
 
 ### Errors
@@ -1108,33 +1125,30 @@ The error codes encountered via the API are enumerated in the following table:
 |Code|Message|Description|
 |----|-------|-----------|
 {{range $err := .ErrorDescriptors}} `{{$err.Value}}` | {{$err.Message}} | {{$err.Description|removenewlines}}
-{{end}}
-
-{{range $route := .RouteDescriptors}}
+{{end -}}
+{{range $route := .RouteDescriptors -}}
 ### {{.Entity}}
 
 {{.Description}}
 
-{{range $method := $route.Methods}}
-
+{{range $method := $route.Methods -}}
 #### {{.Method}} {{$route.Entity}}
 
-{{.Description}}
+{{.Description -}}
 
 {{if .Requests}}{{range .Requests}}{{if .Name}}
-##### {{.Name}}{{end}}
+##### {{ .Name}}{{end }}
 
-```
+```none
 {{$method.Method}} {{$route.Path|prettygorilla}}{{range $i, $param := .QueryParameters}}{{if eq $i 0}}?{{else}}&{{end}}{{$param.Name}}={{$param.Format}}{{end}}{{range .Headers}}
 {{.Name}}: {{.Format}}{{end}}{{if .Body.ContentType}}
 Content-Type: {{.Body.ContentType}}{{end}}{{if .Body.Format}}
 
 {{.Body.Format}}{{end}}
 ```
+{{.Description -}}
 
-{{.Description}}
-
-{{if or .Headers .PathParameters .QueryParameters}}
+{{ if or .Headers .PathParameters .QueryParameters }}
 The following parameters should be specified on the request:
 
 |Name|Kind|Description|
@@ -1142,39 +1156,43 @@ The following parameters should be specified on the request:
 {{range .Headers}}|`{{.Name}}`|header|{{.Description}}|
 {{end}}{{range .PathParameters}}|`{{.Name}}`|path|{{.Description}}|
 {{end}}{{range .QueryParameters}}|`{{.Name}}`|query|{{.Description}}|
-{{end}}{{end}}
+{{end}}{{end -}}
 
-{{if .Successes}}
-{{range .Successes}}
+{{if .Successes -}}
+{{range .Successes }}
 ###### On Success: {{if .Name}}{{.Name}}{{else}}{{.StatusCode | statustext}}{{end}}
 
-```
-{{.StatusCode}} {{.StatusCode | statustext}}{{range .Headers}}
+```none
+{{.StatusCode }} {{.StatusCode | statustext }}
+{{- range .Headers }}
 {{.Name}}: {{.Format}}{{end}}{{if .Body.ContentType}}
 Content-Type: {{.Body.ContentType}}{{end}}{{if .Body.Format}}
 
 {{.Body.Format}}{{end}}
 ```
 
-{{.Description}}
+{{.Description -}}
 {{if .Fields}}The following fields may be returned in the response body:
 
 |Name|Description|
 |----|-----------|
 {{range .Fields}}|`{{.Name}}`|{{.Description}}|
 {{end}}{{end}}{{if .Headers}}
+
 The following headers will be returned with the response:
 
 |Name|Description|
 |----|-----------|
-{{range .Headers}}|`{{.Name}}`|{{.Description}}|
+{{range .Headers -}}
+|`{{.Name}}`|{{.Description -}}|
 {{end}}{{end}}{{end}}{{end}}
 
-{{if .Failures}}
-{{range .Failures}}
+{{if .Failures -}}
+{{range .Failures -}}
+
 ###### On Failure: {{if .Name}}{{.Name}}{{else}}{{.StatusCode | statustext}}{{end}}
 
-```
+```none
 {{.StatusCode}} {{.StatusCode | statustext}}{{range .Headers}}
 {{.Name}}: {{.Format}}{{end}}{{if .Body.ContentType}}
 Content-Type: {{.Body.ContentType}}{{end}}{{if .Body.Format}}
@@ -1189,9 +1207,8 @@ The following headers will be returned on the response:
 |Name|Description|
 |----|-----------|
 {{range .Headers}}|`{{.Name}}`|{{.Description}}|
-{{end}}{{end}}
-
-{{if .ErrorCodes}}
+{{end}}{{end }}
+{{if .ErrorCodes -}}
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|

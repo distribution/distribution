@@ -7,6 +7,7 @@ import (
 
 	"github.com/distribution/distribution/v3"
 	digest "github.com/opencontainers/go-digest"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 func TestCacheSet(t *testing.T) {
@@ -21,7 +22,7 @@ func TestCacheSet(t *testing.T) {
 		t.Fatalf("Unexpected error %v, expected %v", err, distribution.ErrBlobUnknown)
 	}
 
-	desc := distribution.Descriptor{
+	desc := v1.Descriptor{
 		Digest: dgst,
 	}
 	if err := backend.SetDescriptor(ctx, dgst, desc); err != nil {
@@ -37,13 +38,13 @@ func TestCacheSet(t *testing.T) {
 	}
 
 	if len(cache.sets) != 1 || len(cache.sets[dgst]) == 0 {
-		t.Fatalf("Expected cache set")
+		t.Fatal("Expected cache set")
 	}
 	if cache.sets[dgst][0].Digest != desc.Digest {
 		t.Fatalf("Unexpected descriptor %v, expected %v", cache.sets[dgst][0], desc)
 	}
 
-	desc2 := distribution.Descriptor{
+	desc2 := v1.Descriptor{
 		Digest: digest.Digest("dontvalidate 2"),
 	}
 	cache.sets[dgst] = append(cache.sets[dgst], desc2)
@@ -69,7 +70,7 @@ func TestCacheError(t *testing.T) {
 		t.Fatalf("Unexpected error %v, expected %v", err, distribution.ErrBlobUnknown)
 	}
 
-	desc := distribution.Descriptor{
+	desc := v1.Descriptor{
 		Digest: dgst,
 	}
 	if err := backend.SetDescriptor(ctx, dgst, desc); err != nil {
@@ -85,43 +86,43 @@ func TestCacheError(t *testing.T) {
 	}
 
 	if len(cache.sets) > 0 {
-		t.Fatalf("Set should not be called after stat error")
+		t.Fatal("Set should not be called after stat error")
 	}
 }
 
 func newTestStatter() *testStatter {
 	return &testStatter{
 		stats: []digest.Digest{},
-		sets:  map[digest.Digest][]distribution.Descriptor{},
+		sets:  map[digest.Digest][]v1.Descriptor{},
 	}
 }
 
 func newErrTestStatter(err error) *testStatter {
 	return &testStatter{
-		sets: map[digest.Digest][]distribution.Descriptor{},
+		sets: map[digest.Digest][]v1.Descriptor{},
 		err:  err,
 	}
 }
 
 type testStatter struct {
 	stats []digest.Digest
-	sets  map[digest.Digest][]distribution.Descriptor
+	sets  map[digest.Digest][]v1.Descriptor
 	err   error
 }
 
-func (s *testStatter) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
+func (s *testStatter) Stat(ctx context.Context, dgst digest.Digest) (v1.Descriptor, error) {
 	if s.err != nil {
-		return distribution.Descriptor{}, s.err
+		return v1.Descriptor{}, s.err
 	}
 
 	if set := s.sets[dgst]; len(set) > 0 {
 		return set[len(set)-1], nil
 	}
 
-	return distribution.Descriptor{}, distribution.ErrBlobUnknown
+	return v1.Descriptor{}, distribution.ErrBlobUnknown
 }
 
-func (s *testStatter) SetDescriptor(ctx context.Context, dgst digest.Digest, desc distribution.Descriptor) error {
+func (s *testStatter) SetDescriptor(ctx context.Context, dgst digest.Digest, desc v1.Descriptor) error {
 	s.sets[dgst] = append(s.sets[dgst], desc)
 	return s.err
 }

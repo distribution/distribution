@@ -1,13 +1,13 @@
 # syntax=docker/dockerfile:1
 
-ARG GO_VERSION=1.22.5
-ARG ALPINE_VERSION=3.20
+ARG GO_VERSION=1.23.7
+ARG ALPINE_VERSION=3.21
 
 FROM golang:${GO_VERSION}-alpine${ALPINE_VERSION} AS base
 RUN apk add --no-cache git
 
 FROM base AS hugo
-ARG HUGO_VERSION=0.119.0
+ARG HUGO_VERSION=0.136.5
 RUN --mount=type=cache,target=/go/mod/pkg \
     go install github.com/gohugoio/hugo@v${HUGO_VERSION}
 

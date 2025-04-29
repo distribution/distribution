@@ -336,7 +336,7 @@ func TestEndpointAuthorizeRefreshToken(t *testing.T) {
 	}
 
 	if creds.refreshTokens[service] != refreshToken2 {
-		t.Fatalf("Refresh token not set after change")
+		t.Fatal("Refresh token not set after change")
 	}
 
 	// Try with bad token

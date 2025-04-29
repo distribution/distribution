@@ -146,14 +146,14 @@ func TestUploadReadFrom(t *testing.T) {
 	blobUpload.location = e + locationPath
 	_, err = blobUpload.ReadFrom(bytes.NewReader(b))
 	if err == nil {
-		t.Fatalf("Expected error when bad range received")
+		t.Fatal("Expected error when bad range received")
 	}
 
 	// 404
 	blobUpload.location = e + locationPath
 	_, err = blobUpload.ReadFrom(bytes.NewReader(b))
 	if err == nil {
-		t.Fatalf("Expected error when not found")
+		t.Fatal("Expected error when not found")
 	}
 	if err != distribution.ErrBlobUploadUnknown {
 		t.Fatalf("Wrong error thrown: %s, expected %s", err, distribution.ErrBlobUploadUnknown)
@@ -163,7 +163,7 @@ func TestUploadReadFrom(t *testing.T) {
 	blobUpload.location = e + locationPath
 	_, err = blobUpload.ReadFrom(bytes.NewReader(b))
 	if err == nil {
-		t.Fatalf("Expected error when not found")
+		t.Fatal("Expected error when not found")
 	}
 	if uploadErr, ok := err.(errcode.Errors); !ok {
 		t.Fatalf("Wrong error type %T: %s", err, err)
@@ -189,7 +189,7 @@ func TestUploadReadFrom(t *testing.T) {
 	blobUpload.location = e + locationPath
 	_, err = blobUpload.ReadFrom(bytes.NewReader(b))
 	if err == nil {
-		t.Fatalf("Expected error when not found")
+		t.Fatal("Expected error when not found")
 	}
 	if uploadErr, ok := err.(*UnexpectedHTTPResponseError); !ok {
 		t.Fatalf("Wrong error type %T: %s", err, err)
@@ -204,7 +204,7 @@ func TestUploadReadFrom(t *testing.T) {
 	blobUpload.location = e + locationPath
 	_, err = blobUpload.ReadFrom(bytes.NewReader(b))
 	if err == nil {
-		t.Fatalf("Expected error when not found")
+		t.Fatal("Expected error when not found")
 	}
 	if uploadErr, ok := err.(*UnexpectedHTTPStatusError); !ok {
 		t.Fatalf("Wrong error type %T: %s", err, err)
@@ -434,14 +434,14 @@ func TestUploadWrite(t *testing.T) {
 	blobUpload.location = e + locationPath
 	_, err = blobUpload.Write(b)
 	if err == nil {
-		t.Fatalf("Expected error when bad range received")
+		t.Fatal("Expected error when bad range received")
 	}
 
 	// 404
 	blobUpload.location = e + locationPath
 	_, err = blobUpload.Write(b)
 	if err == nil {
-		t.Fatalf("Expected error when not found")
+		t.Fatal("Expected error when not found")
 	}
 	if err != distribution.ErrBlobUploadUnknown {
 		t.Fatalf("Wrong error thrown: %s, expected %s", err, distribution.ErrBlobUploadUnknown)
@@ -451,7 +451,7 @@ func TestUploadWrite(t *testing.T) {
 	blobUpload.location = e + locationPath
 	_, err = blobUpload.Write(b)
 	if err == nil {
-		t.Fatalf("Expected error when not found")
+		t.Fatal("Expected error when not found")
 	}
 	if uploadErr, ok := err.(errcode.Errors); !ok {
 		t.Fatalf("Wrong error type %T: %s", err, err)
@@ -477,7 +477,7 @@ func TestUploadWrite(t *testing.T) {
 	blobUpload.location = e + locationPath
 	_, err = blobUpload.Write(b)
 	if err == nil {
-		t.Fatalf("Expected error when not found")
+		t.Fatal("Expected error when not found")
 	}
 	if uploadErr, ok := err.(*UnexpectedHTTPResponseError); !ok {
 		t.Fatalf("Wrong error type %T: %s", err, err)
@@ -492,7 +492,7 @@ func TestUploadWrite(t *testing.T) {
 	blobUpload.location = e + locationPath
 	_, err = blobUpload.Write(b)
 	if err == nil {
-		t.Fatalf("Expected error when not found")
+		t.Fatal("Expected error when not found")
 	}
 	if uploadErr, ok := err.(*UnexpectedHTTPStatusError); !ok {
 		t.Fatalf("Wrong error type %T: %s", err, err)

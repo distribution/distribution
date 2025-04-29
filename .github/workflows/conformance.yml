@@ -16,13 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       -
-        name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      -
         name: Build image
-        uses: docker/bake-action@v5
+        uses: docker/bake-action@v6
         with:
           targets: image-local
       -
@@ -46,11 +41,11 @@ jobs:
           OCI_HIDE_SKIPPED_WORKFLOWS: 1
       -
         name: Move test results
-        run: mkdir -p .out/ && mv {report.html,junit.xml} .out/
+        run: mkdir -p out/ && mv {report.html,junit.xml} out/
       -
         name: Upload test results
-        uses: actions/upload-artifact@v4.3.0
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: oci-test-results-${{ github.sha }}
-          path: .out/
+          path: out/
           if-no-files-found: error

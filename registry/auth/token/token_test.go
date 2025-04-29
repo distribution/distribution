@@ -646,3 +646,57 @@ func TestNewAccessControllerPemBlock(t *testing.T) {
 		t.Fatal("accessController has the wrong number of certificates")
 	}
 }
+
+// This test makes sure the untrusted key can not be used in token verification.
+func TestVerifyJWKWithTrustedKey(t *testing.T) {
+	// Generate a test key pair
+	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pubKey := privKey.Public()
+
+	// Create a JWK with no certificates
+	jwk := &jose.JSONWebKey{
+		Key:       privKey,
+		KeyID:     "test-key-id",
+		Use:       "sig",
+		Algorithm: string(jose.ES256),
+	}
+
+	// Create verify options with our public key as trusted
+	verifyOpts := VerifyOptions{
+		TrustedKeys: map[string]crypto.PublicKey{
+			"test-key-id": pubKey,
+		},
+	}
+
+	// Create test header
+	header := jose.Header{
+		JSONWebKey: jwk,
+	}
+
+	// Test the verifyJWK function
+	returnedKey, err := verifyJWK(header, verifyOpts)
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	// Verify the returned key matches our trusted key
+	if returnedKey != pubKey {
+		t.Error("Returned key does not match the trusted key")
+	}
+
+	// Test with untrusted key
+	verifyOpts.TrustedKeys = map[string]crypto.PublicKey{
+		"different-key-id": pubKey,
+	}
+
+	_, err = verifyJWK(header, verifyOpts)
+	if err == nil {
+		t.Error("Expected error for untrusted key, got none")
+	}
+	if err.Error() != "untrusted JWK with no certificate chain" {
+		t.Errorf("Expected 'untrusted JWK with no certificate chain' error, got: %v", err)
+	}
+}

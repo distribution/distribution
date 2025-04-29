@@ -12,6 +12,7 @@ import (
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/opencontainers/go-digest"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 // CreateRandomTarFile creates a random tarfile, returning it as an
@@ -107,7 +108,7 @@ func UploadBlobs(repository distribution.Repository, layers map[digest.Digest]io
 			return fmt.Errorf("unexpected error copying to upload: %v", err)
 		}
 
-		if _, err := wr.Commit(ctx, distribution.Descriptor{Digest: dgst}); err != nil {
+		if _, err := wr.Commit(ctx, v1.Descriptor{Digest: dgst}); err != nil {
 			return fmt.Errorf("unexpected error committinng upload: %v", err)
 		}
 	}

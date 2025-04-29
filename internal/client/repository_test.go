@@ -274,7 +274,7 @@ func TestBlobResume(t *testing.T) {
 		t.Fatalf("Unexpected ReadFrom length: %d; expected: %d", n, len(b1))
 	}
 
-	blob, err := upload.Commit(ctx, distribution.Descriptor{
+	blob, err := upload.Commit(ctx, v1.Descriptor{
 		Digest: dgst,
 		Size:   int64(len(b1)),
 	})
@@ -394,7 +394,7 @@ func TestBlobExistsNoContentLength(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !strings.Contains(err.Error(), "missing content-length heade") {
-		t.Fatalf("Expected missing content-length error message")
+		t.Fatal("Expected missing content-length error message")
 	}
 }
 
@@ -538,7 +538,7 @@ func TestBlobUploadChunked(t *testing.T) {
 		}
 	}
 
-	blob, err := upload.Commit(ctx, distribution.Descriptor{
+	blob, err := upload.Commit(ctx, v1.Descriptor{
 		Digest: dgst,
 		Size:   int64(len(b1)),
 	})
@@ -646,7 +646,7 @@ func TestBlobUploadMonolithic(t *testing.T) {
 		t.Fatalf("Unexpected ReadFrom length: %d; expected: %d", n, len(b1))
 	}
 
-	blob, err := upload.Commit(ctx, distribution.Descriptor{
+	blob, err := upload.Commit(ctx, v1.Descriptor{
 		Digest: dgst,
 		Size:   int64(len(b1)),
 	})
@@ -752,7 +752,7 @@ func TestBlobUploadMonolithicDockerUploadUUIDFromURL(t *testing.T) {
 		t.Fatalf("Unexpected ReadFrom length: %d; expected: %d", n, len(b1))
 	}
 
-	blob, err := upload.Commit(ctx, distribution.Descriptor{
+	blob, err := upload.Commit(ctx, v1.Descriptor{
 		Digest: dgst,
 		Size:   int64(len(b1)),
 	})
@@ -917,10 +917,10 @@ func TestBlobMount(t *testing.T) {
 }
 
 func newRandomOCIManifest(t *testing.T, blobCount int) (*ocischema.Manifest, digest.Digest, []byte) {
-	layers := make([]distribution.Descriptor, blobCount)
+	layers := make([]v1.Descriptor, blobCount)
 	for i := 0; i < blobCount; i++ {
 		dgst, blob := newRandomBlob((i % 5) * 16)
-		layers[i] = distribution.Descriptor{
+		layers[i] = v1.Descriptor{
 			MediaType: v1.MediaTypeImageLayer,
 			Digest:    dgst,
 			Size:      int64(len(blob)),
@@ -930,7 +930,7 @@ func newRandomOCIManifest(t *testing.T, blobCount int) (*ocischema.Manifest, dig
 	m := ocischema.Manifest{
 		Versioned: specs.Versioned{SchemaVersion: 2},
 		MediaType: v1.MediaTypeImageManifest,
-		Config: distribution.Descriptor{
+		Config: v1.Descriptor{
 			Digest:    "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
 			Size:      123,
 			MediaType: v1.MediaTypeImageConfig,
@@ -1468,10 +1468,10 @@ func TestObtainsErrorForMissingTag(t *testing.T) {
 
 	_, err = tagService.Get(ctx, "1.0.0")
 	if err == nil {
-		t.Fatalf("Expected an error")
+		t.Fatal("Expected an error")
 	}
 	if !strings.Contains(err.Error(), "manifest unknown") {
-		t.Fatalf("Expected unknown manifest error message")
+		t.Fatal("Expected unknown manifest error message")
 	}
 }
 
@@ -1495,10 +1495,10 @@ func TestObtainsManifestForTagWithoutHeaders(t *testing.T) {
 
 	desc, err := tagService.Get(ctx, "1.0.0")
 	if err != nil {
-		t.Fatalf("Expected no error")
+		t.Fatal("Expected no error")
 	}
 	if desc.Digest != dgst {
-		t.Fatalf("Unexpected digest")
+		t.Fatal("Unexpected digest")
 	}
 }
 
@@ -1657,7 +1657,7 @@ func TestCatalog(t *testing.T) {
 	}
 
 	if numFilled != 3 {
-		t.Fatalf("Got wrong number of repos")
+		t.Fatal("Got wrong number of repos")
 	}
 }
 
@@ -1689,7 +1689,7 @@ func TestCatalogInParts(t *testing.T) {
 	}
 
 	if numFilled != 2 {
-		t.Fatalf("Got wrong number of repos")
+		t.Fatal("Got wrong number of repos")
 	}
 
 	numFilled, err = r.Repositories(ctx, entries, "baz")
@@ -1698,7 +1698,7 @@ func TestCatalogInParts(t *testing.T) {
 	}
 
 	if numFilled != 1 {
-		t.Fatalf("Got wrong number of repos")
+		t.Fatal("Got wrong number of repos")
 	}
 }
 

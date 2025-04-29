@@ -23,6 +23,5 @@ linters-settings:
         disabled: true
 
 issues:
-  deadline: 2m
-  exlude-dirs:
+  exclude-dirs:
     - vendor

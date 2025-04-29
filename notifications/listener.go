@@ -10,6 +10,7 @@ import (
 	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/distribution/reference"
 	"github.com/opencontainers/go-digest"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 // ManifestListener describes a set of methods for listening to events related to manifests.
@@ -21,9 +22,9 @@ type ManifestListener interface {
 
 // BlobListener describes a listener that can respond to layer related events.
 type BlobListener interface {
-	BlobPushed(repo reference.Named, desc distribution.Descriptor) error
-	BlobPulled(repo reference.Named, desc distribution.Descriptor) error
-	BlobMounted(repo reference.Named, desc distribution.Descriptor, fromRepo reference.Named) error
+	BlobPushed(repo reference.Named, desc v1.Descriptor) error
+	BlobPulled(repo reference.Named, desc v1.Descriptor) error
+	BlobMounted(repo reference.Named, desc v1.Descriptor, fromRepo reference.Named) error
 	BlobDeleted(repo reference.Named, desc digest.Digest) error
 }
 
@@ -178,7 +179,7 @@ func (bsl *blobServiceListener) ServeBlob(ctx context.Context, w http.ResponseWr
 	return err
 }
 
-func (bsl *blobServiceListener) Put(ctx context.Context, mediaType string, p []byte) (distribution.Descriptor, error) {
+func (bsl *blobServiceListener) Put(ctx context.Context, mediaType string, p []byte) (v1.Descriptor, error) {
 	desc, err := bsl.BlobStore.Put(ctx, mediaType, p)
 	if err == nil {
 		if err := bsl.parent.listener.BlobPushed(bsl.parent.Repository.Named(), desc); err != nil {
@@ -229,7 +230,7 @@ type blobWriterListener struct {
 	parent *blobServiceListener
 }
 
-func (bwl *blobWriterListener) Commit(ctx context.Context, desc distribution.Descriptor) (distribution.Descriptor, error) {
+func (bwl *blobWriterListener) Commit(ctx context.Context, desc v1.Descriptor) (v1.Descriptor, error) {
 	committed, err := bwl.BlobWriter.Commit(ctx, desc)
 	if err == nil {
 		if err := bwl.parent.parent.listener.BlobPushed(bwl.parent.parent.Repository.Named(), committed); err != nil {

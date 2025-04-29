@@ -14,6 +14,7 @@ import (
 	"github.com/distribution/reference"
 	"github.com/google/uuid"
 	"github.com/opencontainers/go-digest"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 // linkPathFunc describes a function that can resolve a link based on the
@@ -45,7 +46,7 @@ type linkedBlobStore struct {
 
 var _ distribution.BlobStore = &linkedBlobStore{}
 
-func (lbs *linkedBlobStore) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
+func (lbs *linkedBlobStore) Stat(ctx context.Context, dgst digest.Digest) (v1.Descriptor, error) {
 	return lbs.blobAccessController.Stat(ctx, dgst)
 }
 
@@ -81,17 +82,17 @@ func (lbs *linkedBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter
 	return lbs.blobServer.ServeBlob(ctx, w, r, canonical.Digest)
 }
 
-func (lbs *linkedBlobStore) Put(ctx context.Context, mediaType string, p []byte) (distribution.Descriptor, error) {
+func (lbs *linkedBlobStore) Put(ctx context.Context, mediaType string, p []byte) (v1.Descriptor, error) {
 	dgst := digest.FromBytes(p)
 	// Place the data in the blob store first.
 	desc, err := lbs.blobStore.Put(ctx, mediaType, p)
 	if err != nil {
 		dcontext.GetLogger(ctx).Errorf("error putting into main store: %v", err)
-		return distribution.Descriptor{}, err
+		return v1.Descriptor{}, err
 	}
 
 	if err := lbs.blobAccessController.SetDescriptor(ctx, dgst, desc); err != nil {
-		return distribution.Descriptor{}, err
+		return v1.Descriptor{}, err
 	}
 
 	// TODO(stevvooe): Write out mediatype if incoming differs from what is
@@ -270,24 +271,24 @@ func (lbs *linkedBlobStore) Enumerate(ctx context.Context, ingestor func(digest.
 	})
 }
 
-func (lbs *linkedBlobStore) mount(ctx context.Context, sourceRepo reference.Named, dgst digest.Digest, sourceStat *distribution.Descriptor) (distribution.Descriptor, error) {
-	var stat distribution.Descriptor
+func (lbs *linkedBlobStore) mount(ctx context.Context, sourceRepo reference.Named, dgst digest.Digest, sourceStat *v1.Descriptor) (v1.Descriptor, error) {
+	var stat v1.Descriptor
 	if sourceStat == nil {
 		// look up the blob info from the sourceRepo if not already provided
 		repo, err := lbs.registry.Repository(ctx, sourceRepo)
 		if err != nil {
-			return distribution.Descriptor{}, err
+			return v1.Descriptor{}, err
 		}
 		stat, err = repo.Blobs(ctx).Stat(ctx, dgst)
 		if err != nil {
-			return distribution.Descriptor{}, err
+			return v1.Descriptor{}, err
 		}
 	} else {
 		// use the provided blob info
 		stat = *sourceStat
 	}
 
-	desc := distribution.Descriptor{
+	desc := v1.Descriptor{
 		Size: stat.Size,
 
 		// NOTE(stevvooe): The central blob store firewalls media types from
@@ -323,7 +324,7 @@ func (lbs *linkedBlobStore) newBlobUpload(ctx context.Context, uuid, path string
 
 // linkBlob links a valid, written blob into the registry under the named
 // repository for the upload controller.
-func (lbs *linkedBlobStore) linkBlob(ctx context.Context, canonical distribution.Descriptor, aliases ...digest.Digest) error {
+func (lbs *linkedBlobStore) linkBlob(ctx context.Context, canonical v1.Descriptor, aliases ...digest.Digest) error {
 	dgsts := append([]digest.Digest{canonical.Digest}, aliases...)
 
 	// TODO(stevvooe): Need to write out mediatype for only canonical hash
@@ -365,19 +366,19 @@ type linkedBlobStatter struct {
 
 var _ distribution.BlobDescriptorService = &linkedBlobStatter{}
 
-func (lbs *linkedBlobStatter) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
+func (lbs *linkedBlobStatter) Stat(ctx context.Context, dgst digest.Digest) (v1.Descriptor, error) {
 	blobLinkPath, err := lbs.linkPath(lbs.repository.Named().Name(), dgst)
 	if err != nil {
-		return distribution.Descriptor{}, err
+		return v1.Descriptor{}, err
 	}
 
 	target, err := lbs.blobStore.readlink(ctx, blobLinkPath)
 	if err != nil {
 		switch err := err.(type) {
 		case driver.PathNotFoundError:
-			return distribution.Descriptor{}, distribution.ErrBlobUnknown
+			return v1.Descriptor{}, distribution.ErrBlobUnknown
 		default:
-			return distribution.Descriptor{}, err
+			return v1.Descriptor{}, err
 		}
 	}
 
@@ -401,7 +402,7 @@ func (lbs *linkedBlobStatter) Clear(ctx context.Context, dgst digest.Digest) (er
 	return lbs.blobStore.driver.Delete(ctx, blobLinkPath)
 }
 
-func (lbs *linkedBlobStatter) SetDescriptor(ctx context.Context, dgst digest.Digest, desc distribution.Descriptor) error {
+func (lbs *linkedBlobStatter) SetDescriptor(ctx context.Context, dgst digest.Digest, desc v1.Descriptor) error {
 	// The canonical descriptor for a blob is set at the commit phase of upload
 	return nil
 }

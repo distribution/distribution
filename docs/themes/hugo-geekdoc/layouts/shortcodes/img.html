@@ -7,64 +7,58 @@
 {{- with $source }}
   {{- $caption := default .Title $customAlt }}
   {{- $isSVG := (eq .MediaType.SubType "svg") }}
+  {{- $origin := . }}
 
-  {{- $origin := .Permalink }}
   {{- if $isSVG }}
-    {{- $data.SetInMap "size" "profile" "180" }}
     {{- $data.SetInMap "size" "tiny" "320" }}
     {{- $data.SetInMap "size" "small" "600" }}
     {{- $data.SetInMap "size" "medium" "1200" }}
     {{- $data.SetInMap "size" "large" "1800" }}
   {{- else }}
-    {{- $data.SetInMap "size" "profile" (.Fill "180x180 Center").Permalink }}
-    {{- $data.SetInMap "size" "tiny" (.Resize "320x").Permalink }}
-    {{- $data.SetInMap "size" "small" (.Resize "600x").Permalink }}
-    {{- $data.SetInMap "size" "medium" (.Resize "1200x").Permalink }}
-    {{- $data.SetInMap "size" "large" (.Resize "1800x").Permalink }}
-  {{- end }}
-
+    {{- $data.SetInMap "size" "tiny" "320x"}}
+    {{- $data.SetInMap "size" "small" "600x" }}
+    {{- $data.SetInMap "size" "medium" "1200x" }}
+    {{- $data.SetInMap "size" "large" "1800x" }}
+  {{- end -}}
 
   <div class="flex justify-center">
-    <figure
-      class="gdoc-markdown__figure
-      {{- if eq $customSize "profile" }}{{ print " gdoc-post__figure--round" }}{{ end }}"
-    >
+    <figure class="gdoc-markdown__figure">
       <a class="gdoc-markdown__link--raw" href="{{ .Permalink }}">
         <picture>
           {{- $size := $data.Get "size" }}
           {{- if not $isSVG }}
+            {{- if ne $customSize "origin" }}
             <source
-              {{- with $customSize }}
-                srcset="{{ index $size $customSize }}"
+              {{- if $customSize }}
+                srcset="{{ ($origin.Resize (index $size $customSize)).Permalink }}"
               {{- else }}
-                srcset="{{ $size.small }} 600w, {{ $size.medium }} 1200w" sizes="100vw"
+                srcset="{{ ($origin.Resize (index $size "small")).Permalink }} 600w, {{ ($origin.Resize (index $size "medium")).Permalink }} 1200w" sizes="100vw"
               {{- end }}
             />
+            {{- end }}
           {{- end }}
           <img
             {{- if $isSVG }}
-              src="{{ $origin }}" width="{{ index $size (default "medium" $customSize) }}"
+              src="{{ $origin.Permalink }}" width="{{ index $size (default "medium" $customSize) }}"
             {{- else }}
               {{- if $lazyLoad }}{{ print " loading=\"lazy\"" | safeHTMLAttr }}{{- end }}
               {{- if eq $customSize "origin" }}
-                src="{{ $origin }}"
+                src="{{ $origin.Permalink }}"
               {{- else }}
-                src="{{ $size.large }}"
+                src="{{ ($origin.Resize (index $size "large")).Permalink }}"
               {{- end }}
               alt="{{ $caption }}"
             {{- end }}
           />
         </picture>
       </a>
-      {{- if not (eq $customSize "profile") }}
-        {{- with $caption }}
-          <figcaption>
-            {{ . }}
-            {{- with $source.Params.credits }}
-              {{ printf " (%s)" . | $.Page.RenderString }}
-            {{- end }}
-          </figcaption>
-        {{- end }}
+      {{- with $caption }}
+        <figcaption>
+          {{ . }}
+          {{- with $source.Params.credits }}
+            {{ printf " (%s)" . | $.Page.RenderString }}
+          {{- end }}
+        </figcaption>
       {{- end }}
     </figure>
   </div>

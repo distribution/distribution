@@ -8,6 +8,7 @@ import (
 
 	"github.com/distribution/distribution/v3"
 	"github.com/opencontainers/image-spec/specs-go"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 const expectedManifestSerialization = `{
@@ -31,12 +32,12 @@ func makeTestManifest(mediaType string) Manifest {
 	return Manifest{
 		Versioned: specs.Versioned{SchemaVersion: 2},
 		MediaType: mediaType,
-		Config: distribution.Descriptor{
+		Config: v1.Descriptor{
 			MediaType: MediaTypeImageConfig,
 			Digest:    "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
 			Size:      985,
 		},
-		Layers: []distribution.Descriptor{
+		Layers: []v1.Descriptor{
 			{
 				MediaType: MediaTypeLayer,
 				Digest:    "sha256:62d8908bee94c202b2d35224a221aaa2058318bfa9879fa541efaecba272331b",
@@ -130,7 +131,7 @@ func mediaTypeTest(t *testing.T, mediaType string, shouldError bool) {
 
 	if shouldError {
 		if err == nil {
-			t.Fatalf("bad content type should have produced error")
+			t.Fatal("bad content type should have produced error")
 		}
 	} else {
 		if err != nil {

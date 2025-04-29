@@ -212,18 +212,18 @@ func verifyCertChain(header jose.Header, roots *x509.CertPool) (signingKey crypt
 	return
 }
 
-func verifyJWK(header jose.Header, verifyOpts VerifyOptions) (signingKey crypto.PublicKey, err error) {
+func verifyJWK(header jose.Header, verifyOpts VerifyOptions) (crypto.PublicKey, error) {
 	jwk := header.JSONWebKey
-	signingKey = jwk.Key
 
 	// Check to see if the key includes a certificate chain.
 	if len(jwk.Certificates) == 0 {
 		// The JWK should be one of the trusted root keys.
-		if _, trusted := verifyOpts.TrustedKeys[jwk.KeyID]; !trusted {
+		key, trusted := verifyOpts.TrustedKeys[jwk.KeyID]
+		if !trusted {
 			return nil, errors.New("untrusted JWK with no certificate chain")
 		}
 		// The JWK is one of the trusted keys.
-		return
+		return key, nil
 	}
 
 	opts := x509.VerifyOptions{
@@ -245,9 +245,8 @@ func verifyJWK(header jose.Header, verifyOpts VerifyOptions) (signingKey crypto.
 	if err != nil {
 		return nil, err
 	}
-	signingKey = getCertPubKey(chains)
 
-	return
+	return getCertPubKey(chains), nil
 }
 
 func getCertPubKey(chains [][]*x509.Certificate) crypto.PublicKey {

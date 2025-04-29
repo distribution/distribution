@@ -11,6 +11,7 @@ import (
 	"github.com/distribution/reference"
 	digest "github.com/opencontainers/go-digest"
 	"github.com/opencontainers/image-spec/specs-go"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 type tagsTestEnv struct {
@@ -53,7 +54,7 @@ func TestTagStoreTag(t *testing.T) {
 	tags := env.ts
 	ctx := env.ctx
 
-	d := distribution.Descriptor{}
+	d := v1.Descriptor{}
 	err := tags.Tag(ctx, "latest", d)
 	if err == nil {
 		t.Errorf("unexpected error putting malformed descriptor : %s", err)
@@ -95,7 +96,7 @@ func TestTagStoreUnTag(t *testing.T) {
 	env := testTagStore(t)
 	tags := env.ts
 	ctx := env.ctx
-	desc := distribution.Descriptor{Digest: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}
+	desc := v1.Descriptor{Digest: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}
 
 	err := tags.Untag(ctx, "latest")
 	if err == nil {
@@ -127,7 +128,7 @@ func TestTagStoreAll(t *testing.T) {
 	alpha := "abcdefghijklmnopqrstuvwxyz"
 	for i := 0; i < len(alpha); i++ {
 		tag := alpha[i]
-		desc := distribution.Descriptor{Digest: "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"}
+		desc := v1.Descriptor{Digest: "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"}
 		err := tagStore.Tag(ctx, string(tag), desc)
 		if err != nil {
 			t.Error(err)
@@ -170,15 +171,15 @@ func TestTagLookup(t *testing.T) {
 	tagStore := env.ts
 	ctx := env.ctx
 
-	descA := distribution.Descriptor{Digest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
-	desc0 := distribution.Descriptor{Digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"}
+	descA := v1.Descriptor{Digest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+	desc0 := v1.Descriptor{Digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"}
 
 	tags, err := tagStore.Lookup(ctx, descA)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(tags) != 0 {
-		t.Fatalf("Lookup returned > 0 tags from empty store")
+		t.Fatal("Lookup returned > 0 tags from empty store")
 	}
 
 	err = tagStore.Tag(ctx, "a", descA)
@@ -245,12 +246,12 @@ func TestTagIndexes(t *testing.T) {
 		m := schema2.Manifest{
 			Versioned: specs.Versioned{SchemaVersion: 2},
 			MediaType: schema2.MediaTypeManifest,
-			Config: distribution.Descriptor{
+			Config: v1.Descriptor{
 				Digest:    conf.Digest,
 				Size:      1,
 				MediaType: schema2.MediaTypeImageConfig,
 			},
-			Layers: []distribution.Descriptor{
+			Layers: []v1.Descriptor{
 				{
 					Digest:    layer.Digest,
 					Size:      1,

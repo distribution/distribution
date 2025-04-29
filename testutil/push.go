@@ -7,6 +7,7 @@ import (
 
 	"github.com/distribution/distribution/v3"
 	"github.com/opencontainers/go-digest"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 // PushBlob pushes a blob with the given digest to the given repository.
@@ -28,7 +29,7 @@ func PushBlob(ctx context.Context, repository distribution.Repository, blobReade
 		return fmt.Errorf("unexpected error uploading: %v", err)
 	}
 
-	if _, err := wr.Commit(ctx, distribution.Descriptor{Digest: dgst}); err != nil {
+	if _, err := wr.Commit(ctx, v1.Descriptor{Digest: dgst}); err != nil {
 		return fmt.Errorf("unexpected error finishing upload: %v", err)
 	}
 

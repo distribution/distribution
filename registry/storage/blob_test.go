@@ -16,6 +16,7 @@ import (
 	"github.com/distribution/distribution/v3/testutil"
 	"github.com/distribution/reference"
 	"github.com/opencontainers/go-digest"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 // TestWriteSeek tests that the current file size can be
@@ -116,7 +117,7 @@ func TestSimpleBlobUpload(t *testing.T) {
 	}
 
 	if nn != randomDataSize {
-		t.Fatalf("layer data write incomplete")
+		t.Fatal("layer data write incomplete")
 	}
 
 	blobUpload.Close()
@@ -133,7 +134,7 @@ func TestSimpleBlobUpload(t *testing.T) {
 	}
 
 	sha256Digest := digest.NewDigest("sha256", h)
-	desc, err := blobUpload.Commit(ctx, distribution.Descriptor{Digest: dgst})
+	desc, err := blobUpload.Commit(ctx, v1.Descriptor{Digest: dgst})
 	if err != nil {
 		t.Fatalf("unexpected error finishing layer upload: %v", err)
 	}
@@ -173,7 +174,7 @@ func TestSimpleBlobUpload(t *testing.T) {
 	}
 
 	if nn != randomDataSize {
-		t.Fatalf("incorrect read length")
+		t.Fatal("incorrect read length")
 	}
 
 	if digest.NewDigest("sha256", h) != sha256Digest {
@@ -183,7 +184,7 @@ func TestSimpleBlobUpload(t *testing.T) {
 	// Delete a blob
 	err = bs.Delete(ctx, desc.Digest)
 	if err != nil {
-		t.Fatalf("Unexpected error deleting blob")
+		t.Fatal("Unexpected error deleting blob")
 	}
 
 	d, err := bs.Stat(ctx, desc.Digest)
@@ -200,7 +201,7 @@ func TestSimpleBlobUpload(t *testing.T) {
 
 	_, err = bs.Open(ctx, desc.Digest)
 	if err == nil {
-		t.Fatalf("unexpected success opening deleted blob for read")
+		t.Fatal("unexpected success opening deleted blob for read")
 	}
 
 	switch err {
@@ -285,7 +286,7 @@ func TestSimpleBlobRead(t *testing.T) {
 		t.Fatalf("error getting seeker size for random layer: %v", err)
 	}
 
-	descBefore := distribution.Descriptor{Digest: dgst, MediaType: "application/octet-stream", Size: randomLayerSize}
+	descBefore := v1.Descriptor{Digest: dgst, MediaType: "application/octet-stream", Size: randomLayerSize}
 	t.Logf("desc: %v", descBefore)
 
 	desc, err = addBlob(ctx, bs, descBefore, randomLayerReader)
@@ -350,7 +351,7 @@ func TestSimpleBlobRead(t *testing.T) {
 	}
 
 	if !bytes.Equal(p, randomLayerData) {
-		t.Fatalf("layer data not equal")
+		t.Fatal("layer data not equal")
 	}
 }
 
@@ -398,7 +399,7 @@ func TestBlobMount(t *testing.T) {
 		t.Fatalf("unexpected error uploading layer data: %v", err)
 	}
 
-	desc, err := blobUpload.Commit(ctx, distribution.Descriptor{Digest: dgst})
+	desc, err := blobUpload.Commit(ctx, v1.Descriptor{Digest: dgst})
 	if err != nil {
 		t.Fatalf("unexpected error finishing layer upload: %v", err)
 	}
@@ -462,7 +463,7 @@ func TestBlobMount(t *testing.T) {
 	}
 
 	if nn != randomDataSize {
-		t.Fatalf("incorrect read length")
+		t.Fatal("incorrect read length")
 	}
 
 	if digest.NewDigest("sha256", h) != dgst {
@@ -472,7 +473,7 @@ func TestBlobMount(t *testing.T) {
 	// Delete the blob from the source repo
 	err = sbs.Delete(ctx, desc.Digest)
 	if err != nil {
-		t.Fatalf("Unexpected error deleting blob")
+		t.Fatal("Unexpected error deleting blob")
 	}
 
 	_, err = bs.Stat(ctx, desc.Digest)
@@ -495,7 +496,7 @@ func TestBlobMount(t *testing.T) {
 	// Delete the blob from the dest repo
 	err = bs.Delete(ctx, desc.Digest)
 	if err != nil {
-		t.Fatalf("Unexpected error deleting blob")
+		t.Fatal("Unexpected error deleting blob")
 	}
 
 	d, err = bs.Stat(ctx, desc.Digest)
@@ -555,7 +556,7 @@ func simpleUpload(t *testing.T, bs distribution.BlobIngester, blob []byte, expec
 		t.Fatalf("digest not as expected: %v != %v", dgst, expectedDigest)
 	}
 
-	desc, err := wr.Commit(ctx, distribution.Descriptor{Digest: dgst})
+	desc, err := wr.Commit(ctx, v1.Descriptor{Digest: dgst})
 	if err != nil {
 		t.Fatalf("unexpected error committing write: %v", err)
 	}
@@ -593,18 +594,18 @@ func seekerSize(seeker io.ReadSeeker) (int64, error) {
 
 // addBlob simply consumes the reader and inserts into the blob service,
 // returning a descriptor on success.
-func addBlob(ctx context.Context, bs distribution.BlobIngester, desc distribution.Descriptor, rd io.Reader) (distribution.Descriptor, error) {
+func addBlob(ctx context.Context, bs distribution.BlobIngester, desc v1.Descriptor, rd io.Reader) (v1.Descriptor, error) {
 	wr, err := bs.Create(ctx)
 	if err != nil {
-		return distribution.Descriptor{}, err
+		return v1.Descriptor{}, err
 	}
 	// nolint:errcheck
 	defer wr.Cancel(ctx)
 
 	if nn, err := io.Copy(wr, rd); err != nil {
-		return distribution.Descriptor{}, err
+		return v1.Descriptor{}, err
 	} else if nn != desc.Size {
-		return distribution.Descriptor{}, fmt.Errorf("incorrect number of bytes copied: %v != %v", nn, desc.Size)
+		return v1.Descriptor{}, fmt.Errorf("incorrect number of bytes copied: %v != %v", nn, desc.Size)
 	}
 
 	return wr.Commit(ctx, desc)

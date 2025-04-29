@@ -179,7 +179,7 @@ func TestHTTPSink(t *testing.T) {
 			}
 		} else {
 			if err == nil {
-				t.Fatalf("the endpoint should have rejected the request")
+				t.Fatal("the endpoint should have rejected the request")
 			}
 			t.Logf("write error: %v", err)
 		}

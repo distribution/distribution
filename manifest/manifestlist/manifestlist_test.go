@@ -8,7 +8,6 @@ import (
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/manifest/schema2"
-
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
@@ -43,7 +42,7 @@ const expectedManifestListSerialization = `{
 func makeTestManifestList(t *testing.T, mediaType string) ([]ManifestDescriptor, *DeserializedManifestList) {
 	manifestDescriptors := []ManifestDescriptor{
 		{
-			Descriptor: distribution.Descriptor{
+			Descriptor: v1.Descriptor{
 				MediaType: "application/vnd.docker.distribution.manifest.v2+json",
 				Digest:    "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
 				Size:      985,
@@ -55,7 +54,7 @@ func makeTestManifestList(t *testing.T, mediaType string) ([]ManifestDescriptor,
 			},
 		},
 		{
-			Descriptor: distribution.Descriptor{
+			Descriptor: v1.Descriptor{
 				MediaType: "application/vnd.docker.distribution.manifest.v2+json",
 				Digest:    "sha256:6346340964309634683409684360934680934608934608934608934068934608",
 				Size:      2392,
@@ -146,7 +145,7 @@ func mediaTypeTest(contentType string, mediaType string, shouldError bool) func(
 
 		if shouldError {
 			if err == nil {
-				t.Fatalf("bad content type should have produced error")
+				t.Fatal("bad content type should have produced error")
 			}
 		} else {
 			if err != nil {
@@ -178,12 +177,12 @@ func TestMediaTypes(t *testing.T) {
 
 func TestValidateManifestList(t *testing.T) {
 	manifest := schema2.Manifest{
-		Config: distribution.Descriptor{Size: 1},
-		Layers: []distribution.Descriptor{{Size: 2}},
+		Config: v1.Descriptor{Size: 1},
+		Layers: []v1.Descriptor{{Size: 2}},
 	}
 	manifestList := ManifestList{
 		Manifests: []ManifestDescriptor{
-			{Descriptor: distribution.Descriptor{Size: 3}},
+			{Descriptor: v1.Descriptor{Size: 3}},
 		},
 	}
 	t.Run("valid", func(t *testing.T) {

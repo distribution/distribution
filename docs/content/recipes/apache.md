@@ -178,7 +178,7 @@ apache:
     - `pwd`/auth:/usr/local/apache2/conf
 
 registry:
-  image: registry:2
+  image: registry:3
   ports:
     - 127.0.0.1:5000:5000
   volumes:
@@ -192,7 +192,7 @@ EOF
 Now, start your stack:
 
 ```console
-$ docker-compose up -d
+$ docker compose up -d
 ```
 
 Log in with a "push" authorized user (using `testuserpush` and `testpasswordpush`), then tag and push your first image:

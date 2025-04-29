@@ -16,16 +16,7 @@ import (
 // configStruct is a canonical example configuration, which should map to configYamlV0_1
 var configStruct = Configuration{
 	Version: "0.1",
-	Log: struct {
-		AccessLog struct {
-			Disabled bool `yaml:"disabled,omitempty"`
-		} `yaml:"accesslog,omitempty"`
-		Level        Loglevel               `yaml:"level,omitempty"`
-		Formatter    string                 `yaml:"formatter,omitempty"`
-		Fields       map[string]interface{} `yaml:"fields,omitempty"`
-		Hooks        []LogHook              `yaml:"hooks,omitempty"`
-		ReportCaller bool                   `yaml:"reportcaller,omitempty"`
-	}{
+	Log: Log{
 		Level:  "info",
 		Fields: map[string]interface{}{"environment": "test"},
 	},
@@ -69,68 +60,18 @@ var configStruct = Configuration{
 	Catalog: Catalog{
 		MaxEntries: 1000,
 	},
-	HTTP: struct {
-		Addr         string        `yaml:"addr,omitempty"`
-		Net          string        `yaml:"net,omitempty"`
-		Host         string        `yaml:"host,omitempty"`
-		Prefix       string        `yaml:"prefix,omitempty"`
-		Secret       string        `yaml:"secret,omitempty"`
-		RelativeURLs bool          `yaml:"relativeurls,omitempty"`
-		DrainTimeout time.Duration `yaml:"draintimeout,omitempty"`
-		TLS          struct {
-			Certificate  string   `yaml:"certificate,omitempty"`
-			Key          string   `yaml:"key,omitempty"`
-			ClientCAs    []string `yaml:"clientcas,omitempty"`
-			MinimumTLS   string   `yaml:"minimumtls,omitempty"`
-			CipherSuites []string `yaml:"ciphersuites,omitempty"`
-			LetsEncrypt  struct {
-				CacheFile    string   `yaml:"cachefile,omitempty"`
-				Email        string   `yaml:"email,omitempty"`
-				Hosts        []string `yaml:"hosts,omitempty"`
-				DirectoryURL string   `yaml:"directoryurl,omitempty"`
-			} `yaml:"letsencrypt,omitempty"`
-		} `yaml:"tls,omitempty"`
-		Headers http.Header `yaml:"headers,omitempty"`
-		Debug   struct {
-			Addr       string `yaml:"addr,omitempty"`
-			Prometheus struct {
-				Enabled bool   `yaml:"enabled,omitempty"`
-				Path    string `yaml:"path,omitempty"`
-			} `yaml:"prometheus,omitempty"`
-		} `yaml:"debug,omitempty"`
-		HTTP2 struct {
-			Disabled bool `yaml:"disabled,omitempty"`
-		} `yaml:"http2,omitempty"`
-		H2C struct {
-			Enabled bool `yaml:"enabled,omitempty"`
-		} `yaml:"h2c,omitempty"`
-	}{
-		TLS: struct {
-			Certificate  string   `yaml:"certificate,omitempty"`
-			Key          string   `yaml:"key,omitempty"`
-			ClientCAs    []string `yaml:"clientcas,omitempty"`
-			MinimumTLS   string   `yaml:"minimumtls,omitempty"`
-			CipherSuites []string `yaml:"ciphersuites,omitempty"`
-			LetsEncrypt  struct {
-				CacheFile    string   `yaml:"cachefile,omitempty"`
-				Email        string   `yaml:"email,omitempty"`
-				Hosts        []string `yaml:"hosts,omitempty"`
-				DirectoryURL string   `yaml:"directoryurl,omitempty"`
-			} `yaml:"letsencrypt,omitempty"`
-		}{
-			ClientCAs: []string{"/path/to/ca.pem"},
+	HTTP: HTTP{
+		TLS: TLS{
+			ClientCAs:  []string{"/path/to/ca.pem"},
+			ClientAuth: ClientAuthVerifyClientCertIfGiven,
 		},
 		Headers: http.Header{
 			"X-Content-Type-Options": []string{"nosniff"},
 		},
-		HTTP2: struct {
-			Disabled bool `yaml:"disabled,omitempty"`
-		}{
+		HTTP2: HTTP2{
 			Disabled: false,
 		},
-		H2C: struct {
-			Enabled bool `yaml:"enabled,omitempty"`
-		}{
+		H2C: H2C{
 			Enabled: true,
 		},
 	},
@@ -202,6 +143,7 @@ http:
   tls:
     clientcas:
       - /path/to/ca.pem
+    clientauth: verify-client-cert-if-given
   headers:
     X-Content-Type-Options: [nosniff]
 redis:
@@ -297,6 +239,7 @@ func (suite *ConfigSuite) TestParseInmemory() {
 	suite.expectedConfig.Storage = Storage{"inmemory": Parameters{}}
 	suite.expectedConfig.Log.Fields = nil
 	suite.expectedConfig.HTTP.TLS.ClientCAs = nil
+	suite.expectedConfig.HTTP.TLS.ClientAuth = ""
 	suite.expectedConfig.Redis = Redis{}
 
 	config, err := Parse(bytes.NewReader([]byte(inmemoryConfigYamlV0_1)))
@@ -318,6 +261,7 @@ func (suite *ConfigSuite) TestParseIncomplete() {
 	suite.expectedConfig.Notifications = Notifications{}
 	suite.expectedConfig.HTTP.Headers = nil
 	suite.expectedConfig.HTTP.TLS.ClientCAs = nil
+	suite.expectedConfig.HTTP.TLS.ClientAuth = ""
 	suite.expectedConfig.Redis = Redis{}
 	suite.expectedConfig.Validation.Manifests.Indexes.Platforms = ""
 
@@ -590,6 +534,7 @@ func copyConfig(config Configuration) *Configuration {
 	}
 	configCopy.HTTP.TLS.ClientCAs = make([]string, 0, len(config.HTTP.TLS.ClientCAs))
 	configCopy.HTTP.TLS.ClientCAs = append(configCopy.HTTP.TLS.ClientCAs, config.HTTP.TLS.ClientCAs...)
+	configCopy.HTTP.TLS.ClientAuth = config.HTTP.TLS.ClientAuth
 
 	configCopy.Redis = config.Redis
 	configCopy.Redis.TLS.Certificate = config.Redis.TLS.Certificate

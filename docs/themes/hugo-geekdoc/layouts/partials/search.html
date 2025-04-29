@@ -8,7 +8,7 @@
       placeholder="{{ i18n "form_placeholder_search" }}..."
       aria-label="{{ i18n "form_placeholder_search" }}"
       maxlength="64"
-      data-site-base-url="{{ .Site.BaseURL }}"
+      data-site-base-url="{{ "" | absURL }}"
       data-site-lang="{{ .Site.Language.Lang }}"
     />
     <ul id="gdoc-search-results" class="gdoc-search__list"></ul>

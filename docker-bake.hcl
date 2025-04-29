@@ -61,7 +61,8 @@ target "artifact-all" {
     "linux/arm/v7",
     "linux/arm64",
     "linux/ppc64le",
-    "linux/s390x"
+    "linux/s390x",
+    "linux/riscv64"
   ]
 }
 
@@ -87,7 +88,8 @@ target "image-all" {
     "linux/arm/v7",
     "linux/arm64",
     "linux/ppc64le",
-    "linux/s390x"
+    "linux/s390x",
+    "linux/riscv64"
   ]
 }
 

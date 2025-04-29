@@ -93,7 +93,7 @@ func newDriverConstructor(tb testing.TB) testsuites.DriverConstructor {
 
 func TestGCSDriverSuite(t *testing.T) {
 	skipCheck(t)
-	testsuites.Driver(t, newDriverConstructor(t))
+	testsuites.Driver(t, newDriverConstructor(t), false)
 }
 
 func BenchmarkGCSDriverSuite(b *testing.B) {
@@ -303,6 +303,6 @@ func TestMoveDirectory(t *testing.T) {
 
 	err = driver.Move(ctx, "/parent/dir", "/parent/other")
 	if err == nil {
-		t.Fatalf("Moving directory /parent/dir /parent/other should have return a non-nil error\n")
+		t.Fatal("Moving directory /parent/dir /parent/other should have return a non-nil error")
 	}
 }

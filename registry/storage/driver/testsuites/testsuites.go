@@ -5,6 +5,7 @@ import (
 	"context"
 	crand "crypto/rand"
 	"crypto/sha256"
+	"crypto/tls"
 	"io"
 	"math/rand"
 	"net/http"
@@ -43,14 +44,16 @@ type DriverSuite struct {
 	Constructor DriverConstructor
 	Teardown    DriverTeardown
 	storagedriver.StorageDriver
-	ctx context.Context
+	ctx        context.Context
+	skipVerify bool
 }
 
 // Driver runs [DriverSuite] for the given [DriverConstructor].
-func Driver(t *testing.T, driverConstructor DriverConstructor) {
+func Driver(t *testing.T, driverConstructor DriverConstructor, skipVerify bool) {
 	suite.Run(t, &DriverSuite{
 		Constructor: driverConstructor,
 		ctx:         context.Background(),
+		skipVerify:  skipVerify,
 	})
 }
 
@@ -398,31 +401,28 @@ func (suite *DriverSuite) testContinueStreamAppend(chunkSize int64) {
 	filename := randomPath(32)
 	defer suite.deletePath(firstPart(filename))
 
-	contentsChunk1 := randomContents(chunkSize)
-	contentsChunk2 := randomContents(chunkSize)
-	contentsChunk3 := randomContents(chunkSize)
-
-	fullContents := append(append(contentsChunk1, contentsChunk2...), contentsChunk3...)
+	var fullContents bytes.Buffer
+	contents := io.TeeReader(newRandReader(chunkSize*3), &fullContents)
 
 	writer, err := suite.StorageDriver.Writer(suite.ctx, filename, false)
 	suite.Require().NoError(err)
-	nn, err := io.Copy(writer, bytes.NewReader(contentsChunk1))
+	nn, err := io.CopyN(writer, contents, chunkSize)
 	suite.Require().NoError(err)
-	suite.Require().Equal(int64(len(contentsChunk1)), nn)
+	suite.Require().Equal(chunkSize, nn)
 
 	err = writer.Close()
 	suite.Require().NoError(err)
 
 	curSize := writer.Size()
-	suite.Require().Equal(int64(len(contentsChunk1)), curSize)
+	suite.Require().Equal(chunkSize, curSize)
 
 	writer, err = suite.StorageDriver.Writer(suite.ctx, filename, true)
 	suite.Require().NoError(err)
 	suite.Require().Equal(curSize, writer.Size())
 
-	nn, err = io.Copy(writer, bytes.NewReader(contentsChunk2))
+	nn, err = io.CopyN(writer, contents, chunkSize)
 	suite.Require().NoError(err)
-	suite.Require().Equal(int64(len(contentsChunk2)), nn)
+	suite.Require().Equal(chunkSize, nn)
 
 	err = writer.Close()
 	suite.Require().NoError(err)
@@ -434,9 +434,9 @@ func (suite *DriverSuite) testContinueStreamAppend(chunkSize int64) {
 	suite.Require().NoError(err)
 	suite.Require().Equal(curSize, writer.Size())
 
-	nn, err = io.Copy(writer, bytes.NewReader(fullContents[curSize:]))
+	nn, err = io.CopyN(writer, contents, chunkSize)
 	suite.Require().NoError(err)
-	suite.Require().Equal(int64(len(fullContents[curSize:])), nn)
+	suite.Require().Equal(chunkSize, nn)
 
 	err = writer.Commit(context.Background())
 	suite.Require().NoError(err)
@@ -445,7 +445,7 @@ func (suite *DriverSuite) testContinueStreamAppend(chunkSize int64) {
 
 	received, err := suite.StorageDriver.GetContent(suite.ctx, filename)
 	suite.Require().NoError(err)
-	suite.Require().Equal(fullContents, received)
+	suite.Require().Equal(fullContents.Bytes(), received)
 }
 
 // TestReadNonexistentStream tests that reading a stream for a nonexistent path
@@ -742,7 +742,19 @@ func (suite *DriverSuite) TestRedirectURL() {
 	}
 	suite.Require().NoError(err)
 
-	response, err := http.Get(url)
+	client := http.DefaultClient
+	if suite.skipVerify {
+		httpTransport := http.DefaultTransport.(*http.Transport).Clone()
+		httpTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		client = &http.Client{
+			Transport: httpTransport,
+		}
+	}
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	suite.Require().NoError(err)
+
+	response, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer response.Body.Close()
 
@@ -756,7 +768,10 @@ func (suite *DriverSuite) TestRedirectURL() {
 	}
 	suite.Require().NoError(err)
 
-	response, err = http.Head(url)
+	req, err = http.NewRequest(http.MethodHead, url, nil)
+	suite.Require().NoError(err)
+
+	response, err = client.Do(req)
 	suite.Require().NoError(err)
 	defer response.Body.Close()
 	suite.Require().Equal(200, response.StatusCode)
@@ -1326,7 +1341,7 @@ func (suite *DriverSuite) writeReadCompareStreams(filename string, contents []by
 
 var (
 	filenameChars  = []byte("abcdefghijklmnopqrstuvwxyz0123456789")
-	separatorChars = []byte("._-")
+	separatorChars = []byte("-")
 )
 
 func randomPath(length int64) string {

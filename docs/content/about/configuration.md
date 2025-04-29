@@ -35,6 +35,23 @@ REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/somewhere
 This variable overrides the `/var/lib/registry` value to the `/somewhere`
 directory.
 
+In order to override elements of a list, provide the index of the element
+you wish to change as part of the path to that element. For example, to
+configure the `hosts` list under `letsencrypt`:
+
+```yaml
+http:
+  tls:
+    letsencrypt:
+      hosts: [myregistryaddress.org]
+```
+
+The corresponding environment variable would be:
+
+```sh
+REGISTRY_HTTP_TLS_LETSENCRYPT_HOSTS_0=registry.example.com
+```
+
 > **Note**: Create a base configuration file with environment variables that can
 > be configured to tweak individual values. Overriding configuration sections
 > with environment variables is not recommended.
@@ -51,7 +68,7 @@ specify it in the `docker run` command:
 ```bash
 $ docker run -d -p 5000:5000 --restart=always --name registry \
              -v `pwd`/config.yml:/etc/distribution/config.yml \
-             registry:2
+             registry:3
 ```
 
 Use this
@@ -103,8 +120,8 @@ storage:
       clientid: client_id_string
       tenantid: tenant_id_string
       secret: secret_string
-    copy_status_poll_max_retry: 10
-    copy_status_poll_delay: 100ms
+    max_retries: 10
+    retry_delay: 100ms
   gcs:
     bucket: bucketname
     keyfile: /path/to/keyfile
@@ -212,6 +229,7 @@ http:
     clientcas:
       - /path/to/ca.pem
       - /path/to/another/ca.pem
+    clientauth: require-and-verify-client-cert
     letsencrypt:
       cachefile: /path/to/cache-file
       email: emailused@letsencrypt.com
@@ -288,6 +306,9 @@ proxy:
   remoteurl: https://registry-1.docker.io
   username: [username]
   password: [password]
+  exec:
+    command: docker-credential-helper
+    lifetime: 1h
   ttl: 168h
 validation:
   manifests:
@@ -666,6 +687,11 @@ Default `signingalgorithms`:
 - PS384
 - PS512
 
+Additional notes on `rootcertbundle`:
+
+- The public key of this certificate will be automatically added to the list of known keys.
+- The public key will be identified by its JWK Thumbprint. See [RFC 7638](https://datatracker.ietf.org/doc/html/rfc7638) and [RFC 8037](https://datatracker.ietf.org/doc/html/rfc8037) for reference.
+
 For more information about Token based authentication configuration, see the
 [specification](../spec/auth/token.md).
 
@@ -783,6 +809,7 @@ http:
     clientcas:
       - /path/to/ca.pem
       - /path/to/another/ca.pem
+    clientauth: require-and-verify-client-cert
     minimumtls: tls1.2
     ciphersuites:
       - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
@@ -823,13 +850,14 @@ for the server. If you already have a web server running on
 the same host as the registry, you may prefer to configure TLS on that web server
 and proxy connections to the registry server.
 
-| Parameter | Required | Description                                           |
-|-----------|----------|-------------------------------------------------------|
-| `certificate`  | yes  | Absolute path to the x509 certificate file.           |
-| `key`          | yes  | Absolute path to the x509 private key file.           |
-| `clientcas`    | no   | An array of absolute paths to x509 CA files.          |
-| `minimumtls`   | no   | Minimum TLS version allowed (tls1.0, tls1.1, tls1.2, tls1.3). Defaults to tls1.2 |
-| `ciphersuites` | no   | Cipher suites allowed. Please see below for allowed values and default. |
+| Parameter      | Required | Description                                                                                                                                                                                                                                                                                                                                                                                        |
+|----------------|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `certificate`  | yes  | Absolute path to the x509 certificate file.                                                                                                                                                                                                                                                                                                                                                        |
+| `key`          | yes  | Absolute path to the x509 private key file.                                                                                                                                                                                                                                                                                                                                                        |
+| `clientcas`    | no   | An array of absolute paths to x509 CA files.                                                                                                                                                                                                                                                                                                                                                       |
+| `clientauth`   | no   | Client certificate authentication mode. This setting determines how the server handles client certificates during the TLS handshake. If clientcas is not provided, TLS Client Authentication is disabled, and the mode is ignored. Allowed (request-client-cert, require-any-client-cert, verify-client-cert-if-given, require-and-verify-client-cert). Defaults to require-and-verify-client-cert |
+| `minimumtls`   | no   | Minimum TLS version allowed (tls1.0, tls1.1, tls1.2, tls1.3). Defaults to tls1.2                                                                                                                                                                                                                                                                                                                   |
+| `ciphersuites` | no   | Cipher suites allowed. Please see below for allowed values and default.                                                                                                                                                                                                                                                                                                                            |
 
 Available cipher suites:
 - TLS_RSA_WITH_RC4_128_SHA
@@ -1160,7 +1188,7 @@ proxy:
 ```
 
 The `proxy` structure allows a registry to be configured as a pull-through cache
-to Docker Hub. See
+to an upstream registry such as Docker Hub. See
 [mirror](../recipes/mirror.md)
 for more information. Pushing to a registry configured as a pull-through cache
 is unsupported.
@@ -1168,13 +1196,28 @@ is unsupported.
 | Parameter | Required | Description                                           |
 |-----------|----------|-------------------------------------------------------|
 | `remoteurl`| yes     | The URL for the repository on Docker Hub.             |
-| `username` | no      | The username registered with Docker Hub which has access to the repository. |
-| `password` | no      | The password used to authenticate to Docker Hub using the username specified in `username`. |
 | `ttl`      | no      | Expire proxy cache configured in "storage" after this time. Cache 168h(7 days) by default, set to 0 to disable cache expiration, The suffix is one of `ns`, `us`, `ms`, `s`, `m`, or `h`. If you specify a value but omit the suffix, the value is interpreted as a number of nanoseconds. |
 
+To enable pulling private repositories (e.g. `batman/robin`), specify one of the
+following authentication methods for the pull-through cache to authenticate with
+the upstream registry via the [v2 Distribution registry authentication
+scheme](https://distribution.github.io/distribution/spec/auth/token/).]
 
-To enable pulling private repositories (e.g. `batman/robin`) specify the
-username (such as `batman`) and the password for that username.
+### `username` and `password`
+
+The username and password used to authenticate with the upstream registry to
+access the private repositories.
+
+### `exec`
+
+Run a custom exec-based [Docker credential helper](https://github.com/docker/docker-credential-helpers)
+to retrieve the credentials to authenticate with the upstream registry.
+
+| Parameter | Required | Description                                           |
+|-----------|----------|-------------------------------------------------------|
+| `command` | yes      | The command to execute.                               |
+| `lifetime`| no       | The expiry period of the credentials. The credentials returned by the command is reused through the configured lifetime, then the command will be re-executed to retrieve new credentials. If set to zero, the command will be executed for every request. If not set, the command will only be executed once. |
+
 
 > **Note**: These private repositories are stored in the proxy cache's storage.
 > Take appropriate measures to protect access to the proxy cache.
@@ -1232,6 +1275,7 @@ By default the registry will validate that all platform images exist when an ima
 index is uploaded to the registry. Disabling this validatation is experimental
 because other tooling that uses the registry may expect the image index to be complete.
 
+```yaml
 validation:
   manifests:
     indexes:
@@ -1239,6 +1283,7 @@ validation:
       platformlist:
       - os: linux
         architecture: amd64
+```
 
 Use these settings to configure what validation the registry performs on image
 index manifests uploaded to the registry.

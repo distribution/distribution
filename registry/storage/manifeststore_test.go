@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"reflect"
 	"testing"
@@ -96,12 +97,12 @@ func testManifestStorage(t *testing.T, options ...RegistryOption) {
 	m := &schema2.Manifest{
 		Versioned: specs.Versioned{SchemaVersion: 2},
 		MediaType: schema2.MediaTypeManifest,
-		Config: distribution.Descriptor{
+		Config: v1.Descriptor{
 			Digest:    digest.FromBytes(sampleConfig),
 			Size:      int64(len(sampleConfig)),
 			MediaType: schema2.MediaTypeImageConfig,
 		},
-		Layers: []distribution.Descriptor{},
+		Layers: []v1.Descriptor{},
 	}
 
 	// Build up some test layers and add them to the manifest, saving the
@@ -110,11 +111,11 @@ func testManifestStorage(t *testing.T, options ...RegistryOption) {
 	for i := 0; i < 2; i++ {
 		rs, dgst, err := testutil.CreateRandomTarFile()
 		if err != nil {
-			t.Fatalf("unexpected error generating test layer file")
+			t.Fatal("unexpected error generating test layer file")
 		}
 
 		testLayers[dgst] = rs
-		layer := distribution.Descriptor{
+		layer := v1.Descriptor{
 			Digest:    dgst,
 			Size:      6323,
 			MediaType: schema2.MediaTypeLayer,
@@ -133,10 +134,10 @@ func testManifestStorage(t *testing.T, options ...RegistryOption) {
 			t.Fatalf("unexpected error copying to upload: %v", err)
 		}
 
-		if _, err := wr.Commit(env.ctx, distribution.Descriptor{Digest: dgst}); err != nil {
+		if _, err := wr.Commit(env.ctx, v1.Descriptor{Digest: dgst}); err != nil {
 			t.Fatalf("unexpected error finishing upload: %v", err)
 		}
-		if err := builder.AppendReference(distribution.Descriptor{Digest: dgst, MediaType: schema2.MediaTypeLayer}); err != nil {
+		if err := builder.AppendReference(v1.Descriptor{Digest: dgst, MediaType: schema2.MediaTypeLayer}); err != nil {
 			t.Fatalf("unexpected error appending references: %v", err)
 		}
 	}
@@ -157,7 +158,7 @@ func testManifestStorage(t *testing.T, options ...RegistryOption) {
 	}
 
 	if !exists {
-		t.Fatalf("manifest should exist")
+		t.Fatal("manifest should exist")
 	}
 
 	fromStore, err := ms.Get(ctx, manifestDigest)
@@ -167,7 +168,7 @@ func testManifestStorage(t *testing.T, options ...RegistryOption) {
 
 	fetchedManifest, ok := fromStore.(*schema2.DeserializedManifest)
 	if !ok {
-		t.Fatalf("unexpected manifest type from signedstore")
+		t.Fatal("unexpected manifest type from signedstore")
 	}
 	_, pl, err := fetchedManifest.Payload()
 	if err != nil {
@@ -194,7 +195,7 @@ func testManifestStorage(t *testing.T, options ...RegistryOption) {
 
 	byDigestManifest, ok := fetchedByDigest.(*schema2.DeserializedManifest)
 	if !ok {
-		t.Fatalf("unexpected manifest type from signedstore")
+		t.Fatal("unexpected manifest type from signedstore")
 	}
 
 	_, byDigestCanonical, err := byDigestManifest.Payload()
@@ -222,7 +223,7 @@ func testManifestStorage(t *testing.T, options ...RegistryOption) {
 	}
 
 	if !bytes.Equal(receivedPL, pl) {
-		t.Fatalf("payloads are not equal")
+		t.Fatal("payloads are not equal")
 	}
 
 	// Test deleting manifests
@@ -233,7 +234,7 @@ func testManifestStorage(t *testing.T, options ...RegistryOption) {
 
 	exists, err = ms.Exists(ctx, dgst)
 	if err != nil {
-		t.Fatalf("Error querying manifest existence")
+		t.Fatal("Error querying manifest existence")
 	}
 	if exists {
 		t.Errorf("Deleted manifest should not exist")
@@ -262,7 +263,7 @@ func testManifestStorage(t *testing.T, options ...RegistryOption) {
 
 	exists, err = ms.Exists(ctx, dgst)
 	if err != nil {
-		t.Fatalf("Error querying manifest existence")
+		t.Fatal("Error querying manifest existence")
 	}
 	if !exists {
 		t.Errorf("Restored manifest should exist")
@@ -336,7 +337,7 @@ func testOCIManifestStorage(t *testing.T, testname string, includeMediaTypes boo
 		OS:           "CP/M",
 	}
 
-	mfstDescriptors := []distribution.Descriptor{
+	mfstDescriptors := []v1.Descriptor{
 		createOciManifestDescriptor(t, testname, mfst, platformSpec),
 	}
 
@@ -460,7 +461,7 @@ func TestIndexManifestStorageWithoutImageCheck(t *testing.T) {
 		OS:           "CP/M",
 	}
 
-	ociManifestDescriptors := []distribution.Descriptor{
+	ociManifestDescriptors := []v1.Descriptor{
 		createOciManifestDescriptor(t, t.Name(), manifest, ociPlatformSpec),
 	}
 
@@ -547,7 +548,7 @@ func TestIndexManifestStorageWithSelectivePlatforms(t *testing.T) {
 		OS:           "CP/M",
 	}
 
-	manifestDescriptors := []distribution.Descriptor{
+	manifestDescriptors := []v1.Descriptor{
 		createOciManifestDescriptor(t, t.Name(), amdManifest, amdPlatformSpec),
 		createOciManifestDescriptor(t, t.Name(), armManifest, armPlatformSpec),
 		createOciManifestDescriptor(t, t.Name(), atariManifest, atariPlatformSpec),
@@ -616,11 +617,11 @@ func createRandomImage(t *testing.T, testname string, imageMediaType string, blo
 			t.Fatalf("%s: unexpected error copying to upload: %v", testname, err)
 		}
 
-		if _, err := wr.Commit(ctx, distribution.Descriptor{Digest: dgst}); err != nil {
+		if _, err := wr.Commit(ctx, v1.Descriptor{Digest: dgst}); err != nil {
 			t.Fatalf("%s: unexpected error finishing upload: %v", testname, err)
 		}
 
-		if err := builder.AppendReference(distribution.Descriptor{Digest: dgst, MediaType: v1.MediaTypeImageLayer}); err != nil {
+		if err := builder.AppendReference(v1.Descriptor{Digest: dgst, MediaType: v1.MediaTypeImageLayer}); err != nil {
 			t.Fatalf("%s unexpected error appending references: %v", testname, err)
 		}
 	}
@@ -629,14 +630,14 @@ func createRandomImage(t *testing.T, testname string, imageMediaType string, blo
 }
 
 // createOciManifestDescriptor builds a manifest descriptor from a manifest and a platform descriptor
-func createOciManifestDescriptor(t *testing.T, testname string, manifest distribution.Manifest, platformSpec *v1.Platform) distribution.Descriptor {
+func createOciManifestDescriptor(t *testing.T, testname string, manifest distribution.Manifest, platformSpec *v1.Platform) v1.Descriptor {
 	manifestMediaType, manifestPayload, err := manifest.Payload()
 	if err != nil {
 		t.Fatalf("%s: unexpected error getting manifest payload: %v", testname, err)
 	}
 	manifestDigest := digest.FromBytes(manifestPayload)
 
-	return distribution.Descriptor{
+	return v1.Descriptor{
 		Digest:    manifestDigest,
 		Size:      int64(len(manifestPayload)),
 		MediaType: manifestMediaType,
@@ -656,7 +657,7 @@ func createManifestListDescriptor(t *testing.T, testname string, manifest distri
 	manifestDigest := digest.FromBytes(manifestPayload)
 
 	return manifestlist.ManifestDescriptor{
-		Descriptor: distribution.Descriptor{
+		Descriptor: v1.Descriptor{
 			Digest:    manifestDigest,
 			Size:      int64(len(manifestPayload)),
 			MediaType: manifestMediaType,
@@ -701,7 +702,7 @@ func TestLinkPathFuncs(t *testing.T) {
 	}
 }
 
-func ociIndexFromDesriptorsWithMediaType(descriptors []distribution.Descriptor, mediaType string) (*ocischema.DeserializedImageIndex, error) {
+func ociIndexFromDesriptorsWithMediaType(descriptors []v1.Descriptor, mediaType string) (*ocischema.DeserializedImageIndex, error) {
 	manifest, err := ocischema.FromDescriptors(descriptors, nil)
 	if err != nil {
 		return nil, err
@@ -719,4 +720,155 @@ func ociIndexFromDesriptorsWithMediaType(descriptors []distribution.Descriptor, 
 	}
 
 	return &d, nil
+}
+
+func TestManifestStorageCache(t *testing.T) {
+	repoName, _ := reference.WithName("foo/bar")
+	cacheProvider := memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)
+	repositoryScopedCacheProvider, err := cacheProvider.RepositoryScoped(repoName.String())
+	if err != nil {
+		t.Fatalf("unexpected error getting repository scoped cache: %v", err)
+	}
+	env := newManifestStoreTestEnv(t, repoName, "thetag", BlobDescriptorCacheProvider(cacheProvider), EnableDelete)
+	ctx := context.Background()
+	ms, err := env.repository.Manifests(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Push a config, and reference it in the manifest
+	sampleConfig := []byte(`{
+		"architecture": "amd64",
+		"history": [
+		  {
+		    "created": "2015-10-31T22:22:54.690851953Z",
+		    "created_by": "/bin/sh -c #(nop) ADD file:a3bc1e842b69636f9df5256c49c5374fb4eef1e281fe3f282c65fb853ee171c5 in /"
+		  },
+		],
+		"rootfs": {
+		  "diff_ids": [
+		    "sha256:c6f988f4874bb0add23a778f753c65efe992244e148a1d2ec2a8b664fb66bbd1",
+		  ],
+		  "type": "layers"
+		}
+	}`)
+
+	// Build a manifest and store it and its layers in the registry
+
+	blobStore := env.repository.Blobs(ctx)
+	d, err := blobStore.Put(ctx, schema2.MediaTypeImageConfig, sampleConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	builder := schema2.NewManifestBuilder(d, sampleConfig)
+
+	m := &schema2.Manifest{
+		Versioned: specs.Versioned{SchemaVersion: 2},
+		MediaType: schema2.MediaTypeManifest,
+		Config: v1.Descriptor{
+			Digest:    digest.FromBytes(sampleConfig),
+			Size:      int64(len(sampleConfig)),
+			MediaType: schema2.MediaTypeImageConfig,
+		},
+		Layers: []v1.Descriptor{},
+	}
+
+	// Build up some test layers and add them to the manifest, saving the
+	// readseekers for upload later.
+	testLayers := map[digest.Digest]io.ReadSeeker{}
+	for i := 0; i < 2; i++ {
+		rs, dgst, err := testutil.CreateRandomTarFile()
+		if err != nil {
+			t.Fatal("unexpected error generating test layer file")
+		}
+
+		testLayers[dgst] = rs
+		layer := v1.Descriptor{
+			Digest:    dgst,
+			Size:      6323,
+			MediaType: schema2.MediaTypeLayer,
+		}
+		m.Layers = append(m.Layers, layer)
+	}
+
+	// Now, upload the layers that were missing!
+	for dgst, rs := range testLayers {
+		wr, err := env.repository.Blobs(env.ctx).Create(env.ctx)
+		if err != nil {
+			t.Fatalf("unexpected error creating test upload: %v", err)
+		}
+
+		if _, err := io.Copy(wr, rs); err != nil {
+			t.Fatalf("unexpected error copying to upload: %v", err)
+		}
+
+		if _, err := wr.Commit(env.ctx, v1.Descriptor{Digest: dgst}); err != nil {
+			t.Fatalf("unexpected error finishing upload: %v", err)
+		}
+		if err := builder.AppendReference(v1.Descriptor{Digest: dgst, MediaType: schema2.MediaTypeLayer}); err != nil {
+			t.Fatalf("unexpected error appending references: %v", err)
+		}
+	}
+
+	sm, err := builder.Build(ctx)
+	if err != nil {
+		t.Fatalf("%s: unexpected error generating manifest: %v", repoName, err)
+	}
+
+	var manifestDigest digest.Digest
+	if manifestDigest, err = ms.Put(ctx, sm); err != nil {
+		t.Fatalf("unexpected error putting manifest: %v", err)
+	}
+
+	_, err = repositoryScopedCacheProvider.Stat(ctx, manifestDigest)
+	if err != nil {
+		t.Errorf("Manifest should be cached")
+	}
+
+	exists, err := ms.Exists(ctx, manifestDigest)
+	if err != nil {
+		t.Fatalf("unexpected error checking manifest existence: %#v", err)
+	}
+
+	if !exists {
+		t.Fatal("manifest should exist")
+	}
+
+	// Test deleting manifests
+	err = ms.Delete(ctx, manifestDigest)
+	if err != nil {
+		t.Fatalf("unexpected an error deleting manifest by digest: %v", err)
+	}
+
+	exists, err = ms.Exists(ctx, manifestDigest)
+	if err != nil {
+		t.Fatal("Error querying manifest existence")
+	}
+	if exists {
+		t.Errorf("Deleted manifest should not exist")
+	}
+
+	deletedManifest, err := ms.Get(ctx, manifestDigest)
+	if err == nil {
+		t.Errorf("Unexpected success getting deleted manifest")
+	}
+	switch err.(type) {
+	case distribution.ErrManifestUnknownRevision:
+		break
+	default:
+		t.Errorf("Unexpected error getting deleted manifest: %s", reflect.ValueOf(err).Type())
+	}
+
+	if deletedManifest != nil {
+		t.Errorf("Deleted manifest get returned non-nil")
+	}
+
+	// Test cache is cleared after manifest delete
+	_, err = repositoryScopedCacheProvider.Stat(ctx, manifestDigest)
+	if err == nil {
+		t.Errorf("Unexpected success getting deleted manifest")
+	}
+	if !errors.Is(err, distribution.ErrBlobUnknown) {
+		t.Errorf("Unexpected error getting cached manifest: %v", err)
+	}
 }

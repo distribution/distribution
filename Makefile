@@ -122,26 +122,26 @@ test-coverage: ## run unit tests and generate test coverprofiles
 		fi; \
 	done )
 
-.PHONY: test-cloud-storage
-test-cloud-storage: start-cloud-storage run-s3-tests stop-cloud-storage ## run cloud storage driver tests
+.PHONY: test-s3-storage
+test-s3-storage: start-s3-storage run-s3-tests stop-s3-storage ## run s3 storage driver tests
 
-.PHONY: start-cloud-storage
-start-cloud-storage: ## start local cloud storage (minio)
+.PHONY: start-s3-storage
+start-s3-storage: ## start local s3 storage (minio)
 	$(COMPOSE) -f tests/docker-compose-storage.yml up minio minio-init -d
 
-.PHONY: stop-cloud-storage
-stop-cloud-storage: ## stop local cloud storage (minio)
+.PHONY: stop-s3-storage
+stop-s3-storage: ## stop local s3 storage (minio)
 	$(COMPOSE) -f tests/docker-compose-storage.yml down
 
-.PHONY: reset-cloud-storage
-reset-cloud-storage: ## reset (stop, delete, start) local cloud storage (minio)
+.PHONY: reset-s3-storage
+reset-s3-storage: ## reset (stop, delete, start) local s3 storage (minio)
 	$(COMPOSE) -f tests/docker-compose-storage.yml down
 	@mkdir -p tests/miniodata/distribution
 	@rm -rf tests/miniodata/distribution/* tests/miniodata/.minio.sys
 	$(COMPOSE) -f tests/docker-compose-storage.yml up minio minio-init -d
 
 .PHONY: run-s3-tests
-run-s3-tests: start-cloud-storage ## run S3 storage driver integration tests
+run-s3-tests: start-s3-storage ## run S3 storage driver integration tests
 	AWS_ACCESS_KEY=distribution \
 	AWS_SECRET_KEY=password \
 	AWS_REGION=us-east-1 \
@@ -160,6 +160,27 @@ start-e2e-s3-env: ## starts E2E S3 storage test environment (S3, Redis, registry
 .PHONY: stop-e2e-s3-env
 stop-e2e-s3-env: ## stops E2E S3 storage test environment (S3, Redis, registry)
 	$(COMPOSE) -f tests/docker-compose-e2e-cloud-storage.yml down
+
+.PHONY: test-azure-storage
+test-azure-storage: start-azure-storage run-azure-tests stop-azure-storage ## run Azure storage driver tests
+
+.PHONY: start-azure-storage
+start-azure-storage: ## start local Azure storage (Azurite)
+	$(COMPOSE) -f tests/docker-compose-azure-blob-store.yaml up azurite azurite-init -d
+
+.PHONY: stop-azure-storage
+stop-azure-storage: ## stop local Azure storage (minio)
+	$(COMPOSE) -f tests/docker-compose-azure-blob-store.yaml down
+
+.PHONY: run-azure-tests
+run-azure-tests: start-azure-storage ## run Azure storage driver integration tests
+	AZURE_SKIP_VERIFY=true \
+	AZURE_STORAGE_CREDENTIALS_TYPE="shared_key" \
+	AZURE_STORAGE_ACCOUNT_NAME=devstoreaccount1 \
+	AZURE_STORAGE_ACCOUNT_KEY="Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==" \
+	AZURE_STORAGE_CONTAINER=containername \
+	AZURE_SERVICE_URL="https://127.0.0.1:10000/devstoreaccount1" \
+	go test ${TESTFLAGS} -count=1 ./registry/storage/driver/azure/...
 
 ##@ Validate
 

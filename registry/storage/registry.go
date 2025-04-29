@@ -261,6 +261,10 @@ func (repo *repository) Manifests(ctx context.Context, options ...distribution.M
 		linkPath:   manifestRevisionLinkPath,
 	}
 
+	if repo.descriptorCache != nil {
+		statter = cache.NewCachedBlobStatter(repo.descriptorCache, statter)
+	}
+
 	if repo.registry.blobDescriptorServiceFactory != nil {
 		statter = repo.registry.blobDescriptorServiceFactory.BlobAccessController(statter)
 	}
