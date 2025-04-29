@@ -19,6 +19,12 @@ This repository contains the following components:
 | **libraries**      | A rich set of libraries for interacting with distribution components. Please see [godoc](https://pkg.go.dev/github.com/2DFS/2dfs-registry) for details. **Note**: The interfaces for these libraries are **unstable**. |
 | **documentation**  | Full documentation is available at [https://distribution.github.io/distribution](https://distribution.github.io/distribution/).
 
+### Getting Started 
+
+- Build the registry using `sudo docker build -t registry .`
+
+- Run the registry using `sudo docker run -d -p 5000:5000 --restart=always --name registry registry`
+
 ### How does this integrate with Docker, containerd, and other OCI client?
 
 Clients implement against the OCI specification and communicate with the
