@@ -2,6 +2,7 @@ package configuration
 
 import (
 	"bytes"
+	"maps"
 	"net/http"
 	"reflect"
 	"strings"
@@ -507,9 +508,7 @@ func copyConfig(config Configuration) *Configuration {
 	configCopy.Log = config.Log
 	configCopy.Catalog = config.Catalog
 	configCopy.Log.Fields = make(map[string]interface{}, len(config.Log.Fields))
-	for k, v := range config.Log.Fields {
-		configCopy.Log.Fields[k] = v
-	}
+	maps.Copy(configCopy.Log.Fields, config.Log.Fields)
 
 	configCopy.Storage = Storage{config.Storage.Type(): Parameters{}}
 	for k, v := range config.Storage.Parameters() {
@@ -528,9 +527,7 @@ func copyConfig(config Configuration) *Configuration {
 	configCopy.Notifications.Endpoints = append(configCopy.Notifications.Endpoints, config.Notifications.Endpoints...)
 
 	configCopy.HTTP.Headers = make(http.Header)
-	for k, v := range config.HTTP.Headers {
-		configCopy.HTTP.Headers[k] = v
-	}
+	maps.Copy(configCopy.HTTP.Headers, config.HTTP.Headers)
 	configCopy.HTTP.TLS.ClientCAs = make([]string, 0, len(config.HTTP.TLS.ClientCAs))
 	configCopy.HTTP.TLS.ClientCAs = append(configCopy.HTTP.TLS.ClientCAs, config.HTTP.TLS.ClientCAs...)
 	configCopy.HTTP.TLS.ClientAuth = config.HTTP.TLS.ClientAuth
