@@ -15,6 +15,7 @@ import (
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/distribution/v3/registry/storage/driver/base"
 	"github.com/distribution/distribution/v3/registry/storage/driver/factory"
+	"github.com/google/uuid"
 )
 
 const (
@@ -134,19 +135,37 @@ func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
 
 // PutContent stores the []byte content at a location designated by "path".
 func (d *driver) PutContent(ctx context.Context, subPath string, contents []byte) error {
-	writer, err := d.Writer(ctx, subPath, false)
+	tempPath := fmt.Sprintf("%s.%s.tmp", subPath, uuid.NewString())
+
+	// Write to a temporary file to prevent partial writes.
+	writer, err := d.Writer(ctx, tempPath, false)
 	if err != nil {
 		return err
 	}
 	defer writer.Close()
+
 	_, err = io.Copy(writer, bytes.NewReader(contents))
 	if err != nil {
 		if cErr := writer.Cancel(ctx); cErr != nil {
 			return errors.Join(err, cErr)
 		}
+		// Attempt to clean up the temporary file on error.
+		dErr := d.Delete(ctx, tempPath)
+		return errors.Join(err, dErr)
+	}
+
+	if err := writer.Commit(ctx); err != nil {
 		return err
 	}
-	return writer.Commit(ctx)
+
+	// Atomically replace the target file with the temporary file.
+	if err := d.Move(ctx, tempPath, subPath); err != nil {
+		// Clean up the temporary file if rename fails.
+		dErr := d.Delete(ctx, tempPath)
+		return errors.Join(err, dErr)
+	}
+
+	return nil
 }
 
 // Reader retrieves an io.ReadCloser for the content stored at "path" with a
