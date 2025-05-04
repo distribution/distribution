@@ -15,6 +15,7 @@ import (
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/distribution/v3/registry/storage/driver/base"
 	"github.com/distribution/distribution/v3/registry/storage/driver/factory"
+	"github.com/google/uuid"
 )
 
 const (
@@ -134,7 +135,7 @@ func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
 
 // PutContent stores the []byte content at a location designated by "path".
 func (d *driver) PutContent(ctx context.Context, subPath string, contents []byte) error {
-	tempPath := subPath + ".tmp"
+	tempPath := fmt.Sprintf("%s.%s.tmp", subPath, uuid.NewString())
 
 	// Write to a temporary file to prevent partial writes.
 	writer, err := d.Writer(ctx, tempPath, false)
@@ -149,8 +150,8 @@ func (d *driver) PutContent(ctx context.Context, subPath string, contents []byte
 			return errors.Join(err, cErr)
 		}
 		// Attempt to clean up the temporary file on error.
-		_ = d.Delete(ctx, tempPath)
-		return err
+		dErr := d.Delete(ctx, tempPath)
+		return errors.Join(err, dErr)
 	}
 
 	if err := writer.Commit(ctx); err != nil {
@@ -160,8 +161,8 @@ func (d *driver) PutContent(ctx context.Context, subPath string, contents []byte
 	// Atomically replace the target file with the temporary file.
 	if err := d.Move(ctx, tempPath, subPath); err != nil {
 		// Clean up the temporary file if rename fails.
-		_ = d.Delete(ctx, tempPath)
-		return err
+		dErr := d.Delete(ctx, tempPath)
+		return errors.Join(err, dErr)
 	}
 
 	return nil
