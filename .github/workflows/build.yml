@@ -33,7 +33,7 @@ jobs:
       fail-fast: false
       matrix:
         go:
-          - 1.23.7
+          - 1.23.9
           - 1.24.3
         target:
           - test-coverage
