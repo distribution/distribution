@@ -456,6 +456,21 @@ func (suite *ConfigSuite) TestParseEnvMany() {
 	suite.Require().NoError(err)
 }
 
+// TestParseEnvInlinedStruct tests whether environment variables are properly matched to fields in inlined structs.
+func (suite *ConfigSuite) TestParseEnvInlinedStruct() {
+	suite.expectedConfig.Redis.Options.Username = "bob"
+	suite.expectedConfig.Redis.Options.Password = "password123"
+
+	// Test without inlined struct name in the env variable name
+	suite.T().Setenv("REGISTRY_REDIS_USERNAME", "bob")
+	// Test with the inlined struct name in the env variable name, for backward compatibility
+	suite.T().Setenv("REGISTRY_REDIS_OPTIONS_PASSWORD", "password123")
+
+	config, err := Parse(bytes.NewReader([]byte(configYamlV0_1)))
+	suite.Require().NoError(err)
+	suite.Require().Equal(suite.expectedConfig, config)
+}
+
 func checkStructs(tt *testing.T, t reflect.Type, structsChecked map[string]struct{}) {
 	tt.Helper()
 
