@@ -3,6 +3,7 @@ package auth
 import (
 	"encoding/base64"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -38,9 +39,7 @@ func (w *testAuthenticationWrapper) ServeHTTP(rw http.ResponseWriter, r *http.Re
 	auth := r.Header.Get("Authorization")
 	if auth == "" || !w.authCheck(auth) {
 		h := rw.Header()
-		for k, values := range w.headers {
-			h[k] = values
-		}
+		maps.Copy(h, w.headers)
 		rw.WriteHeader(http.StatusUnauthorized)
 		return
 	}
