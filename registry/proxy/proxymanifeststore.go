@@ -2,7 +2,6 @@ package proxy
 
 import (
 	"context"
-	"time"
 
 	"github.com/opencontainers/go-digest"
 
@@ -18,7 +17,6 @@ type proxyManifestStore struct {
 	remoteManifests distribution.ManifestService
 	repositoryName  reference.Named
 	scheduler       *scheduler.TTLExpirationScheduler
-	ttl             *time.Duration
 	authChallenger  authChallenger
 }
 
@@ -76,8 +74,8 @@ func (pms proxyManifestStore) Get(ctx context.Context, dgst digest.Digest, optio
 			return nil, err
 		}
 
-		if pms.scheduler != nil && pms.ttl != nil {
-			if err := pms.scheduler.AddManifest(repoBlob, *pms.ttl); err != nil {
+		if pms.scheduler != nil {
+			if err := pms.scheduler.AddManifest(repoBlob); err != nil {
 				dcontext.GetLogger(ctx).Errorf("Error adding manifest: %s", err)
 				return nil, err
 			}
