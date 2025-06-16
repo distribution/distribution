@@ -132,7 +132,7 @@ func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestE
 		stats:     make(map[string]int),
 	}
 
-	s := scheduler.New(ctx, inmemory.New(), "/scheduler-state.json")
+	s := scheduler.New(ctx, inmemory.New(), "/scheduler-state.json", nil)
 	return &manifestStoreTestEnv{
 		manifestDigest: manifestDigest,
 		manifestSize:   manifestSize,

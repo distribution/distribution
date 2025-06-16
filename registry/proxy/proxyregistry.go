@@ -28,7 +28,6 @@ var repositoryTTL = 24 * 7 * time.Hour
 type proxyingRegistry struct {
 	embedded       distribution.Namespace // provides local registry functionality
 	scheduler      *scheduler.TTLExpirationScheduler
-	ttl            *time.Duration
 	remoteURL      url.URL
 	authChallenger authChallenger
 	basicAuth      auth.CredentialStore
@@ -56,7 +55,7 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 	}
 
 	if ttl != nil {
-		s = scheduler.New(ctx, driver, "/scheduler-state.json")
+		s = scheduler.New(ctx, driver, "/scheduler-state.json", ttl)
 		s.OnBlobExpire(func(ref reference.Reference) error {
 			var r reference.Canonical
 			var ok bool
@@ -130,7 +129,6 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 	return &proxyingRegistry{
 		embedded:  registry,
 		scheduler: s,
-		ttl:       ttl,
 		remoteURL: *remoteURL,
 		authChallenger: &remoteAuthChallenger{
 			remoteURL: *remoteURL,
@@ -193,7 +191,6 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named
 			localStore:     localRepo.Blobs(ctx),
 			remoteStore:    remoteRepo.Blobs(ctx),
 			scheduler:      pr.scheduler,
-			ttl:            pr.ttl,
 			repositoryName: name,
 			authChallenger: pr.authChallenger,
 		},
@@ -203,7 +200,6 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named
 			remoteManifests: remoteManifests,
 			ctx:             ctx,
 			scheduler:       pr.scheduler,
-			ttl:             pr.ttl,
 			authChallenger:  pr.authChallenger,
 		},
 		name: name,

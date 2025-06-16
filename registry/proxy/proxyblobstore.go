@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strconv"
 	"sync"
-	"time"
 
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -21,7 +20,6 @@ type proxyBlobStore struct {
 	localStore     distribution.BlobStore
 	remoteStore    distribution.BlobService
 	scheduler      *scheduler.TTLExpirationScheduler
-	ttl            *time.Duration
 	repositoryName reference.Named
 	authChallenger authChallenger
 }
@@ -137,8 +135,8 @@ func (pbs *proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter,
 		return err
 	}
 
-	if pbs.scheduler != nil && pbs.ttl != nil {
-		if err := pbs.scheduler.AddBlob(blobRef, *pbs.ttl); err != nil {
+	if pbs.scheduler != nil {
+		if err := pbs.scheduler.AddBlob(blobRef); err != nil {
 			dcontext.GetLogger(ctx).Errorf("Error adding blob: %s", err)
 			return err
 		}
