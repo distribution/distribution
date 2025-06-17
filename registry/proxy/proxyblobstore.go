@@ -12,16 +12,15 @@ import (
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/internal/dcontext"
-	"github.com/distribution/distribution/v3/registry/proxy/scheduler"
 	"github.com/distribution/reference"
 )
 
 type proxyBlobStore struct {
-	localStore     distribution.BlobStore
-	remoteStore    distribution.BlobService
-	scheduler      *scheduler.TTLExpirationScheduler
-	repositoryName reference.Named
-	authChallenger authChallenger
+	localStore         distribution.BlobStore
+	remoteStore        distribution.BlobService
+	evictionController EvictionController
+	repositoryName     reference.Named
+	authChallenger     authChallenger
 }
 
 var _ distribution.BlobStore = &proxyBlobStore{}
@@ -135,8 +134,8 @@ func (pbs *proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter,
 		return err
 	}
 
-	if pbs.scheduler != nil {
-		if err := pbs.scheduler.AddBlob(blobRef); err != nil {
+	if pbs.evictionController != nil {
+		if err := pbs.evictionController.AddBlob(blobRef); err != nil {
 			dcontext.GetLogger(ctx).Errorf("Error adding blob: %s", err)
 			return err
 		}
