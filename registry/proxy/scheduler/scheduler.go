@@ -8,18 +8,26 @@ import (
 	"time"
 
 	"github.com/distribution/distribution/v3/internal/dcontext"
+	"github.com/distribution/distribution/v3/registry/proxy"
 	"github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/reference"
+	"github.com/sirupsen/logrus"
 )
-
-// onTTLExpiryFunc is called when a repository's TTL expires
-type expiryFunc func(reference.Reference) error
 
 const (
 	entryTypeBlob = iota
 	entryTypeManifest
 	indexSaveFrequency = 5 * time.Second
 )
+
+var _ proxy.EvictionController = &TTLExpirationScheduler{}
+
+// init registers ttl scheduler eviction backend.
+func init() {
+	if err := proxy.Register("ttl", proxy.InitFunc(new)); err != nil {
+		logrus.Errorf("failed to register tll scheduler: %v", err)
+	}
+}
 
 // schedulerEntry represents an entry in the scheduler
 // fields are exported for serialization
@@ -31,8 +39,21 @@ type schedulerEntry struct {
 	timer *time.Timer
 }
 
-// New returns a new instance of the scheduler
-func New(ctx context.Context, driver driver.StorageDriver, path string, ttl *time.Duration) *TTLExpirationScheduler {
+// new returns a new instance of the scheduler
+func new(ctx context.Context, driver driver.StorageDriver, path string, options map[string]interface{}) (proxy.EvictionController, error) {
+	ttlOpt, present := options["ttl"]
+	if !present {
+		return nil, fmt.Errorf(`"tll" must be set for TTL scheduler eviction policy`)
+	}
+	ttlStr, ok := ttlOpt.(string)
+	if !ok {
+		return nil, fmt.Errorf(`"tll" must be a valid positive time duration value, given %v`, ttlOpt)
+	}
+	ttl, err := time.ParseDuration(ttlStr)
+	if err != nil || ttl <= 0 {
+		return nil, fmt.Errorf(`"tll" must be a valid positive time duration value, given %v, with error: %v`, ttl, err)
+	}
+
 	return &TTLExpirationScheduler{
 		entries:         make(map[string]*schedulerEntry),
 		driver:          driver,
@@ -42,7 +63,7 @@ func New(ctx context.Context, driver driver.StorageDriver, path string, ttl *tim
 		stopped:         true,
 		doneChan:        make(chan struct{}),
 		saveTimer:       time.NewTicker(indexSaveFrequency),
-	}
+	}, nil
 }
 
 // TTLExpirationScheduler is a scheduler used to perform actions
@@ -55,28 +76,28 @@ type TTLExpirationScheduler struct {
 	driver          driver.StorageDriver
 	ctx             context.Context
 	pathToStateFile string
-	ttl             *time.Duration
+	ttl             time.Duration
 
 	stopped bool
 
-	onBlobExpire     expiryFunc
-	onManifestExpire expiryFunc
+	onBlobExpire     proxy.OnEvictFunc
+	onManifestExpire proxy.OnEvictFunc
 
 	indexDirty bool
 	saveTimer  *time.Ticker
 	doneChan   chan struct{}
 }
 
-// OnBlobExpire is called when a scheduled blob's TTL expires
-func (ttles *TTLExpirationScheduler) OnBlobExpire(f expiryFunc) {
+// OnBlobEvict is called when a scheduled blob's TTL expires
+func (ttles *TTLExpirationScheduler) OnBlobEvict(f proxy.OnEvictFunc) {
 	ttles.Lock()
 	defer ttles.Unlock()
 
 	ttles.onBlobExpire = f
 }
 
-// OnManifestExpire is called when a scheduled manifest's TTL expires
-func (ttles *TTLExpirationScheduler) OnManifestExpire(f expiryFunc) {
+// OnManifestEvict is called when a scheduled manifest's TTL expires
+func (ttles *TTLExpirationScheduler) OnManifestEvict(f proxy.OnEvictFunc) {
 	ttles.Lock()
 	defer ttles.Unlock()
 
@@ -85,9 +106,6 @@ func (ttles *TTLExpirationScheduler) OnManifestExpire(f expiryFunc) {
 
 // AddBlob schedules a blob cleanup after ttl expires
 func (ttles *TTLExpirationScheduler) AddBlob(blobRef reference.Canonical) error {
-	if ttles.ttl == nil {
-		return nil
-	}
 	ttles.Lock()
 	defer ttles.Unlock()
 
@@ -95,15 +113,12 @@ func (ttles *TTLExpirationScheduler) AddBlob(blobRef reference.Canonical) error 
 		return fmt.Errorf("scheduler not started")
 	}
 
-	ttles.add(blobRef, *ttles.ttl, entryTypeBlob)
+	ttles.add(blobRef, ttles.ttl, entryTypeBlob)
 	return nil
 }
 
 // AddManifest schedules a manifest cleanup after ttl expires
 func (ttles *TTLExpirationScheduler) AddManifest(manifestRef reference.Canonical) error {
-	if ttles.ttl == nil {
-		return nil
-	}
 	ttles.Lock()
 	defer ttles.Unlock()
 
@@ -111,7 +126,7 @@ func (ttles *TTLExpirationScheduler) AddManifest(manifestRef reference.Canonical
 		return fmt.Errorf("scheduler not started")
 	}
 
-	ttles.add(manifestRef, *ttles.ttl, entryTypeManifest)
+	ttles.add(manifestRef, ttles.ttl, entryTypeManifest)
 	return nil
 }
 
@@ -186,7 +201,7 @@ func (ttles *TTLExpirationScheduler) startTimer(entry *schedulerEntry, ttl time.
 		ttles.Lock()
 		defer ttles.Unlock()
 
-		var f expiryFunc
+		var f proxy.OnEvictFunc
 
 		switch entry.EntryType {
 		case entryTypeBlob:

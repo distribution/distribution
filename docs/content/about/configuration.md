@@ -309,7 +309,9 @@ proxy:
   exec:
     command: docker-credential-helper
     lifetime: 1h
-  ttl: 168h
+  evictionpolicy:
+    ttl:
+      ttl: 168h
 validation:
   manifests:
     urls:
@@ -1184,7 +1186,9 @@ proxy:
   remoteurl: https://registry-1.docker.io
   username: [username]
   password: [password]
-  ttl: 168h
+  evictionpolicy:
+    ttl:
+      ttl: 168h
 ```
 
 The `proxy` structure allows a registry to be configured as a pull-through cache
@@ -1196,7 +1200,6 @@ is unsupported.
 | Parameter | Required | Description                                           |
 |-----------|----------|-------------------------------------------------------|
 | `remoteurl`| yes     | The URL for the repository on Docker Hub.             |
-| `ttl`      | no      | Expire proxy cache configured in "storage" after this time. Cache 168h(7 days) by default, set to 0 to disable cache expiration, The suffix is one of `ns`, `us`, `ms`, `s`, `m`, or `h`. If you specify a value but omit the suffix, the value is interpreted as a number of nanoseconds. |
 
 To enable pulling private repositories (e.g. `batman/robin`), specify one of the
 following authentication methods for the pull-through cache to authenticate with
@@ -1217,6 +1220,20 @@ to retrieve the credentials to authenticate with the upstream registry.
 |-----------|----------|-------------------------------------------------------|
 | `command` | yes      | The command to execute.                               |
 | `lifetime`| no       | The expiry period of the credentials. The credentials returned by the command is reused through the configured lifetime, then the command will be re-executed to retrieve new credentials. If set to zero, the command will be executed for every request. If not set, the command will only be executed once. |
+
+### `evictionpolicy`
+
+The eviction policy to use when removing cached data from the pull-through cache.
+Only one eviction policy can be specified. If `evictionpolicy` is not specified,
+no data will be evicted from the pull-through cache.
+
+#### `ttl`
+
+A time-to-live eviction policy where cached entries are expired after some time.
+
+| Parameter | Required | Description                                           |
+|-----------|----------|-------------------------------------------------------|
+| `ttl`     | yes      | Expire proxy cache configured in "storage" after this time. The suffix is one of `ns`, `us`, `ms`, `s`, `m`, or `h`. If you specify a value but omit the suffix, the value is interpreted as a number of nanoseconds. The value must be positive. |
 
 
 > **Note**: These private repositories are stored in the proxy cache's storage.

@@ -7,17 +7,16 @@ import (
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/internal/dcontext"
-	"github.com/distribution/distribution/v3/registry/proxy/scheduler"
 	"github.com/distribution/reference"
 )
 
 type proxyManifestStore struct {
-	ctx             context.Context
-	localManifests  distribution.ManifestService
-	remoteManifests distribution.ManifestService
-	repositoryName  reference.Named
-	scheduler       *scheduler.TTLExpirationScheduler
-	authChallenger  authChallenger
+	ctx                context.Context
+	localManifests     distribution.ManifestService
+	remoteManifests    distribution.ManifestService
+	repositoryName     reference.Named
+	evictionController EvictionController
+	authChallenger     authChallenger
 }
 
 var _ distribution.ManifestService = &proxyManifestStore{}
@@ -74,8 +73,8 @@ func (pms proxyManifestStore) Get(ctx context.Context, dgst digest.Digest, optio
 			return nil, err
 		}
 
-		if pms.scheduler != nil {
-			if err := pms.scheduler.AddManifest(repoBlob); err != nil {
+		if pms.evictionController != nil {
+			if err := pms.evictionController.AddManifest(repoBlob); err != nil {
 				dcontext.GetLogger(ctx).Errorf("Error adding manifest: %s", err)
 				return nil, err
 			}
