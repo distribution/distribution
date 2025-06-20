@@ -19,7 +19,6 @@ import (
 	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/distribution/distribution/v3/registry/storage"
 	"github.com/distribution/distribution/v3/registry/storage/driver"
-	_ "github.com/c2h5oh/datasize"
 )
 
 // InitFunc is the type of an EvictionController factory function and is used
@@ -327,7 +326,9 @@ type OnEvictFunc func(reference.Reference) error
 
 // EvictionController controls the eviction policy that the proxied registry follows.
 type EvictionController interface {
+	// Start starts the EvictionController
 	Start() error
+	// Stop gracefully shuts down the EvictionController
 	Stop() error
 	// OnBlobEvict attaches the function f to run on a reference when a blob is evicted
 	OnBlobEvict(f OnEvictFunc)
@@ -337,6 +338,10 @@ type EvictionController interface {
 	AddBlob(blobRef reference.Canonical) error
 	// AddManifest adds a blob to the eviction policy and errors when it is unable to
 	AddManifest(manifestRef reference.Canonical) error
+	// TouchBlob notifies the EvictionController of a cache hit on the blob
+	TouchBlob(blobref reference.Canonical) error
+	// TouchManifest notifies the EvictionController of a cache hit on the manifest
+	TouchManifest(manifestRef reference.Canonical) error
 }
 
 // Register is used to register an InitFunc for
