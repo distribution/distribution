@@ -130,6 +130,16 @@ func (ttles *TTLExpirationScheduler) AddManifest(manifestRef reference.Canonical
 	return nil
 }
 
+func (ttles *TTLExpirationScheduler) TouchBlob(blobRef reference.Canonical) error {
+	// TTL doesn't care about a cache hit
+	return nil
+}
+
+func (ttles *TTLExpirationScheduler) TouchManifest(blobRef reference.Canonical) error {
+	// TTL doesn't care about a cache hit
+	return nil
+}
+
 // Start starts the scheduler
 func (ttles *TTLExpirationScheduler) Start() error {
 	ttles.Lock()
