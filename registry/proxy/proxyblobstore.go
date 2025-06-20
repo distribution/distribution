@@ -72,6 +72,19 @@ func (pbs *proxyBlobStore) serveLocal(ctx context.Context, w http.ResponseWriter
 		return false, nil
 	}
 
+	// Touch the eviction entry
+	if pbs.evictionController != nil {
+		blobRef, err := reference.WithDigest(pbs.repositoryName, dgst)
+		if err != nil {
+			dcontext.GetLogger(ctx).Errorf("Error creating reference: %s", err)
+			return false, err
+		}
+		if err := pbs.evictionController.TouchBlob(blobRef); err != nil {
+			dcontext.GetLogger(ctx).Errorf("Error touching blob: %s", err)
+			return false, err
+		}
+	}
+
 	proxyMetrics.BlobPush(uint64(localDesc.Size), true)
 	return true, pbs.localStore.ServeBlob(ctx, w, r, dgst)
 }

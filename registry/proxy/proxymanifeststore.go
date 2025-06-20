@@ -83,6 +83,20 @@ func (pms proxyManifestStore) Get(ctx context.Context, dgst digest.Digest, optio
 		// Ensure the manifest blob is cleaned up
 		// pms.scheduler.AddBlob(blobRef, repositoryTTL)
 
+	} else {
+		// Touch the eviction entry
+		repoBlob, err := reference.WithDigest(pms.repositoryName, dgst)
+		if err != nil {
+			dcontext.GetLogger(ctx).Errorf("Error creating reference: %s", err)
+			return nil, err
+		}
+
+		if pms.evictionController != nil {
+			if err := pms.evictionController.TouchManifest(repoBlob); err != nil {
+				dcontext.GetLogger(ctx).Errorf("Error adding manifest: %s", err)
+				return nil, err
+			}
+		}
 	}
 
 	return manifest, err
