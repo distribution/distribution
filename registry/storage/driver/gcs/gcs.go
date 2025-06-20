@@ -813,6 +813,11 @@ func (d *driver) Walk(ctx context.Context, path string, f storagedriver.WalkFn, 
 	return storagedriver.WalkFallback(ctx, d, path, f, options...)
 }
 
+// Usage gives the total combined size of all files under the given path.
+func (d *driver) Usage(ctx context.Context, path string) (uint64, error) {
+	return 0, storagedriver.ErrUnsupportedMethod{}
+}
+
 func (w *writer) newSession() (uri string, err error) {
 	u := &url.URL{
 		Scheme:   "https",
