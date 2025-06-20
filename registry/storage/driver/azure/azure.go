@@ -445,6 +445,11 @@ func (d *driver) Walk(ctx context.Context, path string, f storagedriver.WalkFn, 
 	return storagedriver.WalkFallback(ctx, d, path, f, options...)
 }
 
+// Usage gives the total combined size of all files under the given path.
+func (d *driver) Usage(ctx context.Context, path string) (uint64, error) {
+	return 0, storagedriver.ErrUnsupportedMethod{}
+}
+
 // directDescendants will find direct descendants (blobs or virtual containers)
 // of from list of blob paths and will return their full paths. Elements in blobs
 // list must be prefixed with a "/" and
