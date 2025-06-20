@@ -312,6 +312,8 @@ proxy:
   evictionpolicy:
     ttl:
       ttl: 168h
+    lru:
+      limit: 128gb
 validation:
   manifests:
     urls:
@@ -1189,6 +1191,8 @@ proxy:
   evictionpolicy:
     ttl:
       ttl: 168h
+    lru:
+      limit: 128gb
 ```
 
 The `proxy` structure allows a registry to be configured as a pull-through cache
@@ -1235,6 +1239,16 @@ A time-to-live eviction policy where cached entries are expired after some time.
 |-----------|----------|-------------------------------------------------------|
 | `ttl`     | yes      | Expire proxy cache configured in "storage" after this time. The suffix is one of `ns`, `us`, `ms`, `s`, `m`, or `h`. If you specify a value but omit the suffix, the value is interpreted as a number of nanoseconds. The value must be positive. |
 
+#### `lru`
+
+A least recently used eviction policy where cached entries that are least recently
+used are evicted when storage usage is above the `limit`. Note this should be set
+to a lower number than the real limit, since eviction happens after the limit is
+surpassed, not before.
+
+| Parameter | Required | Description                                           |
+|-----------|----------|-------------------------------------------------------|
+| `limit`     | yes      | Remove proxy cache configured in "storage" until storage is below this size. The suffix is one of `b`, `kb`, `mb`, `gb`, `tb`, `tb`, `pb`, `eb`. If you specify a value but omit the suffix, the value is interpreted as a number of bytes. The value must be positive. |
 
 > **Note**: These private repositories are stored in the proxy cache's storage.
 > Take appropriate measures to protect access to the proxy cache.
