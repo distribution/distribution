@@ -19,6 +19,7 @@ import (
 	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/distribution/distribution/v3/registry/storage"
 	"github.com/distribution/distribution/v3/registry/storage/driver"
+	_ "github.com/c2h5oh/datasize"
 )
 
 // InitFunc is the type of an EvictionController factory function and is used
