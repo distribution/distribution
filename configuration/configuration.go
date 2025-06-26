@@ -692,6 +692,9 @@ type Proxy struct {
 	// if not set, defaults to 7 * 24 hours
 	// If set to zero, will never expire cache
 	TTL *time.Duration `yaml:"ttl,omitempty"`
+
+	// TLS configures client TLS for proxying to the remote registry
+	TLS *ProxyTLS `yaml:"tls,omitempty"`
 }
 
 // ExecConfig defines the configuration for executing a command as a credential helper.
@@ -709,6 +712,21 @@ type ExecConfig struct {
 	// If set to zero, the command will be executed for every request.
 	// If not set, the command will only be executed once.
 	Lifetime *time.Duration `yaml:"lifetime,omitempty"`
+}
+
+// ProxyTLS configures TLS for registries requiring client certificates.
+type ProxyTLS struct {
+	// Certificate specifies the path to the certificate file for TLS authentication.
+	// This certificate is used to establish a secure connection with the registry.
+	Certificate string `yaml:"certificate,omitempty"`
+
+	// Key specifies the path to the private key file associated with the certificate.
+	// This key is used to authenticate the client during the TLS handshake.
+	Key string `yaml:"key,omitempty"`
+
+	// ClientCAs specifies a list of certificates to be used to verify the server's
+	// certificate during the TLS handshake. This can be used for mutual TLS authentication.
+	ClientCAs []string `yaml:"clientcas,omitempty"`
 }
 
 // Validation configures validation options for the registry.
