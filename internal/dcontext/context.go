@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/google/uuid"
+	"github.com/distribution/distribution/v3/internal/uuid"
 )
 
 // instanceContext is a context that provides only an instance id. It is

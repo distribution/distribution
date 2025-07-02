@@ -4,11 +4,11 @@ import (
 	"testing"
 
 	"github.com/distribution/distribution/v3"
+	"github.com/distribution/distribution/v3/internal/uuid"
 	"github.com/distribution/distribution/v3/manifest/schema2"
 	v2 "github.com/distribution/distribution/v3/registry/api/v2"
 	"github.com/distribution/reference"
 	events "github.com/docker/go-events"
-	"github.com/google/uuid"
 	"github.com/opencontainers/go-digest"
 	"github.com/opencontainers/image-spec/specs-go"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
