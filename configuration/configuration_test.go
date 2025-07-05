@@ -90,7 +90,7 @@ var configStruct = Configuration{
 		TLS: RedisTLSOptions{
 			Certificate: "/foo/cert.crt",
 			Key:         "/foo/key.pem",
-			ClientCAs:   []string{"/path/to/ca.pem"},
+			RootCAs:     []string{"/path/to/ca.pem"},
 		},
 	},
 	Validation: Validation{
@@ -538,8 +538,8 @@ func copyConfig(config Configuration) *Configuration {
 	configCopy.Redis = config.Redis
 	configCopy.Redis.TLS.Certificate = config.Redis.TLS.Certificate
 	configCopy.Redis.TLS.Key = config.Redis.TLS.Key
-	configCopy.Redis.TLS.ClientCAs = make([]string, 0, len(config.Redis.TLS.ClientCAs))
-	configCopy.Redis.TLS.ClientCAs = append(configCopy.Redis.TLS.ClientCAs, config.Redis.TLS.ClientCAs...)
+	configCopy.Redis.TLS.RootCAs = make([]string, 0, len(config.Redis.TLS.RootCAs))
+	configCopy.Redis.TLS.RootCAs = append(configCopy.Redis.TLS.RootCAs, config.Redis.TLS.RootCAs...)
 
 	configCopy.Validation = Validation{
 		Enabled:   config.Validation.Enabled,

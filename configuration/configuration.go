@@ -942,9 +942,9 @@ type RedisTLSOptions struct {
 	// This key is used to authenticate the client during the TLS handshake.
 	Key string `yaml:"key,omitempty"`
 
-	// ClientCAs specifies a list of certificates to be used to verify the server's
-	// certificate during the TLS handshake. This can be used for mutual TLS authentication.
-	ClientCAs []string `yaml:"clientcas,omitempty"`
+	// RootCAs specifies a list of root certificate authorities that clients use when
+	// verifying server certificates. If RootCAs is nil, TLS uses the host's root CA set.
+	RootCAs []string `yaml:"rootcas,omitempty"`
 }
 
 // Redis represents the configuration for connecting to a Redis server. It includes

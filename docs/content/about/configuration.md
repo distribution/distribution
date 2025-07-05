@@ -268,7 +268,7 @@ redis:
   tls:
     certificate: /path/to/cert.crt
     key: /path/to/key.pem
-    clientcas:
+    rootcas:
       - /path/to/ca.pem
   addrs: [localhost:6379]
   password: asecret
@@ -1072,14 +1072,14 @@ Use these settings to configure Redis TLS:
 |-----------|----------|-------------------------------------------------------|
 | `certificate`  | yes  | Absolute path to the x509 certificate file.           |
 | `key`          | yes  | Absolute path to the x509 private key file.           |
-| `clientcas`    | no   | An array of absolute paths to x509 CA files.          |
+| `rootcas`      | no   | An array of absolute paths to x509 CA files.          |
 
 ```yaml
 redis:
   tls:
     certificate: /path/to/cert.crt
     key: /path/to/key.pem
-    clientcas:
+    rootcas:
       - /path/to/ca.pem
   addrs: [localhost:6379]
   password: asecret
