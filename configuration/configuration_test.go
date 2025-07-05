@@ -149,7 +149,7 @@ redis:
   tls:
     certificate: /foo/cert.crt
     key: /foo/key.pem
-    clientcas:
+    rootcas:
       - /path/to/ca.pem
   addrs: [localhost:6379]
   username: alice
