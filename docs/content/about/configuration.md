@@ -56,6 +56,12 @@ REGISTRY_HTTP_TLS_LETSENCRYPT_HOSTS_0=registry.example.com
 > be configured to tweak individual values. Overriding configuration sections
 > with environment variables is not recommended.
 
+### Disable traces export
+
+Currently traces are set to `https://localhost:4318/v1/traces` by default.
+You can control this by setting the [https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#exporter-selection](environment variable) `OTEL_TRACES_EXPORTER`
+to either `none` or your trace collector.
+
 ## Overriding the entire configuration file
 
 If the default configuration is not a sound basis for your usage, or if you are
