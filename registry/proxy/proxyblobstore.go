@@ -6,24 +6,21 @@ import (
 	"net/http"
 	"strconv"
 	"sync"
-	"time"
 
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/internal/dcontext"
-	"github.com/distribution/distribution/v3/registry/proxy/scheduler"
 	"github.com/distribution/reference"
 )
 
 type proxyBlobStore struct {
-	localStore     distribution.BlobStore
-	remoteStore    distribution.BlobService
-	scheduler      *scheduler.TTLExpirationScheduler
-	ttl            *time.Duration
-	repositoryName reference.Named
-	authChallenger authChallenger
+	localStore         distribution.BlobStore
+	remoteStore        distribution.BlobService
+	evictionController EvictionController
+	repositoryName     reference.Named
+	authChallenger     authChallenger
 }
 
 var _ distribution.BlobStore = &proxyBlobStore{}
@@ -73,6 +70,19 @@ func (pbs *proxyBlobStore) serveLocal(ctx context.Context, w http.ResponseWriter
 		// Stat can report a zero sized file here if it's checked between creation
 		// and population.  Return nil error, and continue
 		return false, nil
+	}
+
+	// Touch the eviction entry
+	if pbs.evictionController != nil {
+		blobRef, err := reference.WithDigest(pbs.repositoryName, dgst)
+		if err != nil {
+			dcontext.GetLogger(ctx).Errorf("Error creating reference: %s", err)
+			return false, err
+		}
+		if err := pbs.evictionController.TouchBlob(blobRef); err != nil {
+			dcontext.GetLogger(ctx).Errorf("Error touching blob: %s", err)
+			return false, err
+		}
 	}
 
 	proxyMetrics.BlobPush(uint64(localDesc.Size), true)
@@ -137,8 +147,8 @@ func (pbs *proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter,
 		return err
 	}
 
-	if pbs.scheduler != nil && pbs.ttl != nil {
-		if err := pbs.scheduler.AddBlob(blobRef, *pbs.ttl); err != nil {
+	if pbs.evictionController != nil {
+		if err := pbs.evictionController.AddBlob(blobRef); err != nil {
 			dcontext.GetLogger(ctx).Errorf("Error adding blob: %s", err)
 			return err
 		}

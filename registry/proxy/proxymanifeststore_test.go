@@ -10,7 +10,6 @@ import (
 	"github.com/distribution/distribution/v3/internal/client/auth"
 	"github.com/distribution/distribution/v3/internal/client/auth/challenge"
 	"github.com/distribution/distribution/v3/manifest/schema2"
-	"github.com/distribution/distribution/v3/registry/proxy/scheduler"
 	"github.com/distribution/distribution/v3/registry/storage"
 	"github.com/distribution/distribution/v3/registry/storage/cache/memory"
 	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
@@ -132,7 +131,6 @@ func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestE
 		stats:     make(map[string]int),
 	}
 
-	s := scheduler.New(ctx, inmemory.New(), "/scheduler-state.json")
 	return &manifestStoreTestEnv{
 		manifestDigest: manifestDigest,
 		manifestSize:   manifestSize,
@@ -140,9 +138,10 @@ func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestE
 			ctx:             ctx,
 			localManifests:  localManifests,
 			remoteManifests: truthManifests,
-			scheduler:       s,
-			repositoryName:  nameRef,
-			authChallenger:  &mockChallenger{},
+			// evictionController is nil here for now since importing any eviction controller introduces a cyclic dependency
+			evictionController: nil,
+			repositoryName:     nameRef,
+			authChallenger:     &mockChallenger{},
 		},
 	}
 }
@@ -270,10 +269,10 @@ func TestProxyManifests(t *testing.T) {
 	}
 }
 
-func TestProxyManifestsWithoutScheduler(t *testing.T) {
+func TestProxyManifestsWithoutEviction(t *testing.T) {
 	name := "foo/bar"
 	env := newManifestStoreTestEnv(t, name, "latest")
-	env.manifests.scheduler = nil
+	env.manifests.evictionController = nil
 
 	ctx := context.Background()
 	exists, err := env.manifests.Exists(ctx, env.manifestDigest)
@@ -284,7 +283,7 @@ func TestProxyManifestsWithoutScheduler(t *testing.T) {
 		t.Errorf("Unexpected non-existent manifest")
 	}
 
-	// Get - should succeed without scheduler
+	// Get - should succeed without eviction
 	_, err = env.manifests.Get(ctx, env.manifestDigest)
 	if err != nil {
 		t.Fatal(err)
