@@ -6,9 +6,9 @@ import (
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/internal/requestutil"
+	"github.com/distribution/distribution/v3/internal/uuid"
 	"github.com/distribution/reference"
 	events "github.com/docker/go-events"
-	"github.com/google/uuid"
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )

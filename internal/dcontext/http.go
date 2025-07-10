@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/distribution/distribution/v3/internal/requestutil"
-	"github.com/google/uuid"
+	"github.com/distribution/distribution/v3/internal/uuid"
 	"github.com/gorilla/mux"
 )
 
