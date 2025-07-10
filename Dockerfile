@@ -55,6 +55,7 @@ RUN apk add --no-cache ca-certificates
 COPY cmd/registry/config-dev.yml /etc/distribution/config.yml
 COPY --from=binary /registry /bin/registry
 VOLUME ["/var/lib/registry"]
+ENV OTEL_TRACES_EXPORTER=none
 EXPOSE 5000
 ENTRYPOINT ["registry"]
 CMD ["serve", "/etc/distribution/config.yml"]
