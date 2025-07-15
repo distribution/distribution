@@ -44,13 +44,16 @@ func parseHTTPErrorResponse(resp *http.Response) error {
 	if err != nil {
 		return err
 	}
-
 	statusCode := resp.StatusCode
 
 	// A HEAD request for example validly does not contain any body, while
 	// still returning a JSON content-type.
 	if len(body) == 0 {
 		return makeError(statusCode, "")
+	}
+
+	if statusCode == 401 {
+		return makeError(statusCode, string(body))
 	}
 
 	ctHeader := resp.Header.Get("Content-Type")
@@ -101,13 +104,13 @@ func parseHTTPErrorResponse(resp *http.Response) error {
 func makeError(statusCode int, details string) error {
 	switch statusCode {
 	case http.StatusUnauthorized:
-		return errcode.ErrorCodeUnauthorized.WithMessage(details)
+		return errcode.ErrorCodeUnauthorized.WithMessageStatusCode(details, statusCode)
 	case http.StatusForbidden:
-		return errcode.ErrorCodeDenied.WithMessage(details)
+		return errcode.ErrorCodeDenied.WithMessageStatusCode(details, statusCode)
 	case http.StatusTooManyRequests:
-		return errcode.ErrorCodeTooManyRequests.WithMessage(details)
+		return errcode.ErrorCodeTooManyRequests.WithMessageStatusCode(details, statusCode)
 	default:
-		return errcode.ErrorCodeUnknown.WithMessage(details)
+		return errcode.ErrorCodeUnknown.WithMessageStatusCode(details, statusCode)
 	}
 }
 
@@ -138,6 +141,7 @@ func HandleHTTPResponseError(resp *http.Response) error {
 		for _, c := range challenge.ResponseChallenges(resp) {
 			if c.Scheme == "bearer" {
 				var err errcode.Error
+				err.StatusCode = resp.StatusCode
 				// codes defined at https://tools.ietf.org/html/rfc6750#section-3.1
 				switch c.Parameters["error"] {
 				case "invalid_token":
