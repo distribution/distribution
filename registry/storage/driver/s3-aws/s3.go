@@ -1109,6 +1109,11 @@ func (d *driver) Walk(ctx context.Context, from string, f storagedriver.WalkFn, 
 	return nil
 }
 
+// Usage gives the total combined size of all files under the given path.
+func (d *driver) Usage(ctx context.Context, path string) (uint64, error) {
+	return 0, storagedriver.ErrUnsupportedMethod{}
+}
+
 func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, from, startAfter string, f storagedriver.WalkFn) error {
 	var (
 		retError error
