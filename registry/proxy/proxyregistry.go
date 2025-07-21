@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"path"
 	"sync"
 	"time"
 
@@ -26,12 +27,13 @@ var repositoryTTL = 24 * 7 * time.Hour
 
 // proxyingRegistry fetches content from a remote registry and caches it locally
 type proxyingRegistry struct {
-	embedded       distribution.Namespace // provides local registry functionality
-	scheduler      *scheduler.TTLExpirationScheduler
-	ttl            *time.Duration
-	remoteURL      url.URL
-	authChallenger authChallenger
-	basicAuth      auth.CredentialStore
+	embedded        distribution.Namespace // provides local registry functionality
+	scheduler       *scheduler.TTLExpirationScheduler
+	ttl             *time.Duration
+	remoteURL       url.URL
+	remoteNamespace string
+	authChallenger  authChallenger
+	basicAuth       auth.CredentialStore
 }
 
 // NewRegistryPullThroughCache creates a registry acting as a pull through cache
@@ -126,7 +128,6 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 	if err != nil {
 		return nil, err
 	}
-
 	return &proxyingRegistry{
 		embedded:  registry,
 		scheduler: s,
@@ -137,7 +138,8 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 			cm:        challenge.NewSimpleManager(),
 			cs:        cs,
 		},
-		basicAuth: b,
+		remoteNamespace: config.RemoteNamespace,
+		basicAuth:       b,
 	}, nil
 }
 
@@ -176,6 +178,14 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named
 	localManifests, err := localRepo.Manifests(ctx, storage.SkipLayerVerification())
 	if err != nil {
 		return nil, err
+	}
+
+	if pr.remoteNamespace != "" {
+		var err error
+		name, err = reference.WithName(path.Join(pr.remoteNamespace, name.Name()))
+		if err != nil {
+			return nil, fmt.Errorf("failed to create remote repository name: %w", err)
+		}
 	}
 
 	remoteRepo, err := client.NewRepository(name, pr.remoteURL.String(), tr)

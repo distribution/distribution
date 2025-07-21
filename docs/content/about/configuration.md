@@ -316,6 +316,7 @@ proxy:
     command: docker-credential-helper
     lifetime: 1h
   ttl: 168h
+  remotenamespace: namespace
 validation:
   manifests:
     urls:
@@ -1227,6 +1228,12 @@ to retrieve the credentials to authenticate with the upstream registry.
 
 > **Note**: These private repositories are stored in the proxy cache's storage.
 > Take appropriate measures to protect access to the proxy cache.
+
+### `remotenamespace`
+
+When a namespace is configured, such as `superhero`, Docker image pulls from a remote repository will be prefixed with that namespace.
+
+For example, pulling `batman/robin` will actually resolve to `superhero/batman/robin` in the remote registry.
 
 ## `validation`
 
