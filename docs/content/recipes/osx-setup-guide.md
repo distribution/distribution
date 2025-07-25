@@ -57,16 +57,20 @@ Copy the registry configuration file in place:
 
 ```console
 $ mkdir /Users/Shared/Registry
-$ cp docs/osx/config.yml /Users/Shared/Registry/config.yml
+$ cp docs/content/recipes/osx/config.yml /Users/Shared/Registry/config.yml
 ```
+
+## Modify ports if needed
+
+MacOS runs an Airplay receiver on port 5000 by default, which is the same port as the registry server. You can either disable the Airplay receiver in _System Settings… > General > AirDrop & Handoff > AirPlay Receiver_, or change the listening ports in the config file that you have just copied to /Users/Shared/Registry/config.yml. 
 
 ## Run the registry under launchd
 
 Copy the registry plist into place:
 
 ```console
-$ plutil -lint docs/recipes/osx/com.docker.registry.plist
-$ cp docs/recipes/osx/com.docker.registry.plist ~/Library/LaunchAgents/
+$ plutil -lint docs/content/recipes/osx/com.docker.registry.plist
+$ cp docs/content/recipes/osx/com.docker.registry.plist ~/Library/LaunchAgents/
 $ chmod 644 ~/Library/LaunchAgents/com.docker.registry.plist
 ```
 

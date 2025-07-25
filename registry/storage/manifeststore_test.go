@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"reflect"
 	"testing"
@@ -719,4 +720,155 @@ func ociIndexFromDesriptorsWithMediaType(descriptors []v1.Descriptor, mediaType 
 	}
 
 	return &d, nil
+}
+
+func TestManifestStorageCache(t *testing.T) {
+	repoName, _ := reference.WithName("foo/bar")
+	cacheProvider := memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)
+	repositoryScopedCacheProvider, err := cacheProvider.RepositoryScoped(repoName.String())
+	if err != nil {
+		t.Fatalf("unexpected error getting repository scoped cache: %v", err)
+	}
+	env := newManifestStoreTestEnv(t, repoName, "thetag", BlobDescriptorCacheProvider(cacheProvider), EnableDelete)
+	ctx := context.Background()
+	ms, err := env.repository.Manifests(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Push a config, and reference it in the manifest
+	sampleConfig := []byte(`{
+		"architecture": "amd64",
+		"history": [
+		  {
+		    "created": "2015-10-31T22:22:54.690851953Z",
+		    "created_by": "/bin/sh -c #(nop) ADD file:a3bc1e842b69636f9df5256c49c5374fb4eef1e281fe3f282c65fb853ee171c5 in /"
+		  },
+		],
+		"rootfs": {
+		  "diff_ids": [
+		    "sha256:c6f988f4874bb0add23a778f753c65efe992244e148a1d2ec2a8b664fb66bbd1",
+		  ],
+		  "type": "layers"
+		}
+	}`)
+
+	// Build a manifest and store it and its layers in the registry
+
+	blobStore := env.repository.Blobs(ctx)
+	d, err := blobStore.Put(ctx, schema2.MediaTypeImageConfig, sampleConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	builder := schema2.NewManifestBuilder(d, sampleConfig)
+
+	m := &schema2.Manifest{
+		Versioned: specs.Versioned{SchemaVersion: 2},
+		MediaType: schema2.MediaTypeManifest,
+		Config: v1.Descriptor{
+			Digest:    digest.FromBytes(sampleConfig),
+			Size:      int64(len(sampleConfig)),
+			MediaType: schema2.MediaTypeImageConfig,
+		},
+		Layers: []v1.Descriptor{},
+	}
+
+	// Build up some test layers and add them to the manifest, saving the
+	// readseekers for upload later.
+	testLayers := map[digest.Digest]io.ReadSeeker{}
+	for i := 0; i < 2; i++ {
+		rs, dgst, err := testutil.CreateRandomTarFile()
+		if err != nil {
+			t.Fatal("unexpected error generating test layer file")
+		}
+
+		testLayers[dgst] = rs
+		layer := v1.Descriptor{
+			Digest:    dgst,
+			Size:      6323,
+			MediaType: schema2.MediaTypeLayer,
+		}
+		m.Layers = append(m.Layers, layer)
+	}
+
+	// Now, upload the layers that were missing!
+	for dgst, rs := range testLayers {
+		wr, err := env.repository.Blobs(env.ctx).Create(env.ctx)
+		if err != nil {
+			t.Fatalf("unexpected error creating test upload: %v", err)
+		}
+
+		if _, err := io.Copy(wr, rs); err != nil {
+			t.Fatalf("unexpected error copying to upload: %v", err)
+		}
+
+		if _, err := wr.Commit(env.ctx, v1.Descriptor{Digest: dgst}); err != nil {
+			t.Fatalf("unexpected error finishing upload: %v", err)
+		}
+		if err := builder.AppendReference(v1.Descriptor{Digest: dgst, MediaType: schema2.MediaTypeLayer}); err != nil {
+			t.Fatalf("unexpected error appending references: %v", err)
+		}
+	}
+
+	sm, err := builder.Build(ctx)
+	if err != nil {
+		t.Fatalf("%s: unexpected error generating manifest: %v", repoName, err)
+	}
+
+	var manifestDigest digest.Digest
+	if manifestDigest, err = ms.Put(ctx, sm); err != nil {
+		t.Fatalf("unexpected error putting manifest: %v", err)
+	}
+
+	_, err = repositoryScopedCacheProvider.Stat(ctx, manifestDigest)
+	if err != nil {
+		t.Errorf("Manifest should be cached")
+	}
+
+	exists, err := ms.Exists(ctx, manifestDigest)
+	if err != nil {
+		t.Fatalf("unexpected error checking manifest existence: %#v", err)
+	}
+
+	if !exists {
+		t.Fatal("manifest should exist")
+	}
+
+	// Test deleting manifests
+	err = ms.Delete(ctx, manifestDigest)
+	if err != nil {
+		t.Fatalf("unexpected an error deleting manifest by digest: %v", err)
+	}
+
+	exists, err = ms.Exists(ctx, manifestDigest)
+	if err != nil {
+		t.Fatal("Error querying manifest existence")
+	}
+	if exists {
+		t.Errorf("Deleted manifest should not exist")
+	}
+
+	deletedManifest, err := ms.Get(ctx, manifestDigest)
+	if err == nil {
+		t.Errorf("Unexpected success getting deleted manifest")
+	}
+	switch err.(type) {
+	case distribution.ErrManifestUnknownRevision:
+		break
+	default:
+		t.Errorf("Unexpected error getting deleted manifest: %s", reflect.ValueOf(err).Type())
+	}
+
+	if deletedManifest != nil {
+		t.Errorf("Deleted manifest get returned non-nil")
+	}
+
+	// Test cache is cleared after manifest delete
+	_, err = repositoryScopedCacheProvider.Stat(ctx, manifestDigest)
+	if err == nil {
+		t.Errorf("Unexpected success getting deleted manifest")
+	}
+	if !errors.Is(err, distribution.ErrBlobUnknown) {
+		t.Errorf("Unexpected error getting cached manifest: %v", err)
+	}
 }

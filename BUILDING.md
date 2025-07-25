@@ -9,7 +9,7 @@ This is useful if you intend to actively work on the registry.
 
 Most people should use prebuilt images, for example, the [Registry docker image](https://hub.docker.com/r/library/registry/) provided by Docker.
 
-People looking for advanced operational use cases might consider rolling their own image with a custom Dockerfile inheriting `FROM registry:2`.
+People looking for advanced operational use cases might consider rolling their own image with a custom Dockerfile inheriting `FROM registry:3`.
 
 The latest updates to `main` branch are automatically pushed to [distribution Docker Hub repository](https://hub.docker.com/r/distribution/distribution) and tagged with `edge` tag.
 
@@ -102,15 +102,15 @@ the environment variable `BUILDTAGS`.
 <dd>Compiles without resumable digest support</dd>
 </dl>
 
-### Local cloud storage environment
+### Local S3 store environment
 
-You can run an S3 API compatible storage locally with [minio](https://min.io/).
+You can run an S3 API compatible store locally with [minio](https://min.io/).
 
 You must have a [docker compose](https://docs.docker.com/compose/) compatible tool installed on your workstation.
 
-Start the local cloud environment:
+Start the local S3 store environment:
 ```
-make start-cloud-storage
+make start-s3-storage
 ```
 There is a sample registry configuration file that lets you point the registry to the started storage:
 ```
@@ -121,9 +121,9 @@ AWS_ACCESS_KEY=distribution \
         S3_ENCRYPT=false \
         REGION_ENDPOINT=http://127.0.0.1:9000 \
         S3_SECURE=false \
-./bin/registry serve tests/conf-local-cloud.yml
+./bin/registry serve tests/conf-local-s3.yml
 ```
-Stop the local storage when done:
+Stop the local S3 store when done:
 ```
-make stop-cloud-storage
+make stop-s3-storage
 ```

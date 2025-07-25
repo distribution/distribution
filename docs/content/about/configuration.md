@@ -56,6 +56,12 @@ REGISTRY_HTTP_TLS_LETSENCRYPT_HOSTS_0=registry.example.com
 > be configured to tweak individual values. Overriding configuration sections
 > with environment variables is not recommended.
 
+### Disable traces export
+
+Currently traces are set to `https://localhost:4318/v1/traces` by default.
+You can control this by setting the [environment variable](https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#exporter-selection) `OTEL_TRACES_EXPORTER`
+to either `none` or your trace collector.
+
 ## Overriding the entire configuration file
 
 If the default configuration is not a sound basis for your usage, or if you are
@@ -68,7 +74,7 @@ specify it in the `docker run` command:
 ```bash
 $ docker run -d -p 5000:5000 --restart=always --name registry \
              -v `pwd`/config.yml:/etc/distribution/config.yml \
-             registry:2
+             registry:3
 ```
 
 Use this
@@ -120,8 +126,8 @@ storage:
       clientid: client_id_string
       tenantid: tenant_id_string
       secret: secret_string
-    copy_status_poll_max_retry: 10
-    copy_status_poll_delay: 100ms
+    max_retries: 10
+    retry_delay: 100ms
   gcs:
     bucket: bucketname
     keyfile: /path/to/keyfile
@@ -690,7 +696,7 @@ Default `signingalgorithms`:
 Additional notes on `rootcertbundle`:
 
 - The public key of this certificate will be automatically added to the list of known keys.
-- The public key will be identified by it's [RFC7638 Thumbprint](https://datatracker.ietf.org/doc/html/rfc7638).
+- The public key will be identified by its JWK Thumbprint. See [RFC 7638](https://datatracker.ietf.org/doc/html/rfc7638) and [RFC 8037](https://datatracker.ietf.org/doc/html/rfc8037) for reference.
 
 For more information about Token based authentication configuration, see the
 [specification](../spec/auth/token.md).
@@ -1275,6 +1281,7 @@ By default the registry will validate that all platform images exist when an ima
 index is uploaded to the registry. Disabling this validatation is experimental
 because other tooling that uses the registry may expect the image index to be complete.
 
+```yaml
 validation:
   manifests:
     indexes:
@@ -1282,6 +1289,7 @@ validation:
       platformlist:
       - os: linux
         architecture: amd64
+```
 
 Use these settings to configure what validation the registry performs on image
 index manifests uploaded to the registry.

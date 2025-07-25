@@ -33,11 +33,12 @@ jobs:
       fail-fast: false
       matrix:
         go:
-          - 1.22.12
-          - 1.23.6
+          - 1.23.7
+          - 1.24.1
         target:
           - test-coverage
-          - test-cloud-storage
+          - test-s3-storage
+          - test-azure-storage
     steps:
       -
         name: Checkout
@@ -140,7 +141,7 @@ jobs:
           tree -nh ./bin
       -
         name: Upload artifacts
-        uses: actions/upload-artifact@v4.6.0
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: registry
           path: ./bin/*
