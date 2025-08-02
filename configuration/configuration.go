@@ -66,6 +66,9 @@ type Configuration struct {
 
 	// Policy configures registry policy options.
 	Policy Policy `yaml:"policy,omitempty"`
+
+	// Jobs defines configuration options for the registry's job scheduler.
+	GC GarbageCollection `yaml:"gc,omitempty"`
 }
 
 // Policy defines configuration options for managing registry policies.
@@ -401,6 +404,15 @@ type Platform struct {
 
 	// OS is the operating system for this platform
 	OS string `yaml:"os,omitempty"`
+}
+
+// GarbageCollection provides the configuration section for garbage collection.
+type GarbageCollection struct {
+	// Enabled turns on the garbage collection job
+	Enabled bool `yaml:"enabled,omitempty"`
+
+	// Interval is the duration in between checks
+	Schedule string `yaml:"schedule,omitempty"`
 }
 
 // v0_1Configuration is a Version 0.1 Configuration struct
