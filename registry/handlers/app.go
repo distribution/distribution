@@ -45,6 +45,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/redis/go-redis/extra/redisotel/v9"
 	"github.com/redis/go-redis/v9"
+	"github.com/robfig/cron/v3"
 	"github.com/sirupsen/logrus"
 )
 
@@ -445,6 +446,39 @@ func (app *App) RegisterHealthChecks(healthRegistries ...*health.Registry) {
 		healthRegistry.Register(tcpChecker.Addr, updater)
 		go health.Poll(app, updater, checker, interval)
 	}
+}
+
+func (app *App) RegistryGarbageCollection() {
+	if !app.Config.GC.Enabled {
+		dcontext.GetLogger(app).Info("garbage collection disabled")
+		return
+	}
+
+	dcontext.GetLogger(app).Infof("garbage collection will be scheduled with %s", app.Config.GC.Schedule)
+	c := cron.New(cron.WithSeconds())
+	_, err := c.AddFunc(app.Config.GC.Schedule, func() {
+		dcontext.GetLogger(app).Info("garbage collection cycle started")
+		app.readOnly = true
+		defer func() {
+			app.readOnly = false
+		}()
+
+		err := storage.MarkAndSweep(context.TODO(), app.driver, app.registry, storage.GCOpts{
+			DryRun:         false,
+			RemoveUntagged: true,
+		})
+
+		if err != nil {
+			dcontext.GetLogger(app).Errorf("failed to garbage collect: %v", err)
+		}
+		dcontext.GetLogger(app).Info("garbage collection cycle completed")
+	})
+
+	if err != nil {
+		dcontext.GetLogger(app).Errorf("failed to add garbage collection job: %v", err)
+	}
+
+	c.Start()
 }
 
 // Shutdown close the underlying registry
