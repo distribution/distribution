@@ -9,6 +9,7 @@ import (
 	_ "github.com/distribution/distribution/v3/registry/auth/token"
 	_ "github.com/distribution/distribution/v3/registry/proxy"
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/azure"
+	_ "github.com/distribution/distribution/v3/registry/storage/driver/bunny"
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/filesystem"
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/gcs"
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/inmemory"

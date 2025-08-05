@@ -44,6 +44,15 @@ require (
 )
 
 require (
+	github.com/andybalholm/brotli v1.1.1 // indirect
+	github.com/go-resty/resty/v2 v2.15.3 // indirect
+	github.com/klauspost/cpuid/v2 v2.2.3 // indirect
+	github.com/minio/sha256-simd v1.0.1 // indirect
+	github.com/valyala/bytebufferpool v1.0.0 // indirect
+	github.com/valyala/fasthttp v1.57.0 // indirect
+)
+
+require (
 	cel.dev/expr v0.16.1 // indirect
 	cloud.google.com/go v0.115.1 // indirect
 	cloud.google.com/go/auth v0.9.3 // indirect
@@ -79,6 +88,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
+	github.com/l0wl3vel/bunny-storage-go-sdk v0.0.11
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
