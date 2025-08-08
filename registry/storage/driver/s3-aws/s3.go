@@ -524,6 +524,10 @@ func New(ctx context.Context, params DriverParameters) (*Driver, error) {
 		awsConfig.WithEndpoint(params.RegionEndpoint)
 	}
 
+	// Use regional endpoint for us-east-1 region
+	if params.RegionEndpoint == "" && params.Region == "us-east-1" {
+		awsConfig.WithS3UsEast1RegionalEndpoint(endpoints.RegionalS3UsEast1Endpoint)
+	}
 	awsConfig.WithS3ForcePathStyle(params.ForcePathStyle)
 	awsConfig.WithS3UseAccelerate(params.Accelerate)
 	awsConfig.WithRegion(params.Region)
