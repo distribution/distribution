@@ -1,4 +1,4 @@
-//go:build !arm
+//go:build !arm && !386
 
 package s3
 
