@@ -2,6 +2,7 @@ package dcontext
 
 import (
 	"context"
+	"maps"
 	"sync"
 
 	"github.com/distribution/distribution/v3/internal/uuid"
@@ -52,9 +53,7 @@ type stringMapContext struct {
 // supports string keys.
 func WithValues(ctx context.Context, m map[string]interface{}) context.Context {
 	mo := make(map[string]interface{}, len(m)) // make our own copy.
-	for k, v := range m {
-		mo[k] = v
-	}
+	maps.Copy(mo, m)
 
 	return stringMapContext{
 		Context: ctx,

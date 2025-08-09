@@ -1,6 +1,7 @@
 package notifications
 
 import (
+	"maps"
 	"net/http"
 	"time"
 
@@ -92,7 +93,5 @@ func (e *Endpoint) ReadMetrics(em *EndpointMetrics) {
 	*em = e.metrics.EndpointMetrics
 	// Map still need to copied in a threadsafe manner.
 	em.Statuses = make(map[string]int)
-	for k, v := range e.metrics.Statuses {
-		em.Statuses[k] = v
-	}
+	maps.Copy(em.Statuses, e.metrics.Statuses)
 }
