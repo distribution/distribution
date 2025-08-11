@@ -448,11 +448,20 @@ func FromParameters(ctx context.Context, parameters map[string]interface{}) (*Dr
 	return New(ctx, params)
 }
 
-func getS3LogLevelFromParam(param interface{}) aws.LogLevelType {
+func getS3LogLevelFromParam(param any) aws.LogLevelType {
 	if param == nil {
 		return aws.LogOff
 	}
-	logLevelParam := param.(string)
+	// YAML 1.X interprets "off" as false
+	if b, ok := param.(bool); ok && !b {
+		return aws.LogOff
+	}
+	// if it's not a string, return off
+	logLevelParam, ok := param.(string)
+	if !ok {
+		return aws.LogOff
+	}
+
 	var logLevel aws.LogLevelType
 	switch strings.ToLower(logLevelParam) {
 	case "off":
