@@ -200,6 +200,46 @@ validation:
       platforms: none
 `
 
+// proxyConfigYamlV0_1 is a Version 0.1 yaml document specifying a registry
+// configured as a pull through cache and using an in memory driver
+const proxyConfigYamlV0_1 = `
+version: 0.1
+log:
+  level: info
+storage: inmemory
+auth:
+  silly:
+    realm: silly
+    service: silly
+notifications:
+  endpoints:
+    - name: endpoint-1
+      url:  http://example.com
+      headers:
+        Authorization: [Bearer <example>]
+      ignoredmediatypes:
+        - application/octet-stream
+      ignore:
+        mediatypes:
+           - application/octet-stream
+        actions:
+           - pull
+http:
+  headers:
+    X-Content-Type-Options: [nosniff]
+validation:
+  manifests:
+    indexes:
+      platforms: none
+proxy:
+  remoteurl: https://registry.example.com
+  username: "username"
+  password: "password"
+  evictionpolicy:
+    ttl:
+      ttl: 168h
+`
+
 type ConfigSuite struct {
 	suite.Suite
 	expectedConfig *Configuration
@@ -242,6 +282,30 @@ func (suite *ConfigSuite) TestParseInmemory() {
 	suite.expectedConfig.Redis = Redis{}
 
 	config, err := Parse(bytes.NewReader([]byte(inmemoryConfigYamlV0_1)))
+	suite.Require().NoError(err)
+	suite.Require().Equal(suite.expectedConfig, config)
+}
+
+// TestParseProxy validates that configuration yaml with pull-through cache
+// configured can be parsed into a Configuration struct
+func (suite *ConfigSuite) TestParseProxy() {
+	suite.expectedConfig.Storage = Storage{"inmemory": Parameters{}}
+	suite.expectedConfig.Log.Fields = nil
+	suite.expectedConfig.HTTP.TLS.ClientCAs = nil
+	suite.expectedConfig.HTTP.TLS.ClientAuth = ""
+	suite.expectedConfig.Redis = Redis{}
+	suite.expectedConfig.Proxy = Proxy{
+		RemoteURL: "https://registry.example.com",
+		Username:  "username",
+		Password:  "password",
+		EvictionPolicy: &EvictionPolicy{
+			"ttl": Parameters{
+				"ttl": "168h",
+			},
+		},
+	}
+
+	config, err := Parse(bytes.NewReader([]byte(proxyConfigYamlV0_1)))
 	suite.Require().NoError(err)
 	suite.Require().Equal(suite.expectedConfig, config)
 }

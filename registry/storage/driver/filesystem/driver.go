@@ -9,7 +9,10 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"path"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/distribution/distribution/v3/internal/uuid"
@@ -314,6 +317,29 @@ func (d *driver) RedirectURL(*http.Request, string) (string, error) {
 // from the given path, calling f on each file and directory
 func (d *driver) Walk(ctx context.Context, path string, f storagedriver.WalkFn, options ...func(*storagedriver.WalkOptions)) error {
 	return storagedriver.WalkFallback(ctx, d, path, f, options...)
+}
+
+// Usage gives the total combined size of all files under the given path.
+func (d *driver) Usage(ctx context.Context, path string) (uint64, error) {
+	fullPath := d.fullPath(path)
+
+	du := exec.Command("du", "-sB1", fullPath)
+	duOut, err := du.Output()
+	if err != nil {
+		return 0, fmt.Errorf("failed to run du for disk usage: %v", err)
+	}
+
+	duStr := string(duOut)
+	sizeStr := strings.SplitN(duStr, "\t", 2)
+	if len(sizeStr) != 2 {
+		return 0, fmt.Errorf("got unexpected output while running du for disk usage: %s", duStr)
+	}
+
+	size, err := strconv.ParseUint(sizeStr[0], 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("unable to parse result from du for disk usage: %v", err)
+	}
+	return size, nil
 }
 
 // fullPath returns the absolute path of a key within the Driver's storage.

@@ -688,10 +688,14 @@ type Proxy struct {
 	// If set, Username and Password are ignored.
 	Exec *ExecConfig `yaml:"exec,omitempty"`
 
+	// EvictionPolicy specifies the eviction policy of the cache. Unset means no eviction at all.
+	EvictionPolicy *EvictionPolicy `yaml:"evictionpolicy,omitempty"`
+
+	// This field is kept for backwards compatibility. EvictionPolicy should be used instead.
 	// TTL is the expiry time of the content and will be cleaned up when it expires
 	// if not set, defaults to 7 * 24 hours
 	// If set to zero, will never expire cache
-	TTL *time.Duration `yaml:"ttl,omitempty"`
+	TTL string `yaml:"ttl,omitempty"`
 }
 
 // ExecConfig defines the configuration for executing a command as a credential helper.
@@ -709,6 +713,52 @@ type ExecConfig struct {
 	// If set to zero, the command will be executed for every request.
 	// If not set, the command will only be executed once.
 	Lifetime *time.Duration `yaml:"lifetime,omitempty"`
+}
+
+// EvictionPolicy defines the configuration for the registry proxy eviction policy
+type EvictionPolicy map[string]Parameters
+
+// Type returns the eviction policy type, such as ttl
+func (ep EvictionPolicy) Type() string {
+	// Return only key in this map
+	for k := range ep {
+		return k
+	}
+	return ""
+}
+
+// Parameters returns the Parameters map for an EvictionPolicy configuration
+func (ep EvictionPolicy) Parameters() Parameters {
+	return ep[ep.Type()]
+}
+
+// UnmarshalYAML implements the yaml.Unmarshaler interface
+// Unmarshals a single item map into a EvictionPolicy or a string into a EvictionPolicy type with no parameters
+func (ep *EvictionPolicy) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var m map[string]Parameters
+	err := unmarshal(&m)
+	if err != nil {
+		return err
+	}
+	if len(m) > 1 {
+		types := make([]string, 0, len(m))
+		for k := range m {
+			types = append(types, k)
+		}
+
+		return fmt.Errorf("must provide exactly one type. Provided: %v", types)
+
+	}
+	*ep = m
+	return nil
+}
+
+// MarshalYAML implements the yaml.Marshaler interface
+func (ep EvictionPolicy) MarshalYAML() (interface{}, error) {
+	if ep.Parameters() == nil {
+		return ep.Type(), nil
+	}
+	return map[string]Parameters(ep), nil
 }
 
 // Validation configures validation options for the registry.

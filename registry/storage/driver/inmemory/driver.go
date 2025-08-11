@@ -250,6 +250,22 @@ func (d *driver) Walk(ctx context.Context, path string, f storagedriver.WalkFn, 
 	return storagedriver.WalkFallback(ctx, d, path, f, options...)
 }
 
+// Usage gives the total combined size of all files under the given path.
+func (d *driver) Usage(ctx context.Context, path string) (uint64, error) {
+	usage := uint64(0)
+	err := d.Walk(ctx, path, func(fileInfo storagedriver.FileInfo) error {
+		if fileInfo.Size() < 0 {
+			return fmt.Errorf("Expected non-negative file size for %s, got: %d", fileInfo.Path(), fileInfo.Size())
+		}
+		usage += uint64(fileInfo.Size())
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+	return usage, nil
+}
+
 type writer struct {
 	d         *driver
 	f         *file

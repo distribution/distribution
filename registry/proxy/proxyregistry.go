@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
-	"time"
 
 	"github.com/distribution/reference"
 
@@ -17,21 +17,27 @@ import (
 	"github.com/distribution/distribution/v3/internal/client/auth/challenge"
 	"github.com/distribution/distribution/v3/internal/client/transport"
 	"github.com/distribution/distribution/v3/internal/dcontext"
-	"github.com/distribution/distribution/v3/registry/proxy/scheduler"
 	"github.com/distribution/distribution/v3/registry/storage"
 	"github.com/distribution/distribution/v3/registry/storage/driver"
 )
 
-var repositoryTTL = 24 * 7 * time.Hour
+// InitFunc is the type of an EvictionController factory function and is used
+// to register the constructor for different EvictionController backends.
+type InitFunc func(ctx context.Context, driver driver.StorageDriver, path string, options map[string]interface{}) (EvictionController, error)
+
+var evictionControllers map[string]InitFunc
+
+func init() {
+	evictionControllers = make(map[string]InitFunc)
+}
 
 // proxyingRegistry fetches content from a remote registry and caches it locally
 type proxyingRegistry struct {
-	embedded       distribution.Namespace // provides local registry functionality
-	scheduler      *scheduler.TTLExpirationScheduler
-	ttl            *time.Duration
-	remoteURL      url.URL
-	authChallenger authChallenger
-	basicAuth      auth.CredentialStore
+	embedded           distribution.Namespace // provides local registry functionality
+	evictionController EvictionController
+	remoteURL          url.URL
+	authChallenger     authChallenger
+	basicAuth          auth.CredentialStore
 }
 
 // NewRegistryPullThroughCache creates a registry acting as a pull through cache
@@ -43,21 +49,34 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 
 	v := storage.NewVacuum(ctx, driver)
 
-	var s *scheduler.TTLExpirationScheduler
-	var ttl *time.Duration
-	if config.TTL == nil {
-		// Default TTL is 7 days
-		ttl = &repositoryTTL
-	} else if *config.TTL > 0 {
-		ttl = config.TTL
-	} else {
-		// TTL is disabled, never expire
-		ttl = nil
+	var evictionController EvictionController
+
+	// Legacy TTL configuration
+	if config.TTL != "" {
+		if config.EvictionPolicy != nil {
+			panic(fmt.Sprintf("unable to configure eviction, provided both eviction policy (%s) and ttl (%s)", config.EvictionPolicy.Type(), config.TTL))
+		}
+
+		config.EvictionPolicy = &configuration.EvictionPolicy{
+			"ttl": configuration.Parameters{
+				"ttl": config.TTL,
+			},
+		}
 	}
 
-	if ttl != nil {
-		s = scheduler.New(ctx, driver, "/scheduler-state.json")
-		s.OnBlobExpire(func(ref reference.Reference) error {
+	if config.EvictionPolicy != nil {
+		evictionPolicy := config.EvictionPolicy.Type()
+		if evictionPolicy != "" && !strings.EqualFold(evictionPolicy, "none") {
+			controller, err := getEvictionController(config.EvictionPolicy.Type(), ctx, driver, "/eviction-state.json", config.EvictionPolicy.Parameters())
+			if err != nil {
+				panic(fmt.Sprintf("unable to configure eviction (%s): %v", evictionPolicy, err))
+			}
+			evictionController = controller
+		}
+	}
+
+	if evictionController != nil {
+		evictionController.OnBlobEvict(func(ref reference.Reference) error {
 			var r reference.Canonical
 			var ok bool
 			if r, ok = ref.(reference.Canonical); !ok {
@@ -85,7 +104,7 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 			return nil
 		})
 
-		s.OnManifestExpire(func(ref reference.Reference) error {
+		evictionController.OnManifestEvict(func(ref reference.Reference) error {
 			var r reference.Canonical
 			var ok bool
 			if r, ok = ref.(reference.Canonical); !ok {
@@ -108,7 +127,7 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 			return nil
 		})
 
-		err = s.Start()
+		err = evictionController.Start()
 		if err != nil {
 			return nil, err
 		}
@@ -128,10 +147,9 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 	}
 
 	return &proxyingRegistry{
-		embedded:  registry,
-		scheduler: s,
-		ttl:       ttl,
-		remoteURL: *remoteURL,
+		embedded:           registry,
+		evictionController: evictionController,
+		remoteURL:          *remoteURL,
 		authChallenger: &remoteAuthChallenger{
 			remoteURL: *remoteURL,
 			cm:        challenge.NewSimpleManager(),
@@ -190,21 +208,19 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named
 
 	return &proxiedRepository{
 		blobStore: &proxyBlobStore{
-			localStore:     localRepo.Blobs(ctx),
-			remoteStore:    remoteRepo.Blobs(ctx),
-			scheduler:      pr.scheduler,
-			ttl:            pr.ttl,
-			repositoryName: name,
-			authChallenger: pr.authChallenger,
+			localStore:         localRepo.Blobs(ctx),
+			remoteStore:        remoteRepo.Blobs(ctx),
+			evictionController: pr.evictionController,
+			repositoryName:     name,
+			authChallenger:     pr.authChallenger,
 		},
 		manifests: &proxyManifestStore{
-			repositoryName:  name,
-			localManifests:  localManifests, // Options?
-			remoteManifests: remoteManifests,
-			ctx:             ctx,
-			scheduler:       pr.scheduler,
-			ttl:             pr.ttl,
-			authChallenger:  pr.authChallenger,
+			repositoryName:     name,
+			localManifests:     localManifests, // Options?
+			remoteManifests:    remoteManifests,
+			ctx:                ctx,
+			evictionController: pr.evictionController,
+			authChallenger:     pr.authChallenger,
 		},
 		name: name,
 		tags: &proxyTagService{
@@ -229,7 +245,7 @@ type Closer interface {
 }
 
 func (pr *proxyingRegistry) Close() error {
-	return pr.scheduler.Stop()
+	return pr.evictionController.Stop()
 }
 
 // authChallenger encapsulates a request to the upstream to establish credential challenges
@@ -303,4 +319,49 @@ func (pr *proxiedRepository) Named() reference.Named {
 
 func (pr *proxiedRepository) Tags(ctx context.Context) distribution.TagService {
 	return pr.tags
+}
+
+// OnEvictFunc is called when a cached entry is evicted
+type OnEvictFunc func(reference.Reference) error
+
+// EvictionController controls the eviction policy that the proxied registry follows.
+type EvictionController interface {
+	// Start starts the EvictionController
+	Start() error
+	// Stop gracefully shuts down the EvictionController
+	Stop() error
+	// OnBlobEvict attaches the function f to run on a reference when a blob is evicted
+	OnBlobEvict(f OnEvictFunc)
+	// OnManifestEvict attaches the function f to run on a reference when a manifest is evicted
+	OnManifestEvict(f OnEvictFunc)
+	// AddBlob adds a blob to the eviction policy and errors when it is unable to
+	AddBlob(blobRef reference.Canonical) error
+	// AddManifest adds a blob to the eviction policy and errors when it is unable to
+	AddManifest(manifestRef reference.Canonical) error
+	// TouchBlob notifies the EvictionController of a cache hit on the blob
+	TouchBlob(blobref reference.Canonical) error
+	// TouchManifest notifies the EvictionController of a cache hit on the manifest
+	TouchManifest(manifestRef reference.Canonical) error
+}
+
+// Register is used to register an InitFunc for
+// an EvictionController backend with the given name.
+func Register(name string, initFunc InitFunc) error {
+	if _, exists := evictionControllers[name]; exists {
+		return fmt.Errorf("name already registered: %s", name)
+	}
+
+	evictionControllers[name] = initFunc
+
+	return nil
+}
+
+// getEvictionController constructs an EvictionController
+// with the given options using the named backend.
+func getEvictionController(name string, ctx context.Context, driver driver.StorageDriver, path string, options map[string]interface{}) (EvictionController, error) {
+	if initFunc, exists := evictionControllers[name]; exists {
+		return initFunc(ctx, driver, path, options)
+	}
+
+	return nil, fmt.Errorf("no access controller registered with name: %s", name)
 }
