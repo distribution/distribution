@@ -157,7 +157,7 @@ func (p *Parser) Parse(in []byte, v interface{}) error {
 func (p *Parser) overwriteFields(v reflect.Value, fullpath string, path []string, payload string) error {
 	for v.Kind() == reflect.Ptr {
 		if v.IsNil() {
-			panic("encountered nil pointer while handling environment variable " + fullpath)
+			return fmt.Errorf("encountered nil pointer while handling environment variable %s", fullpath)
 		}
 		v = reflect.Indirect(v)
 	}
@@ -169,11 +169,11 @@ func (p *Parser) overwriteFields(v reflect.Value, fullpath string, path []string
 	case reflect.Slice:
 		idx, err := strconv.Atoi(path[0])
 		if err != nil {
-			panic("non-numeric index: " + path[0])
+			return fmt.Errorf("non-numeric index: %s", path[0])
 		}
 
 		if idx > v.Len() {
-			panic("undefined index: " + path[0])
+			return fmt.Errorf("undefined index: %s", path[0])
 		}
 
 		// if there is no element or the current slice length
@@ -222,7 +222,7 @@ func (p *Parser) overwriteStruct(v reflect.Value, fullpath string, path []string
 
 		upper := strings.ToUpper(sf.Name)
 		if _, present := byUpperCase[upper]; present {
-			panic(fmt.Sprintf("field name collision in configuration object: %s", sf.Name))
+			return fmt.Errorf("field name collision in configuration object: %s", sf.Name)
 		}
 		byUpperCase[upper] = i
 	}
