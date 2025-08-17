@@ -17,16 +17,11 @@ import (
 // handlers. Resources that don't need to be shared across handlers should not
 // be on this object.
 type Context struct {
-	// App points to the application structure that created this context.
-	*App
 	context.Context
 
 	// Repository is the repository for the current request. All requests
 	// should be scoped to a single repository. This field may be nil.
 	Repository distribution.Repository
-
-	// RepositoryRemover provides method to delete a repository
-	RepositoryRemover distribution.RepositoryRemover
 
 	// Errors is a collection of errors encountered during the request to be
 	// returned to the client API. If errors are added to the collection, the
