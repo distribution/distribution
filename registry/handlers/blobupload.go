@@ -218,12 +218,6 @@ func (buh *blobUploadHandler) BlobUploadComplete(w http.ResponseWriter, r *http.
 	}
 	defer buh.Upload.Close()
 
-	// Check if the client canceled the request
-	if r.Context().Err() != nil {
-		dcontext.GetLogger(buh).Errorf("request canceled by client: %v", r.Context().Err())
-		return
-	}
-
 	dgstStr := r.FormValue("digest") // TODO(stevvooe): Support multiple digest parameters!
 
 	if dgstStr == "" {
