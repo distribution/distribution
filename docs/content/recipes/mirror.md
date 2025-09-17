@@ -75,9 +75,11 @@ Registry image.
 At least, you need to specify `proxy.remoteurl` within `/etc/distribution/config.yml`
 as described in the following subsection.
 
-Multiple registry caches can be deployed over the same back-end. A single
-registry cache ensures that concurrent requests do not pull duplicate data,
-but this property does not hold true for a registry cache cluster.
+Multiple registry caches can be deployed over the same back-end, but each 
+instance in a registry cache cluster is stateless, so it maintains its own 
+cache.
+
+Note that concurrent inflight pulls will make multiple requests.
 
 > **Note**
 >
