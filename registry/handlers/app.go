@@ -579,9 +579,9 @@ func (app *App) configureRedis(cfg *configuration.Configuration) {
 		if err != nil {
 			panic(err)
 		}
-		if len(cfg.Redis.TLS.ClientCAs) != 0 {
+		if len(cfg.Redis.TLS.RootCAs) != 0 {
 			pool := x509.NewCertPool()
-			for _, ca := range cfg.Redis.TLS.ClientCAs {
+			for _, ca := range cfg.Redis.TLS.RootCAs {
 				caPem, err := os.ReadFile(ca)
 				if err != nil {
 					dcontext.GetLogger(app).Errorf("failed reading redis client CA: %v", err)
@@ -593,8 +593,7 @@ func (app *App) configureRedis(cfg *configuration.Configuration) {
 					return
 				}
 			}
-			tlsConf.ClientAuth = tls.RequireAndVerifyClientCert
-			tlsConf.ClientCAs = pool
+			tlsConf.RootCAs = pool
 		}
 		opts.TLSConfig = tlsConf
 	}
