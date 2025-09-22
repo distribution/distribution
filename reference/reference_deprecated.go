@@ -119,7 +119,7 @@ func Path(named reference.Named) (name string) {
 //
 // Deprecated: Use [reference.Domain] or [reference.Path].
 func SplitHostname(named reference.Named) (string, string) {
-	return reference.SplitHostname(named)
+	return reference.Domain(named), reference.Path(named)
 }
 
 // Parse parses s and returns a syntactically valid Reference.
