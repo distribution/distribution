@@ -219,6 +219,10 @@ func (ctx *httpRequestContext) Value(key interface{}) interface{} {
 			if ct := ctx.r.Header.Get("Content-Type"); ct != "" {
 				return ct
 			}
+		case "http.request.content-length":
+			if cl := ctx.r.Header.Get("Content-Length"); cl != "" {
+				return cl
+			}
 		case "cf-ray":
 			ct := ctx.r.Header.Get("CF-RAY")
 			if ct != "" {
