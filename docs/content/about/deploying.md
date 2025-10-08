@@ -513,9 +513,10 @@ registry:
     - /path/auth:/auth
 ```
 
+{{< hint type=warning >}}
 Replace `/path` with the directory which contains the `certs/` and `auth/`
 directories.
-{:.warning}
+{{< /hint >}}
 
 Start your registry by issuing the following command in the directory containing
 the `docker-compose.yml` file:
