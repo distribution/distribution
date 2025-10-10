@@ -1,4 +1,4 @@
----
+v---
 title: "Token Authentication Specification"
 description: "Specifies the Distribution Registry v2 authentication"
 keywords: registry, on-prem, images, tags, repository, distribution, Bearer authentication, advanced
