@@ -1362,88 +1362,6 @@ func (w *writer) Write(p []byte) (int, error) {
 		return 0, err
 	}
 
-	// If the last written part is smaller than minChunkSize, we need to make a
-	// new multipart upload :sadface:
-	if len(w.parts) > 0 && int(*w.parts[len(w.parts)-1].Size) < minChunkSize {
-		completedUploadedParts := make(completedParts, len(w.parts))
-		for i, part := range w.parts {
-			completedUploadedParts[i] = &s3.CompletedPart{
-				ETag:       part.ETag,
-				PartNumber: part.PartNumber,
-			}
-		}
-
-		sort.Sort(completedUploadedParts)
-
-		_, err := w.driver.S3.CompleteMultipartUploadWithContext(w.ctx, &s3.CompleteMultipartUploadInput{
-			Bucket:   aws.String(w.driver.Bucket),
-			Key:      aws.String(w.key),
-			UploadId: aws.String(w.uploadID),
-			MultipartUpload: &s3.CompletedMultipartUpload{
-				Parts: completedUploadedParts,
-			},
-		})
-		if err != nil {
-			if _, aErr := w.driver.S3.AbortMultipartUploadWithContext(w.ctx, &s3.AbortMultipartUploadInput{
-				Bucket:   aws.String(w.driver.Bucket),
-				Key:      aws.String(w.key),
-				UploadId: aws.String(w.uploadID),
-			}); aErr != nil {
-				return 0, errors.Join(err, aErr)
-			}
-			return 0, err
-		}
-
-		resp, err := w.driver.S3.CreateMultipartUploadWithContext(w.ctx, &s3.CreateMultipartUploadInput{
-			Bucket:               aws.String(w.driver.Bucket),
-			Key:                  aws.String(w.key),
-			ContentType:          w.driver.getContentType(),
-			ACL:                  w.driver.getACL(),
-			ServerSideEncryption: w.driver.getEncryptionMode(),
-			StorageClass:         w.driver.getStorageClass(),
-		})
-		if err != nil {
-			return 0, err
-		}
-		w.uploadID = *resp.UploadId
-
-		// If the entire written file is smaller than minChunkSize, we need to make
-		// a new part from scratch :double sad face:
-		if w.size < minChunkSize {
-			resp, err := w.driver.S3.GetObjectWithContext(w.ctx, &s3.GetObjectInput{
-				Bucket: aws.String(w.driver.Bucket),
-				Key:    aws.String(w.key),
-			})
-			if err != nil {
-				return 0, err
-			}
-			defer resp.Body.Close()
-
-			w.reset()
-
-			if _, err := io.Copy(w.buf, resp.Body); err != nil {
-				return 0, err
-			}
-		} else {
-			// Otherwise we can use the old file as the new first part
-			copyPartResp, err := w.driver.S3.UploadPartCopyWithContext(w.ctx, &s3.UploadPartCopyInput{
-				Bucket:     aws.String(w.driver.Bucket),
-				CopySource: aws.String(w.driver.Bucket + "/" + w.key),
-				Key:        aws.String(w.key),
-				PartNumber: aws.Int64(1),
-				UploadId:   resp.UploadId,
-			})
-			if err != nil {
-				return 0, err
-			}
-			w.parts = []*s3.Part{{
-				ETag:       copyPartResp.CopyPartResult.ETag,
-				PartNumber: aws.Int64(1),
-				Size:       aws.Int64(w.size),
-			}}
-		}
-	}
-
 	n, _ := w.buf.Write(p)
 
 	for w.buf.Len() >= w.driver.ChunkSize {
@@ -1470,12 +1388,6 @@ func (w *writer) Close() error {
 	defer w.releaseBuffer()
 
 	return w.flush()
-}
-
-func (w *writer) reset() {
-	w.buf.Reset()
-	w.parts = nil
-	w.size = 0
 }
 
 // releaseBuffer resets the buffer and returns it to the pool.
