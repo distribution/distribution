@@ -399,6 +399,12 @@ func (ms *manifests) Exists(ctx context.Context, dgst digest.Digest) (bool, erro
 	if err != nil {
 		return false, err
 	}
+
+	mediaTypes := distribution.ManifestMediaTypes()
+	for _, t := range mediaTypes {
+		req.Header.Add("Accept", t)
+	}
+
 	resp, err := ms.client.Do(req)
 	if err != nil {
 		return false, err
