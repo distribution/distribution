@@ -79,6 +79,9 @@ func TestIgnoredSink(t *testing.T) {
 		{ignoreMediaTypes: []string{"blob", "manifest"}, ignoreActions: []string{"other"}},
 		{ignoreMediaTypes: []string{"other"}, ignoreActions: []string{"pull"}, expected: blob},
 		{ignoreMediaTypes: []string{"other"}, ignoreActions: []string{"pull", "push"}},
+		{ignoreMediaTypes: []string{}, ignoreActions: []string{"pull"}, expected: blob},
+		{ignoreMediaTypes: []string{}, ignoreActions: []string{"push"}},
+		{ignoreMediaTypes: []string{}, ignoreActions: []string{"mount", "delete"}, expected: blob},
 	}
 
 	for _, tc := range tests {
@@ -103,6 +106,9 @@ func TestIgnoredSink(t *testing.T) {
 		{ignoreMediaTypes: []string{"blob", "manifest"}, ignoreActions: []string{"other"}},
 		{ignoreMediaTypes: []string{"other"}, ignoreActions: []string{"push"}, expected: manifest},
 		{ignoreMediaTypes: []string{"other"}, ignoreActions: []string{"pull", "push"}},
+		{ignoreMediaTypes: []string{}, ignoreActions: []string{"push"}, expected: manifest},
+		{ignoreMediaTypes: []string{}, ignoreActions: []string{"pull"}},
+		{ignoreMediaTypes: []string{}, ignoreActions: []string{"mount", "delete"}, expected: manifest},
 	}
 
 	for _, tc := range tests {
