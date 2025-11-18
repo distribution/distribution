@@ -88,9 +88,6 @@ func ping(ctx context.Context, manager challenge.Manager, endpoint, versionHeade
 	if err != nil {
 		return err
 	}
-	if versionHeader != "" {
-		req.Header.Set(versionHeader, "registry/2.0")
-	}
 
 	client := &http.Client{
 		Timeout: 30 * time.Second,
