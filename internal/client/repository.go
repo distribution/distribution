@@ -86,7 +86,7 @@ type registry struct {
 	ub     *v2.URLBuilder
 }
 
-// Repositories returns a lexigraphically sorted catalog given a base URL.  The 'entries' slice will be filled up to the size
+// Repositories returns a lexicographically sorted catalog given a base URL.  The 'entries' slice will be filled up to the size
 // of the slice, starting at the value provided in 'last'.  The number of entries will be returned along with io.EOF if there
 // are no more entries
 func (r *registry) Repositories(ctx context.Context, entries []string, last string) (int, error) {
