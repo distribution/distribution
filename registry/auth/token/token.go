@@ -5,11 +5,11 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/distribution/distribution/v3/registry/auth"
 )
@@ -119,7 +119,7 @@ func (t *Token) Verify(verifyOpts VerifyOptions) (*ClaimSet, error) {
 	// Verify that the signing key is trusted.
 	signingKey, err := t.VerifySigningKey(verifyOpts)
 	if err != nil {
-		log.Infof("failed to verify token: %v", err)
+		slog.Info(fmt.Sprintf("failed to verify token: %v", err))
 		return nil, ErrInvalidToken
 	}
 
@@ -133,13 +133,13 @@ func (t *Token) Verify(verifyOpts VerifyOptions) (*ClaimSet, error) {
 
 	// Verify that the Issuer claim is a trusted authority.
 	if !contains(verifyOpts.TrustedIssuers, claims.Issuer) {
-		log.Infof("token from untrusted issuer: %q", claims.Issuer)
+		slog.Info(fmt.Sprintf("token from untrusted issuer: %q", claims.Issuer))
 		return nil, ErrInvalidToken
 	}
 
 	// Verify that the Audience claim is allowed.
 	if !containsAny(verifyOpts.AcceptedAudiences, claims.Audience) {
-		log.Infof("token intended for another audience: %v", claims.Audience)
+		slog.Info(fmt.Sprintf("token intended for another audience: %v", claims.Audience))
 		return nil, ErrInvalidToken
 	}
 
@@ -148,13 +148,13 @@ func (t *Token) Verify(verifyOpts VerifyOptions) (*ClaimSet, error) {
 
 	ExpWithLeeway := time.Unix(claims.Expiration, 0).Add(Leeway)
 	if currentTime.After(ExpWithLeeway) {
-		log.Infof("token not to be used after %s - currently %s", ExpWithLeeway, currentTime)
+		slog.Info(fmt.Sprintf("token not to be used after %s - currently %s", ExpWithLeeway, currentTime))
 		return nil, ErrInvalidToken
 	}
 
 	NotBeforeWithLeeway := time.Unix(claims.NotBefore, 0).Add(-Leeway)
 	if currentTime.Before(NotBeforeWithLeeway) {
-		log.Infof("token not to be used before %s - currently %s", NotBeforeWithLeeway, currentTime)
+		slog.Info(fmt.Sprintf("token not to be used before %s - currently %s", NotBeforeWithLeeway, currentTime))
 		return nil, ErrInvalidToken
 	}
 
