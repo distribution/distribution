@@ -311,7 +311,6 @@ func TestEligibleForS3(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		tc := tc
 		t.Run(fmt.Sprintf("Client IP = %v", tc.RemoteAddr), func(t *testing.T) {
 			t.Parallel()
 			req := &http.Request{RemoteAddr: tc.RemoteAddr}
@@ -340,7 +339,6 @@ func TestEligibleForS3WithAWSIPNotInitialized(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		tc := tc
 		t.Run(fmt.Sprintf("Client IP = %v", tc.RemoteAddr), func(t *testing.T) {
 			t.Parallel()
 			req := &http.Request{RemoteAddr: tc.RemoteAddr}

@@ -491,7 +491,6 @@ func (imh *manifestHandler) DeleteManifest(w http.ResponseWriter, r *http.Reques
 	g := errgroup.Group{}
 	g.SetLimit(storage.DefaultConcurrencyLimit)
 	for _, tag := range referencedTags {
-		tag := tag
 
 		g.Go(func() error {
 			if err := tagService.Untag(imh, tag); err != nil {
