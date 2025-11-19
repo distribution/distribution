@@ -1063,8 +1063,8 @@ may use the Redis instance for several applications. Currently, it caches
 information about immutable blobs. Most of the `redis` options control
 how the registry connects to the `redis` instance.
 
-You should configure Redis with the **allkeys-lru** eviction policy, because the
-registry does not set an expiration value on keys.
+You **must** configure Redis with the **allkeys-lru** eviction policy, because
+the registry does not set an expiration value on keys.
 
 Under the hood distribution uses [`go-redis`](https://github.com/redis/go-redis) Go module for
 Redis connectivity and its [`UniversalOptions`](https://pkg.go.dev/github.com/redis/go-redis/v9#UniversalOptions)
