@@ -40,7 +40,6 @@ func TestErrorCodes(t *testing.T) {
 	}
 
 	for ec := range errorCodeToDescriptors {
-		ec := ec
 		t.Run(ec.String(), func(t *testing.T) {
 			t.Parallel()
 			desc := errorCodeToDescriptors[ec]

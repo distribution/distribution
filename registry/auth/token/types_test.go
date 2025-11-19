@@ -27,7 +27,6 @@ func TestAudienceList_Unmarshal(t *testing.T) {
 		}
 
 		for _, tc := range tests {
-			tc := tc
 			t.Run("", func(t *testing.T) {
 				t.Parallel()
 				var actual AudienceList
