@@ -53,6 +53,10 @@ area/storage/s3:
   - changed-files:
     - any-glob-to-any-file:
       - registry/storage/driver/s3-aws/**
+area/client:
+  - changed-files:
+    - any-glob-to-any-file:
+      - internal/client/**
 dependencies:
   - changed-files:
     - any-glob-to-any-file:
