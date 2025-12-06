@@ -642,6 +642,14 @@ func (app *App) configureLogHook(configuration *configuration.Configuration) {
 		if !configHook.Disabled {
 			switch configHook.Type {
 			case "mail":
+                                mailHandler := NewMailHandler(
+					Addr:     configHook.MailOptions.SMTP.Addr,
+					Username: configHook.MailOptions.SMTP.Username,
+					Password: configHook.MailOptions.SMTP.Password,
+					Insecure: configHook.MailOptions.SMTP.Insecure,
+					From:     configHook.MailOptions.From,
+					To:       configHook.MailOptions.To,
+                                )
 				hook := &logHook{}
 				hook.LevelsParam = configHook.Levels
 				hook.Mail = &mailer{
