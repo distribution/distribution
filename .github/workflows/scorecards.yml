@@ -54,7 +54,7 @@ jobs:
 
       # Upload the results to GitHub's code scanning dashboard.
       - name: "Upload to code-scanning"
-        uses: github/codeql-action/upload-sarif@86b7d4fc363de6ec65b66605da5fa8e7e0fe8028 # tag=v2.22.12
+        uses: github/codeql-action/upload-sarif@378219ced27d0034fb5243e6fb8495a1f0afefe7 # tag=v2.22.12
         with:
           sarif_file: results.sarif
 
