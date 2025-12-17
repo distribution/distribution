@@ -688,6 +688,11 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 		}
 		context := app.context(w, r)
 
+		if r.Context().Err() != nil {
+			dcontext.GetLogger(context).Errorf("request canceled by client: %v", r.Context().Err())
+			return
+		}
+
 		dcontext.GetRequestLogger(context).Infof("request received")
 
 		defer func() {
