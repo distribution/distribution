@@ -442,6 +442,7 @@ github.com/redis/go-redis/v9/internal/util
 # github.com/sirupsen/logrus v1.9.3
 ## explicit; go 1.13
 github.com/sirupsen/logrus
+github.com/sirupsen/logrus/hooks/test
 # github.com/spf13/cobra v1.8.0
 ## explicit; go 1.15
 github.com/spf13/cobra
