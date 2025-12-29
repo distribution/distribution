@@ -688,17 +688,18 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 		}
 		context := app.context(w, r)
 
-		if r.Context().Err() != nil {
-			dcontext.GetLogger(context).Errorf("request canceled by client: %v", r.Context().Err())
-			return
-		}
-
 		dcontext.GetRequestLogger(context).Infof("request received")
 
 		defer func() {
 			// Automated error response handling here. Handlers may return their
 			// own errors if they need different behavior (such as range errors
 			// for layer upload).
+
+			if r.Context().Err() != nil {
+				dcontext.GetLogger(context).Errorf("request canceled by client: %v", r.Context().Err())
+				return
+			}
+
 			if context.Errors.Len() > 0 {
 				_ = errcode.ServeJSON(w, context.Errors)
 				app.logError(context, context.Errors)
