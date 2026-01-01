@@ -2,6 +2,7 @@ package htpasswd
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -30,21 +31,19 @@ func newHTPasswd(rd io.Reader) (*htpasswd, error) {
 // AuthenticateUser checks a given user:password credential against the
 // receiving HTPasswd's file. If the check passes, nil is returned.
 func (htpasswd *htpasswd) authenticateUser(username string, password string) error {
-	credentials, ok := htpasswd.entries[username]
-	if !ok {
-		// timing attack paranoia
-		if err := bcrypt.CompareHashAndPassword([]byte{}, []byte(password)); err != nil {
+	var credentials []byte
+	// timing attack paranoia
+	if i, ok := htpasswd.entries[username]; ok {
+		credentials = i
+	}
+	if err := bcrypt.CompareHashAndPassword(credentials, []byte(password)); err != nil {
+		// the hash is not the same as the password
+		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
 			return auth.ErrAuthenticationFailure
 		}
-
-		return auth.ErrAuthenticationFailure
+		// other error, e.g. non-bcrypt hash in entries, passthrough to logger for clarity
+		return err
 	}
-
-	err := bcrypt.CompareHashAndPassword(credentials, []byte(password))
-	if err != nil {
-		return auth.ErrAuthenticationFailure
-	}
-
 	return nil
 }
 
