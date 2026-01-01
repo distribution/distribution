@@ -115,6 +115,27 @@ func TestBasicAccessController(t *testing.T) {
 			}
 		}
 	}
+
+	for i := 0; i < len(testUsers); i++ {
+		userNumber = i
+		req, err := http.NewRequest(http.MethodGet, server.URL, nil)
+		if err != nil {
+			t.Fatalf("error allocating new request: %v", err)
+		}
+
+		invalidPassword := testPasswords[i] + "invalid"
+		req.SetBasicAuth(testUsers[i], invalidPassword)
+
+		resp, err = client.Do(req)
+		if err != nil {
+			t.Fatalf("unexpected error during GET: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusUnauthorized {
+			t.Fatalf("unexpected non-success response status: %v != %v for %s %s", resp.StatusCode, http.StatusUnauthorized, testUsers[i], invalidPassword)
+		}
+	}
 }
 
 func TestCreateHtpasswdFile(t *testing.T) {
