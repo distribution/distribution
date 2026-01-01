@@ -35,6 +35,9 @@ type accessController struct {
 	modtime  time.Time
 	mu       sync.Mutex
 	htpasswd *htpasswd
+
+	// overrideDummyHash allows overriding the dummy-hash for testing.
+	overrideDummyHash []byte
 }
 
 var _ auth.AccessController = &accessController{}
@@ -53,7 +56,13 @@ func newAccessController(options map[string]any) (auth.AccessController, error) 
 	if err := createHtpasswdFile(path); err != nil {
 		return nil, err
 	}
-	return &accessController{realm: realm.(string), path: path}, nil
+	var dummyHash []byte
+	if hash, ok := options["overrideDummyHash"]; ok {
+		// override dummy hash for testing
+		dummyHash = hash.([]byte)
+	}
+
+	return &accessController{realm: realm.(string), path: path, overrideDummyHash: dummyHash}, nil
 }
 
 func (ac *accessController) Authorized(req *http.Request, accessRecords ...auth.Access) (*auth.Grant, error) {
@@ -83,7 +92,7 @@ func (ac *accessController) Authorized(req *http.Request, accessRecords ...auth.
 		}
 		defer f.Close()
 
-		h, err := newHTPasswd(f)
+		h, err := newHTPasswd(f, ac.overrideDummyHash)
 		if err != nil {
 			ac.mu.Unlock()
 			return nil, err
@@ -93,11 +102,10 @@ func (ac *accessController) Authorized(req *http.Request, accessRecords ...auth.
 	localHTPasswd := ac.htpasswd
 	ac.mu.Unlock()
 
-	if err := localHTPasswd.authenticateUser(username, password); err != nil {
-		dcontext.GetLogger(req.Context()).Errorf("error authenticating user %q: %v", username, err)
+	if err := localHTPasswd.authenticateUser(req.Context(), username, password); err != nil {
 		return nil, &challenge{
 			realm: ac.realm,
-			err:   auth.ErrAuthenticationFailure,
+			err:   err,
 		}
 	}
 
