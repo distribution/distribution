@@ -1013,11 +1013,13 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 	for {
 		// list all the objects
 		resp, err := d.S3.ListObjectsV2WithContext(ctx, listObjectsInput)
-
+		if err != nil {
+			return err
+		}
 		// resp.Contents can only be empty on the first call
 		// if there were no more results to return after the first call, resp.IsTruncated would have been false
 		// and the loop would exit without recalling ListObjects
-		if err != nil || len(resp.Contents) == 0 {
+		if len(resp.Contents) == 0 {
 			return storagedriver.PathNotFoundError{Path: path}
 		}
 
