@@ -34,6 +34,7 @@ import (
 	"github.com/opencontainers/go-digest"
 	"github.com/opencontainers/image-spec/specs-go"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
+	hookstest "github.com/sirupsen/logrus/hooks/test"
 )
 
 var headerConfig = http.Header{
@@ -1709,7 +1710,10 @@ func testManifestAPISchema2(t *testing.T, env *testEnv, imageName reference.Name
 	// ------------------
 	// Fetch by tag name
 
-	// HEAD requests should not contain a body
+	// HEAD requests should emit a logging entry and not contain a body
+	hook := hookstest.NewGlobal()
+	defer hook.Reset()
+
 	headReq, err := http.NewRequest(http.MethodHead, manifestURL, nil)
 	if err != nil {
 		t.Fatalf("Error constructing request: %s", err)
@@ -1725,6 +1729,14 @@ func testManifestAPISchema2(t *testing.T, env *testEnv, imageName reference.Name
 		"Docker-Content-Digest": []string{dgst.String()},
 		"ETag":                  []string{fmt.Sprintf(`"%s"`, dgst)},
 	})
+
+	lastMsg := hook.LastEntry()
+	if v := lastMsg.Data["http.request.method"]; v != http.MethodHead {
+		t.Errorf("expected http.request.method to be %q, got %q", http.MethodHead, v)
+	}
+	if v := lastMsg.Data["http.response.status"]; v != http.StatusOK {
+		t.Errorf("expected http.response.status to be %d, got %d", http.StatusOK, v)
+	}
 
 	headBody, err := io.ReadAll(headResp.Body)
 	if err != nil {

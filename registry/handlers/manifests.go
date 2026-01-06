@@ -217,6 +217,7 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 	w.Header().Set("Etag", fmt.Sprintf(`"%s"`, imh.Digest))
 
 	if r.Method == http.MethodHead {
+		w.WriteHeader(http.StatusOK)
 		return
 	}
 
