@@ -201,21 +201,9 @@ func FromParameters(ctx context.Context, parameters map[string]interface{}) (*Dr
 		regionEndpoint = ""
 	}
 
-	forcePathStyleBool := false
-	forcePathStyle := parameters["forcepathstyle"]
-	switch forcePathStyle := forcePathStyle.(type) {
-	case string:
-		b, err := strconv.ParseBool(forcePathStyle)
-		if err != nil {
-			return nil, fmt.Errorf("the forcePathStyle parameter should be a boolean")
-		}
-		forcePathStyleBool = b
-	case bool:
-		forcePathStyleBool = forcePathStyle
-	case nil:
-		// do nothing
-	default:
-		return nil, fmt.Errorf("the forcePathStyle parameter should be a boolean")
+	forcePathStyleBool, err := getParameterAsBool(parameters, "forcepathstyle", false)
+	if err != nil {
+		return nil, err
 	}
 
 	regionName := parameters["region"]
@@ -236,72 +224,24 @@ func FromParameters(ctx context.Context, parameters map[string]interface{}) (*Dr
 		return nil, fmt.Errorf("no bucket parameter provided")
 	}
 
-	encryptBool := false
-	encrypt := parameters["encrypt"]
-	switch encrypt := encrypt.(type) {
-	case string:
-		b, err := strconv.ParseBool(encrypt)
-		if err != nil {
-			return nil, fmt.Errorf("the encrypt parameter should be a boolean")
-		}
-		encryptBool = b
-	case bool:
-		encryptBool = encrypt
-	case nil:
-		// do nothing
-	default:
-		return nil, fmt.Errorf("the encrypt parameter should be a boolean")
+	encryptBool, err := getParameterAsBool(parameters, "encrypt", false)
+	if err != nil {
+		return nil, err
 	}
 
-	secureBool := true
-	secure := parameters["secure"]
-	switch secure := secure.(type) {
-	case string:
-		b, err := strconv.ParseBool(secure)
-		if err != nil {
-			return nil, fmt.Errorf("the secure parameter should be a boolean")
-		}
-		secureBool = b
-	case bool:
-		secureBool = secure
-	case nil:
-		// do nothing
-	default:
-		return nil, fmt.Errorf("the secure parameter should be a boolean")
+	secureBool, err := getParameterAsBool(parameters, "secure", true)
+	if err != nil {
+		return nil, err
 	}
 
-	skipVerifyBool := false
-	skipVerify := parameters["skipverify"]
-	switch skipVerify := skipVerify.(type) {
-	case string:
-		b, err := strconv.ParseBool(skipVerify)
-		if err != nil {
-			return nil, fmt.Errorf("the skipVerify parameter should be a boolean")
-		}
-		skipVerifyBool = b
-	case bool:
-		skipVerifyBool = skipVerify
-	case nil:
-		// do nothing
-	default:
-		return nil, fmt.Errorf("the skipVerify parameter should be a boolean")
+	skipVerifyBool, err := getParameterAsBool(parameters, "skipverify", false)
+	if err != nil {
+		return nil, err
 	}
 
-	v4Bool := true
-	v4auth := parameters["v4auth"]
-	switch v4auth := v4auth.(type) {
-	case string:
-		b, err := strconv.ParseBool(v4auth)
-		if err != nil {
-			return nil, fmt.Errorf("the v4auth parameter should be a boolean")
-		}
-		v4Bool = b
-	case bool:
-		v4Bool = v4auth
-	case nil:
-		// do nothing
-	default:
-		return nil, fmt.Errorf("the v4auth parameter should be a boolean")
+	v4Bool, err := getParameterAsBool(parameters, "v4auth", true)
+	if err != nil {
+		return nil, err
 	}
 
 	keyID := parameters["keyid"]
@@ -383,40 +323,16 @@ func FromParameters(ctx context.Context, parameters map[string]interface{}) (*Dr
 		objectACL = objectACLString
 	}
 
-	useDualStackBool := false
-	useDualStack := parameters["usedualstack"]
-	switch useDualStack := useDualStack.(type) {
-	case string:
-		b, err := strconv.ParseBool(useDualStack)
-		if err != nil {
-			return nil, fmt.Errorf("the useDualStack parameter should be a boolean")
-		}
-		useDualStackBool = b
-	case bool:
-		useDualStackBool = useDualStack
-	case nil:
-		// do nothing
-	default:
-		return nil, fmt.Errorf("the useDualStack parameter should be a boolean")
+	useDualStackBool, err := getParameterAsBool(parameters, "usedualstack", false)
+	if err != nil {
+		return nil, err
 	}
 
 	sessionToken := ""
 
-	accelerateBool := false
-	accelerate := parameters["accelerate"]
-	switch accelerate := accelerate.(type) {
-	case string:
-		b, err := strconv.ParseBool(accelerate)
-		if err != nil {
-			return nil, fmt.Errorf("the accelerate parameter should be a boolean")
-		}
-		accelerateBool = b
-	case bool:
-		accelerateBool = accelerate
-	case nil:
-		// do nothing
-	default:
-		return nil, fmt.Errorf("the accelerate parameter should be a boolean")
+	accelerateBool, err := getParameterAsBool(parameters, "accelerate", false)
+	if err != nil {
+		return nil, err
 	}
 
 	params := DriverParameters{
@@ -507,6 +423,26 @@ func getParameterAsInteger[T integer](parameters map[string]any, name string, de
 		return 0, fmt.Errorf("the %s %#v parameter should be a number between %d and %d (inclusive)", name, v, min, max)
 	}
 	return v, nil
+}
+
+// getParameterAsBool converts parameters[name] to a boolean (using defaultValue if
+// nil). It accepts both string and bool types.
+func getParameterAsBool(parameters map[string]any, name string, defaultValue bool) (bool, error) {
+	if p := parameters[name]; p != nil {
+		switch v := p.(type) {
+		case string:
+			b, err := strconv.ParseBool(v)
+			if err != nil {
+				return false, fmt.Errorf("the %s parameter should be a boolean", name)
+			}
+			return b, nil
+		case bool:
+			return v, nil
+		default:
+			return false, fmt.Errorf("the %s parameter should be a boolean", name)
+		}
+	}
+	return defaultValue, nil
 }
 
 // New constructs a new Driver with the given AWS credentials, region, encryption flag, and
