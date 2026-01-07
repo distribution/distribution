@@ -31,10 +31,11 @@ func newHTPasswd(rd io.Reader) (*htpasswd, error) {
 // AuthenticateUser checks a given user:password credential against the
 // receiving HTPasswd's file. If the check passes, nil is returned.
 func (htpasswd *htpasswd) authenticateUser(username string, password string) error {
-	var credentials []byte
-	// timing attack paranoia
-	if i, ok := htpasswd.entries[username]; ok {
-		credentials = i
+	credentials, userExists := htpasswd.entries[username]
+	// timing attack paranoia, always compare the hash even if the user is not found
+	if !userExists {
+		// dummy hash "nonexistent" for the user that is not found
+		credentials = []byte("$2a$05$/vyFmJBPzsrsp6EC53biLulrw8zVjsWqpw26Hb.wfMyrHmRdh2orW")
 	}
 	if err := bcrypt.CompareHashAndPassword(credentials, []byte(password)); err != nil {
 		// the hash is not the same as the password
@@ -43,6 +44,10 @@ func (htpasswd *htpasswd) authenticateUser(username string, password string) err
 		}
 		// other error, e.g. non-bcrypt hash in entries, passthrough to logger for clarity
 		return err
+	}
+	// return error if the user is not found even the dummy hash comparison is successful
+	if !userExists {
+		return auth.ErrAuthenticationFailure
 	}
 	return nil
 }
