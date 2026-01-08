@@ -40,7 +40,7 @@ func (pt proxyTagService) Get(ctx context.Context, tag string) (v1.Descriptor, e
 }
 
 func (pt proxyTagService) Tag(ctx context.Context, tag string, desc v1.Descriptor) error {
-	return distribution.ErrUnsupported
+	return pt.localTags.Tag(ctx, tag, desc)
 }
 
 func (pt proxyTagService) Untag(ctx context.Context, tag string) error {
@@ -63,5 +63,5 @@ func (pt proxyTagService) All(ctx context.Context) ([]string, error) {
 }
 
 func (pt proxyTagService) Lookup(ctx context.Context, digest v1.Descriptor) ([]string, error) {
-	return []string{}, distribution.ErrUnsupported
+	return pt.localTags.Lookup(ctx, digest)
 }
