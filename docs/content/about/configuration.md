@@ -162,6 +162,7 @@ storage:
     multipartcopythresholdsize: 33554432
     rootdirectory: /s3/object/name/prefix
     usedualstack: false
+    usefipsendpoint: false
     loglevel: debug
   inmemory:  # This driver takes no parameters
   tag:
@@ -455,6 +456,7 @@ storage:
     multipartcopymaxconcurrency: 100
     multipartcopythresholdsize: 33554432
     rootdirectory: /s3/object/name/prefix
+    usefipsendpoint: false
     loglevel: debug
   inmemory:
   delete:

@@ -114,6 +114,7 @@ type DriverParameters struct {
 	SessionToken                string
 	UseDualStack                bool
 	Accelerate                  bool
+	UseFIPSEndpoint             bool
 	LogLevel                    aws.LogLevelType
 }
 
@@ -335,6 +336,11 @@ func FromParameters(ctx context.Context, parameters map[string]interface{}) (*Dr
 		return nil, err
 	}
 
+	useFIPSEndpointBool, err := getParameterAsBool(parameters, "usefipsendpoint", false)
+	if err != nil {
+		return nil, err
+	}
+
 	params := DriverParameters{
 		AccessKey:                   fmt.Sprint(accessKey),
 		SecretKey:                   fmt.Sprint(secretKey),
@@ -358,6 +364,7 @@ func FromParameters(ctx context.Context, parameters map[string]interface{}) (*Dr
 		SessionToken:                fmt.Sprint(sessionToken),
 		UseDualStack:                useDualStackBool,
 		Accelerate:                  accelerateBool,
+		UseFIPSEndpoint:             useFIPSEndpointBool,
 		LogLevel:                    getS3LogLevelFromParam(parameters["loglevel"]),
 	}
 
@@ -475,6 +482,9 @@ func New(ctx context.Context, params DriverParameters) (*Driver, error) {
 	awsConfig.WithDisableSSL(!params.Secure)
 	if params.UseDualStack {
 		awsConfig.UseDualStackEndpoint = endpoints.DualStackEndpointStateEnabled
+	}
+	if params.UseFIPSEndpoint {
+		awsConfig.UseFIPSEndpoint = endpoints.FIPSEndpointStateEnabled
 	}
 
 	if params.SkipVerify {

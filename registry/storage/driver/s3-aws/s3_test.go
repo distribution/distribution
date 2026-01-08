@@ -29,22 +29,23 @@ var (
 
 func init() {
 	var (
-		accessKey      = os.Getenv("AWS_ACCESS_KEY")
-		secretKey      = os.Getenv("AWS_SECRET_KEY")
-		bucket         = os.Getenv("S3_BUCKET")
-		encrypt        = os.Getenv("S3_ENCRYPT")
-		keyID          = os.Getenv("S3_KEY_ID")
-		secure         = os.Getenv("S3_SECURE")
-		skipVerify     = os.Getenv("S3_SKIP_VERIFY")
-		v4Auth         = os.Getenv("S3_V4_AUTH")
-		region         = os.Getenv("AWS_REGION")
-		objectACL      = os.Getenv("S3_OBJECT_ACL")
-		regionEndpoint = os.Getenv("REGION_ENDPOINT")
-		forcePathStyle = os.Getenv("AWS_S3_FORCE_PATH_STYLE")
-		sessionToken   = os.Getenv("AWS_SESSION_TOKEN")
-		useDualStack   = os.Getenv("S3_USE_DUALSTACK")
-		accelerate     = os.Getenv("S3_ACCELERATE")
-		logLevel       = os.Getenv("S3_LOGLEVEL")
+		accessKey       = os.Getenv("AWS_ACCESS_KEY")
+		secretKey       = os.Getenv("AWS_SECRET_KEY")
+		bucket          = os.Getenv("S3_BUCKET")
+		encrypt         = os.Getenv("S3_ENCRYPT")
+		keyID           = os.Getenv("S3_KEY_ID")
+		secure          = os.Getenv("S3_SECURE")
+		skipVerify      = os.Getenv("S3_SKIP_VERIFY")
+		v4Auth          = os.Getenv("S3_V4_AUTH")
+		region          = os.Getenv("AWS_REGION")
+		objectACL       = os.Getenv("S3_OBJECT_ACL")
+		regionEndpoint  = os.Getenv("REGION_ENDPOINT")
+		forcePathStyle  = os.Getenv("AWS_S3_FORCE_PATH_STYLE")
+		sessionToken    = os.Getenv("AWS_SESSION_TOKEN")
+		useDualStack    = os.Getenv("S3_USE_DUALSTACK")
+		accelerate      = os.Getenv("S3_ACCELERATE")
+		useFIPSEndpoint = os.Getenv("S3_USE_FIPS_ENDPOINT")
+		logLevel        = os.Getenv("S3_LOGLEVEL")
 	)
 
 	var err error
@@ -101,6 +102,14 @@ func init() {
 			}
 		}
 
+		useFIPSEndpointBool := false
+		if useFIPSEndpoint != "" {
+			useFIPSEndpointBool, err = strconv.ParseBool(useFIPSEndpoint)
+			if err != nil {
+				return nil, err
+			}
+		}
+
 		if objectACL == "" {
 			objectACL = s3.ObjectCannedACLPrivate
 		}
@@ -128,6 +137,7 @@ func init() {
 			SessionToken:                sessionToken,
 			UseDualStack:                useDualStackBool,
 			Accelerate:                  accelerateBool,
+			UseFIPSEndpoint:             useFIPSEndpointBool,
 			LogLevel:                    getS3LogLevelFromParam(logLevel),
 		}
 
