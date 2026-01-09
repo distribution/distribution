@@ -9,3 +9,5 @@ Harbor, CNCF Graduated project https://goharbor.io/
 VMware Harbor Registry https://docs.pivotal.io/partners/vmware-harbor/index.html
 
 DigitalOcean Container Registry https://www.digitalocean.com/products/container-registry/
+
+Cloudfleet Container Registry https://cloudfleet.ai/docs/container-registry/overview/
