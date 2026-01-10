@@ -118,22 +118,22 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 		}
 	}
 
+	baseTr, err := getHttpTransport(config.TLS, remoteURL)
+	if err != nil {
+		return nil, fmt.Errorf("get proxy http transport: %w", err)
+	}
+
 	cs, b, err := func() (auth.CredentialStore, auth.CredentialStore, error) {
 		switch {
 		case config.Exec != nil:
 			cs, err := configureExecAuth(*config.Exec)
 			return cs, cs, err
 		default:
-			return configureAuth(config.Username, config.Password, config.RemoteURL)
+			return configureAuth(config.Username, config.Password, config.RemoteURL, baseTr)
 		}
 	}()
 	if err != nil {
 		return nil, err
-	}
-
-	baseTr, err := getHttpTransport(config.TLS, remoteURL)
-	if err != nil {
-		return nil, fmt.Errorf("get proxy http transport: %w", err)
 	}
 
 	return &proxyingRegistry{
@@ -145,6 +145,7 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 			remoteURL: *remoteURL,
 			cm:        challenge.NewSimpleManager(),
 			cs:        cs,
+			transport: baseTr,
 		},
 		basicAuth:     b,
 		baseTransport: baseTr,
@@ -234,24 +235,27 @@ func getHttpTransport(cfg *configuration.ProxyTLS, remoteURL *url.URL) (http.Rou
 		return nil, fmt.Errorf("TLS configuration set but URL is not HTTPS: %s", remoteURL)
 	}
 
-	tlsConfig := &tls.Config{}
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: cfg.InsecureSkipVerify,
+	}
 	cert, err := tls.LoadX509KeyPair(cfg.Certificate, cfg.Key)
 	if err != nil {
 		return nil, fmt.Errorf("load TLS key pair from %s and %s: %w", cfg.Certificate, cfg.Key, err)
 	}
 	tlsConfig.Certificates = []tls.Certificate{cert}
-	if len(cfg.ClientCAs) > 0 {
+	if len(cfg.RootCAs) > 0 {
 		pool := x509.NewCertPool()
-		for _, ca := range cfg.ClientCAs {
+		for _, ca := range cfg.RootCAs {
 			caPem, err := os.ReadFile(ca)
 			if err != nil {
-				return nil, fmt.Errorf("reading client CA %s: %w", ca, err)
+				return nil, fmt.Errorf("reading root CA %s: %w", ca, err)
 			}
 
 			if ok := pool.AppendCertsFromPEM(caPem); !ok {
 				return nil, fmt.Errorf("could not add CA to pool from %s", ca)
 			}
 		}
+		tlsConfig.RootCAs = pool
 	}
 
 	return &http.Transport{TLSClientConfig: tlsConfig}, nil
@@ -284,8 +288,9 @@ type authChallenger interface {
 type remoteAuthChallenger struct {
 	remoteURL url.URL
 	sync.Mutex
-	cm challenge.Manager
-	cs auth.CredentialStore
+	cm        challenge.Manager
+	cs        auth.CredentialStore
+	transport http.RoundTripper
 }
 
 func (r *remoteAuthChallenger) credentialStore() auth.CredentialStore {
@@ -313,7 +318,7 @@ func (r *remoteAuthChallenger) tryEstablishChallenges(ctx context.Context) error
 	}
 
 	// establish challenge type with upstream
-	if err := ping(r.cm, remoteURL.String(), challengeHeader); err != nil {
+	if err := ping(r.cm, remoteURL.String(), challengeHeader, r.transport); err != nil {
 		return err
 	}
 

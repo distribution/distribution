@@ -1197,11 +1197,36 @@ is unsupported.
 |-----------|----------|-------------------------------------------------------|
 | `remoteurl`| yes     | The URL for the repository on Docker Hub.             |
 | `ttl`      | no      | Expire proxy cache configured in "storage" after this time. Cache 168h(7 days) by default, set to 0 to disable cache expiration, The suffix is one of `ns`, `us`, `ms`, `s`, `m`, or `h`. If you specify a value but omit the suffix, the value is interpreted as a number of nanoseconds. |
+| `tls`      | no      | TLS configures client TLS for proxying to the remote registry. See [tls certificates](#tls-certificates) below. |
 
 To enable pulling private repositories (e.g. `batman/robin`), specify one of the
 following authentication methods for the pull-through cache to authenticate with
 the upstream registry via the [v2 Distribution registry authentication
 scheme](https://distribution.github.io/distribution/spec/auth/token/).]
+
+### `tls` certificates
+
+The `tls` section allows you to configure client certificates for the pull-through cache to authenticate with the upstream registry.
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `certificate` | yes | Path to the client certificate file. |
+| `key` | yes | Path to the client private key file. |
+| `rootcas` | no | A list of paths to Root CA certificates to use for verifying the upstream registry's certificate. |
+| `insecure-skip-verify` | no | If set to `true`, the registry will not verify the upstream registry's certificate chain and host name. |
+
+Example:
+
+```yaml
+proxy:
+  remoteurl: https://registry-1.docker.io
+  tls:
+    certificate: /path/to/client.crt
+    key: /path/to/client.key
+    rootcas:
+      - /path/to/ca.crt
+    insecure-skip-verify: false
+```
 
 ### `username` and `password`
 

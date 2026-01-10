@@ -724,9 +724,13 @@ type ProxyTLS struct {
 	// This key is used to authenticate the client during the TLS handshake.
 	Key string `yaml:"key,omitempty"`
 
-	// ClientCAs specifies a list of certificates to be used to verify the server's
-	// certificate during the TLS handshake. This can be used for mutual TLS authentication.
-	ClientCAs []string `yaml:"clientcas,omitempty"`
+	// RootCAs specifies a list of certificates to be used to verify the server's
+	// certificate during the TLS handshake.
+	RootCAs []string `yaml:"rootcas,omitempty"`
+
+	// InsecureSkipVerify controls whether a client verifies the server's
+	// certificate chain and host name.
+	InsecureSkipVerify bool `yaml:"insecure-skip-verify,omitempty"`
 }
 
 // Validation configures validation options for the registry.
