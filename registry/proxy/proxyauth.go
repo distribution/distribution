@@ -1,9 +1,11 @@
 package proxy
 
 import (
+	"context"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/distribution/distribution/v3/internal/client/auth"
 	"github.com/distribution/distribution/v3/internal/client/auth/challenge"
@@ -81,8 +83,16 @@ func getAuthURLs(remoteURL string) ([]string, error) {
 	return authURLs, nil
 }
 
-func ping(manager challenge.Manager, endpoint, versionHeader string) error {
-	resp, err := http.Get(endpoint)
+func ping(ctx context.Context, manager challenge.Manager, endpoint, versionHeader string) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return err
+	}
+
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}
