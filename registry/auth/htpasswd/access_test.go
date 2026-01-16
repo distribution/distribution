@@ -19,7 +19,7 @@ func TestBasicAccessController(t *testing.T) {
 							frodo:$2y$05$926C3y10Quzn/LnqQH86VOEVh/18T6RnLaS.khre96jLNL/7e.K5W
 							MiShil:$2y$05$0oHgwMehvoe8iAWS8I.7l.KoECXrwVaC16RPfaSCU5eVTFrATuMI2
 							DeokMan:공주님`
-
+	dummyHash = []byte("$2a$05$/vyFmJBPzsrsp6EC53biLulrw8zVjsWqpw26Hb.wfMyrHmRdh2orW") // hash of "nonexistent"
 	tempFile, err := os.CreateTemp("", "htpasswd-test")
 	if err != nil {
 		t.Fatal("could not create temporary htpasswd file")

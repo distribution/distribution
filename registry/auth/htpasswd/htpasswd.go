@@ -12,6 +12,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+var dummyHash = []byte("$2a$05$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+
 // htpasswd holds a path to a system .htpasswd file and the machinery to parse
 // it. Only bcrypt hash entries are supported.
 type htpasswd struct {
@@ -34,8 +36,7 @@ func (htpasswd *htpasswd) authenticateUser(username string, password string) err
 	credentials, userExists := htpasswd.entries[username]
 	// timing attack paranoia, always compare the hash even if the user is not found
 	if !userExists {
-		// dummy hash "nonexistent" for the user that is not found
-		credentials = []byte("$2a$05$/vyFmJBPzsrsp6EC53biLulrw8zVjsWqpw26Hb.wfMyrHmRdh2orW")
+		credentials = dummyHash
 	}
 	if err := bcrypt.CompareHashAndPassword(credentials, []byte(password)); err != nil {
 		// the hash is not the same as the password
