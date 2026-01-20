@@ -256,12 +256,13 @@ func (r *remoteAuthChallenger) challengeManager() challenge.Manager {
 
 // tryEstablishChallenges will attempt to get a challenge type for the upstream if none currently exist
 func (r *remoteAuthChallenger) tryEstablishChallenges(ctx context.Context) error {
-	r.Lock()
-	defer r.Unlock()
-
 	remoteURL := r.remoteURL
 	remoteURL.Path = "/v2/"
+
+	// Check if challenges already exist without holding the lock during HTTP request
+	r.Lock()
 	challenges, err := r.cm.GetChallenges(remoteURL)
+	r.Unlock()
 	if err != nil {
 		return err
 	}
@@ -271,11 +272,24 @@ func (r *remoteAuthChallenger) tryEstablishChallenges(ctx context.Context) error
 	}
 
 	// establish challenge type with upstream
-	if err := ping(r.cm, remoteURL.String(), challengeHeader); err != nil {
+	// Don't hold r.Lock() during HTTP request to avoid blocking other goroutines
+	if err := ping(ctx, r.cm, remoteURL.String(), challengeHeader); err != nil {
 		return err
 	}
-	dcontext.GetLogger(ctx).Infof("Challenge established with upstream: %s", remoteURL.Redacted())
 
+	// Verify that challenges were actually established
+	r.Lock()
+	challenges, err = r.cm.GetChallenges(remoteURL)
+	r.Unlock()
+	if err != nil {
+		return err
+	}
+
+	if len(challenges) == 0 {
+		return fmt.Errorf("failed to establish challenges with upstream: %s", remoteURL.Redacted())
+	}
+
+	dcontext.GetLogger(ctx).Infof("Challenge established with upstream: %s", remoteURL.Redacted())
 	return nil
 }
 
