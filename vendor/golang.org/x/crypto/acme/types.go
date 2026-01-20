@@ -56,6 +56,10 @@ var (
 
 	// ErrNoAccount indicates that the Client's key has not been registered with the CA.
 	ErrNoAccount = errors.New("acme: account does not exist")
+
+	// errPreAuthorizationNotSupported indicates that the server does not
+	// support pre-authorization of identifiers.
+	errPreAuthorizationNotSupported = errors.New("acme: pre-authorization is not supported")
 )
 
 // A Subproblem describes an ACME subproblem as reported in an Error.
@@ -150,13 +154,16 @@ func (a *AuthorizationError) Error() string {
 
 // OrderError is returned from Client's order related methods.
 // It indicates the order is unusable and the clients should start over with
-// AuthorizeOrder.
+// AuthorizeOrder. A Problem description may be provided with details on
+// what caused the order to become unusable.
 //
 // The clients can still fetch the order object from CA using GetOrder
 // to inspect its state.
 type OrderError struct {
 	OrderURL string
 	Status   string
+	// Problem is the error that occurred while processing the order.
+	Problem *Error
 }
 
 func (oe *OrderError) Error() string {
@@ -615,7 +622,7 @@ func (*certOptKey) privateCertOpt() {}
 //
 // In TLS ChallengeCert methods, the template is also used as parent,
 // resulting in a self-signed certificate.
-// The DNSNames field of t is always overwritten for tls-sni challenge certs.
+// The DNSNames or IPAddresses fields of t are always overwritten for tls-alpn challenge certs.
 func WithTemplate(t *x509.Certificate) CertOption {
 	return (*certOptTemplate)(t)
 }
