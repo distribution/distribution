@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/docker/docker-credential-helpers/client"
-	credspkg "github.com/docker/docker-credential-helpers/credentials"
 )
 
 type testHelper struct {
@@ -28,13 +27,20 @@ var _ client.Program = (*testHelper)(nil)
 
 func TestExecAuth(t *testing.T) {
 	ptrDuration := func(t time.Duration) *time.Duration { return &t }
+	regHost := "example.com"
+	makeCreds := func(cred *execCredentialsCredential) map[string]execCredentialsCredential {
+		creds := map[string]execCredentialsCredential{}
+		if cred != nil {
+			creds[regHost] = *cred
+		}
+		return creds
+	}
 
 	for _, tc := range []struct {
 		name         string
 		helper       client.ProgramFunc
 		lifetime     *time.Duration
-		currCreds    *credspkg.Credentials
-		currExpiry   time.Time
+		currCreds    *execCredentialsCredential
 		wantUsername string
 		wantPassword string
 		wantExpiry   time.Time
@@ -79,9 +85,9 @@ func TestExecAuth(t *testing.T) {
 				secret:   "nextpass",
 			}
 		},
-		currCreds: &credspkg.Credentials{
-			Username: "user",
-			Secret:   "currpass",
+		currCreds: &execCredentialsCredential{
+			username: "user",
+			secret:   "currpass",
 		},
 		wantUsername: "user",
 		wantPassword: "currpass",
@@ -94,9 +100,9 @@ func TestExecAuth(t *testing.T) {
 			}
 		},
 		lifetime: ptrDuration(0),
-		currCreds: &credspkg.Credentials{
-			Username: "user",
-			Secret:   "currpass",
+		currCreds: &execCredentialsCredential{
+			username: "user",
+			secret:   "currpass",
 		},
 		wantUsername: "user",
 		wantPassword: "nextpass",
@@ -109,11 +115,11 @@ func TestExecAuth(t *testing.T) {
 			}
 		},
 		lifetime: ptrDuration(time.Hour),
-		currCreds: &credspkg.Credentials{
-			Username: "user",
-			Secret:   "currpass",
+		currCreds: &execCredentialsCredential{
+			username: "user",
+			secret:   "currpass",
+			expiry:   time.Now().Add(time.Minute),
 		},
-		currExpiry:   time.Now().Add(time.Minute),
 		wantUsername: "user",
 		wantPassword: "currpass",
 		wantExpiry:   time.Now().Add(time.Minute),
@@ -126,11 +132,11 @@ func TestExecAuth(t *testing.T) {
 			}
 		},
 		lifetime: ptrDuration(time.Hour),
-		currCreds: &credspkg.Credentials{
-			Username: "user",
-			Secret:   "currpass",
+		currCreds: &execCredentialsCredential{
+			username: "user",
+			secret:   "currpass",
+			expiry:   time.Now().Add(-1),
 		},
-		currExpiry:   time.Now().Add(-1),
 		wantUsername: "user",
 		wantPassword: "nextpass",
 		wantExpiry:   time.Now().Add(time.Hour),
@@ -142,11 +148,11 @@ func TestExecAuth(t *testing.T) {
 			}
 		},
 		lifetime: ptrDuration(time.Hour),
-		currCreds: &credspkg.Credentials{
-			Username: "user",
-			Secret:   "currpass",
+		currCreds: &execCredentialsCredential{
+			username: "user",
+			secret:   "currpass",
+			expiry:   time.Now().Add(-1),
 		},
-		currExpiry:   time.Now().Add(-1),
 		wantUsername: "",
 		wantPassword: "",
 		wantExpiry:   time.Now().Add(-1),
@@ -155,8 +161,7 @@ func TestExecAuth(t *testing.T) {
 			cs := &execCredentials{
 				helper:   tc.helper,
 				lifetime: tc.lifetime,
-				creds:    tc.currCreds,
-				expiry:   tc.currExpiry,
+				creds:    makeCreds(tc.currCreds),
 			}
 			url := &url.URL{
 				Scheme: "https",
@@ -167,8 +172,8 @@ func TestExecAuth(t *testing.T) {
 				t.Errorf("execCredentials.Basic(%q) = (%q, %q), want (%q, %q)", url, user, pass, tc.wantUsername, tc.wantPassword)
 			}
 			// All tests should finish within seconds, so the time error should be less than a minute.
-			if cs.expiry.Sub(tc.wantExpiry).Abs() > time.Minute {
-				t.Errorf("execCredentials.expiry = %v, want %v", cs.expiry, tc.wantExpiry)
+			if cs.creds[regHost].expiry.Sub(tc.wantExpiry).Abs() > time.Minute {
+				t.Errorf("execCredentials.expiry = %v, want %v", cs.creds[regHost].expiry, tc.wantExpiry)
 			}
 		})
 	}

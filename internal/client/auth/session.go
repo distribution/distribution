@@ -259,7 +259,7 @@ func (th *tokenHandler) AuthorizeRequest(req *http.Request, params map[string]st
 		}.String())
 	}
 
-	token, err := th.getToken(req.Context(), params, additionalScopes...)
+	token, err := th.getToken(req.Context(), req.URL, params, additionalScopes...)
 	if err != nil {
 		return err
 	}
@@ -269,7 +269,7 @@ func (th *tokenHandler) AuthorizeRequest(req *http.Request, params map[string]st
 	return nil
 }
 
-func (th *tokenHandler) getToken(ctx context.Context, params map[string]string, additionalScopes ...string) (string, error) {
+func (th *tokenHandler) getToken(ctx context.Context, requestURL *url.URL, params map[string]string, additionalScopes ...string) (string, error) {
 	th.tokenLock.Lock()
 	defer th.tokenLock.Unlock()
 	scopes := make([]string, 0, len(th.scopes)+len(additionalScopes))
@@ -287,7 +287,7 @@ func (th *tokenHandler) getToken(ctx context.Context, params map[string]string, 
 
 	now := th.clock.Now()
 	if now.After(th.tokenExpiration) || addedScopes {
-		token, expiration, err := th.fetchToken(ctx, params, scopes)
+		token, expiration, err := th.fetchToken(ctx, requestURL, params, scopes)
 		if err != nil {
 			return "", err
 		}
@@ -321,7 +321,7 @@ type postTokenResponse struct {
 	Scope        string    `json:"scope"`
 }
 
-func (th *tokenHandler) fetchTokenWithOAuth(ctx context.Context, realm *url.URL, refreshToken, service string, scopes []string) (token string, expiration time.Time, err error) {
+func (th *tokenHandler) fetchTokenWithOAuth(ctx context.Context, requestURL, realm *url.URL, refreshToken, service string, scopes []string) (token string, expiration time.Time, err error) {
 	form := url.Values{}
 	form.Set("scope", strings.Join(scopes, " "))
 	form.Set("service", service)
@@ -338,7 +338,7 @@ func (th *tokenHandler) fetchTokenWithOAuth(ctx context.Context, realm *url.URL,
 		form.Set("refresh_token", refreshToken)
 	} else if th.creds != nil {
 		form.Set("grant_type", "password")
-		username, password := th.creds.Basic(realm)
+		username, password := th.creds.Basic(requestURL)
 		form.Set("username", username)
 		form.Set("password", password)
 
@@ -401,7 +401,7 @@ type getTokenResponse struct {
 	RefreshToken string    `json:"refresh_token"`
 }
 
-func (th *tokenHandler) fetchTokenWithBasicAuth(ctx context.Context, realm *url.URL, service string, scopes []string) (token string, expiration time.Time, err error) {
+func (th *tokenHandler) fetchTokenWithBasicAuth(ctx context.Context, requestURL, realm *url.URL, service string, scopes []string) (token string, expiration time.Time, err error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, realm.String(), nil)
 	if err != nil {
 		return "", time.Time{}, err
@@ -427,7 +427,7 @@ func (th *tokenHandler) fetchTokenWithBasicAuth(ctx context.Context, realm *url.
 	}
 
 	if th.creds != nil {
-		username, password := th.creds.Basic(realm)
+		username, password := th.creds.Basic(requestURL)
 		if username != "" && password != "" {
 			reqParams.Add("account", username)
 			req.SetBasicAuth(username, password)
@@ -482,7 +482,7 @@ func (th *tokenHandler) fetchTokenWithBasicAuth(ctx context.Context, realm *url.
 	return tr.Token, tr.IssuedAt.Add(time.Duration(tr.ExpiresIn) * time.Second), nil
 }
 
-func (th *tokenHandler) fetchToken(ctx context.Context, params map[string]string, scopes []string) (token string, expiration time.Time, err error) {
+func (th *tokenHandler) fetchToken(ctx context.Context, requestURL *url.URL, params map[string]string, scopes []string) (token string, expiration time.Time, err error) {
 	realm, ok := params["realm"]
 	if !ok {
 		return "", time.Time{}, errors.New("no realm specified for token auth challenge")
@@ -503,17 +503,17 @@ func (th *tokenHandler) fetchToken(ctx context.Context, params map[string]string
 	}
 
 	if refreshToken != "" || th.forceOAuth {
-		return th.fetchTokenWithOAuth(ctx, realmURL, refreshToken, service, scopes)
+		return th.fetchTokenWithOAuth(ctx, requestURL, realmURL, refreshToken, service, scopes)
 	}
 
-	return th.fetchTokenWithBasicAuth(ctx, realmURL, service, scopes)
+	return th.fetchTokenWithBasicAuth(ctx, requestURL, realmURL, service, scopes)
 }
 
 type basicHandler struct {
 	creds CredentialStore
 }
 
-// NewBasicHandler creaters a new authentiation handler which adds
+// NewBasicHandler creates a new authentication handler which adds
 // basic authentication credentials to a request.
 func NewBasicHandler(creds CredentialStore) AuthenticationHandler {
 	return &basicHandler{

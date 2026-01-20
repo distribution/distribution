@@ -675,13 +675,20 @@ type Middleware struct {
 
 // Proxy configures the registry as a pull through cache
 type Proxy struct {
-	// RemoteURL is the URL of the remote registry
+	// EnableNamespaces enables support for the `ns` query parameter and disables use of RemoteURL
+	EnableNamespaces bool `yaml:"enablenamespaces"`
+
+	// NamespaceCredentials is a map of URLs to credentials
+	// Only used when EnableNamespaces is true
+	NamespaceCredentials map[string]ProxyCredential `yaml:"credentials"`
+
+	// RemoteURL is the URL of the remote registry when EnableNamespaces is disabled
 	RemoteURL string `yaml:"remoteurl"`
 
-	// Username of the hub user
+	// Username of the registry user for RemoteURL
 	Username string `yaml:"username"`
 
-	// Password of the hub user
+	// Password of the registry user for RemoteURL
 	Password string `yaml:"password"`
 
 	// Exec specifies a custom exec-based command to retrieve credentials.
@@ -692,6 +699,14 @@ type Proxy struct {
 	// if not set, defaults to 7 * 24 hours
 	// If set to zero, will never expire cache
 	TTL *time.Duration `yaml:"ttl,omitempty"`
+}
+
+type ProxyCredential struct {
+	// Username of the registry user
+	Username string `yaml:"username"`
+
+	// Password of the registry user
+	Password string `yaml:"password"`
 }
 
 // ExecConfig defines the configuration for executing a command as a credential helper.
