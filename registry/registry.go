@@ -151,6 +151,7 @@ func NewRegistry(ctx context.Context, config *configuration.Configuration) (*Reg
 	// TODO(aaronl): The global scope of the health checks means NewRegistry
 	// can only be called once per process.
 	app.RegisterHealthChecks()
+	app.RegistryGarbageCollection()
 	var handler http.Handler = app
 	handler = alive("/", handler)
 	handler = health.Handler(handler)
