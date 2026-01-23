@@ -571,13 +571,15 @@ func (app *App) configureRedis(cfg *configuration.Configuration) {
 	}
 
 	// redis TLS config
-	if cfg.Redis.TLS.Certificate != "" || cfg.Redis.TLS.Key != "" {
+	if cfg.Redis.TLS.Certificate != "" || cfg.Redis.TLS.Key != "" || len(cfg.Redis.TLS.RootCAs) != 0 {
 		var err error
 		tlsConf := &tls.Config{}
-		tlsConf.Certificates = make([]tls.Certificate, 1)
-		tlsConf.Certificates[0], err = tls.LoadX509KeyPair(cfg.Redis.TLS.Certificate, cfg.Redis.TLS.Key)
-		if err != nil {
-			panic(err)
+		if cfg.Redis.TLS.Certificate != "" && cfg.Redis.TLS.Key != "" {
+			tlsConf.Certificates = make([]tls.Certificate, 1)
+			tlsConf.Certificates[0], err = tls.LoadX509KeyPair(cfg.Redis.TLS.Certificate, cfg.Redis.TLS.Key)
+			if err != nil {
+				panic(err)
+			}
 		}
 		if len(cfg.Redis.TLS.RootCAs) != 0 {
 			pool := x509.NewCertPool()
