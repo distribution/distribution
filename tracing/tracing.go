@@ -29,11 +29,17 @@ const (
 // InitOpenTelemetry initializes OpenTelemetry for the application. This function sets up the
 // necessary components for collecting telemetry data, such as traces.
 func InitOpenTelemetry(ctx context.Context) error {
-	res := resource.NewWithAttributes(
-		semconv.SchemaURL,
-		semconv.ServiceNameKey.String(serviceName),
-		semconv.ServiceVersionKey.String(version.Version()),
+	res, err := resource.New(
+		ctx,
+		resource.WithAttributes(
+			semconv.ServiceNameKey.String(serviceName),
+			semconv.ServiceVersionKey.String(version.Version()),
+		),
+		resource.WithFromEnv(), // OTEL_SERVICE_NAME
 	)
+	if err != nil {
+		return err
+	}
 
 	autoExp, err := autoexport.NewSpanExporter(ctx)
 	if err != nil {
