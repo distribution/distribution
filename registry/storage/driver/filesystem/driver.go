@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/distribution/distribution/v3/internal/uuid"
@@ -164,8 +165,26 @@ func (d *driver) PutContent(ctx context.Context, subPath string, contents []byte
 		dErr := d.Delete(ctx, tempPath)
 		return errors.Join(err, dErr)
 	}
-
+	if err := syncDir(filepath.Dir(d.fullPath(subPath))); err != nil {
+		return err
+	}
 	return nil
+}
+
+func syncDir(dir string) (err error) {
+	dirF, err := os.Open(dir)
+	if err != nil {
+		return fmt.Errorf("failed to open dir %s: %w", dir, err)
+	}
+	defer func() {
+		if cerr := dirF.Close(); cerr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to close dir %s: %w", dir, cerr))
+		}
+	}()
+	if err = dirF.Sync(); err != nil {
+		err = fmt.Errorf("failed to sync dir %s: %w", dir, err)
+	}
+	return err
 }
 
 // Reader retrieves an io.ReadCloser for the content stored at "path" with a
