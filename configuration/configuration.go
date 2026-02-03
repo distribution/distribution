@@ -692,6 +692,12 @@ type Proxy struct {
 	// if not set, defaults to 7 * 24 hours
 	// If set to zero, will never expire cache
 	TTL *time.Duration `yaml:"ttl,omitempty"`
+
+	// CacheWriteTimeout is the maximum duration allowed for cache write operations
+	// to complete when pulling blobs from the remote registry. This timeout ensures
+	// that cache writes don't hang indefinitely if the storage backend is slow.
+	// If not set, defaults to 5 minutes.
+	CacheWriteTimeout *time.Duration `yaml:"cachewritetimeout,omitempty"`
 }
 
 // ExecConfig defines the configuration for executing a command as a credential helper.
