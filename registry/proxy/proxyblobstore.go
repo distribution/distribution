@@ -18,12 +18,13 @@ import (
 )
 
 type proxyBlobStore struct {
-	localStore     distribution.BlobStore
-	remoteStore    distribution.BlobService
-	scheduler      *scheduler.TTLExpirationScheduler
-	ttl            *time.Duration
-	repositoryName reference.Named
-	authChallenger authChallenger
+	localStore        distribution.BlobStore
+	remoteStore       distribution.BlobService
+	scheduler         *scheduler.TTLExpirationScheduler
+	ttl               *time.Duration
+	cacheWriteTimeout time.Duration
+	repositoryName    reference.Named
+	authChallenger    authChallenger
 }
 
 var _ distribution.BlobStore = &proxyBlobStore{}
@@ -116,8 +117,9 @@ func (pbs *proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter,
 	// Create a detached context for the blob writer that won't be canceled
 	// when the HTTP request context is canceled. This allows the cache write
 	// to complete even if the client disconnects.
-	// Use a reasonable timeout (30 minutes) to prevent hanging operations.
-	writerCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Minute)
+	// Use the configured timeout to prevent hanging operations.
+	detachedCtx := dcontext.DetachedContext(ctx)
+	writerCtx, cancel := context.WithTimeout(detachedCtx, pbs.cacheWriteTimeout)
 	defer cancel()
 
 	bw, err := pbs.localStore.Create(writerCtx)
