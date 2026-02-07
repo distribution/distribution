@@ -29,23 +29,24 @@ var (
 
 func init() {
 	var (
-		accessKey       = os.Getenv("AWS_ACCESS_KEY")
-		secretKey       = os.Getenv("AWS_SECRET_KEY")
-		bucket          = os.Getenv("S3_BUCKET")
-		encrypt         = os.Getenv("S3_ENCRYPT")
-		keyID           = os.Getenv("S3_KEY_ID")
-		secure          = os.Getenv("S3_SECURE")
-		skipVerify      = os.Getenv("S3_SKIP_VERIFY")
-		v4Auth          = os.Getenv("S3_V4_AUTH")
-		region          = os.Getenv("AWS_REGION")
-		objectACL       = os.Getenv("S3_OBJECT_ACL")
-		regionEndpoint  = os.Getenv("REGION_ENDPOINT")
-		forcePathStyle  = os.Getenv("AWS_S3_FORCE_PATH_STYLE")
-		sessionToken    = os.Getenv("AWS_SESSION_TOKEN")
-		useDualStack    = os.Getenv("S3_USE_DUALSTACK")
-		accelerate      = os.Getenv("S3_ACCELERATE")
-		useFIPSEndpoint = os.Getenv("S3_USE_FIPS_ENDPOINT")
-		logLevel        = os.Getenv("S3_LOGLEVEL")
+		accessKey           = os.Getenv("AWS_ACCESS_KEY")
+		secretKey           = os.Getenv("AWS_SECRET_KEY")
+		bucket              = os.Getenv("S3_BUCKET")
+		encrypt             = os.Getenv("S3_ENCRYPT")
+		keyID               = os.Getenv("S3_KEY_ID")
+		secure              = os.Getenv("S3_SECURE")
+		skipVerify          = os.Getenv("S3_SKIP_VERIFY")
+		maxIdleConnsPerHost = os.Getenv("S3_MAX_IDLE_CONNS_PER_HOST")
+		v4Auth              = os.Getenv("S3_V4_AUTH")
+		region              = os.Getenv("AWS_REGION")
+		objectACL           = os.Getenv("S3_OBJECT_ACL")
+		regionEndpoint      = os.Getenv("REGION_ENDPOINT")
+		forcePathStyle      = os.Getenv("AWS_S3_FORCE_PATH_STYLE")
+		sessionToken        = os.Getenv("AWS_SESSION_TOKEN")
+		useDualStack        = os.Getenv("S3_USE_DUALSTACK")
+		accelerate          = os.Getenv("S3_ACCELERATE")
+		useFIPSEndpoint     = os.Getenv("S3_USE_FIPS_ENDPOINT")
+		logLevel            = os.Getenv("S3_LOGLEVEL")
 	)
 
 	var err error
@@ -69,6 +70,14 @@ func init() {
 		skipVerifyBool := false
 		if skipVerify != "" {
 			skipVerifyBool, err = strconv.ParseBool(skipVerify)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		var maxIdleConnsPerHostInt int
+		if maxIdleConnsPerHost != "" {
+			maxIdleConnsPerHostInt, err = strconv.Atoi(maxIdleConnsPerHost)
 			if err != nil {
 				return nil, err
 			}
@@ -125,6 +134,7 @@ func init() {
 			KeyID:                       keyID,
 			Secure:                      secureBool,
 			SkipVerify:                  skipVerifyBool,
+			MaxIdleConnsPerHost:         maxIdleConnsPerHostInt,
 			V4Auth:                      v4Bool,
 			ChunkSize:                   minChunkSize,
 			MultipartCopyChunkSize:      defaultMultipartCopyChunkSize,
@@ -339,10 +349,13 @@ func TestClientTransport(t *testing.T) {
 	skipCheck(t)
 
 	testCases := []struct {
-		skipverify bool
+		skipverify          bool
+		maxIdleConnsPerHost int
 	}{
-		{true},
-		{false},
+		{true, 0},
+		{false, 0},
+		{true, 1024},
+		{false, 1024},
 	}
 
 	for _, tc := range testCases {
@@ -350,9 +363,10 @@ func TestClientTransport(t *testing.T) {
 		// because s3DriverConstructor is initialized in init() using the process
 		// env vars: we can not override S3_SKIP_VERIFY env var with t.Setenv
 		params := map[string]interface{}{
-			"region":     os.Getenv("AWS_REGION"),
-			"bucket":     os.Getenv("S3_BUCKET"),
-			"skipverify": tc.skipverify,
+			"region":              os.Getenv("AWS_REGION"),
+			"bucket":              os.Getenv("S3_BUCKET"),
+			"skipverify":          tc.skipverify,
+			"maxidleconnsperhost": tc.maxIdleConnsPerHost,
 		}
 		t.Run(fmt.Sprintf("SkipVerify %v", tc.skipverify), func(t *testing.T) {
 			drv, err := FromParameters(context.TODO(), params)
@@ -361,26 +375,34 @@ func TestClientTransport(t *testing.T) {
 			}
 
 			s3drv := drv.baseEmbed.Base.StorageDriver.(*driver)
-			if tc.skipverify {
+			if tc.skipverify || tc.maxIdleConnsPerHost > 0 {
 				tr, ok := s3drv.S3.Client.Config.HTTPClient.Transport.(*http.Transport)
 				if !ok {
 					t.Fatal("unexpected driver transport")
 				}
-				if !tr.TLSClientConfig.InsecureSkipVerify {
+
+				if tr.TLSClientConfig.InsecureSkipVerify != tc.skipverify {
 					t.Errorf("unexpected TLS Config. Expected InsecureSkipVerify: %v, got %v",
 						tc.skipverify,
 						tr.TLSClientConfig.InsecureSkipVerify)
 				}
+
+				if tr.MaxIdleConnsPerHost != tc.maxIdleConnsPerHost {
+					t.Errorf("unexpected MaxIdleConnsPerHost Config. Expected MaxIdleConnsPerHost: %v, got %v",
+						tc.maxIdleConnsPerHost,
+						tr.MaxIdleConnsPerHost)
+				}
+
 				// make sure the proxy is always set
 				if tr.Proxy == nil {
 					t.Fatal("missing HTTP transport proxy config")
 				}
-				return
-			}
-			// if tc.skipverify is false we do not override the driver
-			// HTTP client transport and leave it to the AWS SDK.
-			if s3drv.S3.Client.Config.HTTPClient.Transport != nil {
-				t.Errorf("unexpected S3 driver client transport")
+			} else {
+				// if tc.skipverify is false we do not override the driver
+				// HTTP client transport and leave it to the AWS SDK.
+				if s3drv.S3.Client.Config.HTTPClient.Transport != nil {
+					t.Errorf("unexpected S3 driver client transport")
+				}
 			}
 		})
 	}
