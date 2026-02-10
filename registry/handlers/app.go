@@ -464,7 +464,7 @@ func (app *App) register(routeName string, dispatch dispatchFunc) {
 	// Chain the handler with prometheus instrumented handler
 	if app.Config.HTTP.Debug.Prometheus.Enabled {
 		namespace := metrics.NewNamespace(prometheus.NamespacePrefix, "http", nil)
-		httpMetrics := namespace.NewDefaultHttpMetrics(strings.Replace(routeName, "-", "_", -1))
+		httpMetrics := namespace.NewDefaultHttpMetrics(strings.ReplaceAll(routeName, "-", "_"))
 		metrics.Register(namespace)
 		handler = metrics.InstrumentHandler(httpMetrics, handler)
 	}

@@ -440,7 +440,8 @@ func TestBlobUploadChunked(t *testing.T) {
 		b1[513:1024],
 	}
 	repo, _ := reference.WithName("test.example.com/uploadrepo")
-	uuids := []string{uuid.NewString()}
+	uuids := make([]string, 0, len(chunks)+1)
+	uuids = append(uuids, uuid.NewString())
 	m = append(m, testutil.RequestResponseMapping{
 		Request: testutil.Request{
 			Method: http.MethodPost,

@@ -26,9 +26,9 @@ func TestErrorFormat(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expJson := `{"driver":"foo","detail":"unexpected error"}`
-	if gotJson := string(b); gotJson != expJson {
-		t.Fatalf("expected JSON: %s,\n got: %s", expJson, gotJson)
+	expJSON := `{"driver":"foo","detail":"unexpected error"}`
+	if gotJSON := string(b); gotJSON != expJSON {
+		t.Fatalf("expected JSON: %s,\n got: %s", expJSON, gotJSON)
 	}
 }
 
@@ -40,25 +40,25 @@ func TestErrors(t *testing.T) {
 		name    string
 		errs    Errors
 		exp     string
-		expJson string
+		expJSON string
 	}{
 		{
 			name:    "no details",
 			errs:    Errors{DriverName: drvName},
 			exp:     fmt.Sprintf("%s: <nil>", drvName),
-			expJson: `{"driver":"foo","details":[]}`,
+			expJSON: `{"driver":"foo","details":[]}`,
 		},
 		{
 			name:    "single detail",
 			errs:    Errors{DriverName: drvName, Errs: []error{errors.New("err msg")}},
 			exp:     fmt.Sprintf("%s: err msg", drvName),
-			expJson: `{"driver":"foo","details":["err msg"]}`,
+			expJSON: `{"driver":"foo","details":["err msg"]}`,
 		},
 		{
 			name:    "multiple details",
 			errs:    Errors{DriverName: drvName, Errs: []error{errors.New("err msg1"), errors.New("err msg2")}},
 			exp:     fmt.Sprintf("%s: errors:\nerr msg1\nerr msg2\n", drvName),
-			expJson: `{"driver":"foo","details":["err msg1","err msg2"]}`,
+			expJSON: `{"driver":"foo","details":["err msg1","err msg2"]}`,
 		},
 	}
 
@@ -72,8 +72,8 @@ func TestErrors(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if gotJson := string(b); gotJson != tc.expJson {
-				t.Errorf("expected JSON: %s,\n got: %s", tc.expJson, gotJson)
+			if gotJSON := string(b); gotJSON != tc.expJSON {
+				t.Errorf("expected JSON: %s,\n got: %s", tc.expJSON, gotJSON)
 			}
 		})
 	}

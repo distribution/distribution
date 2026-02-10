@@ -135,9 +135,10 @@ func (ac authChallenge) challengeParams(r *http.Request) string {
 		str = fmt.Sprintf("%s,scope=%q", str, scope)
 	}
 
-	if ac.err == ErrInvalidToken || ac.err == ErrMalformedToken {
+	switch ac.err {
+	case ErrInvalidToken, ErrMalformedToken:
 		str = fmt.Sprintf("%s,error=%q", str, "invalid_token")
-	} else if ac.err == ErrInsufficientScope {
+	case ErrInsufficientScope:
 		str = fmt.Sprintf("%s,error=%q", str, "insufficient_scope")
 	}
 
