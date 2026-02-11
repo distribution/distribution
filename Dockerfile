@@ -2,7 +2,10 @@
 
 ARG GO_VERSION=1.23.7
 ARG ALPINE_VERSION=3.21
-ARG XX_VERSION=1.6.1
+
+# XX_VERSION sets the version of the tonistiigi/xx utility to use.
+# It must be a valid tag in the docker.io/tonistiigi/xx image repository.
+ARG XX_VERSION=1.9.0
 
 FROM --platform=$BUILDPLATFORM tonistiigi/xx:${XX_VERSION} AS xx
 FROM --platform=$BUILDPLATFORM golang:${GO_VERSION}-alpine${ALPINE_VERSION} AS base
