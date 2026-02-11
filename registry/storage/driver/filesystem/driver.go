@@ -9,7 +9,7 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/distribution/distribution/v3/internal/uuid"
@@ -194,7 +194,7 @@ func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.Read
 
 func (d *driver) Writer(ctx context.Context, subPath string, append bool) (storagedriver.FileWriter, error) {
 	fullPath := d.fullPath(subPath)
-	parentDir := path.Dir(fullPath)
+	parentDir := filepath.Dir(fullPath)
 	if err := os.MkdirAll(parentDir, 0o777); err != nil {
 		return nil, err
 	}
@@ -266,7 +266,7 @@ func (d *driver) List(ctx context.Context, subPath string) ([]string, error) {
 
 	keys := make([]string, 0, len(fileNames))
 	for _, fileName := range fileNames {
-		keys = append(keys, path.Join(subPath, fileName))
+		keys = append(keys, filepath.Join(subPath, fileName))
 	}
 
 	return keys, nil
@@ -282,7 +282,7 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 		return storagedriver.PathNotFoundError{Path: sourcePath}
 	}
 
-	if err := os.MkdirAll(path.Dir(dest), 0o777); err != nil {
+	if err := os.MkdirAll(filepath.Dir(dest), 0o777); err != nil {
 		return err
 	}
 
@@ -318,7 +318,7 @@ func (d *driver) Walk(ctx context.Context, path string, f storagedriver.WalkFn, 
 
 // fullPath returns the absolute path of a key within the Driver's storage.
 func (d *driver) fullPath(subPath string) string {
-	return path.Join(d.rootDirectory, subPath)
+	return filepath.Join(d.rootDirectory, subPath)
 }
 
 type fileInfo struct {
