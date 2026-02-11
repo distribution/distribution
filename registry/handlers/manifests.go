@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/distribution/distribution/v3"
+	"github.com/distribution/distribution/v3/configuration"
 	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/distribution/distribution/v3/manifest/manifestlist"
 	"github.com/distribution/distribution/v3/manifest/ocischema"
@@ -42,9 +43,11 @@ const (
 
 // manifestDispatcher takes the request context and builds the
 // appropriate handler for handling manifest requests.
-func manifestDispatcher(ctx *Context, r *http.Request) http.Handler {
+func manifestDispatcher(ctx *Context, app *App, r *http.Request) http.Handler {
 	manifestHandler := &manifestHandler{
 		Context: ctx,
+		isCache: app.isCache,
+		Config:  app.Config,
 	}
 	ref := getReference(ctx)
 	dgst, err := digest.Parse(ref)
@@ -60,7 +63,7 @@ func manifestDispatcher(ctx *Context, r *http.Request) http.Handler {
 		http.MethodHead: http.HandlerFunc(manifestHandler.GetManifest),
 	}
 
-	if !ctx.readOnly {
+	if !app.readOnly {
 		mhandler[http.MethodPut] = http.HandlerFunc(manifestHandler.PutManifest)
 		mhandler[http.MethodDelete] = http.HandlerFunc(manifestHandler.DeleteManifest)
 	}
@@ -71,6 +74,11 @@ func manifestDispatcher(ctx *Context, r *http.Request) http.Handler {
 // manifestHandler handles http operations on image manifests.
 type manifestHandler struct {
 	*Context
+
+	Config *configuration.Configuration
+
+	// isCache is true if this registry is configured as a pull through cache
+	isCache bool
 
 	// One of tag or digest gets set, depending on what is present in context.
 	Tag    string
@@ -363,7 +371,7 @@ func (imh *manifestHandler) PutManifest(w http.ResponseWriter, r *http.Request) 
 // applyResourcePolicy checks whether the resource class matches what has
 // been authorized and allowed by the policy configuration.
 func (imh *manifestHandler) applyResourcePolicy(manifest distribution.Manifest) error {
-	allowedClasses := imh.App.Config.Policy.Repository.Classes
+	allowedClasses := imh.Config.Policy.Repository.Classes
 	if len(allowedClasses) == 0 {
 		return nil
 	}
@@ -432,7 +440,7 @@ func (imh *manifestHandler) applyResourcePolicy(manifest distribution.Manifest) 
 func (imh *manifestHandler) DeleteManifest(w http.ResponseWriter, r *http.Request) {
 	dcontext.GetLogger(imh).Debug("DeleteImageManifest")
 
-	if imh.App.isCache {
+	if imh.isCache {
 		imh.Errors = append(imh.Errors, errcode.ErrorCodeUnsupported)
 		return
 	}
