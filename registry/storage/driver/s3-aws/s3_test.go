@@ -501,7 +501,7 @@ func TestDelete(t *testing.T) {
 		"/folder1-v2/subfolder1/file1",
 	}
 
-	tcs := []testCase{
+	tcs := []testCase{ //nolint:prealloc
 		{
 			name:   "delete folder1",
 			delete: "/folder1",

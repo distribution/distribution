@@ -19,7 +19,7 @@ func (reg *registry) Repositories(ctx context.Context, repos []string, last stri
 	foundRepos := 0
 
 	if len(repos) == 0 {
-		return 0, errors.New("Attempted to list 0 repositories")
+		return 0, errors.New("attempted to list 0 repositories")
 	}
 
 	root, err := pathFor(repositoriesRootPathSpec{})

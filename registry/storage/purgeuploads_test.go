@@ -116,7 +116,7 @@ func TestPurgeOnlyUploads(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	nonUploadPath := strings.Replace(dataPath, "_upload", "_important", -1)
+	nonUploadPath := strings.ReplaceAll(dataPath, "_upload", "_important")
 	if strings.Contains(nonUploadPath, "_upload") {
 		t.Fatal("Non-upload path not created correctly")
 	}

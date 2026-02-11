@@ -661,7 +661,7 @@ func (bw *blockWriter) Write(p []byte) (int, error) {
 		}
 		appendposFailed := bloberror.HasCode(err, bloberror.AppendPositionConditionNotMet)
 		etagFailed := bloberror.HasCode(err, bloberror.ConditionNotMet)
-		if !(appendposFailed || etagFailed) || !timeoutFromCtx {
+		if (!appendposFailed && !etagFailed) || !timeoutFromCtx {
 			// Error was not caused by an operation timeout, abort!
 			return n, fmt.Errorf("appending blob: %w", err)
 		}

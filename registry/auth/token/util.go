@@ -77,9 +77,9 @@ func GetJWKThumbprint(publickey crypto.PublicKey) string {
 func getJWKThumbprint(publickey crypto.PublicKey, skipED25519 bool) string {
 	switch pubkey := publickey.(type) {
 	case *rsa.PublicKey:
-		e_big := big.NewInt(int64(pubkey.E)).Bytes()
+		eBig := big.NewInt(int64(pubkey.E)).Bytes()
 
-		e := base64.RawURLEncoding.EncodeToString(e_big)
+		e := base64.RawURLEncoding.EncodeToString(eBig)
 		n := base64.RawURLEncoding.EncodeToString(pubkey.N.Bytes())
 
 		return hashAndEncode(fmt.Sprintf(`{"e":"%s","kty":"RSA","n":"%s"}`, e, n))

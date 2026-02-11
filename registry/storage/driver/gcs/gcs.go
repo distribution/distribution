@@ -119,7 +119,7 @@ type baseEmbed struct {
 func FromParameters(ctx context.Context, parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
 	bucket, ok := parameters["bucket"]
 	if !ok || fmt.Sprint(bucket) == "" {
-		return nil, fmt.Errorf("No bucket parameter provided")
+		return nil, fmt.Errorf("no bucket parameter provided")
 	}
 
 	rootDirectory, ok := parameters["rootdirectory"]
@@ -171,21 +171,21 @@ func FromParameters(ctx context.Context, parameters map[string]interface{}) (sto
 	} else if credentials, ok := parameters["credentials"]; ok {
 		credentialMap, ok := credentials.(map[interface{}]interface{})
 		if !ok {
-			return nil, fmt.Errorf("The credentials were not specified in the correct format")
+			return nil, fmt.Errorf("the credentials were not specified in the correct format")
 		}
 
 		stringMap := map[string]interface{}{}
 		for k, v := range credentialMap {
 			key, ok := k.(string)
 			if !ok {
-				return nil, fmt.Errorf("One of the credential keys was not a string: %s", fmt.Sprint(k))
+				return nil, fmt.Errorf("one of the credential keys was not a string: %s", fmt.Sprint(k))
 			}
 			stringMap[key] = v
 		}
 
 		data, err := json.Marshal(stringMap)
 		if err != nil {
-			return nil, fmt.Errorf("Failed to marshal gcs credentials to json")
+			return nil, fmt.Errorf("failed to marshal gcs credentials to json")
 		}
 
 		jwtConf, err = google.JWTConfigFromJSON(data, storage.ScopeFullControl)
@@ -242,7 +242,7 @@ func New(ctx context.Context, params driverParameters) (storagedriver.StorageDri
 		rootDirectory += "/"
 	}
 	if params.chunkSize <= 0 || params.chunkSize%minChunkSize != 0 {
-		return nil, fmt.Errorf("Invalid chunksize: %d is not a positive multiple of %d", params.chunkSize, minChunkSize)
+		return nil, fmt.Errorf("invalid chunksize: %d is not a positive multiple of %d", params.chunkSize, minChunkSize)
 	}
 	d := &driver{
 		bucket:        params.gcs.Bucket(params.bucket),

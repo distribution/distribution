@@ -2,7 +2,8 @@
 
 ARG GO_VERSION=1.23.7
 ARG ALPINE_VERSION=3.21
-ARG GOLANGCI_LINT_VERSION=v1.64.8
+# GOLANGCI_LINT_VERSION sets the version of the golangci/golangci-lint image to use.
+ARG GOLANGCI_LINT_VERSION=v2.9
 ARG BUILDTAGS=""
 
 FROM golangci/golangci-lint:${GOLANGCI_LINT_VERSION}-alpine AS golangci-lint

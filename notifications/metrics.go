@@ -44,6 +44,10 @@ func init() {
 		defer endpoints.mu.Unlock()
 
 		var names []interface{}
+		if len(endpoints.registered) == 0 {
+			return names
+		}
+		names = make([]interface{}, 0, len(endpoints.registered))
 		for _, v := range endpoints.registered {
 			var epjson struct {
 				Name string `json:"name"`
