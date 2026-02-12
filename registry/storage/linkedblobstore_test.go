@@ -21,7 +21,7 @@ func TestLinkedBlobStoreEnumerator(t *testing.T) {
 	fooEnv := newManifestStoreTestEnv(t, fooRepoName, "thetag")
 	ctx := context.Background()
 
-	var expected []string
+	expected := make([]string, 0, 2)
 	for range 2 {
 		rs, dgst, err := testutil.CreateRandomTarFile()
 		if err != nil {

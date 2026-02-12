@@ -1051,7 +1051,7 @@ func TestListObjectsV2(t *testing.T) {
 	ctx := dcontext.Background()
 	n := 6
 	prefix := "/test-list-objects-v2"
-	var filePaths []string
+	filePaths := make([]string, 0, n)
 	for i := range n {
 		filePaths = append(filePaths, fmt.Sprintf("%s/%d", prefix, i))
 	}
