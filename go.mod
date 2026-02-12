@@ -9,7 +9,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.8.2
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.6.0
 	github.com/aws/aws-sdk-go v1.55.5
-	github.com/bshuster-repo/logrus-logstash-hook v1.0.0
+	github.com/bshuster-repo/logrus-logstash-hook v1.1.0
 	github.com/coreos/go-systemd/v22 v22.5.0
 	github.com/distribution/reference v0.6.0
 	github.com/docker/docker-credential-helpers v0.9.5

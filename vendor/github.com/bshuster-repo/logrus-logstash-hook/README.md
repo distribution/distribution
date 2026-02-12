@@ -47,11 +47,18 @@ This is how it will look like:
 }
 ```
 
+# FAQ
+Q: I would like to add characters to each line before sending to Logstash?
+A: Logrustash gives you the ability to mutate the message before sending it to Logstash. Just follow [this example](https://github.com/bshuster-repo/logrus-logstash-hook/issues/60#issuecomment-604948272).
+
+Q: Is there a way to maintain the connection when it drops
+A: It's recommended to use [GoAutoSocket](https://github.com/firstrow/goautosocket) for that. See [here](https://github.com/bshuster-repo/logrus-logstash-hook/issues/48#issuecomment-361938249) how it can be done.
+
 # Maintainers
 
-Name         | Github    | Twitter    |
------------- | --------- | ---------- |
-Boaz Shuster | ripcurld0 | @ripcurld0 |
+Name         | Github    |
+------------ | --------- |
+Boaz Shuster | boaz0     |
 
 # License
 
