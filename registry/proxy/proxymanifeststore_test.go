@@ -165,7 +165,7 @@ func populateRepo(ctx context.Context, t *testing.T, repository distribution.Rep
 		},
 	}
 
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		rs, dgst, err := testutil.CreateRandomTarFile()
 		if err != nil {
 			t.Fatal("unexpected error generating test layer file")

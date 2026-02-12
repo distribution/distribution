@@ -45,7 +45,7 @@ type Event struct {
 	ID string `json:"id,omitempty"`
 
 	// Timestamp is the time at which the event occurred.
-	Timestamp time.Time `json:"timestamp,omitempty"`
+	Timestamp time.Time `json:"timestamp"`
 
 	// Action indicates what action encompasses the provided event.
 	Action string `json:"action,omitempty"`
@@ -75,19 +75,19 @@ type Event struct {
 
 		// References provides the references descriptors.
 		References []v1.Descriptor `json:"references,omitempty"`
-	} `json:"target,omitempty"`
+	} `json:"target"`
 
 	// Request covers the request that generated the event.
-	Request RequestRecord `json:"request,omitempty"`
+	Request RequestRecord `json:"request"`
 
 	// Actor specifies the agent that initiated the event. For most
 	// situations, this could be from the authorization context of the request.
-	Actor ActorRecord `json:"actor,omitempty"`
+	Actor ActorRecord `json:"actor"`
 
 	// Source identifies the registry node that generated the event. Put
 	// differently, while the actor "initiates" the event, the source
 	// "generates" it.
-	Source SourceRecord `json:"source,omitempty"`
+	Source SourceRecord `json:"source"`
 }
 
 // ActorRecord specifies the agent that initiated the event. For most

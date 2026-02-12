@@ -68,7 +68,7 @@ func init() {
 	}
 
 	azureDriverConstructor = func() (storagedriver.StorageDriver, error) {
-		parameters := map[string]interface{}{
+		parameters := map[string]any{
 			"container":     container,
 			"accountname":   accountName,
 			"accountkey":    accountKey,
@@ -175,7 +175,7 @@ func TestCommitAfterMove(t *testing.T) {
 }
 
 func TestParamParsing(t *testing.T) {
-	expectErrors := []map[string]interface{}{
+	expectErrors := []map[string]any{
 		{},
 		{"accountname": "acc1"},
 	}
@@ -184,10 +184,10 @@ func TestParamParsing(t *testing.T) {
 			t.Fatalf("Expected an error for parameter set: %v", parameters)
 		}
 	}
-	input := []map[string]interface{}{
+	input := []map[string]any{
 		{"accountname": "acc1", "accountkey": "k1", "container": "c1", "max_retries": 1, "retry_delay": "10ms"},
-		{"accountname": "acc1", "container": "c1", "credentials": map[string]interface{}{"type": "default"}},
-		{"accountname": "acc1", "container": "c1", "credentials": map[string]interface{}{"type": "client_secret", "clientid": "c1", "tenantid": "t1", "secret": "s1"}},
+		{"accountname": "acc1", "container": "c1", "credentials": map[string]any{"type": "default"}},
+		{"accountname": "acc1", "container": "c1", "credentials": map[string]any{"type": "client_secret", "clientid": "c1", "tenantid": "t1", "secret": "s1"}},
 	}
 	expecteds := []DriverParameters{
 		{

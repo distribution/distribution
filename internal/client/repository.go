@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -45,14 +46,7 @@ func checkHTTPRedirect(req *http.Request, via []*http.Request) error {
 				// Don't add to redirected request if redirected
 				// request already has a header with the same
 				// name and value.
-				hasValue := false
-				for _, existingVal := range req.Header[headerName] {
-					if existingVal == val {
-						hasValue = true
-						break
-					}
-				}
-				if !hasValue {
+				if !slices.Contains(req.Header[headerName], val) {
 					req.Header.Add(headerName, val)
 				}
 			}
@@ -739,16 +733,16 @@ func (bs *blobs) Put(ctx context.Context, mediaType string, p []byte) (v1.Descri
 	})
 }
 
-type optionFunc func(interface{}) error
+type optionFunc func(any) error
 
-func (f optionFunc) Apply(v interface{}) error {
+func (f optionFunc) Apply(v any) error {
 	return f(v)
 }
 
 // WithMountFrom returns a BlobCreateOption which designates that the blob should be
 // mounted from the given canonical reference.
 func WithMountFrom(ref reference.Canonical) distribution.BlobCreateOption {
-	return optionFunc(func(v interface{}) error {
+	return optionFunc(func(v any) error {
 		opts, ok := v.(*distribution.CreateOptions)
 		if !ok {
 			return fmt.Errorf("unexpected options type: %T", v)

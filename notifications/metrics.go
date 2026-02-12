@@ -39,15 +39,15 @@ func init() {
 
 	var notifications expvar.Map
 	notifications.Init()
-	notifications.Set("endpoints", expvar.Func(func() interface{} {
+	notifications.Set("endpoints", expvar.Func(func() any {
 		endpoints.mu.Lock()
 		defer endpoints.mu.Unlock()
 
-		var names []interface{}
+		var names []any
 		if len(endpoints.registered) == 0 {
 			return names
 		}
-		names = make([]interface{}, 0, len(endpoints.registered))
+		names = make([]any, 0, len(endpoints.registered))
 		for _, v := range endpoints.registered {
 			var epjson struct {
 				Name string `json:"name"`

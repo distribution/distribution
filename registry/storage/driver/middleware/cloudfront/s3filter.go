@@ -116,7 +116,7 @@ func (s *awsIPs) tryUpdate(ctx context.Context) error {
 
 		_, network, err := net.ParseCIDR(prefix)
 		if err != nil {
-			dcontext.GetLoggerWithFields(dcontext.Background(), map[interface{}]interface{}{
+			dcontext.GetLoggerWithFields(dcontext.Background(), map[any]any{
 				"cidr": prefix,
 			}).Error("unparseable cidr")
 			return
@@ -172,7 +172,7 @@ func (s *awsIPs) getCandidateNetworks(ip net.IP) []net.IPNet {
 	} else if ip.To16() != nil {
 		return s.ipv6
 	} else {
-		dcontext.GetLoggerWithFields(dcontext.Background(), map[interface{}]interface{}{
+		dcontext.GetLoggerWithFields(dcontext.Background(), map[any]any{
 			"ip": ip,
 		}).Error("unknown ip address format")
 		// assume mismatch, pass through cloudfront
@@ -208,7 +208,7 @@ func parseIPFromRequest(request *http.Request) (net.IP, error) {
 func eligibleForS3(request *http.Request, awsIPs *awsIPs) bool {
 	if awsIPs != nil && awsIPs.initialized {
 		if addr, err := parseIPFromRequest(request); err == nil {
-			loggerField := map[interface{}]interface{}{
+			loggerField := map[any]any{
 				"user-client": request.UserAgent(),
 				"ip":          requestutil.RemoteIP(request),
 			}

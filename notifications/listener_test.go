@@ -127,9 +127,6 @@ func checkTestRepository(t *testing.T, repository distribution.Repository, remov
 	configDgst := digest.FromBytes(config)
 	configReader := bytes.NewReader(config)
 
-	var blobDigests []digest.Digest
-	blobDigests = append(blobDigests, configDgst)
-
 	blobs := repository.Blobs(ctx)
 
 	// push config blob
@@ -153,7 +150,9 @@ func checkTestRepository(t *testing.T, repository distribution.Repository, remov
 		},
 	}
 
-	for i := 0; i < 2; i++ {
+	blobDigests := make([]digest.Digest, 0, 3)
+	blobDigests = append(blobDigests, configDgst)
+	for range 2 {
 		rs, dgst, err := testutil.CreateRandomTarFile()
 		if err != nil {
 			t.Fatalf("error creating test layer: %v", err)

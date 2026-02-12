@@ -181,7 +181,7 @@ type tokenAccessOptions struct {
 
 // checkOptions gathers the necessary options
 // for an accessController from the given map.
-func checkOptions(options map[string]interface{}) (tokenAccessOptions, error) {
+func checkOptions(options map[string]any) (tokenAccessOptions, error) {
 	var opts tokenAccessOptions
 
 	keys := []string{"realm", "issuer", "service", "rootcertbundle", "jwks"}
@@ -229,7 +229,7 @@ func checkOptions(options map[string]interface{}) (tokenAccessOptions, error) {
 
 	signingAlgos, ok := options["signingalgorithms"]
 	if ok {
-		signingAlgorithmsVals, ok := signingAlgos.([]interface{})
+		signingAlgorithmsVals, ok := signingAlgos.([]any)
 		if !ok {
 			return tokenAccessOptions{}, errors.New("signingalgorithms must be a list of signing algorithms")
 		}
@@ -317,7 +317,7 @@ func getSigningAlgorithms(algos []string) ([]jose.SignatureAlgorithm, error) {
 }
 
 // newAccessController creates an accessController using the given options.
-func newAccessController(options map[string]interface{}) (auth.AccessController, error) {
+func newAccessController(options map[string]any) (auth.AccessController, error) {
 	config, err := checkOptions(options)
 	if err != nil {
 		return nil, err

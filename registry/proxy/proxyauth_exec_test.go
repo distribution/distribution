@@ -18,7 +18,7 @@ type testHelper struct {
 }
 
 func (h *testHelper) Output() ([]byte, error) {
-	return []byte(fmt.Sprintf(`{"Username":%q,"Secret":%q}`, h.username, h.secret)), h.err
+	return fmt.Appendf(nil, `{"Username":%q,"Secret":%q}`, h.username, h.secret), h.err
 }
 
 func (h *testHelper) Input(in io.Reader) {

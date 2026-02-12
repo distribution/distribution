@@ -71,7 +71,7 @@ func setupRegistry(tlsCfg *registryTLSConfig, addr string) (*Registry, error) {
 		config.HTTP.TLS.Certificate = tlsCfg.certificatePath
 		config.HTTP.TLS.Key = tlsCfg.privateKeyPath
 	}
-	config.Storage = map[string]configuration.Parameters{"inmemory": map[string]interface{}{}}
+	config.Storage = map[string]configuration.Parameters{"inmemory": map[string]any{}}
 	return NewRegistry(context.Background(), config)
 }
 
@@ -177,7 +177,7 @@ func TestGetCipherSuite(t *testing.T) {
 }
 
 func buildRegistryTLSConfig(name, keyType string, cipherSuites []string) (*registryTLSConfig, error) {
-	var priv interface{}
+	var priv any
 	var pub crypto.PublicKey
 	var err error
 	switch keyType {

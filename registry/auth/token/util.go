@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"math/big"
+	"slices"
 )
 
 // actionSet is a special type of stringSet.
@@ -28,13 +29,7 @@ func (s actionSet) contains(action string) bool {
 
 // contains returns true if q is found in ss.
 func contains(ss []string, q string) bool {
-	for _, s := range ss {
-		if s == q {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(ss, q)
 }
 
 // containsAny returns true if any of q is found in ss.

@@ -12,7 +12,7 @@ import (
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-func emit(format string, a ...interface{}) {
+func emit(format string, a ...any) {
 	fmt.Printf(format+"\n", a...)
 }
 

@@ -107,10 +107,7 @@ func compareReplaceInline(s1, s2 string, old, new byte) int {
 	// the exact same slice header. It will make the code unsafe but can
 	// provide some extra performance.
 
-	l := len(s1)
-	if len(s2) < l {
-		l = len(s2)
-	}
+	l := min(len(s2), len(s1))
 
 	for i := 0; i < l; i++ {
 		c1, c2 := s1[i], s2[i]

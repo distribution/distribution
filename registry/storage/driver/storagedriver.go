@@ -216,11 +216,12 @@ func (e Errors) Error() string {
 	case 1:
 		return fmt.Sprintf("%s: %s", e.DriverName, e.Errs[0].Error())
 	default:
-		msg := "errors:\n"
+		var msg strings.Builder
+		msg.WriteString("errors:\n")
 		for _, err := range e.Errs {
-			msg += err.Error() + "\n"
+			msg.WriteString(err.Error() + "\n")
 		}
-		return fmt.Sprintf("%s: %s", e.DriverName, msg)
+		return fmt.Sprintf("%s: %s", e.DriverName, msg.String())
 	}
 }
 

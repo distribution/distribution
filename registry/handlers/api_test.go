@@ -15,6 +15,7 @@ import (
 	"path"
 	"reflect"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -631,19 +632,14 @@ func checkLink(t *testing.T, urlStr string, numEntries int, last string) url.Val
 }
 
 func contains(elems []string, e string) bool {
-	for _, elem := range elems {
-		if elem == e {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(elems, e)
 }
 
 func TestURLPrefix(t *testing.T) {
 	config := configuration.Configuration{
 		Storage: configuration.Storage{
 			"inmemory": configuration.Parameters{},
-			"maintenance": configuration.Parameters{"uploadpurging": map[interface{}]interface{}{
+			"maintenance": configuration.Parameters{"uploadpurging": map[any]any{
 				"enabled": false,
 			}},
 		},
@@ -726,7 +722,7 @@ func TestRelativeURL(t *testing.T) {
 	config := configuration.Configuration{
 		Storage: configuration.Storage{
 			"inmemory": configuration.Parameters{},
-			"maintenance": configuration.Parameters{"uploadpurging": map[interface{}]interface{}{
+			"maintenance": configuration.Parameters{"uploadpurging": map[any]any{
 				"enabled": false,
 			}},
 		},
@@ -1405,7 +1401,7 @@ const (
 	repositoryWithGenericStorageError = "genericstorageerr"
 )
 
-func (factory *storageManifestErrDriverFactory) Create(ctx context.Context, parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
+func (factory *storageManifestErrDriverFactory) Create(ctx context.Context, parameters map[string]any) (storagedriver.StorageDriver, error) {
 	// Initialize the mock driver
 	errGenericStorage := errors.New("generic storage error")
 	return &mockErrorDriver{
@@ -1460,7 +1456,7 @@ func TestGetManifestWithStorageError(t *testing.T) {
 	config := configuration.Configuration{
 		Storage: configuration.Storage{
 			"storagemanifesterror": configuration.Parameters{},
-			"maintenance": configuration.Parameters{"uploadpurging": map[interface{}]interface{}{
+			"maintenance": configuration.Parameters{"uploadpurging": map[any]any{
 				"enabled": false,
 			}},
 		},
@@ -2231,7 +2227,7 @@ func newTestEnvMirror(t *testing.T, deleteEnabled bool) *testEnv {
 		Storage: configuration.Storage{
 			"inmemory": configuration.Parameters{},
 			"delete":   configuration.Parameters{"enabled": deleteEnabled},
-			"maintenance": configuration.Parameters{"uploadpurging": map[interface{}]interface{}{
+			"maintenance": configuration.Parameters{"uploadpurging": map[any]any{
 				"enabled": false,
 			}},
 		},
@@ -2251,7 +2247,7 @@ func newTestEnv(t *testing.T, deleteEnabled bool) *testEnv {
 		Storage: configuration.Storage{
 			"inmemory": configuration.Parameters{},
 			"delete":   configuration.Parameters{"enabled": deleteEnabled},
-			"maintenance": configuration.Parameters{"uploadpurging": map[interface{}]interface{}{
+			"maintenance": configuration.Parameters{"uploadpurging": map[any]any{
 				"enabled": false,
 			}},
 		},
@@ -2289,7 +2285,7 @@ func (t *testEnv) Shutdown() {
 	t.server.Close()
 }
 
-func putManifest(t *testing.T, msg, url, contentType string, v interface{}) *http.Response {
+func putManifest(t *testing.T, msg, url, contentType string, v any) *http.Response {
 	var body []byte
 
 	switch m := v.(type) {
@@ -2805,7 +2801,7 @@ func TestProxyManifestGetByTag(t *testing.T) {
 	truthConfig := configuration.Configuration{
 		Storage: configuration.Storage{
 			"inmemory": configuration.Parameters{},
-			"maintenance": configuration.Parameters{"uploadpurging": map[interface{}]interface{}{
+			"maintenance": configuration.Parameters{"uploadpurging": map[any]any{
 				"enabled": false,
 			}},
 		},

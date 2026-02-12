@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"mime"
 	"net/http"
+	"slices"
 	"strings"
 	"sync"
 
@@ -95,7 +96,7 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 
 		// we need to split each header value on "," to get the full list of "Accept" values (per RFC 2616)
 		// https://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.1
-		for _, mediaType := range strings.Split(acceptHeader, ",") {
+		for mediaType := range strings.SplitSeq(acceptHeader, ",") {
 			if mediaType, _, err = mime.ParseMediaType(mediaType); err != nil {
 				continue
 			}
@@ -395,11 +396,8 @@ func (imh *manifestHandler) applyResourcePolicy(manifest distribution.Manifest) 
 
 	// Check to see if class is allowed in registry
 	var allowedClass bool
-	for _, c := range allowedClasses {
-		if class == c {
-			allowedClass = true
-			break
-		}
+	if slices.Contains(allowedClasses, class) {
+		allowedClass = true
 	}
 	if !allowedClass {
 		return errcode.ErrorCodeDenied.WithMessage(fmt.Sprintf("registry does not allow %s manifest", class))

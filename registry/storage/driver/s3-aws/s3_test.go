@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"reflect"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -349,7 +350,7 @@ func TestClientTransport(t *testing.T) {
 		// NOTE(milosgajdos): we cannot simply reuse s3DriverConstructor
 		// because s3DriverConstructor is initialized in init() using the process
 		// env vars: we can not override S3_SKIP_VERIFY env var with t.Setenv
-		params := map[string]interface{}{
+		params := map[string]any{
 			"region":     os.Getenv("AWS_REGION"),
 			"bucket":     os.Getenv("S3_BUCKET"),
 			"skipverify": tc.skipverify,
@@ -610,12 +611,7 @@ func TestDelete(t *testing.T) {
 			// and all files not marked for deletion still remain
 			expected := tc.expected
 			isExpected := func(path string) bool {
-				for _, epath := range expected {
-					if epath == path {
-						return true
-					}
-				}
-				return false
+				return slices.Contains(expected, path)
 			}
 			for _, path := range objs {
 				stat, err := drvr.Stat(dcontext.Background(), path)
@@ -976,7 +972,7 @@ func TestOverThousandBlobs(t *testing.T) {
 	}
 
 	ctx := dcontext.Background()
-	for i := 0; i < 1005; i++ {
+	for i := range 1005 {
 		filename := "/thousandfiletest/file" + strconv.Itoa(i)
 		contents := []byte("contents")
 		err = standardDriver.PutContent(ctx, filename, contents)
@@ -1055,8 +1051,8 @@ func TestListObjectsV2(t *testing.T) {
 	ctx := dcontext.Background()
 	n := 6
 	prefix := "/test-list-objects-v2"
-	var filePaths []string
-	for i := 0; i < n; i++ {
+	filePaths := make([]string, 0, n)
+	for i := range n {
 		filePaths = append(filePaths, fmt.Sprintf("%s/%d", prefix, i))
 	}
 	for _, p := range filePaths {

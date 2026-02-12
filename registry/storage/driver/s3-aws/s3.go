@@ -146,7 +146,7 @@ func init() {
 // s3DriverFactory implements the factory.StorageDriverFactory interface
 type s3DriverFactory struct{}
 
-func (factory *s3DriverFactory) Create(ctx context.Context, parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
+func (factory *s3DriverFactory) Create(ctx context.Context, parameters map[string]any) (storagedriver.StorageDriver, error) {
 	return FromParameters(ctx, parameters)
 }
 
@@ -184,7 +184,7 @@ type Driver struct {
 // - region
 // - bucket
 // - encrypt
-func FromParameters(ctx context.Context, parameters map[string]interface{}) (*Driver, error) {
+func FromParameters(ctx context.Context, parameters map[string]any) (*Driver, error) {
 	// Providing no values for these is valid in case the user is authenticating
 	// with an IAM on an ec2 instance (in which case the instance credentials will
 	// be summoned when GetAuth is called)

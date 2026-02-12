@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -178,10 +179,10 @@ func (rs RegistryScope) String() string {
 
 // Logger defines the injectable logging interface, used on TokenHandlers.
 type Logger interface {
-	Debugf(format string, args ...interface{})
+	Debugf(format string, args ...any)
 }
 
-func logDebugf(logger Logger, format string, args ...interface{}) {
+func logDebugf(logger Logger, format string, args ...any) {
 	if logger == nil {
 		return
 	}
@@ -305,12 +306,7 @@ func (th *tokenHandler) getToken(ctx context.Context, params map[string]string, 
 }
 
 func hasScope(scopes []string, scope string) bool {
-	for _, s := range scopes {
-		if s == scope {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(scopes, scope)
 }
 
 type postTokenResponse struct {

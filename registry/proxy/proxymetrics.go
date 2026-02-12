@@ -53,11 +53,11 @@ func init() {
 		registry.(*expvar.Map).Set("proxy", pm)
 	}
 
-	pm.(*expvar.Map).Set("blobs", expvar.Func(func() interface{} {
+	pm.(*expvar.Map).Set("blobs", expvar.Func(func() any {
 		return proxyMetrics.blobMetrics
 	}))
 
-	pm.(*expvar.Map).Set("manifests", expvar.Func(func() interface{} {
+	pm.(*expvar.Map).Set("manifests", expvar.Func(func() any {
 		return proxyMetrics.manifestMetrics
 	}))
 
