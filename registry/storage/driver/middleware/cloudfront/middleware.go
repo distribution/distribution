@@ -57,7 +57,7 @@ var _ storagedriver.StorageDriver = &cloudFrontStorageMiddleware{}
 //     default value. "aws", only aws IP goes to S3 directly. "awsregion", only
 //     regions listed in awsregion options goes to S3 directly
 //   - awsregion: a comma separated string of AWS regions.
-func newCloudFrontStorageMiddleware(ctx context.Context, storageDriver storagedriver.StorageDriver, options map[string]interface{}) (storagedriver.StorageDriver, error) {
+func newCloudFrontStorageMiddleware(ctx context.Context, storageDriver storagedriver.StorageDriver, options map[string]any) (storagedriver.StorageDriver, error) {
 	// parse baseurl
 	base, ok := options["baseurl"]
 	if !ok {
@@ -174,7 +174,7 @@ func newCloudFrontStorageMiddleware(ctx context.Context, storageDriver storagedr
 				var awsRegion []string
 				if i, ok := options["awsregion"]; ok {
 					if regions, ok := i.(string); ok {
-						for _, awsRegions := range strings.Split(regions, ",") {
+						for awsRegions := range strings.SplitSeq(regions, ",") {
 							awsRegion = append(awsRegion, strings.ToLower(strings.TrimSpace(awsRegions)))
 						}
 						awsIPs, err = newAWSIPs(ctx, ipRangesURL, updateFrequency, awsRegion)

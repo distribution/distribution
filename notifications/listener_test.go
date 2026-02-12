@@ -153,7 +153,7 @@ func checkTestRepository(t *testing.T, repository distribution.Repository, remov
 		},
 	}
 
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		rs, dgst, err := testutil.CreateRandomTarFile()
 		if err != nil {
 			t.Fatalf("error creating test layer: %v", err)

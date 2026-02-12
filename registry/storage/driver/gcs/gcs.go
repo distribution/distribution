@@ -86,7 +86,7 @@ func init() {
 type gcsDriverFactory struct{}
 
 // Create StorageDriver from parameters
-func (factory *gcsDriverFactory) Create(ctx context.Context, parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
+func (factory *gcsDriverFactory) Create(ctx context.Context, parameters map[string]any) (storagedriver.StorageDriver, error) {
 	return FromParameters(ctx, parameters)
 }
 
@@ -116,7 +116,7 @@ type baseEmbed struct {
 // FromParameters constructs a new Driver with a given parameters map
 // Required parameters:
 // - bucket
-func FromParameters(ctx context.Context, parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
+func FromParameters(ctx context.Context, parameters map[string]any) (storagedriver.StorageDriver, error) {
 	bucket, ok := parameters["bucket"]
 	if !ok || fmt.Sprint(bucket) == "" {
 		return nil, fmt.Errorf("no bucket parameter provided")
@@ -138,7 +138,7 @@ func FromParameters(ctx context.Context, parameters map[string]interface{}) (sto
 			}
 			chunkSize = vv
 		case int, uint, int32, uint32, uint64, int64:
-			chunkSize = int(reflect.ValueOf(v).Convert(reflect.TypeOf(chunkSize)).Int())
+			chunkSize = int(reflect.ValueOf(v).Convert(reflect.TypeFor[int]()).Int())
 		default:
 			return nil, fmt.Errorf("invalid valud for chunksize: %#v", chunkSizeParam)
 		}
@@ -169,12 +169,12 @@ func FromParameters(ctx context.Context, parameters map[string]interface{}) (sto
 		ts = jwtConf.TokenSource(ctx)
 		options = append(options, option.WithCredentialsFile(fmt.Sprint(keyfile)))
 	} else if credentials, ok := parameters["credentials"]; ok {
-		credentialMap, ok := credentials.(map[interface{}]interface{})
+		credentialMap, ok := credentials.(map[any]any)
 		if !ok {
 			return nil, fmt.Errorf("the credentials were not specified in the correct format")
 		}
 
-		stringMap := map[string]interface{}{}
+		stringMap := map[string]any{}
 		for k, v := range credentialMap {
 			key, ok := k.(string)
 			if !ok {
@@ -600,7 +600,7 @@ type request func() error
 func retry(req request) error {
 	backoff := time.Second
 	var err error
-	for i := 0; i < maxTries; i++ {
+	for i := range maxTries {
 		err = req()
 		if err == nil {
 			return nil

@@ -18,7 +18,7 @@ var configStruct = Configuration{
 	Version: "0.1",
 	Log: Log{
 		Level:  "info",
-		Fields: map[string]interface{}{"environment": "test"},
+		Fields: map[string]any{"environment": "test"},
 	},
 	Storage: Storage{
 		"somedriver": Parameters{
@@ -395,10 +395,10 @@ func (suite *ConfigSuite) TestParseExtraneousVars() {
 // TestParseEnvVarImplicitMaps validates that environment variables can set
 // values in maps that don't already exist.
 func (suite *ConfigSuite) TestParseEnvVarImplicitMaps() {
-	readonly := make(map[string]interface{})
+	readonly := make(map[string]any)
 	readonly["enabled"] = true
 
-	maintenance := make(map[string]interface{})
+	maintenance := make(map[string]any)
 	maintenance["readonly"] = readonly
 
 	suite.expectedConfig.Storage["maintenance"] = maintenance
@@ -497,7 +497,7 @@ func checkStructs(tt *testing.T, t reflect.Type, structsChecked map[string]struc
 // with yaml tags that would be ambiguous to the environment variable parser.
 func (suite *ConfigSuite) TestValidateConfigStruct() {
 	structsChecked := make(map[string]struct{})
-	checkStructs(suite.T(), reflect.TypeOf(Configuration{}), structsChecked)
+	checkStructs(suite.T(), reflect.TypeFor[Configuration](), structsChecked)
 }
 
 func copyConfig(config Configuration) *Configuration {
@@ -507,7 +507,7 @@ func copyConfig(config Configuration) *Configuration {
 	configCopy.Loglevel = config.Loglevel
 	configCopy.Log = config.Log
 	configCopy.Catalog = config.Catalog
-	configCopy.Log.Fields = make(map[string]interface{}, len(config.Log.Fields))
+	configCopy.Log.Fields = make(map[string]any, len(config.Log.Fields))
 	maps.Copy(configCopy.Log.Fields, config.Log.Fields)
 
 	configCopy.Storage = Storage{config.Storage.Type(): Parameters{}}

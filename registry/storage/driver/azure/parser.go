@@ -42,7 +42,7 @@ type DriverParameters struct {
 	SkipVerify       bool        `mapstructure:"skipverify"`
 }
 
-func NewParameters(parameters map[string]interface{}) (*DriverParameters, error) {
+func NewParameters(parameters map[string]any) (*DriverParameters, error) {
 	params := DriverParameters{
 		Realm: defaultRealm,
 	}

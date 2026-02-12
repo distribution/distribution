@@ -131,13 +131,13 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 	purgeConfig := uploadPurgeDefaultConfig()
 	if mc, ok := config.Storage["maintenance"]; ok {
 		if v, ok := mc["uploadpurging"]; ok {
-			purgeConfig, ok = v.(map[interface{}]interface{})
+			purgeConfig, ok = v.(map[any]any)
 			if !ok {
 				panic("uploadpurging config key must contain additional keys")
 			}
 		}
 		if v, ok := mc["readonly"]; ok {
-			readOnly, ok := v.(map[interface{}]interface{})
+			readOnly, ok := v.(map[any]any)
 			if !ok {
 				panic("readonly config key must contain additional keys")
 			}
@@ -611,9 +611,9 @@ func (app *App) configureRedis(cfg *configuration.Configuration) {
 		registry = expvar.NewMap("registry")
 	}
 
-	registry.(*expvar.Map).Set("redis", expvar.Func(func() interface{} {
+	registry.(*expvar.Map).Set("redis", expvar.Func(func() any {
 		stats := app.redis.PoolStats()
-		return map[string]interface{}{
+		return map[string]any{
 			"Config": cfg,
 			"Active": stats.TotalConns - stats.IdleConns,
 		}
@@ -1047,8 +1047,8 @@ func applyStorageMiddleware(ctx context.Context, driver storagedriver.StorageDri
 // uploadPurgeDefaultConfig provides a default configuration for upload
 // purging to be used in the absence of configuration in the
 // configuration file
-func uploadPurgeDefaultConfig() map[interface{}]interface{} {
-	config := map[interface{}]interface{}{}
+func uploadPurgeDefaultConfig() map[any]any {
+	config := map[any]any{}
 	config["enabled"] = true
 	config["age"] = "168h"
 	config["interval"] = "24h"
@@ -1062,7 +1062,7 @@ func badPurgeUploadConfig(reason string) {
 
 // startUploadPurger schedules a goroutine which will periodically
 // check upload directories for old files and delete them
-func startUploadPurger(ctx context.Context, storageDriver storagedriver.StorageDriver, log dcontext.Logger, config map[interface{}]interface{}) {
+func startUploadPurger(ctx context.Context, storageDriver storagedriver.StorageDriver, log dcontext.Logger, config map[any]any) {
 	if config["enabled"] == false {
 		return
 	}

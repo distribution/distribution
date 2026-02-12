@@ -26,7 +26,7 @@ import (
 func makeRootKeys(numKeys int) ([]*ecdsa.PrivateKey, error) {
 	rootKeys := make([]*ecdsa.PrivateKey, 0, numKeys)
 
-	for i := 0; i < numKeys; i++ {
+	for range numKeys {
 		pk, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		if err != nil {
 			return nil, err
@@ -251,7 +251,7 @@ func TestTokenVerify(t *testing.T) {
 	tokens := make([]*Token, 0, numTokens)
 	trustedKeys := map[string]crypto.PublicKey{}
 
-	for i := 0; i < numTokens; i++ {
+	for i := range numTokens {
 		jwk, err := makeSigningKeyWithChain(rootKeys[i], i)
 		if err != nil {
 			t.Fatal(err)
@@ -437,7 +437,7 @@ func TestAccessController(t *testing.T) {
 	issuer := "test-issuer.example.com"
 	service := "test-service.example.com"
 
-	options := map[string]interface{}{
+	options := map[string]any{
 		"realm":          realm,
 		"issuer":         issuer,
 		"service":        service,
@@ -629,7 +629,7 @@ func TestNewAccessControllerPemBlock(t *testing.T) {
 	issuer := "test-issuer.example.com"
 	service := "test-service.example.com"
 
-	options := map[string]interface{}{
+	options := map[string]any{
 		"realm":          realm,
 		"issuer":         issuer,
 		"service":        service,

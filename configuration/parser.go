@@ -57,7 +57,7 @@ type VersionedParseInfo struct {
 	// ConversionFunc defines a method for converting the parsed configuration
 	// (of type ParseAs) into the current configuration version
 	// Note: this method signature is very unclear with the absence of generics
-	ConversionFunc func(interface{}) (interface{}, error)
+	ConversionFunc func(any) (any, error)
 }
 
 type envVar struct {
@@ -111,7 +111,7 @@ func NewParser(prefix string, parseInfos []VersionedParseInfo) *Parser {
 // than version, following the scheme below:
 // v.Abc may be replaced by the value of PREFIX_ABC,
 // v.Abc.Xyz may be replaced by the value of PREFIX_ABC_XYZ, and so forth
-func (p *Parser) Parse(in []byte, v interface{}) error {
+func (p *Parser) Parse(in []byte, v any) error {
 	var versionedStruct struct {
 		Version Version
 	}
@@ -191,7 +191,7 @@ func (p *Parser) overwriteFields(v reflect.Value, fullpath string, path []string
 				return p.overwriteFields(v.Elem(), fullpath, path, payload)
 			}
 			// Interface was empty; create an implicit map
-			var template map[string]interface{}
+			var template map[string]any
 			wrappedV := reflect.MakeMap(reflect.TypeOf(template))
 			v.Set(wrappedV)
 			return p.overwriteMap(wrappedV, fullpath, path, payload)

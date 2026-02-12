@@ -108,7 +108,7 @@ func testManifestStorage(t *testing.T, options ...RegistryOption) {
 	// Build up some test layers and add them to the manifest, saving the
 	// readseekers for upload later.
 	testLayers := map[digest.Digest]io.ReadSeeker{}
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		rs, dgst, err := testutil.CreateRandomTarFile()
 		if err != nil {
 			t.Fatal("unexpected error generating test layer file")
@@ -602,7 +602,7 @@ func createRandomImage(t *testing.T, testname string, imageMediaType string, blo
 	ctx := context.Background()
 
 	// Add some layers
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		rs, dgst, err := testutil.CreateRandomTarFile()
 		if err != nil {
 			t.Fatalf("%s: unexpected error generating test layer file", testname)
@@ -776,7 +776,7 @@ func TestManifestStorageCache(t *testing.T) {
 	// Build up some test layers and add them to the manifest, saving the
 	// readseekers for upload later.
 	testLayers := map[digest.Digest]io.ReadSeeker{}
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		rs, dgst, err := testutil.CreateRandomTarFile()
 		if err != nil {
 			t.Fatal("unexpected error generating test layer file")

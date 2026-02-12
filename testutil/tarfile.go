@@ -34,7 +34,7 @@ func CreateRandomTarFile() (rs io.ReadSeeker, dgst digest.Digest, err error) {
 		ChangeTime: time.Now(),
 	}
 
-	for fileNumber := 0; fileNumber < nFiles; fileNumber++ {
+	for fileNumber := range nFiles {
 		fileSize := mrand.Int63n(1<<20) + 1<<20
 
 		header.Name = fmt.Sprint(fileNumber)
@@ -84,7 +84,7 @@ func CreateRandomTarFile() (rs io.ReadSeeker, dgst digest.Digest, err error) {
 // about the order of said digests (since they're all random anyway).
 func CreateRandomLayers(n int) (map[digest.Digest]io.ReadSeeker, error) {
 	digestMap := map[digest.Digest]io.ReadSeeker{}
-	for i := 0; i < n; i++ {
+	for range n {
 		rs, ds, err := CreateRandomTarFile()
 		if err != nil {
 			return nil, fmt.Errorf("unexpected error generating test layer file: %v", err)

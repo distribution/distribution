@@ -66,7 +66,7 @@ func TestErrorCodes(t *testing.T) {
 			}
 
 			// First, unmarshal to interface and ensure we have a string.
-			var ecUnspecified interface{}
+			var ecUnspecified any
 			if err := json.Unmarshal(p, &ecUnspecified); err != nil {
 				t.Fatalf("error unmarshaling error code %v: %v", ec, err)
 			}
@@ -98,7 +98,7 @@ func TestErrorsManagement(t *testing.T) {
 
 	errs = append(errs, ErrorCodeTest1)
 	errs = append(errs, ErrorCodeTest2.WithDetail(
-		map[string]interface{}{"digest": "sometestblobsumdoesntmatter"}))
+		map[string]any{"digest": "sometestblobsumdoesntmatter"}))
 	errs = append(errs, ErrorCodeTest3.WithArgs("BOOGIE"))
 	errs = append(errs, ErrorCodeTest3.WithArgs("BOOGIE").WithDetail("data"))
 

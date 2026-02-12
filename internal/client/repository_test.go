@@ -919,7 +919,7 @@ func TestBlobMount(t *testing.T) {
 
 func newRandomOCIManifest(t *testing.T, blobCount int) (*ocischema.Manifest, digest.Digest, []byte) {
 	layers := make([]v1.Descriptor, blobCount)
-	for i := 0; i < blobCount; i++ {
+	for i := range blobCount {
 		dgst, blob := newRandomBlob((i % 5) * 16)
 		layers[i] = v1.Descriptor{
 			MediaType: v1.MediaTypeImageLayer,
@@ -1418,7 +1418,7 @@ func TestManifestTags(t *testing.T) {
 }
 	`))
 	var m testutil.RequestResponseMap
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		m = append(m, testutil.RequestResponseMapping{
 			Request: testutil.Request{
 				Method: http.MethodGet,
@@ -1581,8 +1581,8 @@ func TestManifestTagsPaginated(t *testing.T) {
 	repo, _ := reference.WithName("test.example.com/repo/tags/list")
 	tagsList := []string{"tag1", "tag2", "funtag"}
 	var m testutil.RequestResponseMap
-	for i := 0; i < 3; i++ {
-		body, err := json.Marshal(map[string]interface{}{
+	for i := range 3 {
+		body, err := json.Marshal(map[string]any{
 			"name": "test.example.com/repo/tags/list",
 			"tags": []string{tagsList[i]},
 		})
@@ -1801,7 +1801,7 @@ func TestSanitizeLocation(t *testing.T) {
 			expected:    "https://mwhahaha.com/v2/foo/baasdf?_state=asdfasfdasdfasdf",
 		},
 	} {
-		fatalf := func(format string, args ...interface{}) {
+		fatalf := func(format string, args ...any) {
 			t.Fatalf(testcase.description+": "+format, args...)
 		}
 

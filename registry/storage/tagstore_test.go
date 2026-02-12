@@ -238,7 +238,7 @@ func TestTagIndexes(t *testing.T) {
 
 	t1Dgsts := make(map[digest.Digest]struct{})
 	t2Dgsts := make(map[digest.Digest]struct{})
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		layer, err := env.bs.Put(ctx, "application/octet-stream", []byte{byte(i + 1)})
 		if err != nil {
 			t.Fatal(err)

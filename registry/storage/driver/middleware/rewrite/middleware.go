@@ -27,7 +27,7 @@ type rewriteStorageMiddleware struct {
 
 var _ storagedriver.StorageDriver = &rewriteStorageMiddleware{}
 
-func getStringOption(key string, options map[string]interface{}) (string, error) {
+func getStringOption(key string, options map[string]any) (string, error) {
 	o, ok := options[key]
 	if !ok {
 		return "", nil
@@ -39,7 +39,7 @@ func getStringOption(key string, options map[string]interface{}) (string, error)
 	return s, nil
 }
 
-func newRewriteStorageMiddleware(ctx context.Context, sd storagedriver.StorageDriver, options map[string]interface{}) (storagedriver.StorageDriver, error) {
+func newRewriteStorageMiddleware(ctx context.Context, sd storagedriver.StorageDriver, options map[string]any) (storagedriver.StorageDriver, error) {
 	var err error
 
 	r := &rewriteStorageMiddleware{StorageDriver: sd}
