@@ -26,7 +26,7 @@ require (
 	github.com/opencontainers/image-spec v1.1.0
 	github.com/redis/go-redis/extra/redisotel/v9 v9.0.5
 	github.com/redis/go-redis/v9 v9.7.3
-	github.com/sirupsen/logrus v1.9.3
+	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/contrib/exporters/autoexport v0.57.0
