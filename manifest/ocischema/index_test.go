@@ -85,7 +85,7 @@ func makeTestOCIImageIndex(t *testing.T, mediaType string) ([]v1.Descriptor, *De
 		"com.example.locale":           "en_GB",
 	}
 
-	deserialized, err := fromDescriptorsWithMediaType(manifestDescriptors, annotations, mediaType)
+	deserialized, err := fromDescriptorsWithMediaType(manifestDescriptors, nil, annotations, mediaType)
 	if err != nil {
 		t.Fatalf("error creating DeserializedManifestList: %v", err)
 	}
