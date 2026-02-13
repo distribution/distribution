@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -17,13 +18,12 @@ import (
 	"github.com/distribution/distribution/v3/internal/dcontext"
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	storagemiddleware "github.com/distribution/distribution/v3/registry/storage/driver/middleware"
-	"github.com/sirupsen/logrus"
 )
 
 // init registers the cloudfront layerHandler backend.
 func init() {
 	if err := storagemiddleware.Register("cloudfront", newCloudFrontStorageMiddleware); err != nil {
-		logrus.Errorf("failed to register cloudfront middleware: %v", err)
+		slog.Error(fmt.Sprintf("failed to register cloudfront middleware: %v", err))
 	}
 }
 

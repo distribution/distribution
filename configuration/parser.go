@@ -2,13 +2,13 @@ package configuration
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"reflect"
 	"sort"
 	"strconv"
 	"strings"
 
-	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
 
@@ -214,7 +214,7 @@ func (p *Parser) overwriteStruct(v reflect.Value, fullpath string, path []string
 
 	fieldIndex, present := byUpperCase[path[0]]
 	if !present {
-		logrus.Warnf("Ignoring unrecognized environment variable %s", fullpath)
+		slog.Warn(fmt.Sprintf("Ignoring unrecognized environment variable %s", fullpath))
 		return nil
 	}
 	field := v.Field(fieldIndex)
@@ -254,7 +254,7 @@ func (p *Parser) overwriteStruct(v reflect.Value, fullpath string, path []string
 func (p *Parser) overwriteMap(m reflect.Value, fullpath string, path []string, payload string) error {
 	if m.Type().Key().Kind() != reflect.String {
 		// non-string keys unsupported
-		logrus.Warnf("Ignoring environment variable %s involving map with non-string keys", fullpath)
+		slog.Warn(fmt.Sprintf("Ignoring environment variable %s involving map with non-string keys", fullpath))
 		return nil
 	}
 

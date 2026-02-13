@@ -2,12 +2,12 @@ package listener
 
 import (
 	"fmt"
+	"log/slog"
 	"net"
 	"os"
 	"time"
 
 	"github.com/coreos/go-systemd/v22/activation"
-	log "github.com/sirupsen/logrus"
 )
 
 // tcpKeepAliveListener sets TCP keep-alive timeouts on accepted
@@ -54,7 +54,7 @@ func NewListener(net, laddr string) (net.Listener, error) {
 			return nil, fmt.Errorf("unknown address type %s", net)
 		}
 	case 1:
-		log.Info("Using systemd socket activation instead of any configured network listeners")
+		slog.Info("Using systemd socket activation instead of any configured network listeners")
 		return listeners[0], nil
 	default:
 		return nil, fmt.Errorf("found %d socket-activation listeners, only expected 1", len(listeners))

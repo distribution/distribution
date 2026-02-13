@@ -9,17 +9,17 @@ package silly
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 
 	"github.com/distribution/distribution/v3/registry/auth"
-	"github.com/sirupsen/logrus"
 )
 
 // init registers the silly auth backend.
 func init() {
 	if err := auth.Register("silly", auth.InitFunc(newAccessController)); err != nil {
-		logrus.Errorf("failed to register silly auth: %v", err)
+		slog.Error(fmt.Sprintf("failed to register silly auth: %v", err))
 	}
 }
 
