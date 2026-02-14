@@ -692,6 +692,19 @@ func (d *driver) Writer(ctx context.Context, path string, appendMode bool) (stor
 				}
 				allParts = append(allParts, partsList.Parts...)
 			}
+			// If the last written part is smaller than minChunkSize, we need to make a
+			// new multipart upload :sadface:
+			if len(allParts) > 0 && int(*allParts[len(allParts)-1].Size) < minChunkSize {
+				newUploadID, parts, buf, err := d.reassemblyMultipart(ctx, key, *multi.UploadId, allParts)
+				if err != nil {
+					return nil, storagedriver.Error{
+						DriverName: driverName,
+						Detail:     fmt.Errorf("append to discrete partitions unsupported, path %s, upload id %s", path, *multi.UploadId),
+					}
+				}
+				return d.newWriterWithBuffer(ctx, key, newUploadID, parts, buf), nil
+			}
+
 			return d.newWriter(ctx, key, *multi.UploadId, allParts), nil
 		}
 
@@ -705,6 +718,94 @@ func (d *driver) Writer(ctx context.Context, path string, appendMode bool) (stor
 		}
 	}
 	return nil, storagedriver.PathNotFoundError{Path: path}
+}
+
+func (d *driver) reassemblyMultipart(ctx context.Context, key string, uploadId string, parts []*s3.Part) (string, []*s3.Part, *bytes.Buffer, error) {
+	completedUploadedParts := make(completedParts, len(parts))
+	for i, part := range parts {
+		completedUploadedParts[i] = &s3.CompletedPart{
+			ETag:       part.ETag,
+			PartNumber: part.PartNumber,
+		}
+	}
+
+	sort.Sort(completedUploadedParts)
+
+	_, err := d.S3.CompleteMultipartUploadWithContext(ctx, &s3.CompleteMultipartUploadInput{
+		Bucket:   aws.String(d.Bucket),
+		Key:      aws.String(key),
+		UploadId: aws.String(uploadId),
+		MultipartUpload: &s3.CompletedMultipartUpload{
+			Parts: completedUploadedParts,
+		},
+	})
+
+	if err != nil {
+		if _, aErr := d.S3.AbortMultipartUploadWithContext(ctx, &s3.AbortMultipartUploadInput{
+			Bucket:   aws.String(d.Bucket),
+			Key:      aws.String(key),
+			UploadId: aws.String(uploadId),
+		}); aErr != nil {
+			return "", nil, nil, errors.Join(err, aErr)
+		}
+		return "", nil, nil, err
+	}
+
+	resp, err := d.S3.CreateMultipartUploadWithContext(ctx, &s3.CreateMultipartUploadInput{
+		Bucket:               aws.String(d.Bucket),
+		Key:                  aws.String(key),
+		ContentType:          d.getContentType(),
+		ACL:                  d.getACL(),
+		ServerSideEncryption: d.getEncryptionMode(),
+		StorageClass:         d.getStorageClass(),
+	})
+	if err != nil {
+		return "", nil, nil, err
+	}
+
+	newUploadID := *resp.UploadId
+
+	var size int64
+	for _, part := range parts {
+		size += *part.Size
+	}
+
+	// If the entire written file is smaller than minChunkSize, we need to make
+	// a new part from scratch :double sad face:
+	if size < minChunkSize {
+		resp, err := d.S3.GetObjectWithContext(ctx, &s3.GetObjectInput{
+			Bucket: aws.String(d.Bucket),
+			Key:    aws.String(key),
+		})
+		if err != nil {
+			return "", nil, nil, err
+		}
+		defer resp.Body.Close()
+
+		buf := &bytes.Buffer{}
+		if _, err := io.Copy(buf, resp.Body); err != nil {
+			return "", nil, nil, err
+		}
+		return newUploadID, []*s3.Part{}, buf, nil
+	} else {
+		// Otherwise we can use the old file as the new first part
+		copyPartResp, err := d.S3.UploadPartCopyWithContext(ctx, &s3.UploadPartCopyInput{
+			Bucket:     aws.String(d.Bucket),
+			CopySource: aws.String(d.Bucket + "/" + key),
+			Key:        aws.String(key),
+			PartNumber: aws.Int64(1),
+			UploadId:   resp.UploadId,
+		})
+		if err != nil {
+			return "", nil, nil, err
+		}
+		parts := []*s3.Part{{
+			ETag:       copyPartResp.CopyPartResult.ETag,
+			PartNumber: aws.Int64(1),
+			Size:       aws.Int64(size),
+		}}
+		return newUploadID, parts, nil, nil
+	}
 }
 
 func (d *driver) statHead(ctx context.Context, path string) (*storagedriver.FileInfoFields, error) {
@@ -1284,10 +1385,21 @@ type writer struct {
 }
 
 func (d *driver) newWriter(ctx context.Context, key, uploadID string, parts []*s3.Part) storagedriver.FileWriter {
+	buf := d.pool.Get().(*bytes.Buffer)
+	return d.newWriterWithBuffer(ctx, key, uploadID, parts, buf)
+}
+
+func (d *driver) newWriterWithBuffer(ctx context.Context, key, uploadID string, parts []*s3.Part, buf *bytes.Buffer) storagedriver.FileWriter {
 	var size int64
 	for _, part := range parts {
 		size += *part.Size
 	}
+
+	if buf == nil {
+		buf = d.pool.Get().(*bytes.Buffer)
+	}
+
+	size += int64(buf.Len())
 	return &writer{
 		ctx:      ctx,
 		driver:   d,
@@ -1295,7 +1407,7 @@ func (d *driver) newWriter(ctx context.Context, key, uploadID string, parts []*s
 		uploadID: uploadID,
 		parts:    parts,
 		size:     size,
-		buf:      d.pool.Get().(*bytes.Buffer),
+		buf:      buf,
 	}
 }
 
@@ -1310,89 +1422,8 @@ func (w *writer) Write(p []byte) (int, error) {
 		return 0, err
 	}
 
-	// If the last written part is smaller than minChunkSize, we need to make a
-	// new multipart upload :sadface:
-	if len(w.parts) > 0 && int(*w.parts[len(w.parts)-1].Size) < minChunkSize {
-		completedUploadedParts := make(completedParts, len(w.parts))
-		for i, part := range w.parts {
-			completedUploadedParts[i] = &s3.CompletedPart{
-				ETag:       part.ETag,
-				PartNumber: part.PartNumber,
-			}
-		}
-
-		sort.Sort(completedUploadedParts)
-
-		_, err := w.driver.S3.CompleteMultipartUploadWithContext(w.ctx, &s3.CompleteMultipartUploadInput{
-			Bucket:   aws.String(w.driver.Bucket),
-			Key:      aws.String(w.key),
-			UploadId: aws.String(w.uploadID),
-			MultipartUpload: &s3.CompletedMultipartUpload{
-				Parts: completedUploadedParts,
-			},
-		})
-		if err != nil {
-			if _, aErr := w.driver.S3.AbortMultipartUploadWithContext(w.ctx, &s3.AbortMultipartUploadInput{
-				Bucket:   aws.String(w.driver.Bucket),
-				Key:      aws.String(w.key),
-				UploadId: aws.String(w.uploadID),
-			}); aErr != nil {
-				return 0, errors.Join(err, aErr)
-			}
-			return 0, err
-		}
-
-		resp, err := w.driver.S3.CreateMultipartUploadWithContext(w.ctx, &s3.CreateMultipartUploadInput{
-			Bucket:               aws.String(w.driver.Bucket),
-			Key:                  aws.String(w.key),
-			ContentType:          w.driver.getContentType(),
-			ACL:                  w.driver.getACL(),
-			ServerSideEncryption: w.driver.getEncryptionMode(),
-			StorageClass:         w.driver.getStorageClass(),
-		})
-		if err != nil {
-			return 0, err
-		}
-		w.uploadID = *resp.UploadId
-
-		// If the entire written file is smaller than minChunkSize, we need to make
-		// a new part from scratch :double sad face:
-		if w.size < minChunkSize {
-			resp, err := w.driver.S3.GetObjectWithContext(w.ctx, &s3.GetObjectInput{
-				Bucket: aws.String(w.driver.Bucket),
-				Key:    aws.String(w.key),
-			})
-			if err != nil {
-				return 0, err
-			}
-			defer resp.Body.Close()
-
-			w.reset()
-
-			if _, err := io.Copy(w.buf, resp.Body); err != nil {
-				return 0, err
-			}
-		} else {
-			// Otherwise we can use the old file as the new first part
-			copyPartResp, err := w.driver.S3.UploadPartCopyWithContext(w.ctx, &s3.UploadPartCopyInput{
-				Bucket:     aws.String(w.driver.Bucket),
-				CopySource: aws.String(w.driver.Bucket + "/" + w.key),
-				Key:        aws.String(w.key),
-				PartNumber: aws.Int64(1),
-				UploadId:   resp.UploadId,
-			})
-			if err != nil {
-				return 0, err
-			}
-			w.parts = []*s3.Part{{
-				ETag:       copyPartResp.CopyPartResult.ETag,
-				PartNumber: aws.Int64(1),
-				Size:       aws.Int64(w.size),
-			}}
-		}
-	}
-
 	n, _ := w.buf.Write(p)
+	w.size += int64(n)
 
 	for w.buf.Len() >= w.driver.ChunkSize {
 		if err := w.flush(); err != nil {
@@ -1418,12 +1449,6 @@ func (w *writer) Close() error {
 	defer w.releaseBuffer()
 
 	return w.flush()
-}
-
-func (w *writer) reset() {
-	w.buf.Reset()
-	w.parts = nil
-	w.size = 0
 }
 
 // releaseBuffer resets the buffer and returns it to the pool.
@@ -1544,8 +1569,6 @@ func (w *writer) flush() error {
 		PartNumber: partNumber,
 		Size:       aws.Int64(int64(partSize)),
 	})
-
-	w.size += int64(partSize)
 
 	return nil
 }
