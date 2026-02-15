@@ -2,6 +2,7 @@ package htpasswd
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -10,6 +11,8 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 )
+
+var dummyHash = []byte("$2a$05$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
 
 // htpasswd holds a path to a system .htpasswd file and the machinery to parse
 // it. Only bcrypt hash entries are supported.
@@ -30,21 +33,23 @@ func newHTPasswd(rd io.Reader) (*htpasswd, error) {
 // AuthenticateUser checks a given user:password credential against the
 // receiving HTPasswd's file. If the check passes, nil is returned.
 func (htpasswd *htpasswd) authenticateUser(username string, password string) error {
-	credentials, ok := htpasswd.entries[username]
-	if !ok {
-		// timing attack paranoia
-		if err := bcrypt.CompareHashAndPassword([]byte{}, []byte(password)); err != nil {
+	credentials, userExists := htpasswd.entries[username]
+	// timing attack paranoia, always compare the hash even if the user is not found
+	if !userExists {
+		credentials = dummyHash
+	}
+	if err := bcrypt.CompareHashAndPassword(credentials, []byte(password)); err != nil {
+		// the hash is not the same as the password
+		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
 			return auth.ErrAuthenticationFailure
 		}
-
+		// other error, e.g. non-bcrypt hash in entries, passthrough to logger for clarity
+		return err
+	}
+	// return error if the user is not found even the dummy hash comparison is successful
+	if !userExists {
 		return auth.ErrAuthenticationFailure
 	}
-
-	err := bcrypt.CompareHashAndPassword(credentials, []byte(password))
-	if err != nil {
-		return auth.ErrAuthenticationFailure
-	}
-
 	return nil
 }
 
