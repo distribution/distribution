@@ -2,9 +2,11 @@ package proxy
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -26,12 +28,12 @@ var repositoryTTL = 24 * 7 * time.Hour
 
 // proxyingRegistry fetches content from a remote registry and caches it locally
 type proxyingRegistry struct {
-	embedded       distribution.Namespace // provides local registry functionality
-	scheduler      *scheduler.TTLExpirationScheduler
-	ttl            *time.Duration
-	remoteURL      url.URL
-	authChallenger authChallenger
-	basicAuth      auth.CredentialStore
+	embedded         distribution.Namespace // provides local registry functionality
+	scheduler        *scheduler.TTLExpirationScheduler
+	ttl              *time.Duration
+	remoteURL        url.URL
+	enableNamespaces bool
+	authChallenger   authChallenger
 }
 
 // NewRegistryPullThroughCache creates a registry acting as a pull through cache
@@ -114,30 +116,36 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 		}
 	}
 
-	cs, b, err := func() (auth.CredentialStore, auth.CredentialStore, error) {
-		switch {
-		case config.Exec != nil:
-			cs, err := configureExecAuth(*config.Exec)
-			return cs, cs, err
-		default:
-			return configureAuth(config.Username, config.Password, config.RemoteURL)
+	var cs auth.CredentialStore
+	if config.Exec != nil {
+		cs, err = configureExecAuth(*config.Exec)
+	} else {
+		if !config.EnableNamespaces {
+			config.NamespaceCredentials = map[string]configuration.ProxyCredential{
+				config.RemoteURL: {
+					Username: config.Username,
+					Password: config.Password,
+				},
+			}
 		}
-	}()
+		cs, err = configureAuth(config.NamespaceCredentials)
+	}
 	if err != nil {
 		return nil, err
 	}
 
 	return &proxyingRegistry{
-		embedded:  registry,
-		scheduler: s,
-		ttl:       ttl,
-		remoteURL: *remoteURL,
+		embedded:         registry,
+		scheduler:        s,
+		ttl:              ttl,
+		remoteURL:        *remoteURL,
+		enableNamespaces: config.EnableNamespaces,
 		authChallenger: &remoteAuthChallenger{
-			remoteURL: *remoteURL,
-			cm:        challenge.NewSimpleManager(),
-			cs:        cs,
+			remoteURL:        *remoteURL,
+			enableNamespaces: config.EnableNamespaces,
+			cm:               challenge.NewSimpleManager(),
+			cs:               cs,
 		},
-		basicAuth: b,
 	}, nil
 }
 
@@ -151,6 +159,21 @@ func (pr *proxyingRegistry) Repositories(ctx context.Context, repos []string, la
 
 func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named) (distribution.Repository, error) {
 	c := pr.authChallenger
+
+	localName := name
+	remoteURL := pr.remoteURL
+	if pr.enableNamespaces {
+		var err error
+		remoteURL, name, err = extractRemoteURL(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		localName, err = reference.WithName(remoteURL.Host + "/" + name.Name())
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	tkopts := auth.TokenHandlerOptions{
 		Transport:   http.DefaultTransport,
@@ -167,9 +190,11 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named
 	tr := transport.NewTransport(http.DefaultTransport,
 		auth.NewAuthorizer(c.challengeManager(),
 			auth.NewTokenHandlerWithOptions(tkopts),
-			auth.NewBasicHandler(pr.basicAuth)))
+			auth.NewBasicHandler(c.credentialStore()),
+		),
+	)
 
-	localRepo, err := pr.embedded.Repository(ctx, name)
+	localRepo, err := pr.embedded.Repository(ctx, localName)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +203,7 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named
 		return nil, err
 	}
 
-	remoteRepo, err := client.NewRepository(name, pr.remoteURL.String(), tr)
+	remoteRepo, err := client.NewRepository(name, remoteURL.String(), tr)
 	if err != nil {
 		return nil, err
 	}
@@ -194,11 +219,11 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named
 			remoteStore:    remoteRepo.Blobs(ctx),
 			scheduler:      pr.scheduler,
 			ttl:            pr.ttl,
-			repositoryName: name,
+			repositoryName: localName,
 			authChallenger: pr.authChallenger,
 		},
 		manifests: &proxyManifestStore{
-			repositoryName:  name,
+			repositoryName:  localName,
 			localManifests:  localManifests, // Options?
 			remoteManifests: remoteManifests,
 			ctx:             ctx,
@@ -240,7 +265,8 @@ type authChallenger interface {
 }
 
 type remoteAuthChallenger struct {
-	remoteURL url.URL
+	remoteURL        url.URL
+	enableNamespaces bool
 	sync.Mutex
 	cm challenge.Manager
 	cs auth.CredentialStore
@@ -260,6 +286,14 @@ func (r *remoteAuthChallenger) tryEstablishChallenges(ctx context.Context) error
 	defer r.Unlock()
 
 	remoteURL := r.remoteURL
+	if r.enableNamespaces {
+		var err error
+		remoteURL, _, err = extractRemoteURL(ctx)
+		if err != nil {
+			return err
+		}
+	}
+
 	remoteURL.Path = "/v2/"
 	challenges, err := r.cm.GetChallenges(remoteURL)
 	if err != nil {
@@ -270,7 +304,7 @@ func (r *remoteAuthChallenger) tryEstablishChallenges(ctx context.Context) error
 		return nil
 	}
 
-	// establish challenge type with upstream
+	// Establish challenge type with upstream
 	if err := ping(r.cm, remoteURL.String(), challengeHeader); err != nil {
 		return err
 	}
@@ -303,4 +337,36 @@ func (pr *proxiedRepository) Named() reference.Named {
 
 func (pr *proxiedRepository) Tags(ctx context.Context) distribution.TagService {
 	return pr.tags
+}
+
+func extractRemoteURL(ctx context.Context) (url.URL, reference.Named, error) {
+	r, err := dcontext.GetRequest(ctx)
+	if err != nil {
+		return url.URL{}, nil, err
+	}
+
+	ns := r.URL.Query().Get("ns")
+	name := dcontext.GetStringValue(ctx, "vars.name")
+	if ns == "" {
+		// When the ns parameter is missing, assume that the domain is already prepended to the image name
+		var found bool
+		ns, name, found = strings.Cut(name, "/")
+		if !found || strings.IndexRune(ns, '.') < 1 {
+			return url.URL{}, nil, errors.New("ns parameter is missing and image is not prefixed with domain")
+		}
+	}
+
+	if ns == "docker.io" {
+		ns = "registry-1.docker.io"
+	}
+
+	named, err := reference.WithName(name)
+	if err != nil {
+		return url.URL{}, nil, err
+	}
+
+	return url.URL{
+		Scheme: "https",
+		Host:   ns,
+	}, named, nil
 }

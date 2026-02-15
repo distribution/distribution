@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/distribution/distribution/v3/configuration"
 	"github.com/distribution/distribution/v3/internal/client/auth"
 	"github.com/distribution/distribution/v3/internal/client/auth/challenge"
 	"github.com/distribution/distribution/v3/internal/dcontext"
@@ -17,68 +18,48 @@ type userpass struct {
 	password string
 }
 
-func (u userpass) Basic(_ *url.URL) (string, string) {
-	return u.username, u.password
-}
-
-func (u userpass) RefreshToken(_ *url.URL, service string) string {
-	return ""
-}
-
-func (u userpass) SetRefreshToken(_ *url.URL, service, token string) {
-}
-
 type credentials struct {
 	creds map[string]userpass
 }
 
 func (c credentials) Basic(u *url.URL) (string, string) {
-	return c.creds[u.String()].Basic(u)
+	up := c.creds[u.Host]
+
+	return up.username, up.password
 }
 
-func (c credentials) RefreshToken(u *url.URL, service string) string {
+func (c credentials) RefreshToken(_ *url.URL, _ string) string {
 	return ""
 }
 
-func (c credentials) SetRefreshToken(u *url.URL, service, token string) {
+func (c credentials) SetRefreshToken(_ *url.URL, _, _ string) {
 }
 
 // configureAuth stores credentials for challenge responses
-func configureAuth(username, password, remoteURL string) (auth.CredentialStore, auth.CredentialStore, error) {
+func configureAuth(configCredentials map[string]configuration.ProxyCredential) (auth.CredentialStore, error) {
 	creds := map[string]userpass{}
 
-	authURLs, err := getAuthURLs(remoteURL)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	for _, url := range authURLs {
-		dcontext.GetLogger(dcontext.Background()).Infof("Discovered token authentication URL: %s", url)
-		creds[url] = userpass{
-			username: username,
-			password: password,
+	for remoteURLString, credential := range configCredentials {
+		remoteURL, err := parseSchemelessURL(remoteURLString)
+		if err != nil {
+			return nil, err
 		}
+
+		creds[remoteURL.Host] = userpass{
+			username: credential.Username,
+			password: credential.Password,
+		}
+		dcontext.GetLogger(dcontext.Background()).Infof("Registered credentials for remote registry: %s", remoteURL.Host)
 	}
 
-	return credentials{creds: creds}, userpass{username: username, password: password}, nil
+	return credentials{creds: creds}, nil
 }
 
-func getAuthURLs(remoteURL string) ([]string, error) {
-	authURLs := []string{}
-
-	resp, err := http.Get(remoteURL + "/v2/")
-	if err != nil {
-		return nil, err
+func parseSchemelessURL(u string) (*url.URL, error) {
+	if !(strings.HasPrefix(u, "http://") || strings.HasPrefix(u, "https://")) {
+		u = "https://" + u
 	}
-	defer resp.Body.Close()
-
-	for _, c := range challenge.ResponseChallenges(resp) {
-		if strings.EqualFold(c.Scheme, "bearer") {
-			authURLs = append(authURLs, c.Parameters["realm"])
-		}
-	}
-
-	return authURLs, nil
+	return url.Parse(u)
 }
 
 func ping(manager challenge.Manager, endpoint, versionHeader string) error {
