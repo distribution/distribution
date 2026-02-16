@@ -3,6 +3,7 @@ package registry
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/distribution/distribution/v3/registry/storage"
@@ -13,12 +14,28 @@ import (
 
 var showVersion bool
 
+var (
+	dryRun         bool
+	removeUntagged bool
+	quiet          bool
+	workers        int
+	timeout        time.Duration
+	checkpointDir  string
+	markOnly       bool
+	sweepOnly      bool
+)
+
 func init() {
 	RootCmd.AddCommand(ServeCmd)
 	RootCmd.AddCommand(GCCmd)
 	GCCmd.Flags().BoolVarP(&dryRun, "dry-run", "d", false, "do everything except remove the blobs")
 	GCCmd.Flags().BoolVarP(&removeUntagged, "delete-untagged", "m", false, "delete manifests that are not currently referenced via tag")
 	GCCmd.Flags().BoolVarP(&quiet, "quiet", "q", false, "silence output")
+	GCCmd.Flags().IntVarP(&workers, "workers", "w", 4, "number of concurrent workers")
+	GCCmd.Flags().DurationVarP(&timeout, "timeout", "t", 24*time.Hour, "maximum runtime before stopping")
+	GCCmd.Flags().StringVar(&checkpointDir, "checkpoint-dir", "", "directory for checkpoint/resume and two-pass mode")
+	GCCmd.Flags().BoolVar(&markOnly, "mark-only", false, "only run mark phase and save candidates (requires --checkpoint-dir)")
+	GCCmd.Flags().BoolVar(&sweepOnly, "sweep", false, "only run sweep phase from checkpoint (requires --checkpoint-dir)")
 	RootCmd.Flags().BoolVarP(&showVersion, "version", "v", false, "show the version and exit")
 }
 
@@ -36,12 +53,6 @@ var RootCmd = &cobra.Command{
 		cmd.Usage()
 	},
 }
-
-var (
-	dryRun         bool
-	removeUntagged bool
-	quiet          bool
-)
 
 // GCCmd is the cobra command that corresponds to the garbage-collect subcommand
 var GCCmd = &cobra.Command{
@@ -80,6 +91,11 @@ var GCCmd = &cobra.Command{
 			DryRun:         dryRun,
 			RemoveUntagged: removeUntagged,
 			Quiet:          quiet,
+			MaxConcurrency: workers,
+			Timeout:        timeout,
+			CheckpointDir:  checkpointDir,
+			MarkOnly:       markOnly,
+			SweepOnly:      sweepOnly,
 		})
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to garbage collect: %v", err)
