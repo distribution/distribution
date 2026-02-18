@@ -118,8 +118,7 @@ func (pbs *proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter,
 	// when the HTTP request context is canceled. This allows the cache write
 	// to complete even if the client disconnects.
 	// Use the configured timeout to prevent hanging operations.
-	detachedCtx := context.WithoutCancel(ctx)
-	writerCtx, cancel := context.WithTimeout(detachedCtx, pbs.cacheWriteTimeout)
+	writerCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), pbs.cacheWriteTimeout)
 	defer cancel()
 
 	bw, err := pbs.localStore.Create(writerCtx)
@@ -131,8 +130,8 @@ func (pbs *proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter,
 	// Ensure the writer is canceled if we return early with an error
 	defer func() {
 		if !committed {
-			if cancelErr := bw.Cancel(writerCtx); cancelErr != nil {
-				dcontext.GetLogger(ctx).Errorf("Error canceling blob writer: %s", cancelErr)
+			if err := bw.Cancel(writerCtx); err != nil {
+				dcontext.GetLogger(ctx).WithError(err).Errorf("Error canceling blob writer")
 			}
 		}
 	}()

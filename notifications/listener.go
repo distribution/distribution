@@ -169,8 +169,7 @@ func (bsl *blobServiceListener) ServeBlob(ctx context.Context, w http.ResponseWr
 	if err == nil {
 		// Use a detached context for Stat() since the HTTP request context may be canceled
 		// after ServeBlob completes, but we still want to send the notification.
-		statCtx := context.WithoutCancel(ctx)
-		if desc, err := bsl.Stat(statCtx, dgst); err != nil {
+		if desc, err := bsl.Stat(context.WithoutCancel(ctx), dgst); err != nil {
 			dcontext.GetLogger(ctx).Errorf("error resolving descriptor in ServeBlob listener: %v", err)
 		} else {
 			if err := bsl.parent.listener.BlobPulled(bsl.parent.Repository.Named(), desc); err != nil {
