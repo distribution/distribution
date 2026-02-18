@@ -18,12 +18,13 @@ import (
 )
 
 type proxyBlobStore struct {
-	localStore     distribution.BlobStore
-	remoteStore    distribution.BlobService
-	scheduler      *scheduler.TTLExpirationScheduler
-	ttl            *time.Duration
-	repositoryName reference.Named
-	authChallenger authChallenger
+	localStore        distribution.BlobStore
+	remoteStore       distribution.BlobService
+	scheduler         *scheduler.TTLExpirationScheduler
+	ttl               *time.Duration
+	cacheWriteTimeout time.Duration
+	repositoryName    reference.Named
+	authChallenger    authChallenger
 }
 
 var _ distribution.BlobStore = &proxyBlobStore{}
@@ -113,10 +114,27 @@ func (pbs *proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter,
 		mu.Unlock()
 	}()
 
-	bw, err := pbs.localStore.Create(ctx)
+	// Create a detached context for the blob writer that won't be canceled
+	// when the HTTP request context is canceled. This allows the cache write
+	// to complete even if the client disconnects.
+	// Use the configured timeout to prevent hanging operations.
+	writerCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), pbs.cacheWriteTimeout)
+	defer cancel()
+
+	bw, err := pbs.localStore.Create(writerCtx)
 	if err != nil {
 		return err
 	}
+
+	committed := false
+	// Ensure the writer is canceled if we return early with an error
+	defer func() {
+		if !committed {
+			if err := bw.Cancel(writerCtx); err != nil {
+				dcontext.GetLogger(ctx).WithError(err).Errorf("Error canceling blob writer")
+			}
+		}
+	}()
 
 	// Serving client and storing locally over same fetching request.
 	// This can prevent a redundant blob fetching.
@@ -126,10 +144,12 @@ func (pbs *proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter,
 		return err
 	}
 
-	_, err = bw.Commit(ctx, desc)
+	_, err = bw.Commit(writerCtx, desc)
 	if err != nil {
 		return err
 	}
+
+	committed = true
 
 	blobRef, err := reference.WithDigest(pbs.repositoryName, dgst)
 	if err != nil {
