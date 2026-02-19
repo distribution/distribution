@@ -566,9 +566,11 @@ func TestTagsAPI(t *testing.T) {
 			queryParams:        url.Values{"last": []string{"does-not-exist"}, "n": []string{"3"}},
 			expectedStatusCode: http.StatusOK,
 			expectedBody: tagsAPIResponse{Name: imageName.Name(), Tags: []string{
+				"jyi7b",
 				"kb0j5",
 				"sb71y",
 			}},
+			expectedLinkHeader: `</v2/test/tags/list?last=sb71y&n=3>; rel="next"`,
 		},
 	}
 

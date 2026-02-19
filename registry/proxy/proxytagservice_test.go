@@ -58,7 +58,14 @@ func (m *mockTagStore) All(ctx context.Context) ([]string, error) {
 	return tags, nil
 }
 
-func testProxyTagService(local, remote map[string]v1.Descriptor) *proxyTagService {
+func (m *mockTagStore) Lookup(ctx context.Context, digest distribution.Descriptor) ([]string, error) {
+	panic("not implemented")
+}
+
+func (m *mockTagStore) List(ctx context.Context, limit int, last string) ([]string, error) {
+	panic("not implemented")
+}
+func testProxyTagService(local, remote map[string]distribution.Descriptor) *proxyTagService {
 	if local == nil {
 		local = make(map[string]v1.Descriptor)
 	}
