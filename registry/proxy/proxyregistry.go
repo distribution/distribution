@@ -229,6 +229,9 @@ type Closer interface {
 }
 
 func (pr *proxyingRegistry) Close() error {
+	if pr.scheduler == nil {
+		return nil
+	}
 	return pr.scheduler.Stop()
 }
 
