@@ -90,7 +90,7 @@ func getJWKThumbprint(publickey crypto.PublicKey, skipED25519 bool) string {
 		}
 		x := base64.RawURLEncoding.EncodeToString(pubkey)
 
-		return hashAndEncode(fmt.Sprintf(`{"crv":"Ed25519","kty":"OTP","x":"%s"}`, x))
+		return hashAndEncode(fmt.Sprintf(`{"crv":"Ed25519","kty":"OKP","x":"%s"}`, x))
 	default:
 		return ""
 	}
