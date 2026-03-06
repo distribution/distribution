@@ -97,7 +97,9 @@ proxy:
   remoteurl: https://registry-1.docker.io
   username: [username]
   password: [password]
-  ttl: 168h
+  evictionpolicy:
+    ttl:
+      ttl: 168h
 ```
 
 > **Warning**: If you specify a username and password, it's very important to
