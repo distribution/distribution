@@ -362,8 +362,9 @@ func TestClientTransport(t *testing.T) {
 			}
 
 			s3drv := drv.baseEmbed.Base.StorageDriver.(*driver)
+			s3Client := s3drv.S3.(*s3.S3)
 			if tc.skipverify {
-				tr, ok := s3drv.S3.Client.Config.HTTPClient.Transport.(*http.Transport)
+				tr, ok := s3Client.Client.Config.HTTPClient.Transport.(*http.Transport)
 				if !ok {
 					t.Fatal("unexpected driver transport")
 				}
@@ -380,7 +381,7 @@ func TestClientTransport(t *testing.T) {
 			}
 			// if tc.skipverify is false we do not override the driver
 			// HTTP client transport and leave it to the AWS SDK.
-			if s3drv.S3.Client.Config.HTTPClient.Transport != nil {
+			if s3Client.Config.HTTPClient.Transport != nil {
 				t.Errorf("unexpected S3 driver client transport")
 			}
 		})
@@ -416,7 +417,7 @@ func TestStorageClass(t *testing.T) {
 		defer s3Driver.Delete(ctx, filename)
 
 		driverUnwrapped := s3Driver.Base.StorageDriver.(*driver)
-		resp, err := driverUnwrapped.S3.GetObject(&s3.GetObjectInput{
+		resp, err := driverUnwrapped.S3.GetObjectWithContext(context.Background(), &s3.GetObjectInput{
 			Bucket: aws.String(driverUnwrapped.Bucket),
 			Key:    aws.String(driverUnwrapped.s3Path(filename)),
 		})
@@ -1125,5 +1126,66 @@ func compareWalked(t *testing.T, expected, walked []string) {
 		if walked[i] != expected[i] {
 			t.Fatalf("walked in unexpected order: expected %s; walked %s", expected, walked)
 		}
+	}
+}
+
+func TestGetInitialPath(t *testing.T) {
+	tests := []struct {
+		name       string
+		from       string
+		startAfter string
+		expected   string
+	}{
+		{
+			name:       "empty strings",
+			from:       "",
+			startAfter: "",
+			expected:   "",
+		},
+		{
+			name:       "startAfter ending in _manifests",
+			from:       "docker/registry/v2/repositories/",
+			startAfter: "docker/registry/v2/repositories/cloud/cs-artemisregister/_manifests",
+			expected:   "docker/registry/v2/repositories/cloud",
+		},
+		{
+			name:       "deeper path ending in _manifests",
+			from:       "/v2/repositories",
+			startAfter: "/v2/repositories/myrepo/subpath/_manifests",
+			expected:   "/v2/repositories/myrepo",
+		},
+		{
+			name:       "nested org/project ending in _manifests",
+			from:       "/v2/repositories",
+			startAfter: "/v2/repositories/org/project/_manifests",
+			expected:   "/v2/repositories/org",
+		},
+		{
+			name:       "from is root ending in _manifests",
+			from:       "/",
+			startAfter: "/v2/repositories/repo/_manifests",
+			expected:   "/v2/repositories",
+		},
+		{
+			name:       "multiple levels ending in _manifests",
+			from:       "/v2",
+			startAfter: "/v2/repositories/a/b/c/_manifests",
+			expected:   "/v2/repositories/a/b",
+		},
+		{
+			name:       "nested path without underscore directory",
+			from:       "",
+			startAfter: "/mycompany/another/nested/app",
+			expected:   "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getInitialPath(tt.startAfter)
+			if result != tt.expected {
+				t.Errorf("getInitialPath(%q, %q) = %q, want %q", tt.from, tt.startAfter, result, tt.expected)
+			}
+		})
 	}
 }
