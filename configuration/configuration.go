@@ -678,6 +678,8 @@ type Proxy struct {
 	// RemoteURL is the URL of the remote registry
 	RemoteURL string `yaml:"remoteurl"`
 
+	RemoteNamespace string `yaml:"remotenamespace"`
+
 	// Username of the hub user
 	Username string `yaml:"username"`
 

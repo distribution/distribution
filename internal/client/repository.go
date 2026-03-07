@@ -868,6 +868,30 @@ func (bs *blobStatter) Stat(ctx context.Context, dgst digest.Digest) (v1.Descrip
 		return v1.Descriptor{}, err
 	}
 	defer resp.Body.Close()
+	// Some registries do not support HEAD requests
+	if resp.StatusCode == http.StatusForbidden {
+		req, err = http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+		if err != nil {
+			return v1.Descriptor{}, err
+		}
+		resp, err = bs.client.Do(req)
+		if err != nil {
+			return v1.Descriptor{}, err
+		}
+		defer resp.Body.Close()
+	}
+	// Some pull though cache will return 404 on first request
+	if resp.StatusCode == http.StatusNotFound {
+		req, err = http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+		if err != nil {
+			return v1.Descriptor{}, err
+		}
+		resp, err = bs.client.Do(req)
+		if err != nil {
+			return v1.Descriptor{}, err
+		}
+		defer resp.Body.Close()
+	}
 
 	if resp.StatusCode == http.StatusNotFound {
 		return v1.Descriptor{}, distribution.ErrBlobUnknown
