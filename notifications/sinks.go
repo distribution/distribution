@@ -3,10 +3,10 @@ package notifications
 import (
 	"container/list"
 	"fmt"
+	"log/slog"
 	"sync"
 
 	events "github.com/docker/go-events"
-	"github.com/sirupsen/logrus"
 )
 
 // eventQueue accepts all messages into a queue for asynchronous consumption
@@ -87,7 +87,7 @@ func (eq *eventQueue) run() {
 		}
 
 		if err := eq.sink.Write(event); err != nil {
-			logrus.Warnf("eventqueue: error writing events to %v, these events will be lost: %v", eq.sink, err)
+			slog.Warn(fmt.Sprintf("eventqueue: error writing events to %v, these events will be lost: %v", eq.sink, err))
 		}
 
 		for _, listener := range eq.listeners {

@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -33,7 +34,6 @@ import (
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/distribution/v3/registry/storage/driver/base"
 	"github.com/distribution/distribution/v3/registry/storage/driver/factory"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"golang.org/x/oauth2/jwt"
@@ -722,7 +722,7 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 	// if deleting the file fails, log the error, but do not fail; the file was successfully copied,
 	// and the original should eventually be cleaned when purging the uploads folder.
 	if err != nil {
-		logrus.Infof("error deleting %v: %v", sourcePath, err)
+		slog.Info(fmt.Sprintf("error deleting %v: %v", sourcePath, err))
 	}
 	return nil
 }
