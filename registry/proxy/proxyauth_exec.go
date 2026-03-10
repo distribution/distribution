@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/docker/docker-credential-helpers/client"
-	credspkg "github.com/docker/docker-credential-helpers/credentials"
 	"github.com/sirupsen/logrus"
 
 	"github.com/distribution/distribution/v3/configuration"
@@ -17,7 +16,12 @@ type execCredentials struct {
 	m        sync.Mutex
 	helper   client.ProgramFunc
 	lifetime *time.Duration
-	creds    *credspkg.Credentials
+	creds    map[string]execCredentialsCredential
+}
+
+type execCredentialsCredential struct {
+	username string
+	secret   string
 	expiry   time.Time
 }
 
@@ -26,21 +30,27 @@ func (c *execCredentials) Basic(url *url.URL) (string, string) {
 	defer c.m.Unlock()
 
 	now := time.Now()
-	if c.creds != nil && (c.lifetime == nil || now.Before(c.expiry)) {
-		return c.creds.Username, c.creds.Secret
+	creds, ok := c.creds[url.Host]
+	if ok && (c.lifetime == nil || now.Before(creds.expiry)) {
+		return creds.username, creds.secret
 	}
 
-	creds, err := client.Get(c.helper, url.Host)
+	helperCreds, err := client.Get(c.helper, url.Host)
 	if err != nil {
-		logrus.Errorf("failed to run command: %v", err)
+		logrus.Errorf("Failed to run credential helper command: %v", err)
 		return "", ""
 	}
-	c.creds = creds
-	if c.lifetime != nil && *c.lifetime > 0 {
-		c.expiry = now.Add(*c.lifetime)
-	}
 
-	return c.creds.Username, c.creds.Secret
+	creds = execCredentialsCredential{
+		username: helperCreds.Username,
+		secret:   helperCreds.Secret,
+	}
+	if c.lifetime != nil && *c.lifetime > 0 {
+		creds.expiry = now.Add(*c.lifetime)
+	}
+	c.creds[url.Host] = creds
+
+	return creds.username, creds.secret
 }
 
 func (c *execCredentials) RefreshToken(_ *url.URL, _ string) string {
@@ -54,5 +64,6 @@ func configureExecAuth(cfg configuration.ExecConfig) (auth.CredentialStore, erro
 	return &execCredentials{
 		helper:   client.NewShellProgramFunc(cfg.Command),
 		lifetime: cfg.Lifetime,
+		creds:    make(map[string]execCredentialsCredential),
 	}, nil
 }
