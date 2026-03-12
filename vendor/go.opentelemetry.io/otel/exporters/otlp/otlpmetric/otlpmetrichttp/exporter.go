@@ -5,15 +5,17 @@ package otlpmetrichttp // import "go.opentelemetry.io/otel/exporters/otlp/otlpme
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
+
+	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/oconf"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/transform"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
 
 // Exporter is a OpenTelemetry metric Exporter using protobufs over HTTP.
@@ -90,7 +92,7 @@ func (e *Exporter) Export(ctx context.Context, rm *metricdata.ResourceMetrics) e
 // This method returns an error if the method is canceled by the passed context.
 //
 // This method is safe to call concurrently.
-func (e *Exporter) ForceFlush(ctx context.Context) error {
+func (*Exporter) ForceFlush(ctx context.Context) error {
 	// The exporter and client hold no state, nothing to flush.
 	return ctx.Err()
 }
@@ -114,11 +116,11 @@ func (e *Exporter) Shutdown(ctx context.Context) error {
 	return err
 }
 
-var errShutdown = fmt.Errorf("HTTP exporter is shutdown")
+var errShutdown = errors.New("HTTP exporter is shutdown")
 
 type shutdownClient struct{}
 
-func (c shutdownClient) err(ctx context.Context) error {
+func (shutdownClient) err(ctx context.Context) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -134,7 +136,7 @@ func (c shutdownClient) Shutdown(ctx context.Context) error {
 }
 
 // MarshalLog returns logging data about the Exporter.
-func (e *Exporter) MarshalLog() interface{} {
+func (*Exporter) MarshalLog() any {
 	return struct{ Type string }{Type: "OTLP/HTTP"}
 }
 

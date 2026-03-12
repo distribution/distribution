@@ -20,7 +20,7 @@ import (
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/embedded"
 )
@@ -61,6 +61,7 @@ type ReadOnlySpan interface {
 	InstrumentationScope() instrumentation.Scope
 	// InstrumentationLibrary returns information about the instrumentation
 	// library that created the span.
+	//
 	// Deprecated: please use InstrumentationScope instead.
 	InstrumentationLibrary() instrumentation.Library //nolint:staticcheck // This method needs to be define for backwards compatibility
 	// Resource returns information about the entity that produced the span.
@@ -150,12 +151,22 @@ type recordingSpan struct {
 
 	// tracer is the SDK tracer that created this span.
 	tracer *tracer
+
+	// origCtx is the context used when starting this span that has the
+	// recordingSpan instance set as the active span. If not nil, it is used
+	// when ending the span to ensure any metrics are recorded with a context
+	// containing this span without requiring an additional allocation.
+	origCtx context.Context
 }
 
 var (
 	_ ReadWriteSpan = (*recordingSpan)(nil)
 	_ runtimeTracer = (*recordingSpan)(nil)
 )
+
+func (s *recordingSpan) setOrigCtx(ctx context.Context) {
+	s.origCtx = ctx
+}
 
 // SpanContext returns the SpanContext of this span.
 func (s *recordingSpan) SpanContext() trace.SpanContext {
@@ -165,7 +176,7 @@ func (s *recordingSpan) SpanContext() trace.SpanContext {
 	return s.spanContext
 }
 
-// IsRecording returns if this span is being recorded. If this span has ended
+// IsRecording reports whether this span is being recorded. If this span has ended
 // this will return false.
 func (s *recordingSpan) IsRecording() bool {
 	if s == nil {
@@ -177,7 +188,7 @@ func (s *recordingSpan) IsRecording() bool {
 	return s.isRecording()
 }
 
-// isRecording returns if this span is being recorded. If this span has ended
+// isRecording reports whether this span is being recorded. If this span has ended
 // this will return false.
 //
 // This method assumes s.mu.Lock is held by the caller.
@@ -347,54 +358,99 @@ func truncateAttr(limit int, attr attribute.KeyValue) attribute.KeyValue {
 	}
 	switch attr.Value.Type() {
 	case attribute.STRING:
-		if v := attr.Value.AsString(); len(v) > limit {
-			return attr.Key.String(safeTruncate(v, limit))
-		}
+		v := attr.Value.AsString()
+		return attr.Key.String(truncate(limit, v))
 	case attribute.STRINGSLICE:
 		v := attr.Value.AsStringSlice()
 		for i := range v {
-			if len(v[i]) > limit {
-				v[i] = safeTruncate(v[i], limit)
-			}
+			v[i] = truncate(limit, v[i])
 		}
 		return attr.Key.StringSlice(v)
 	}
 	return attr
 }
 
-// safeTruncate truncates the string and guarantees valid UTF-8 is returned.
-func safeTruncate(input string, limit int) string {
-	if trunc, ok := safeTruncateValidUTF8(input, limit); ok {
-		return trunc
+// truncate returns a truncated version of s such that it contains less than
+// the limit number of characters. Truncation is applied by returning the limit
+// number of valid characters contained in s.
+//
+// If limit is negative, it returns the original string.
+//
+// UTF-8 is supported. When truncating, all invalid characters are dropped
+// before applying truncation.
+//
+// If s already contains less than the limit number of bytes, it is returned
+// unchanged. No invalid characters are removed.
+func truncate(limit int, s string) string {
+	// This prioritize performance in the following order based on the most
+	// common expected use-cases.
+	//
+	//  - Short values less than the default limit (128).
+	//  - Strings with valid encodings that exceed the limit.
+	//  - No limit.
+	//  - Strings with invalid encodings that exceed the limit.
+	if limit < 0 || len(s) <= limit {
+		return s
 	}
-	trunc, _ := safeTruncateValidUTF8(strings.ToValidUTF8(input, ""), limit)
-	return trunc
-}
 
-// safeTruncateValidUTF8 returns a copy of the input string safely truncated to
-// limit. The truncation is ensured to occur at the bounds of complete UTF-8
-// characters. If invalid encoding of UTF-8 is encountered, input is returned
-// with false, otherwise, the truncated input will be returned with true.
-func safeTruncateValidUTF8(input string, limit int) (string, bool) {
-	for cnt := 0; cnt <= limit; {
-		r, size := utf8.DecodeRuneInString(input[cnt:])
-		if r == utf8.RuneError {
-			return input, false
+	// Optimistically, assume all valid UTF-8.
+	var b strings.Builder
+	count := 0
+	for i, c := range s {
+		if c != utf8.RuneError {
+			count++
+			if count > limit {
+				return s[:i]
+			}
+			continue
 		}
 
-		if cnt+size > limit {
-			return input[:cnt], true
+		_, size := utf8.DecodeRuneInString(s[i:])
+		if size == 1 {
+			// Invalid encoding.
+			b.Grow(len(s) - 1)
+			_, _ = b.WriteString(s[:i])
+			s = s[i:]
+			break
 		}
-		cnt += size
 	}
-	return input, true
+
+	// Fast-path, no invalid input.
+	if b.Cap() == 0 {
+		return s
+	}
+
+	// Truncate while validating UTF-8.
+	for i := 0; i < len(s) && count < limit; {
+		c := s[i]
+		if c < utf8.RuneSelf {
+			// Optimization for single byte runes (common case).
+			_ = b.WriteByte(c)
+			i++
+			count++
+			continue
+		}
+
+		_, size := utf8.DecodeRuneInString(s[i:])
+		if size == 1 {
+			// We checked for all 1-byte runes above, this is a RuneError.
+			i++
+			continue
+		}
+
+		_, _ = b.WriteString(s[i : i+size])
+		i += size
+		count++
+	}
+
+	return b.String()
 }
 
 // End ends the span. This method does nothing if the span is already ended or
 // is not being recorded.
 //
-// The only SpanOption currently supported is WithTimestamp which will set the
-// end time for a Span's life-cycle.
+// The only SpanEndOption currently supported are [trace.WithTimestamp], and
+// [trace.WithStackTrace].
 //
 // If this method is called while panicking an error event is added to the
 // Span before ending it and the panic is continued.
@@ -450,6 +506,17 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 	}
 	s.mu.Unlock()
 
+	if s.tracer.inst.Enabled() {
+		ctx := s.origCtx
+		if ctx == nil {
+			// This should not happen as the origCtx should be set, but
+			// ensure trace information is propagated in the case of an
+			// error.
+			ctx = trace.ContextWithSpan(context.Background(), s)
+		}
+		defer s.tracer.inst.SpanEnded(ctx, s)
+	}
+
 	sps := s.tracer.provider.getSpanProcessors()
 	if len(sps) == 0 {
 		return
@@ -500,7 +567,7 @@ func (s *recordingSpan) RecordError(err error, opts ...trace.EventOption) {
 	s.addEvent(semconv.ExceptionEventName, opts...)
 }
 
-func typeStr(i interface{}) string {
+func typeStr(i any) string {
 	t := reflect.TypeOf(i)
 	if t.PkgPath() == "" && t.Name() == "" {
 		// Likely a builtin type.

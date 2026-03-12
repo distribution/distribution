@@ -5,6 +5,7 @@ package log // import "go.opentelemetry.io/otel/log"
 
 import (
 	"context"
+	"slices"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log/embedded"
@@ -28,17 +29,18 @@ type Logger interface {
 	//
 	// Implementations of this method need to be safe for a user to call
 	// concurrently.
-	//
-	// Notice: Emit is intended to be used by log bridges.
-	// Is should not be used for writing instrumentation.
 	Emit(ctx context.Context, record Record)
 
-	// Enabled returns whether the Logger emits for the given context and
+	// Enabled reports whether the Logger emits for the given context and
 	// param.
 	//
-	// The passed param is likely to be a partial record with only the
-	// bridge-relevant information being provided (e.g a param with only the
-	// Severity set). If a Logger needs more information than is provided, it
+	// This is useful for users that want to know if a [Record]
+	// will be processed or dropped before they perform complex operations to
+	// construct the [Record].
+	//
+	// The passed param is likely to be a partial record information being
+	// provided (e.g a param with only the Severity set).
+	// If a Logger needs more information than is provided, it
 	// is said to be in an indeterminate state (see below).
 	//
 	// The returned value will be true when the Logger will emit for the
@@ -49,13 +51,10 @@ type Logger interface {
 	// exist (e.g. performance, correctness).
 	//
 	// The param should not be held by the implementation. A copy should be
-	// made if the record needs to be held after the call returns.
+	// made if the param needs to be held after the call returns.
 	//
 	// Implementations of this method need to be safe for a user to call
 	// concurrently.
-	//
-	// Notice: Enabled is intended to be used by log bridges.
-	// Is should not be used for writing instrumentation.
 	Enabled(ctx context.Context, param EnabledParameters) bool
 }
 
@@ -116,13 +115,52 @@ func WithInstrumentationVersion(version string) LoggerOption {
 	})
 }
 
+// mergeSets returns the union of keys between a and b. Any duplicate keys will
+// use the value associated with b.
+func mergeSets(a, b attribute.Set) attribute.Set {
+	// NewMergeIterator uses the first value for any duplicates.
+	iter := attribute.NewMergeIterator(&b, &a)
+	merged := make([]attribute.KeyValue, 0, a.Len()+b.Len())
+	for iter.Next() {
+		merged = append(merged, iter.Attribute())
+	}
+	return attribute.NewSet(merged...)
+}
+
 // WithInstrumentationAttributes returns a [LoggerOption] that sets the
 // instrumentation attributes of a [Logger].
 //
-// The passed attributes will be de-duplicated.
+// This is equivalent to calling WithInstrumentationAttributeSet with an
+// [attribute.Set] created from a clone of the passed attributes.
+// [WithInstrumentationAttributeSet] is recommended for more control.
+//
+// If multiple [WithInstrumentationAttributes] or [WithInstrumentationAttributeSet]
+// options are passed, the attributes will be merged together in the order
+// they are passed. Attributes with duplicate keys will use the last value passed.
 func WithInstrumentationAttributes(attr ...attribute.KeyValue) LoggerOption {
+	set := attribute.NewSet(slices.Clone(attr)...)
+	return WithInstrumentationAttributeSet(set)
+}
+
+// WithInstrumentationAttributeSet returns a [LoggerOption] that adds the
+// instrumentation attributes of a [Logger].
+//
+// If multiple [WithInstrumentationAttributes] or [WithInstrumentationAttributeSet]
+// options are passed, the attributes will be merged together in the order
+// they are passed. Attributes with duplicate keys will use the last value passed.
+func WithInstrumentationAttributeSet(set attribute.Set) LoggerOption {
+	if set.Len() == 0 {
+		return loggerOptionFunc(func(config LoggerConfig) LoggerConfig {
+			return config
+		})
+	}
+
 	return loggerOptionFunc(func(config LoggerConfig) LoggerConfig {
-		config.attrs = attribute.NewSet(attr...)
+		if config.attrs.Len() == 0 {
+			config.attrs = set
+		} else {
+			config.attrs = mergeSets(config.attrs, set)
+		}
 		return config
 	})
 }
@@ -138,18 +176,6 @@ func WithSchemaURL(schemaURL string) LoggerOption {
 
 // EnabledParameters represents payload for [Logger]'s Enabled method.
 type EnabledParameters struct {
-	severity    Severity
-	severitySet bool
-}
-
-// Severity returns the [Severity] level value, or [SeverityUndefined] if no value was set.
-// The ok result indicates whether the value was set.
-func (r *EnabledParameters) Severity() (value Severity, ok bool) {
-	return r.severity, r.severitySet
-}
-
-// SetSeverity sets the [Severity] level.
-func (r *EnabledParameters) SetSeverity(level Severity) {
-	r.severity = level
-	r.severitySet = true
+	Severity  Severity
+	EventName string
 }
