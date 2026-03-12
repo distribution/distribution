@@ -11,7 +11,6 @@ import (
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/log/internal/x"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -25,13 +24,24 @@ type logger struct {
 
 	provider             *LoggerProvider
 	instrumentationScope instrumentation.Scope
+
+	// recCntIncr increments the count of log records created. It will be nil
+	// if observability is disabled.
+	recCntIncr func(context.Context)
 }
 
 func newLogger(p *LoggerProvider, scope instrumentation.Scope) *logger {
-	return &logger{
+	l := &logger{
 		provider:             p,
 		instrumentationScope: scope,
 	}
+
+	var err error
+	l.recCntIncr, err = newRecordCounterIncr()
+	if err != nil {
+		otel.Handle(err)
+	}
+	return l
 }
 
 func (l *logger) Emit(ctx context.Context, r log.Record) {
@@ -44,28 +54,25 @@ func (l *logger) Emit(ctx context.Context, r log.Record) {
 }
 
 // Enabled returns true if at least one Processor held by the LoggerProvider
-// that created the logger will process param for the provided context and param.
+// that created the logger will process for the provided context and param.
 //
-// If it is not possible to definitively determine the param will be
+// If it is not possible to definitively determine the record will be
 // processed, true will be returned by default. A value of false will only be
 // returned if it can be positively verified that no Processor will process.
 func (l *logger) Enabled(ctx context.Context, param log.EnabledParameters) bool {
-	fltrs := l.provider.filterProcessors()
-	// If there are more Processors than FilterProcessors we cannot be sure
-	// that all Processors will drop the record. Therefore, return true.
-	//
-	// If all Processors are FilterProcessors, check if any is enabled.
-	return len(l.provider.processors) > len(fltrs) || anyEnabled(ctx, param, fltrs)
-}
+	p := EnabledParameters{
+		InstrumentationScope: l.instrumentationScope,
+		Severity:             param.Severity,
+		EventName:            param.EventName,
+	}
 
-func anyEnabled(ctx context.Context, param log.EnabledParameters, fltrs []x.FilterProcessor) bool {
-	for _, f := range fltrs {
-		if f.Enabled(ctx, param) {
+	for _, processor := range l.provider.processors {
+		if processor.Enabled(ctx, p) {
 			// At least one Processor will process the Record.
 			return true
 		}
 	}
-	// No Processor will process the record
+	// No Processor will process the record.
 	return false
 }
 
@@ -73,11 +80,11 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 	sc := trace.SpanContextFromContext(ctx)
 
 	newRecord := Record{
+		eventName:         r.EventName(),
 		timestamp:         r.Timestamp(),
 		observedTimestamp: r.ObservedTimestamp(),
 		severity:          r.Severity(),
 		severityText:      r.SeverityText(),
-		body:              r.Body(),
 
 		traceID:    sc.TraceID(),
 		spanID:     sc.SpanID(),
@@ -87,7 +94,14 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 		scope:                     &l.instrumentationScope,
 		attributeValueLengthLimit: l.provider.attributeValueLengthLimit,
 		attributeCountLimit:       l.provider.attributeCountLimit,
+		allowDupKeys:              l.provider.allowDupKeys,
 	}
+	if l.recCntIncr != nil {
+		l.recCntIncr(ctx)
+	}
+
+	// This ensures we deduplicate key-value collections in the log body
+	newRecord.SetBody(r.Body())
 
 	// This field SHOULD be set once the event is observed by OpenTelemetry.
 	if newRecord.observedTimestamp.IsZero() {

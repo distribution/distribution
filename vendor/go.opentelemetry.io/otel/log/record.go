@@ -15,10 +15,12 @@ import (
 const attributesInlineCount = 5
 
 // Record represents a log record.
+// A log record with non-empty event name is interpreted as an event record.
 type Record struct {
 	// Ensure forward compatibility by explicitly making this not comparable.
 	noCmp [0]func() //nolint: unused  // This is indeed used.
 
+	eventName         string
 	timestamp         time.Time
 	observedTimestamp time.Time
 	severity          Severity
@@ -42,6 +44,18 @@ type Record struct {
 	//   - len(back) > 0 if nFront == len(front)
 	//   - Unused array elements are zero-ed. Used to detect mistakes.
 	back []KeyValue
+}
+
+// EventName returns the event name.
+// A log record with non-empty event name is interpreted as an event record.
+func (r *Record) EventName() string {
+	return r.eventName
+}
+
+// SetEventName sets the event name.
+// A log record with non-empty event name is interpreted as an event record.
+func (r *Record) SetEventName(s string) {
+	r.eventName = s
 }
 
 // Timestamp returns the time when the log record occurred.
@@ -127,4 +141,12 @@ func (r *Record) AddAttributes(attrs ...KeyValue) {
 // AttributesLen returns the number of attributes in the log record.
 func (r *Record) AttributesLen() int {
 	return r.nFront + len(r.back)
+}
+
+// Clone returns a copy of the record with no shared state.
+// The original record and the clone can both be modified without interfering with each other.
+func (r *Record) Clone() Record {
+	res := *r
+	res.back = slices.Clone(r.back)
+	return res
 }

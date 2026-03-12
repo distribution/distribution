@@ -156,13 +156,20 @@ func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 				global.Warn("dropped log records", "dropped", d)
 			}
 
-			qLen := b.q.TryDequeue(buf, func(r []Record) bool {
-				ok := b.exporter.EnqueueExport(r)
-				if ok {
-					buf = slices.Clone(buf)
-				}
-				return ok
-			})
+			var qLen int
+			// Don't copy data from queue unless exporter can accept more, it is very expensive.
+			if b.exporter.Ready() {
+				qLen = b.q.TryDequeue(buf, func(r []Record) bool {
+					ok := b.exporter.EnqueueExport(r)
+					if ok {
+						buf = slices.Clone(buf)
+					}
+					return ok
+				})
+			} else {
+				qLen = b.q.Len()
+			}
+
 			if qLen >= b.batchSize {
 				// There is another full batch ready. Immediately trigger
 				// another export attempt.
@@ -175,6 +182,11 @@ func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 		}
 	}()
 	return done
+}
+
+// Enabled returns true, indicating this Processor will process all records.
+func (*BatchProcessor) Enabled(context.Context, EnabledParameters) bool {
+	return true
 }
 
 // OnEmit batches provided log record.
@@ -272,6 +284,13 @@ func newQueue(size int) *queue {
 	}
 }
 
+func (q *queue) Len() int {
+	q.Lock()
+	defer q.Unlock()
+
+	return q.len
+}
+
 // Dropped returns the number of Records dropped during enqueueing since the
 // last time Dropped was called.
 func (q *queue) Dropped() uint64 {
@@ -315,8 +334,8 @@ func (q *queue) TryDequeue(buf []Record, write func([]Record) bool) int {
 	origRead := q.read
 
 	n := min(len(buf), q.len)
-	for i := 0; i < n; i++ {
-		buf[i] = q.read.Value
+	for i := range n {
+		buf[i] = q.read.Value // nolint:gosec // n is bounded by len(buf)
 		q.read = q.read.Next()
 	}
 
@@ -361,25 +380,25 @@ func newBatchConfig(options []BatchProcessorOption) batchConfig {
 	c.maxQSize = c.maxQSize.Resolve(
 		clearLessThanOne[int](),
 		getenv[int](envarMaxQSize),
-		clearLessThanOne[int](),
+		clearLessThanOne[int](), // nolint:gocritic // the function argument is duplicated on purpose
 		fallback[int](dfltMaxQSize),
 	)
 	c.expInterval = c.expInterval.Resolve(
 		clearLessThanOne[time.Duration](),
 		getenv[time.Duration](envarExpInterval),
-		clearLessThanOne[time.Duration](),
+		clearLessThanOne[time.Duration](), // nolint:gocritic // the function argument is duplicated on purpose
 		fallback[time.Duration](dfltExpInterval),
 	)
 	c.expTimeout = c.expTimeout.Resolve(
 		clearLessThanOne[time.Duration](),
 		getenv[time.Duration](envarExpTimeout),
-		clearLessThanOne[time.Duration](),
+		clearLessThanOne[time.Duration](), // nolint:gocritic // the function argument is duplicated on purpose
 		fallback[time.Duration](dfltExpTimeout),
 	)
 	c.expMaxBatchSize = c.expMaxBatchSize.Resolve(
 		clearLessThanOne[int](),
 		getenv[int](envarExpMaxBatchSize),
-		clearLessThanOne[int](),
+		clearLessThanOne[int](), // nolint:gocritic // the function argument is duplicated on purpose
 		clampMax[int](c.maxQSize.Value),
 		fallback[int](dfltExpMaxBatchSize),
 	)
