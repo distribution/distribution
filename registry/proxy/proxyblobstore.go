@@ -188,15 +188,15 @@ func (pbs *proxyBlobStore) Get(ctx context.Context, dgst digest.Digest) ([]byte,
 
 // Unsupported functions
 func (pbs *proxyBlobStore) Put(ctx context.Context, mediaType string, p []byte) (v1.Descriptor, error) {
-	return v1.Descriptor{}, distribution.ErrUnsupported
+	return pbs.localStore.Put(ctx, mediaType, p)
 }
 
 func (pbs *proxyBlobStore) Create(ctx context.Context, options ...distribution.BlobCreateOption) (distribution.BlobWriter, error) {
-	return nil, distribution.ErrUnsupported
+	return pbs.localStore.Create(ctx, options...)
 }
 
 func (pbs *proxyBlobStore) Resume(ctx context.Context, id string) (distribution.BlobWriter, error) {
-	return nil, distribution.ErrUnsupported
+	return pbs.localStore.Resume(ctx, id)
 }
 
 func (pbs *proxyBlobStore) Mount(ctx context.Context, sourceRepo reference.Named, dgst digest.Digest) (v1.Descriptor, error) {
@@ -204,9 +204,9 @@ func (pbs *proxyBlobStore) Mount(ctx context.Context, sourceRepo reference.Named
 }
 
 func (pbs *proxyBlobStore) Open(ctx context.Context, dgst digest.Digest) (io.ReadSeekCloser, error) {
-	return nil, distribution.ErrUnsupported
+	return pbs.localStore.Open(ctx, dgst)
 }
 
 func (pbs *proxyBlobStore) Delete(ctx context.Context, dgst digest.Digest) error {
-	return distribution.ErrUnsupported
+	return pbs.localStore.Delete(ctx, dgst)
 }
