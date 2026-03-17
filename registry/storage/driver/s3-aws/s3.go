@@ -1019,7 +1019,7 @@ func (d *driver) copy(ctx context.Context, sourcePath string, destPath string) e
 		StorageClass:         d.getStorageClass(),
 	})
 	if err != nil {
-		return err
+		return parseError(destPath, err)
 	}
 
 	numParts := (fileInfo.Size() + d.MultipartCopyChunkSize - 1) / d.MultipartCopyChunkSize
@@ -1058,7 +1058,7 @@ func (d *driver) copy(ctx context.Context, sourcePath string, destPath string) e
 	for range completedParts {
 		err := <-errChan
 		if err != nil {
-			return err
+			return parseError(sourcePath, err)
 		}
 	}
 
@@ -1068,7 +1068,7 @@ func (d *driver) copy(ctx context.Context, sourcePath string, destPath string) e
 		UploadId:        createResp.UploadId,
 		MultipartUpload: &s3.CompletedMultipartUpload{Parts: completedParts},
 	})
-	return err
+	return parseError(destPath, err)
 }
 
 // Delete recursively deletes all objects stored at "path" and its subpaths.
@@ -1679,7 +1679,7 @@ func (w *writer) Commit() error {
 			Body:       bytes.NewReader(nil),
 		})
 		if err != nil {
-			return err
+			return parseError(w.key, err)
 		}
 
 		completedUploadedParts = append(completedUploadedParts, &s3.CompletedPart{
