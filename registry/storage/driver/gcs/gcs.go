@@ -423,7 +423,7 @@ func (d *driver) putContent(ctx context.Context, obj *storage.ObjectHandle, cont
 	wc.ContentType = contentType
 	wc.ChunkSize = d.chunkSize
 
-	// NOTE(milosgajdos): Apparently it's possible to to upload 0-byte content to GCS.
+	// NOTE(milosgajdos): Apparently it's possible to upload 0-byte content to GCS.
 	// Setting MD5 on the Writer helps to prevent presisting that data.
 	// If set, the uploaded data is rejected if its MD5 hash does not match this field.
 	// See: https://pkg.go.dev/cloud.google.com/go/storage#ObjectAttrs
