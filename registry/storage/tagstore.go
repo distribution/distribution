@@ -62,6 +62,70 @@ func (ts *tagStore) All(ctx context.Context) ([]string, error) {
 	return tags, nil
 }
 
+// AllWithModifiedTime returns all tags with their last modification time,
+// sorted by modification time in descending order (newest first).
+// It retrieves the modification time of each tag's current link file in parallel.
+func (ts *tagStore) AllWithModifiedTime(ctx context.Context) ([]distribution.TagDescriptor, error) {
+	pathSpec, err := pathFor(manifestTagsPathSpec{
+		name: ts.repository.Named().Name(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	entries, err := ts.blobStore.driver.List(ctx, pathSpec)
+	if err != nil {
+		switch err.(type) {
+		case storagedriver.PathNotFoundError:
+			return nil, distribution.ErrRepositoryUnknown{Name: ts.repository.Named().Name()}
+		default:
+			return nil, err
+		}
+	}
+
+	descs := make([]distribution.TagDescriptor, len(entries))
+	for i, entry := range entries {
+		_, filename := path.Split(entry)
+		descs[i].Name = filename
+	}
+
+	g, ctx := errgroup.WithContext(ctx)
+	g.SetLimit(ts.concurrencyLimit)
+
+	for i := range descs {
+		i := i
+		g.Go(func() error {
+			currentPath, err := pathFor(manifestTagCurrentPathSpec{
+				name: ts.repository.Named().Name(),
+				tag:  descs[i].Name,
+			})
+			if err != nil {
+				return err
+			}
+			fi, err := ts.blobStore.driver.Stat(ctx, currentPath)
+			if err != nil {
+				switch err.(type) {
+				case storagedriver.PathNotFoundError:
+					return nil
+				}
+				return err
+			}
+			descs[i].ModifiedTime = fi.ModTime()
+			return nil
+		})
+	}
+
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+
+	sort.Slice(descs, func(i, j int) bool {
+		return descs[i].ModifiedTime.After(descs[j].ModifiedTime)
+	})
+
+	return descs, nil
+}
+
 // Tag tags the digest with the given tag, updating the store to point at
 // the current tag. The digest must point to a manifest.
 func (ts *tagStore) Tag(ctx context.Context, tag string, desc v1.Descriptor) error {
