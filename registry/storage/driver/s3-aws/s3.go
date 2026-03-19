@@ -137,6 +137,7 @@ func init() {
 	} {
 		validObjectACLs[objectACL] = struct{}{}
 	}
+	validObjectACLs[""] = struct{}{}
 
 	// Register this as the default s3 driver in addition to s3aws
 	factory.Register("s3", &s3DriverFactory{})
@@ -310,7 +311,7 @@ func FromParameters(ctx context.Context, parameters map[string]any) (*Driver, er
 		userAgent = ""
 	}
 
-	objectACL := s3.ObjectCannedACLPrivate
+	objectACL := ""
 	objectACLParam := parameters["objectacl"]
 	if objectACLParam != nil {
 		objectACLString, ok := objectACLParam.(string)
@@ -1255,6 +1256,9 @@ func (d *driver) getContentType() *string {
 }
 
 func (d *driver) getACL() *string {
+	if d.ObjectACL == "" {
+		return nil
+	}
 	return aws.String(d.ObjectACL)
 }
 

@@ -1117,6 +1117,58 @@ func TestListObjectsV2(t *testing.T) {
 	}
 }
 
+func TestValidObjectACLEmptyString(t *testing.T) {
+	if _, ok := validObjectACLs[""]; !ok {
+		t.Fatal("empty string should be a valid objectacl value")
+	}
+}
+
+func TestGetACL(t *testing.T) {
+	tests := []struct {
+		name      string
+		objectACL string
+		wantNil   bool
+		wantValue string
+	}{
+		{
+			name:      "empty string returns nil",
+			objectACL: "",
+			wantNil:   true,
+		},
+		{
+			name:      "private returns pointer",
+			objectACL: s3.ObjectCannedACLPrivate,
+			wantNil:   false,
+			wantValue: s3.ObjectCannedACLPrivate,
+		},
+		{
+			name:      "public-read returns pointer",
+			objectACL: s3.ObjectCannedACLPublicRead,
+			wantNil:   false,
+			wantValue: s3.ObjectCannedACLPublicRead,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := &driver{ObjectACL: tt.objectACL}
+			got := d.getACL()
+			if tt.wantNil {
+				if got != nil {
+					t.Fatalf("getACL() = %v, want nil", *got)
+				}
+				return
+			}
+			if got == nil {
+				t.Fatalf("getACL() = nil, want %q", tt.wantValue)
+			}
+			if *got != tt.wantValue {
+				t.Fatalf("getACL() = %q, want %q", *got, tt.wantValue)
+			}
+		})
+	}
+}
+
 func compareWalked(t *testing.T, expected, walked []string) {
 	if len(walked) != len(expected) {
 		t.Fatalf("Mismatch number of fileInfo walked %d expected %d; walked %s; expected %s;", len(walked), len(expected), walked, expected)
