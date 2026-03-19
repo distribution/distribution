@@ -210,6 +210,24 @@ func (DataPointFlags) EnumDescriptor() ([]byte, []int) {
 // storage, OR can be embedded by other protocols that transfer OTLP metrics
 // data but do not implement the OTLP protocol.
 //
+// MetricsData
+// └─── ResourceMetrics
+//   ├── Resource
+//   ├── SchemaURL
+//   └── ScopeMetrics
+//      ├── Scope
+//      ├── SchemaURL
+//      └── Metric
+//         ├── Name
+//         ├── Description
+//         ├── Unit
+//         └── data
+//            ├── Gauge
+//            ├── Sum
+//            ├── Histogram
+//            ├── ExponentialHistogram
+//            └── Summary
+//
 // The main difference between this message and collector protocol is that
 // in this message there will not be any "control" or "metadata" specific to
 // OTLP protocol.
@@ -280,7 +298,8 @@ type ResourceMetrics struct {
 	// A list of metrics that originate from a resource.
 	ScopeMetrics []*ScopeMetrics `protobuf:"bytes,2,rep,name=scope_metrics,json=scopeMetrics,proto3" json:"scope_metrics,omitempty"`
 	// The Schema URL, if known. This is the identifier of the Schema that the resource data
-	// is recorded in. To learn more about Schema URL see
+	// is recorded in. Notably, the last part of the URL path is the version number of the
+	// schema: http[s]://server[:port]/path/<version>. To learn more about Schema URL see
 	// https://opentelemetry.io/docs/specs/otel/schemas/#schema-url
 	// This schema_url applies to the data in the "resource" field. It does not apply
 	// to the data in the "scope_metrics" field which have their own schema_url field.
@@ -353,9 +372,11 @@ type ScopeMetrics struct {
 	// A list of metrics that originate from an instrumentation library.
 	Metrics []*Metric `protobuf:"bytes,2,rep,name=metrics,proto3" json:"metrics,omitempty"`
 	// The Schema URL, if known. This is the identifier of the Schema that the metric data
-	// is recorded in. To learn more about Schema URL see
+	// is recorded in. Notably, the last part of the URL path is the version number of the
+	// schema: http[s]://server[:port]/path/<version>. To learn more about Schema URL see
 	// https://opentelemetry.io/docs/specs/otel/schemas/#schema-url
-	// This schema_url applies to all metrics in the "metrics" field.
+	// This schema_url applies to the data in the "scope" field and all metrics in the
+	// "metrics" field.
 	SchemaUrl string `protobuf:"bytes,3,opt,name=schema_url,json=schemaUrl,proto3" json:"schema_url,omitempty"`
 }
 
@@ -417,7 +438,6 @@ func (x *ScopeMetrics) GetSchemaUrl() string {
 //
 //   https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/data-model.md
 //
-//
 // The data model and relation between entities is shown in the
 // diagram below. Here, "DataPoint" is the term used to refer to any
 // one of the specific data point value types, and "points" is the term used
@@ -429,7 +449,7 @@ func (x *ScopeMetrics) GetSchemaUrl() string {
 // - DataPoint contains timestamps, attributes, and one of the possible value type
 //   fields.
 //
-//     Metric
+//    Metric
 //  +------------+
 //  |name        |
 //  |description |
@@ -502,12 +522,12 @@ type Metric struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// name of the metric.
+	// The name of the metric.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	// description of the metric, which can be used in documentation.
+	// A description of the metric, which can be used in documentation.
 	Description string `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
-	// unit in which the metric value is reported. Follows the format
-	// described by http://unitsofmeasure.org/ucum.html.
+	// The unit in which the metric value is reported. Follows the format
+	// described by https://unitsofmeasure.org/ucum.html.
 	Unit string `protobuf:"bytes,3,opt,name=unit,proto3" json:"unit,omitempty"`
 	// Data determines the aggregation type (if any) of the metric, what is the
 	// reported value type for the data points, as well as the relatationship to
@@ -527,6 +547,7 @@ type Metric struct {
 	// for lossless roundtrip translation to / from another data model.
 	// Attribute keys MUST be unique (it is not allowed to have more than one
 	// attribute with the same key).
+	// The behavior of software that receives duplicated keys can be unpredictable.
 	Metadata []*v11.KeyValue `protobuf:"bytes,12,rep,name=metadata,proto3" json:"metadata,omitempty"`
 }
 
@@ -680,6 +701,8 @@ type Gauge struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// The time series data points.
+	// Note: Multiple time series may be included (same timestamp, different attributes).
 	DataPoints []*NumberDataPoint `protobuf:"bytes,1,rep,name=data_points,json=dataPoints,proto3" json:"data_points,omitempty"`
 }
 
@@ -729,11 +752,13 @@ type Sum struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// The time series data points.
+	// Note: Multiple time series may be included (same timestamp, different attributes).
 	DataPoints []*NumberDataPoint `protobuf:"bytes,1,rep,name=data_points,json=dataPoints,proto3" json:"data_points,omitempty"`
 	// aggregation_temporality describes if the aggregator reports delta changes
 	// since last report time, or cumulative changes since a fixed start time.
 	AggregationTemporality AggregationTemporality `protobuf:"varint,2,opt,name=aggregation_temporality,json=aggregationTemporality,proto3,enum=opentelemetry.proto.metrics.v1.AggregationTemporality" json:"aggregation_temporality,omitempty"`
-	// If "true" means that the sum is monotonic.
+	// Represents whether the sum is monotonic.
 	IsMonotonic bool `protobuf:"varint,3,opt,name=is_monotonic,json=isMonotonic,proto3" json:"is_monotonic,omitempty"`
 }
 
@@ -797,6 +822,8 @@ type Histogram struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// The time series data points.
+	// Note: Multiple time series may be included (same timestamp, different attributes).
 	DataPoints []*HistogramDataPoint `protobuf:"bytes,1,rep,name=data_points,json=dataPoints,proto3" json:"data_points,omitempty"`
 	// aggregation_temporality describes if the aggregator reports delta changes
 	// since last report time, or cumulative changes since a fixed start time.
@@ -856,6 +883,8 @@ type ExponentialHistogram struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// The time series data points.
+	// Note: Multiple time series may be included (same timestamp, different attributes).
 	DataPoints []*ExponentialHistogramDataPoint `protobuf:"bytes,1,rep,name=data_points,json=dataPoints,proto3" json:"data_points,omitempty"`
 	// aggregation_temporality describes if the aggregator reports delta changes
 	// since last report time, or cumulative changes since a fixed start time.
@@ -910,15 +939,20 @@ func (x *ExponentialHistogram) GetAggregationTemporality() AggregationTemporalit
 
 // Summary metric data are used to convey quantile summaries,
 // a Prometheus (see: https://prometheus.io/docs/concepts/metric_types/#summary)
-// and OpenMetrics (see: https://github.com/OpenObservability/OpenMetrics/blob/4dbf6075567ab43296eed941037c12951faafb92/protos/prometheus.proto#L45)
+// and OpenMetrics (see: https://github.com/prometheus/OpenMetrics/blob/4dbf6075567ab43296eed941037c12951faafb92/protos/prometheus.proto#L45)
 // data type. These data points cannot always be merged in a meaningful way.
 // While they can be useful in some applications, histogram data points are
 // recommended for new applications.
+// Summary metrics do not have an aggregation temporality field. This is
+// because the count and sum fields of a SummaryDataPoint are assumed to be
+// cumulative values.
 type Summary struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// The time series data points.
+	// Note: Multiple time series may be included (same timestamp, different attributes).
 	DataPoints []*SummaryDataPoint `protobuf:"bytes,1,rep,name=data_points,json=dataPoints,proto3" json:"data_points,omitempty"`
 }
 
@@ -972,6 +1006,7 @@ type NumberDataPoint struct {
 	// where this point belongs. The list may be empty (may contain 0 elements).
 	// Attribute keys MUST be unique (it is not allowed to have more than one
 	// attribute with the same key).
+	// The behavior of software that receives duplicated keys can be unpredictable.
 	Attributes []*v11.KeyValue `protobuf:"bytes,7,rep,name=attributes,proto3" json:"attributes,omitempty"`
 	// StartTimeUnixNano is optional but strongly encouraged, see the
 	// the detailed comments above Metric.
@@ -1122,6 +1157,7 @@ type HistogramDataPoint struct {
 	// where this point belongs. The list may be empty (may contain 0 elements).
 	// Attribute keys MUST be unique (it is not allowed to have more than one
 	// attribute with the same key).
+	// The behavior of software that receives duplicated keys can be unpredictable.
 	Attributes []*v11.KeyValue `protobuf:"bytes,9,rep,name=attributes,proto3" json:"attributes,omitempty"`
 	// StartTimeUnixNano is optional but strongly encouraged, see the
 	// the detailed comments above Metric.
@@ -1145,7 +1181,7 @@ type HistogramDataPoint struct {
 	// events, and is assumed to be monotonic over the values of these events.
 	// Negative events *can* be recorded, but sum should not be filled out when
 	// doing so.  This is specifically to enforce compatibility w/ OpenMetrics,
-	// see: https://github.com/OpenObservability/OpenMetrics/blob/main/specification/OpenMetrics.md#histogram
+	// see: https://github.com/prometheus/OpenMetrics/blob/v1.0.0/specification/OpenMetrics.md#histogram
 	Sum *float64 `protobuf:"fixed64,5,opt,name=sum,proto3,oneof" json:"sum,omitempty"`
 	// bucket_counts is an optional field contains the count values of histogram
 	// for each bucket.
@@ -1153,7 +1189,9 @@ type HistogramDataPoint struct {
 	// The sum of the bucket_counts must equal the value in the count field.
 	//
 	// The number of elements in bucket_counts array must be by one greater than
-	// the number of elements in explicit_bounds array.
+	// the number of elements in explicit_bounds array. The exception to this rule
+	// is when the length of bucket_counts is 0, then the length of explicit_bounds
+	// must also be 0.
 	BucketCounts []uint64 `protobuf:"fixed64,6,rep,packed,name=bucket_counts,json=bucketCounts,proto3" json:"bucket_counts,omitempty"`
 	// explicit_bounds specifies buckets with explicitly defined bounds for values.
 	//
@@ -1168,6 +1206,9 @@ type HistogramDataPoint struct {
 	// Histogram buckets are inclusive of their upper boundary, except the last
 	// bucket where the boundary is at infinity. This format is intentionally
 	// compatible with the OpenMetrics histogram definition.
+	//
+	// If bucket_counts length is 0 then explicit_bounds length must also be 0,
+	// otherwise the data point is invalid.
 	ExplicitBounds []float64 `protobuf:"fixed64,7,rep,packed,name=explicit_bounds,json=explicitBounds,proto3" json:"explicit_bounds,omitempty"`
 	// (Optional) List of exemplars collected from
 	// measurements that were used to form the data point
@@ -1304,6 +1345,7 @@ type ExponentialHistogramDataPoint struct {
 	// where this point belongs. The list may be empty (may contain 0 elements).
 	// Attribute keys MUST be unique (it is not allowed to have more than one
 	// attribute with the same key).
+	// The behavior of software that receives duplicated keys can be unpredictable.
 	Attributes []*v11.KeyValue `protobuf:"bytes,1,rep,name=attributes,proto3" json:"attributes,omitempty"`
 	// StartTimeUnixNano is optional but strongly encouraged, see the
 	// the detailed comments above Metric.
@@ -1316,18 +1358,18 @@ type ExponentialHistogramDataPoint struct {
 	// Value is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January
 	// 1970.
 	TimeUnixNano uint64 `protobuf:"fixed64,3,opt,name=time_unix_nano,json=timeUnixNano,proto3" json:"time_unix_nano,omitempty"`
-	// count is the number of values in the population. Must be
+	// The number of values in the population. Must be
 	// non-negative. This value must be equal to the sum of the "bucket_counts"
 	// values in the positive and negative Buckets plus the "zero_count" field.
 	Count uint64 `protobuf:"fixed64,4,opt,name=count,proto3" json:"count,omitempty"`
-	// sum of the values in the population. If count is zero then this field
+	// The sum of the values in the population. If count is zero then this field
 	// must be zero.
 	//
 	// Note: Sum should only be filled out when measuring non-negative discrete
 	// events, and is assumed to be monotonic over the values of these events.
 	// Negative events *can* be recorded, but sum should not be filled out when
 	// doing so.  This is specifically to enforce compatibility w/ OpenMetrics,
-	// see: https://github.com/OpenObservability/OpenMetrics/blob/main/specification/OpenMetrics.md#histogram
+	// see: https://github.com/prometheus/OpenMetrics/blob/v1.0.0/specification/OpenMetrics.md#histogram
 	Sum *float64 `protobuf:"fixed64,5,opt,name=sum,proto3,oneof" json:"sum,omitempty"`
 	// scale describes the resolution of the histogram.  Boundaries are
 	// located at powers of the base, where:
@@ -1345,7 +1387,7 @@ type ExponentialHistogramDataPoint struct {
 	// scale is not restricted by the protocol, as the permissible
 	// values depend on the range of the data.
 	Scale int32 `protobuf:"zigzag32,6,opt,name=scale,proto3" json:"scale,omitempty"`
-	// zero_count is the count of values that are either exactly zero or
+	// The count of values that are either exactly zero or
 	// within the region considered zero by the instrumentation at the
 	// tolerated degree of precision.  This bucket stores values that
 	// cannot be expressed using the standard exponential formula as
@@ -1364,9 +1406,9 @@ type ExponentialHistogramDataPoint struct {
 	// (Optional) List of exemplars collected from
 	// measurements that were used to form the data point
 	Exemplars []*Exemplar `protobuf:"bytes,11,rep,name=exemplars,proto3" json:"exemplars,omitempty"`
-	// min is the minimum value over (start_time, end_time].
+	// The minimum value over (start_time, end_time].
 	Min *float64 `protobuf:"fixed64,12,opt,name=min,proto3,oneof" json:"min,omitempty"`
-	// max is the maximum value over (start_time, end_time].
+	// The maximum value over (start_time, end_time].
 	Max *float64 `protobuf:"fixed64,13,opt,name=max,proto3,oneof" json:"max,omitempty"`
 	// ZeroThreshold may be optionally set to convey the width of the zero
 	// region. Where the zero region is defined as the closed interval
@@ -1508,7 +1550,8 @@ func (x *ExponentialHistogramDataPoint) GetZeroThreshold() float64 {
 }
 
 // SummaryDataPoint is a single data point in a timeseries that describes the
-// time-varying values of a Summary metric.
+// time-varying values of a Summary metric. The count and sum fields represent
+// cumulative values.
 type SummaryDataPoint struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1518,6 +1561,7 @@ type SummaryDataPoint struct {
 	// where this point belongs. The list may be empty (may contain 0 elements).
 	// Attribute keys MUST be unique (it is not allowed to have more than one
 	// attribute with the same key).
+	// The behavior of software that receives duplicated keys can be unpredictable.
 	Attributes []*v11.KeyValue `protobuf:"bytes,7,rep,name=attributes,proto3" json:"attributes,omitempty"`
 	// StartTimeUnixNano is optional but strongly encouraged, see the
 	// the detailed comments above Metric.
@@ -1539,7 +1583,7 @@ type SummaryDataPoint struct {
 	// events, and is assumed to be monotonic over the values of these events.
 	// Negative events *can* be recorded, but sum should not be filled out when
 	// doing so.  This is specifically to enforce compatibility w/ OpenMetrics,
-	// see: https://github.com/OpenObservability/OpenMetrics/blob/main/specification/OpenMetrics.md#summary
+	// see: https://github.com/prometheus/OpenMetrics/blob/v1.0.0/specification/OpenMetrics.md#summary
 	Sum float64 `protobuf:"fixed64,5,opt,name=sum,proto3" json:"sum,omitempty"`
 	// (Optional) list of values at different quantiles of the distribution calculated
 	// from the current snapshot. The quantiles must be strictly increasing.
@@ -1770,11 +1814,11 @@ type ExponentialHistogramDataPoint_Buckets struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// Offset is the bucket index of the first entry in the bucket_counts array.
+	// The bucket index of the first entry in the bucket_counts array.
 	//
 	// Note: This uses a varint encoding as a simple form of compression.
 	Offset int32 `protobuf:"zigzag32,1,opt,name=offset,proto3" json:"offset,omitempty"`
-	// bucket_counts is an array of count values, where bucket_counts[i] carries
+	// An array of count values, where bucket_counts[i] carries
 	// the count of the bucket at index (offset+i). bucket_counts[i] is the count
 	// of values greater than base^(offset+i) and less than or equal to
 	// base^(offset+i+1).

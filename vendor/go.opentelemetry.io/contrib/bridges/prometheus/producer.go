@@ -13,7 +13,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
-
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -231,7 +230,7 @@ func convertExponentialBuckets(bucketSpans []*dto.BucketSpan, deltas []int64) me
 			// Increase the count index by the Offset to insert Offset zeroes
 			countIndex += bs.GetOffset()
 		}
-		for j := uint32(0); j < bs.GetLength(); j++ {
+		for range bs.GetLength() {
 			// Convert deltas to the cumulative number of observations
 			count += deltas[deltaIndex]
 			deltaIndex++
@@ -296,6 +295,7 @@ func convertBuckets(buckets []*dto.Bucket, sampleCount uint64) ([]float64, []uin
 		bucketCounts = make([]uint64, len(buckets)+1)
 	}
 	exemplars := make([]metricdata.Exemplar[float64], 0)
+	var previousCount uint64
 	for i, bucket := range buckets {
 		// The last bound may be the +Inf bucket, which is implied in OTel, but
 		// is explicit in Prometheus. Skip the last boundary if it is the +Inf
@@ -303,7 +303,7 @@ func convertBuckets(buckets []*dto.Bucket, sampleCount uint64) ([]float64, []uin
 		if bound := bucket.GetUpperBound(); !math.IsInf(bound, +1) {
 			bounds[i] = bound
 		}
-		bucketCounts[i] = bucket.GetCumulativeCount()
+		previousCount, bucketCounts[i] = bucket.GetCumulativeCount(), bucket.GetCumulativeCount()-previousCount
 		if ex := bucket.GetExemplar(); ex != nil {
 			exemplars = append(exemplars, convertExemplar(ex))
 		}
@@ -311,7 +311,7 @@ func convertBuckets(buckets []*dto.Bucket, sampleCount uint64) ([]float64, []uin
 	if !hasInf {
 		// The Inf bucket was missing, so set the last bucket counts to the
 		// overall count
-		bucketCounts[len(bucketCounts)-1] = sampleCount
+		bucketCounts[len(bucketCounts)-1] = sampleCount - previousCount
 	}
 	return bounds, bucketCounts, exemplars
 }
@@ -366,11 +366,12 @@ func convertExemplar(exemplar *dto.Exemplar) metricdata.Exemplar[float64] {
 	var traceID, spanID []byte
 	// find the trace ID and span ID in attributes, if it exists
 	for _, label := range exemplar.GetLabel() {
-		if label.GetName() == traceIDLabel {
+		switch label.GetName() {
+		case traceIDLabel:
 			traceID = []byte(label.GetValue())
-		} else if label.GetName() == spanIDLabel {
+		case spanIDLabel:
 			spanID = []byte(label.GetValue())
-		} else {
+		default:
 			attrs = append(attrs, attribute.String(label.GetName(), label.GetValue()))
 		}
 	}

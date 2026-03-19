@@ -21,6 +21,7 @@ import (
 
 	"cloud.google.com/go/storage/experimental"
 	storageinternal "cloud.google.com/go/storage/internal"
+	"go.opentelemetry.io/otel/sdk/metric"
 	"google.golang.org/api/option"
 	"google.golang.org/api/option/internaloption"
 )
@@ -35,8 +36,11 @@ const (
 )
 
 func init() {
-	// initialize experimental option.
+	// initialize experimental options
+	storageinternal.WithMetricExporter = withMetricExporter
+	storageinternal.WithMetricInterval = withMetricInterval
 	storageinternal.WithReadStallTimeout = withReadStallTimeout
+	storageinternal.WithGRPCBidiReads = withGRPCBidiReads
 }
 
 // getDynamicReadReqIncreaseRateFromEnv returns the value set in the env variable.
@@ -69,13 +73,16 @@ func getDynamicReadReqInitialTimeoutSecFromEnv(defaultVal time.Duration) time.Du
 	return val
 }
 
-// storageConfig contains the Storage client option configuration that can be
 // set through storageClientOptions.
 type storageConfig struct {
 	useJSONforReads        bool
 	readAPIWasSet          bool
 	disableClientMetrics   bool
+	metricExporter         *metric.Exporter
+	metricInterval         time.Duration
+	manualReader           *metric.ManualReader
 	readStallTimeoutConfig *experimental.ReadStallTimeoutConfig
+	grpcBidiReads          bool
 }
 
 // newStorageConfig generates a new storageConfig with all the given
@@ -160,6 +167,48 @@ func (w *withDisabledClientMetrics) ApplyStorageOpt(c *storageConfig) {
 	c.disableClientMetrics = w.disabledClientMetrics
 }
 
+type withMeterOptions struct {
+	internaloption.EmbeddableAdapter
+	// set sampling interval
+	interval time.Duration
+}
+
+func withMetricInterval(interval time.Duration) option.ClientOption {
+	return &withMeterOptions{interval: interval}
+}
+
+func (w *withMeterOptions) ApplyStorageOpt(c *storageConfig) {
+	c.metricInterval = w.interval
+}
+
+type withMetricExporterConfig struct {
+	internaloption.EmbeddableAdapter
+	// exporter override
+	metricExporter *metric.Exporter
+}
+
+func withMetricExporter(ex *metric.Exporter) option.ClientOption {
+	return &withMetricExporterConfig{metricExporter: ex}
+}
+
+func (w *withMetricExporterConfig) ApplyStorageOpt(c *storageConfig) {
+	c.metricExporter = w.metricExporter
+}
+
+type withTestMetricReaderConfig struct {
+	internaloption.EmbeddableAdapter
+	// reader override
+	metricReader *metric.ManualReader
+}
+
+func withTestMetricReader(ex *metric.ManualReader) option.ClientOption {
+	return &withTestMetricReaderConfig{metricReader: ex}
+}
+
+func (w *withTestMetricReaderConfig) ApplyStorageOpt(c *storageConfig) {
+	c.manualReader = w.metricReader
+}
+
 // WithReadStallTimeout is an option that may be passed to [NewClient].
 // It enables the client to retry the stalled read request, happens as part of
 // storage.Reader creation. As the name suggest, timeout is adjusted dynamically
@@ -192,4 +241,16 @@ type withReadStallTimeoutConfig struct {
 
 func (wrstc *withReadStallTimeoutConfig) ApplyStorageOpt(config *storageConfig) {
 	config.readStallTimeoutConfig = wrstc.readStallTimeoutConfig
+}
+
+func withGRPCBidiReads() option.ClientOption {
+	return &withGRPCBidiReadsConfig{}
+}
+
+type withGRPCBidiReadsConfig struct {
+	internaloption.EmbeddableAdapter
+}
+
+func (w *withGRPCBidiReadsConfig) ApplyStorageOpt(config *storageConfig) {
+	config.grpcBidiReads = true
 }
