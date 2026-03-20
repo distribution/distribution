@@ -1,31 +1,28 @@
 # Experimental Features
 
-The Logs SDK contains features that have not yet stabilized.
-These features are added to the OpenTelemetry Go Logs SDK prior to stabilization so that users can start experimenting with them and provide feedback.
+The Logs SDK contains features that have not yet stabilized in the OpenTelemetry specification.
+These features are added to the OpenTelemetry Go Logs SDK prior to stabilization in the specification so that users can start experimenting with them and provide feedback.
 
 These feature may change in backwards incompatible ways as feedback is applied.
 See the [Compatibility and Stability](#compatibility-and-stability) section for more information.
 
 ## Features
 
-- [Filter Processors](#filter-processor)
+- [Observability](#observability)
 
-### Filter Processor
+### Observability
 
-Users of logging libraries often want to know if a log `Record` will be processed or dropped before they perform complex operations to construct the `Record`.
-The [`Logger`] in the Logs Bridge API provides the `Enabled` method for just this use-case.
-In order for the Logs Bridge SDK to effectively implement this API, it needs to be known if the registered [`Processor`]s are enabled for the `Record` within a context.
-A [`Processor`] that knows, and can identify, what `Record` it will process or drop when it is passed to `OnEmit` can communicate this to the SDK `Logger` by implementing the `FilterProcessor`.
+The Logs SDK can be configured to provide observability about itself using OpenTelemetry metrics.
 
-By default, the SDK `Logger.Enabled` will return true when called.
-Only if all the registered [`Processor`]s implement `FilterProcessor` and they all return `false` will `Logger.Enabled` return `false`.
+To opt-in, set the environment variable `OTEL_GO_X_OBSERVABILITY` to `true`.
 
-See the [`minsev`] [`Processor`] for an example use-case.
-It is used to filter `Record`s out that a have a `Severity` below a threshold.
+When enabled, the SDK will create the following metrics using the global `MeterProvider`:
 
-[`Logger`]: https://pkg.go.dev/go.opentelemetry.io/otel/log#Logger
-[`Processor`]: https://pkg.go.dev/go.opentelemetry.io/otel/sdk/log#Processor
-[`minsev`]: https://pkg.go.dev/go.opentelemetry.io/contrib/processors/minsev
+- `otel.sdk.log.created`
+
+Please see the [Semantic conventions for OpenTelemetry SDK metrics] documentation for more details on these metrics.
+
+[Semantic conventions for OpenTelemetry SDK metrics]: https://github.com/open-telemetry/semantic-conventions/blob/v1.36.0/docs/otel/sdk-metrics.md
 
 ## Compatibility and Stability
 
@@ -33,3 +30,5 @@ Experimental features do not fall within the scope of the OpenTelemetry Go versi
 These features may be removed or modified in successive version releases, including patch versions.
 
 When an experimental feature is promoted to a stable feature, a migration path will be included in the changelog entry of the release.
+There is no guarantee that any environment variable feature flags that enabled the experimental feature will be supported by the stable version.
+If they are supported, they may be accompanied with a deprecation notice stating a timeline for the removal of that support.
