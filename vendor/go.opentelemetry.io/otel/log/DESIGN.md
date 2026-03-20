@@ -1,16 +1,16 @@
-# Logs Bridge API
+# Logs API
 
 ## Abstract
 
 `go.opentelemetry.io/otel/log` provides
-[Logs Bridge API](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/).
+[Logs API](https://opentelemetry.io/docs/specs/otel/logs/api/).
 
 The prototype was created in
 [#4725](https://github.com/open-telemetry/opentelemetry-go/pull/4725).
 
 ## Background
 
-The key challenge is to create a performant API compliant with the [specification](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/)
+The key challenge is to create a performant API compliant with the [specification](https://opentelemetry.io/docs/specs/otel/logs/api/)
 with an intuitive and user friendly design.
 Performance is seen as one of the most important characteristics of logging libraries in Go.
 
@@ -40,7 +40,7 @@ Rejected alternative:
 
 ### LoggerProvider
 
-The [`LoggerProvider` abstraction](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#loggerprovider)
+The [`LoggerProvider` abstraction](https://opentelemetry.io/docs/specs/otel/logs/api/#loggerprovider)
 is defined as `LoggerProvider` interface in [provider.go](provider.go).
 
 The specification may add new operations to `LoggerProvider`.
@@ -51,7 +51,7 @@ This approach is already used in Trace API and Metrics API.
 
 #### LoggerProvider.Logger
 
-The `Logger` method implements the [`Get a Logger` operation](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#get-a-logger).
+The `Logger` method implements the [`Get a Logger` operation](https://opentelemetry.io/docs/specs/otel/logs/api/#get-a-logger).
 
 The required `name` parameter is accepted as a `string` method argument.
 
@@ -59,7 +59,7 @@ The `LoggerOption` options are defined to support optional parameters.
 
 Implementation requirements:
 
-- The [specification requires](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#concurrency-requirements)
+- The [specification requires](https://opentelemetry.io/docs/specs/otel/logs/api/#concurrency-requirements)
   the method to be safe to be called concurrently.
 
 - The method should use some default name if the passed name is empty
@@ -78,7 +78,7 @@ Rejected alternative:
 
 ### Logger
 
-The [`Logger` abstraction](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#logger)
+The [`Logger` abstraction](https://opentelemetry.io/docs/specs/otel/logs/api/#logger)
 is defined as `Logger` interface in [logger.go](logger.go).
 
 The specification may add new operations to `Logger`.
@@ -89,14 +89,14 @@ This approach is already used in Trace API and Metrics API.
 
 ### Logger.Emit
 
-The `Emit` method implements the [`Emit a LogRecord` operation](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#emit-a-logrecord).
+The `Emit` method implements the [`Emit a LogRecord` operation](https://opentelemetry.io/docs/specs/otel/logs/api/#emit-a-logrecord).
 
 [`Context` associated with the `LogRecord`](https://opentelemetry.io/docs/specs/otel/context/)
 is accepted as a `context.Context` method argument.
 
 Calls to `Emit` are supposed to be on the hot path.
 Therefore, in order to reduce the number of heap allocations,
-the [`LogRecord` abstraction](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#emit-a-logrecord),
+the [`LogRecord` abstraction](https://opentelemetry.io/docs/specs/otel/logs/api/#emit-a-logrecord),
 is defined as `Record` struct  in [record.go](record.go).
 
 [`Timestamp`](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-timestamp)
@@ -113,6 +113,14 @@ is accessed using following methods:
 ```go
 func (r *Record) ObservedTimestamp() time.Time
 func (r *Record) SetObservedTimestamp(t time.Time)
+```
+
+[`EventName`](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-eventname)
+is accessed using following methods:
+
+```go
+func (r *Record) EventName() string
+func (r *Record) SetEventName(s string)
 ```
 
 [`SeverityNumber`](https://opentelemetry.io/docs/specs/otel/logs/data-model/#field-severitynumber)
@@ -222,13 +230,13 @@ after the call (even when the documentation says that the caller must not do it)
 
 Implementation requirements:
 
-- The [specification requires](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#concurrency-requirements)
+- The [specification requires](https://opentelemetry.io/docs/specs/otel/logs/api/#concurrency-requirements)
   the method to be safe to be called concurrently.
 
 - The method must not interrupt the record processing if the context is canceled
   per ["ignoring context cancellation" guideline](../CONTRIBUTING.md#ignoring-context-cancellation).
 
-- The [specification requires](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#emit-a-logrecord)
+- The [specification requires](https://opentelemetry.io/docs/specs/otel/logs/api/#emit-a-logrecord)
   use the current time as observed timestamp if the passed is empty.
 
 - The method should handle the trace context passed via `ctx` argument in order to meet the
@@ -253,7 +261,7 @@ Rejected alternatives:
 
 ### Logger.Enabled
 
-The `Enabled` method implements the [`Enabled` operation](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/#enabled).
+The `Enabled` method implements the [`Enabled` operation](https://opentelemetry.io/docs/specs/otel/logs/api/#enabled).
 
 [`Context` associated with the `LogRecord`](https://opentelemetry.io/docs/specs/otel/context/)
 is accepted as a `context.Context` method argument.
@@ -264,14 +272,14 @@ allocations and make it possible to handle new arguments, `Enabled` accepts
 a `EnabledParameters` struct, defined in [logger.go](logger.go), as the second
 method argument.
 
-The `EnabledParameters` getters are returning values using the `(value, ok)`
-idiom in order to indicate if the values were actually set by the caller or if
-there are unspecified.
+The `EnabledParameters` uses fields, instead of getters and setters, to allow
+simpler usage which allows configuring the `EnabledParameters` in the same line
+where `Enabled` is called.
 
 ### noop package
 
 The `go.opentelemetry.io/otel/log/noop` package provides
-[Logs Bridge API No-Op Implementation](https://opentelemetry.io/docs/specs/otel/logs/noop/).
+[Logs API No-Op Implementation](https://opentelemetry.io/docs/specs/otel/logs/noop/).
 
 ### Trace context correlation
 
@@ -319,7 +327,7 @@ nor any other logging library.
 
 The API needs to evolve orthogonally to `slog`.
 
-`slog` is not compliant with the [Logs Bridge API](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/).
+`slog` is not compliant with the [Logs API](https://opentelemetry.io/docs/specs/otel/logs/api/).
 and we cannot expect the Go team to make `slog` compliant with it.
 
 The interoperability can be achieved using [a log bridge](https://opentelemetry.io/docs/specs/otel/glossary/#log-appender--bridge).
@@ -423,10 +431,12 @@ One of the proposals[^6] was to have `Record` as a simple struct:
 type Record struct {
 	Timestamp         time.Time
 	ObservedTimestamp time.Time
+	EventName         string
 	Severity          Severity
 	SeverityText      string
 	Body              Value
 	Attributes        []KeyValue
+}
 ```
 
 The bridge implementations could use [`sync.Pool`](https://pkg.go.dev/sync#Pool)
@@ -508,7 +518,7 @@ It should be more user friendly to have them separated.
 Especially when having getter and setter methods, setting one value
 when the other is already set would be unpleasant.
 
-## Reuse attribute package
+### Reuse attribute package
 
 It was tempting to reuse the existing
 [https://pkg.go.dev/go.opentelemetry.io/otel/attribute] package
@@ -523,7 +533,7 @@ has anything in common with a common attribute value.
 Therefore, we define new types representing the abstract types defined
 in the [Logs Data Model](https://opentelemetry.io/docs/specs/otel/logs/data-model/#definitions-used-in-this-document).
 
-## Mix receiver types for Record
+### Mix receiver types for Record
 
 Methods of [`slog.Record`](https://pkg.go.dev/log/slog#Record)
 have different receiver types.
@@ -577,17 +587,9 @@ we decided to use pointer receivers for all `Record` methods.
 
 ### Add XYZ method to Logger
 
-The `Logger` does not have methods like `Enabled`, `SetSeverity`, etc.
-as the Bridge API needs to follow (be compliant with)
-the [specification](https://opentelemetry.io/docs/specs/otel/logs/bridge-api/)
-
-Moreover, the Bridge API is intended to be used to implement bridges.
-Applications should not use it directly. The applications should use logging packages
-such as [`slog`](https://pkg.go.dev/log/slog),
-[`logrus`](https://pkg.go.dev/github.com/sirupsen/logrus),
-[`zap`](https://pkg.go.dev/go.uber.org/zap),
-[`zerolog`](https://pkg.go.dev/github.com/rs/zerolog),
-[`logr`](https://pkg.go.dev/github.com/go-logr/logr).
+The `Logger` does not have methods like `SetSeverity`, etc.
+as the Logs API needs to follow (be compliant with)
+the [specification](https://opentelemetry.io/docs/specs/otel/logs/api/)
 
 ### Rename KeyValue to Attr
 
@@ -597,16 +599,17 @@ the OpenTelemetry parlance.
 
 During the discussion we agreed to keep the `KeyValue` name.
 
-The type is used in two semantics:
+The type is used in multiple semantics:
 
-- as a log attribute
-- as a map item
+- as a log attribute,
+- as a map item,
+- as a log record Body.
 
 As for map item semantics, this type is a key-value pair, not an attribute.
 Naming the type as `Attr` would convey semantical meaning
 that would not be correct for a map.
 
-We expect that most of the Bridge API users will be OpenTelemetry contributors.
+We expect that most of the Logs API users will be OpenTelemetry contributors.
 We plan to implement bridges for the most popular logging libraries ourselves.
 Given we will all have the context needed to disambiguate these overlapping
 names, developers' confusion should not be an issue.
@@ -615,10 +618,8 @@ For bridges not developed by us,
 developers will likely look at our existing bridges for inspiration.
 Our correct use of these types will be a reference to them.
 
-At last, we could consider a design defining both types: `KeyValue` and `Attr`.
-However, in this approach we would need have factory functions for both types.
-It would make the API surface unnecessarily big,
-and we may even have problems naming the functions.
+At last, we provide `ValueFromAttribute` and `KeyValueFromAttribute`
+to offer reuse of `attribute.Value` and `attribute.KeyValue`.
 
 [^1]: [Handle structured body and attributes](https://github.com/pellared/opentelemetry-go/pull/7)
 [^2]: Jonathan Amsterdam, [The Go Blog: Structured Logging with slog](https://go.dev/blog/slog)

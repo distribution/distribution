@@ -80,6 +80,17 @@ func (m *TlsParameters) validate(all bool) error {
 		errors = append(errors, err)
 	}
 
+	if len(m.GetCompliancePolicies()) > 1 {
+		err := TlsParametersValidationError{
+			field:  "CompliancePolicies",
+			reason: "value must contain no more than 1 item(s)",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
 	if len(errors) > 0 {
 		return TlsParametersMultiError(errors)
 	}
@@ -826,7 +837,16 @@ func (m *CertificateProviderPluginInstance) validate(all bool) error {
 
 	var errors []error
 
-	// no validation rules for InstanceName
+	if utf8.RuneCountInString(m.GetInstanceName()) < 1 {
+		err := CertificateProviderPluginInstanceValidationError{
+			field:  "InstanceName",
+			reason: "value length must be at least 1 runes",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
 
 	// no validation rules for CertificateName
 
