@@ -42,7 +42,7 @@ const expectedManifestSerialization = `{
 }`
 
 var (
-	emptyJsonDescriptor = distribution.Descriptor{
+	emptyJSONDescriptor = distribution.Descriptor{
 		MediaType: v1.DescriptorEmptyJSON.MediaType,
 		Size:      v1.DescriptorEmptyJSON.Size,
 		Digest:    v1.DescriptorEmptyJSON.Digest,
@@ -331,7 +331,7 @@ func TestArtifactManifest(t *testing.T) {
 					SchemaVersion: 2,
 				},
 				ArtifactType: "application/vnd.example.catgif",
-				Config:       emptyJsonDescriptor,
+				Config:       emptyJSONDescriptor,
 				Layers: []distribution.Descriptor{
 					{
 						MediaType: "image/gif",
@@ -348,7 +348,7 @@ func TestArtifactManifest(t *testing.T) {
 				Versioned: specs.Versioned{
 					SchemaVersion: 2,
 				},
-				Config: emptyJsonDescriptor, // This MUST have an artifactType
+				Config: emptyJSONDescriptor, // This MUST have an artifactType
 				Layers: []distribution.Descriptor{
 					{
 						MediaType: "image/gif",
@@ -365,9 +365,9 @@ func TestArtifactManifest(t *testing.T) {
 					SchemaVersion: 2.,
 				},
 				ArtifactType: "application/vnd.example.comment",
-				Config:       emptyJsonDescriptor,
+				Config:       emptyJSONDescriptor,
 				Layers: []distribution.Descriptor{
-					emptyJsonDescriptor,
+					emptyJSONDescriptor,
 				},
 				Annotations: map[string]string{
 					"com.example.data": "payload",
@@ -382,9 +382,9 @@ func TestArtifactManifest(t *testing.T) {
 					SchemaVersion: 2,
 				},
 				ArtifactType: "application/vnd.example.comment",
-				Config:       emptyJsonDescriptor,
+				Config:       emptyJSONDescriptor,
 				Layers: []distribution.Descriptor{
-					emptyJsonDescriptor,
+					emptyJSONDescriptor,
 				},
 				Subject: &distribution.Descriptor{
 					MediaType: v1.MediaTypeImageManifest,
@@ -404,9 +404,9 @@ func TestArtifactManifest(t *testing.T) {
 					SchemaVersion: 2,
 				},
 				ArtifactType: "application/vnd.example.comment",
-				Config:       emptyJsonDescriptor,
+				Config:       emptyJSONDescriptor,
 				Layers: []distribution.Descriptor{
-					emptyJsonDescriptor,
+					emptyJSONDescriptor,
 				},
 				Subject: &distribution.Descriptor{
 					MediaType: v1.MediaTypeImageLayerGzip, // The subject is a manifest
@@ -425,9 +425,9 @@ func TestArtifactManifest(t *testing.T) {
 					SchemaVersion: 2,
 				},
 				ArtifactType: "application/vnd.example.comment",
-				Config:       emptyJsonDescriptor,
+				Config:       emptyJSONDescriptor,
 				Layers: []distribution.Descriptor{
-					emptyJsonDescriptor,
+					emptyJSONDescriptor,
 				},
 				Subject: &distribution.Descriptor{
 					MediaType: schema2.MediaTypeManifest,
