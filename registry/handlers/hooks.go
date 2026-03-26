@@ -43,7 +43,7 @@ func (hook *logHook) Fire(entry *logrus.Entry) error {
 
 // Levels contains hook levels to be catched
 func (hook *logHook) Levels() []logrus.Level {
-	levels := []logrus.Level{}
+	levels := make([]logrus.Level, 0, len(hook.LevelsParam))
 	for _, v := range hook.LevelsParam {
 		lv, _ := logrus.ParseLevel(v)
 		levels = append(levels, lv)

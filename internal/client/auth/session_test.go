@@ -221,11 +221,11 @@ func TestEndpointAuthorizeRefreshToken(t *testing.T) {
 			Request: testutil.Request{
 				Method: http.MethodPost,
 				Route:  "/token",
-				Body:   []byte(fmt.Sprintf("client_id=registry-client&grant_type=refresh_token&refresh_token=%s&scope=%s&service=%s", refreshToken1, url.QueryEscape(scope1), service)),
+				Body:   fmt.Appendf(nil, "client_id=registry-client&grant_type=refresh_token&refresh_token=%s&scope=%s&service=%s", refreshToken1, url.QueryEscape(scope1), service),
 			},
 			Response: testutil.Response{
 				StatusCode: http.StatusOK,
-				Body:       []byte(fmt.Sprintf(`{"access_token":"statictoken","refresh_token":"%s"}`, refreshToken1)),
+				Body:       fmt.Appendf(nil, `{"access_token":"statictoken","refresh_token":"%s"}`, refreshToken1),
 			},
 		},
 		{
@@ -233,18 +233,18 @@ func TestEndpointAuthorizeRefreshToken(t *testing.T) {
 			Request: testutil.Request{
 				Method: http.MethodPost,
 				Route:  "/token",
-				Body:   []byte(fmt.Sprintf("client_id=registry-client&grant_type=refresh_token&refresh_token=%s&scope=%s&service=%s", refreshToken1, url.QueryEscape(scope2), service)),
+				Body:   fmt.Appendf(nil, "client_id=registry-client&grant_type=refresh_token&refresh_token=%s&scope=%s&service=%s", refreshToken1, url.QueryEscape(scope2), service),
 			},
 			Response: testutil.Response{
 				StatusCode: http.StatusOK,
-				Body:       []byte(fmt.Sprintf(`{"access_token":"statictoken","refresh_token":"%s"}`, refreshToken2)),
+				Body:       fmt.Appendf(nil, `{"access_token":"statictoken","refresh_token":"%s"}`, refreshToken2),
 			},
 		},
 		{
 			Request: testutil.Request{
 				Method: http.MethodPost,
 				Route:  "/token",
-				Body:   []byte(fmt.Sprintf("client_id=registry-client&grant_type=refresh_token&refresh_token=%s&scope=%s&service=%s", refreshToken2, url.QueryEscape(scope2), service)),
+				Body:   fmt.Appendf(nil, "client_id=registry-client&grant_type=refresh_token&refresh_token=%s&scope=%s&service=%s", refreshToken2, url.QueryEscape(scope2), service),
 			},
 			Response: testutil.Response{
 				StatusCode: http.StatusOK,
@@ -375,11 +375,11 @@ func TestEndpointAuthorizeV2RefreshToken(t *testing.T) {
 			Request: testutil.Request{
 				Method: http.MethodPost,
 				Route:  "/token",
-				Body:   []byte(fmt.Sprintf("client_id=registry-client&grant_type=refresh_token&refresh_token=%s&scope=%s&service=%s", refreshToken1, url.QueryEscape(scope1), service)),
+				Body:   fmt.Appendf(nil, "client_id=registry-client&grant_type=refresh_token&refresh_token=%s&scope=%s&service=%s", refreshToken1, url.QueryEscape(scope1), service),
 			},
 			Response: testutil.Response{
 				StatusCode: http.StatusOK,
-				Body:       []byte(fmt.Sprintf(`{"access_token":"statictoken","refresh_token":"%s"}`, refreshToken1)),
+				Body:       fmt.Appendf(nil, `{"access_token":"statictoken","refresh_token":"%s"}`, refreshToken1),
 			},
 		},
 	})
@@ -644,7 +644,7 @@ func TestEndpointAuthorizeTokenBasicWithExpiresIn(t *testing.T) {
 	// First call should result in a token exchange
 	// Subsequent calls should recycle the token from the first request, until the expiration has lapsed.
 	timeIncrement := 1000 * time.Second
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		req, _ := http.NewRequest(http.MethodGet, e+"/v2/hello", nil)
 		resp, err := client.Do(req)
 		if err != nil {
@@ -798,7 +798,7 @@ func TestEndpointAuthorizeTokenBasicWithExpiresInAndIssuedAt(t *testing.T) {
 	// Subsequent calls should recycle the token from the first request, until the expiration has lapsed.
 	// We shaved one increment off of the equivalent logic in TestEndpointAuthorizeTokenBasicWithExpiresIn
 	// so this loop should have one fewer iteration.
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		req, _ := http.NewRequest(http.MethodGet, e+"/v2/hello", nil)
 		resp, err := client.Do(req)
 		if err != nil {

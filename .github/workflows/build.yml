@@ -33,8 +33,8 @@ jobs:
       fail-fast: false
       matrix:
         go:
-          - 1.23.7
-          - 1.24.1
+          - 1.25.x
+          - 1.26.1
         target:
           - test-coverage
           - test-s3-storage
@@ -42,7 +42,7 @@ jobs:
     steps:
       -
         name: Checkout
-        uses: actions/checkout@v6.0.0
+        uses: actions/checkout@v6.0.2
       -
         name: Set up Go
         uses: actions/setup-go@v6
@@ -69,13 +69,13 @@ jobs:
     steps:
       -
         name: Checkout
-        uses: actions/checkout@v6.0.0
+        uses: actions/checkout@v6.0.2
         with:
           fetch-depth: 0
       -
         name: Docker meta
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: |
             ${{ env.DOCKERHUB_SLUG }}
@@ -101,25 +101,25 @@ jobs:
             org.opencontainers.image.description=The toolkit to pack, ship, store, and distribute container content
       -
         name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
       -
         name: Login to DockerHub
         if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       -
         name: Log in to GitHub Container registry
         if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       -
         name: Build artifacts
-        uses: docker/bake-action@v6
+        uses: docker/bake-action@v7
         with:
           source: .
           targets: artifact-all
@@ -141,14 +141,14 @@ jobs:
           tree -nh ./bin
       -
         name: Upload artifacts
-        uses: actions/upload-artifact@v4.6.2
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: registry
           path: ./bin/*
           if-no-files-found: error
       -
         name: Build image
-        uses: docker/bake-action@v6
+        uses: docker/bake-action@v7
         with:
           source: .
           files: |

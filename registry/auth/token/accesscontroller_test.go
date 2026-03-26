@@ -54,7 +54,7 @@ func TestCheckOptions(t *testing.T) {
 	issuer := "test-issuer.example.com"
 	service := "test-service.example.com"
 
-	options := map[string]interface{}{
+	options := map[string]any{
 		"realm":            realm,
 		"issuer":           issuer,
 		"service":          service,
@@ -74,7 +74,7 @@ func TestCheckOptions(t *testing.T) {
 		t.Fatal("autoredirectpath should be /auth")
 	}
 
-	options = map[string]interface{}{
+	options = map[string]any{
 		"realm":                        realm,
 		"issuer":                       issuer,
 		"service":                      service,
@@ -127,7 +127,7 @@ func TestRootCertIncludedInTrustedKeys(t *testing.T) {
 	issuer := "test-issuer.example.com"
 	service := "test-service.example.com"
 
-	options := map[string]interface{}{
+	options := map[string]any{
 		"realm":            realm,
 		"issuer":           issuer,
 		"service":          service,
@@ -157,7 +157,7 @@ func TestJWKSIncludedInTrustedKeys(t *testing.T) {
 	issuer := "test-issuer.example.com"
 	service := "test-service.example.com"
 
-	options := map[string]interface{}{
+	options := map[string]any{
 		"realm":            realm,
 		"issuer":           issuer,
 		"service":          service,

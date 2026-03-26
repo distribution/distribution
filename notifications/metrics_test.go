@@ -9,7 +9,7 @@ import (
 func TestMetricsExpvar(t *testing.T) {
 	endpointsVar := expvar.Get("registry").(*expvar.Map).Get("notifications").(*expvar.Map).Get("endpoints")
 
-	var v interface{}
+	var v any
 	if err := json.Unmarshal([]byte(endpointsVar.String()), &v); err != nil {
 		t.Fatalf("unexpected error unmarshaling endpoints: %v", err)
 	}
@@ -22,7 +22,7 @@ func TestMetricsExpvar(t *testing.T) {
 	if err := json.Unmarshal([]byte(endpointsVar.String()), &v); err != nil {
 		t.Fatalf("unexpected error unmarshaling endpoints: %v", err)
 	}
-	if slice, ok := v.([]interface{}); !ok || len(slice) != 1 {
+	if slice, ok := v.([]any); !ok || len(slice) != 1 {
 		t.Logf("expected one-element []interface{}, got %#v", v)
 	}
 }

@@ -1050,6 +1050,15 @@ accept event notifications.
 | `mediatypes`|no| A list of target media types to ignore. Events with these target media types are not published to the endpoint. |
 | `actions`   |no| A list of actions to ignore. Events with these actions are not published to the endpoint. |
 
+The `mediatypes` and `actions` filters work independently. You can specify:
+
+- Only `mediatypes` to filter by media type.
+- Only `actions` to filter by action (e.g., `pull`, `push`, `delete`, `mount`)
+- Both to filter events matching either condition (OR logic)
+- Neither to receive all events
+
+Common use case: Set `mediatypes: []` with `actions: [pull, delete, mount]` to receive only push events regardless of media type.
+
 ### `events`
 
 The `events` structure configures the information provided in event notifications.

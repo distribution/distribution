@@ -42,7 +42,7 @@ const (
 
 type azureDriverFactory struct{}
 
-func (factory *azureDriverFactory) Create(ctx context.Context, parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
+func (factory *azureDriverFactory) Create(ctx context.Context, parameters map[string]any) (storagedriver.StorageDriver, error) {
 	params, err := NewParameters(parameters)
 	if err != nil {
 		return nil, err
@@ -161,10 +161,7 @@ func (d *driver) PutContent(ctx context.Context, path string, contents []byte) e
 		// when writing large piece of data in one sot:
 		// RESPONSE 413: 413 The uploaded entity blob is too large.
 		for offset := 0; offset < len(contents); offset += maxChunkSize {
-			end := offset + maxChunkSize
-			if end > len(contents) {
-				end = len(contents)
-			}
+			end := min(offset+maxChunkSize, len(contents))
 
 			chunk := contents[offset:end]
 			_, err := appendBlobRef.AppendBlock(ctx, streaming.NopCloser(bytes.NewReader(chunk)), nil)
@@ -661,7 +658,7 @@ func (bw *blockWriter) Write(p []byte) (int, error) {
 		}
 		appendposFailed := bloberror.HasCode(err, bloberror.AppendPositionConditionNotMet)
 		etagFailed := bloberror.HasCode(err, bloberror.ConditionNotMet)
-		if !(appendposFailed || etagFailed) || !timeoutFromCtx {
+		if (!appendposFailed && !etagFailed) || !timeoutFromCtx {
 			// Error was not caused by an operation timeout, abort!
 			return n, fmt.Errorf("appending blob: %w", err)
 		}

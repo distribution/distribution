@@ -16,7 +16,6 @@ go_library(
     importpath = "cel.dev/expr",
     visibility = ["//visibility:public"],
     deps = [
-        "//proto/cel/expr:google_rpc_status_go_proto",
         "@org_golang_google_protobuf//reflect/protoreflect",
         "@org_golang_google_protobuf//runtime/protoimpl",
         "@org_golang_google_protobuf//types/known/anypb",

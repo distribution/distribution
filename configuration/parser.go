@@ -57,7 +57,7 @@ type VersionedParseInfo struct {
 	// ConversionFunc defines a method for converting the parsed configuration
 	// (of type ParseAs) into the current configuration version
 	// Note: this method signature is very unclear with the absence of generics
-	ConversionFunc func(interface{}) (interface{}, error)
+	ConversionFunc func(any) (any, error)
 }
 
 type envVar struct {
@@ -111,7 +111,7 @@ func NewParser(prefix string, parseInfos []VersionedParseInfo) *Parser {
 // than version, following the scheme below:
 // v.Abc may be replaced by the value of PREFIX_ABC,
 // v.Abc.Xyz may be replaced by the value of PREFIX_ABC_XYZ, and so forth
-func (p *Parser) Parse(in []byte, v interface{}) error {
+func (p *Parser) Parse(in []byte, v any) error {
 	var versionedStruct struct {
 		Version Version
 	}
@@ -157,7 +157,7 @@ func (p *Parser) Parse(in []byte, v interface{}) error {
 func (p *Parser) overwriteFields(v reflect.Value, fullpath string, path []string, payload string) error {
 	for v.Kind() == reflect.Ptr {
 		if v.IsNil() {
-			panic("encountered nil pointer while handling environment variable " + fullpath)
+			return fmt.Errorf("encountered nil pointer while handling environment variable %s", fullpath)
 		}
 		v = reflect.Indirect(v)
 	}
@@ -169,11 +169,11 @@ func (p *Parser) overwriteFields(v reflect.Value, fullpath string, path []string
 	case reflect.Slice:
 		idx, err := strconv.Atoi(path[0])
 		if err != nil {
-			panic("non-numeric index: " + path[0])
+			return fmt.Errorf("non-numeric index: %s", path[0])
 		}
 
 		if idx > v.Len() {
-			panic("undefined index: " + path[0])
+			return fmt.Errorf("undefined index: %s", path[0])
 		}
 
 		// if there is no element or the current slice length
@@ -191,7 +191,7 @@ func (p *Parser) overwriteFields(v reflect.Value, fullpath string, path []string
 				return p.overwriteFields(v.Elem(), fullpath, path, payload)
 			}
 			// Interface was empty; create an implicit map
-			var template map[string]interface{}
+			var template map[string]any
 			wrappedV := reflect.MakeMap(reflect.TypeOf(template))
 			v.Set(wrappedV)
 			return p.overwriteMap(wrappedV, fullpath, path, payload)
@@ -205,9 +205,24 @@ func (p *Parser) overwriteStruct(v reflect.Value, fullpath string, path []string
 	byUpperCase := make(map[string]int)
 	for i := 0; i < v.NumField(); i++ {
 		sf := v.Type().Field(i)
+
+		// For fields inlined in the YAML configuration file, the environment variables also need to be inlined
+		// Example struct tag for inlined field: `yaml:",inline"`
+		_, yamlOpts, _ := strings.Cut(sf.Tag.Get("yaml"), ",")
+		if yamlOpts == "inline" && sf.Type.Kind() == reflect.Struct {
+			// Inlined struct, check whether the env variable corresponds to a field inside this struct
+			// Maps could also be inlined, but since we don't need it right now it is not supported
+			inlined := v.Field(i)
+			for j := range inlined.NumField() {
+				if strings.EqualFold(inlined.Type().Field(j).Name, path[0]) {
+					return p.overwriteFields(inlined, fullpath, path, payload)
+				}
+			}
+		}
+
 		upper := strings.ToUpper(sf.Name)
 		if _, present := byUpperCase[upper]; present {
-			panic(fmt.Sprintf("field name collision in configuration object: %s", sf.Name))
+			return fmt.Errorf("field name collision in configuration object: %s", sf.Name)
 		}
 		byUpperCase[upper] = i
 	}

@@ -87,7 +87,7 @@ func makeRepo(ctx context.Context, t *testing.T, name string, reg distribution.N
 		t.Fatalf("failed to upload layers: %v", err)
 	}
 
-	digests := []digest.Digest{}
+	digests := make([]digest.Digest, 0, len(layers))
 	for digest := range layers {
 		digests = append(digests, digest)
 	}

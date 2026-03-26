@@ -86,7 +86,7 @@ func init() {
 type gcsDriverFactory struct{}
 
 // Create StorageDriver from parameters
-func (factory *gcsDriverFactory) Create(ctx context.Context, parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
+func (factory *gcsDriverFactory) Create(ctx context.Context, parameters map[string]any) (storagedriver.StorageDriver, error) {
 	return FromParameters(ctx, parameters)
 }
 
@@ -116,10 +116,10 @@ type baseEmbed struct {
 // FromParameters constructs a new Driver with a given parameters map
 // Required parameters:
 // - bucket
-func FromParameters(ctx context.Context, parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
+func FromParameters(ctx context.Context, parameters map[string]any) (storagedriver.StorageDriver, error) {
 	bucket, ok := parameters["bucket"]
 	if !ok || fmt.Sprint(bucket) == "" {
-		return nil, fmt.Errorf("No bucket parameter provided")
+		return nil, fmt.Errorf("no bucket parameter provided")
 	}
 
 	rootDirectory, ok := parameters["rootdirectory"]
@@ -138,7 +138,7 @@ func FromParameters(ctx context.Context, parameters map[string]interface{}) (sto
 			}
 			chunkSize = vv
 		case int, uint, int32, uint32, uint64, int64:
-			chunkSize = int(reflect.ValueOf(v).Convert(reflect.TypeOf(chunkSize)).Int())
+			chunkSize = int(reflect.ValueOf(v).Convert(reflect.TypeFor[int]()).Int())
 		default:
 			return nil, fmt.Errorf("invalid valud for chunksize: %#v", chunkSizeParam)
 		}
@@ -169,23 +169,23 @@ func FromParameters(ctx context.Context, parameters map[string]interface{}) (sto
 		ts = jwtConf.TokenSource(ctx)
 		options = append(options, option.WithCredentialsFile(fmt.Sprint(keyfile)))
 	} else if credentials, ok := parameters["credentials"]; ok {
-		credentialMap, ok := credentials.(map[interface{}]interface{})
+		credentialMap, ok := credentials.(map[any]any)
 		if !ok {
-			return nil, fmt.Errorf("The credentials were not specified in the correct format")
+			return nil, fmt.Errorf("the credentials were not specified in the correct format")
 		}
 
-		stringMap := map[string]interface{}{}
+		stringMap := map[string]any{}
 		for k, v := range credentialMap {
 			key, ok := k.(string)
 			if !ok {
-				return nil, fmt.Errorf("One of the credential keys was not a string: %s", fmt.Sprint(k))
+				return nil, fmt.Errorf("one of the credential keys was not a string: %s", fmt.Sprint(k))
 			}
 			stringMap[key] = v
 		}
 
 		data, err := json.Marshal(stringMap)
 		if err != nil {
-			return nil, fmt.Errorf("Failed to marshal gcs credentials to json")
+			return nil, fmt.Errorf("failed to marshal gcs credentials to json")
 		}
 
 		jwtConf, err = google.JWTConfigFromJSON(data, storage.ScopeFullControl)
@@ -242,7 +242,7 @@ func New(ctx context.Context, params driverParameters) (storagedriver.StorageDri
 		rootDirectory += "/"
 	}
 	if params.chunkSize <= 0 || params.chunkSize%minChunkSize != 0 {
-		return nil, fmt.Errorf("Invalid chunksize: %d is not a positive multiple of %d", params.chunkSize, minChunkSize)
+		return nil, fmt.Errorf("invalid chunksize: %d is not a positive multiple of %d", params.chunkSize, minChunkSize)
 	}
 	d := &driver{
 		bucket:        params.gcs.Bucket(params.bucket),
@@ -423,16 +423,16 @@ func (d *driver) putContent(ctx context.Context, obj *storage.ObjectHandle, cont
 	wc.ContentType = contentType
 	wc.ChunkSize = d.chunkSize
 
-	if _, err := bytes.NewReader(content).WriteTo(wc); err != nil {
-		return err
-	}
-	// NOTE(milosgajdos): Apparently it's posisble to to upload 0-byte content to GCS.
+	// NOTE(milosgajdos): Apparently it's possible to upload 0-byte content to GCS.
 	// Setting MD5 on the Writer helps to prevent presisting that data.
 	// If set, the uploaded data is rejected if its MD5 hash does not match this field.
 	// See: https://pkg.go.dev/cloud.google.com/go/storage#ObjectAttrs
-	h := md5.New()
-	h.Write(content)
-	wc.MD5 = h.Sum(nil)
+	sum := md5.Sum(content)
+	wc.MD5 = sum[:]
+
+	if _, err := bytes.NewReader(content).WriteTo(wc); err != nil {
+		return err
+	}
 
 	return wc.Close()
 }
@@ -600,7 +600,7 @@ type request func() error
 func retry(req request) error {
 	backoff := time.Second
 	var err error
-	for i := 0; i < maxTries; i++ {
+	for i := range maxTries {
 		err = req()
 		if err == nil {
 			return nil

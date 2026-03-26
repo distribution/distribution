@@ -119,7 +119,9 @@ func newTimeoutExporter(exp Exporter, timeout time.Duration) Exporter {
 
 // Export sets the timeout of ctx before calling the Exporter e wraps.
 func (e *timeoutExporter) Export(ctx context.Context, records []Record) error {
-	ctx, cancel := context.WithTimeout(ctx, e.timeout)
+	// This only used by the batch processor, and it takes processor timeout config.
+	// Thus, the error message points to the processor. So users know they should adjust the processor timeout.
+	ctx, cancel := context.WithTimeoutCause(ctx, e.timeout, errors.New("processor export timeout"))
 	defer cancel()
 	return e.Exporter.Export(ctx, records)
 }
@@ -186,11 +188,10 @@ type bufferExporter struct {
 
 // newBufferExporter returns a new bufferExporter that wraps exporter. The
 // returned bufferExporter will buffer at most size number of export requests.
-// If size is less than zero, zero will be used (i.e. only synchronous
-// exporting will be supported).
+// If size is less than 1, 1 will be used.
 func newBufferExporter(exporter Exporter, size int) *bufferExporter {
-	if size < 0 {
-		size = 0
+	if size < 1 {
+		size = 1
 	}
 	input := make(chan exportData, size)
 	return &bufferExporter{
@@ -199,6 +200,10 @@ func newBufferExporter(exporter Exporter, size int) *bufferExporter {
 		input: input,
 		done:  exportSync(input, exporter),
 	}
+}
+
+func (e *bufferExporter) Ready() bool {
+	return len(e.input) != cap(e.input)
 }
 
 var errStopped = errors.New("exporter stopped")

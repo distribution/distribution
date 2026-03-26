@@ -15,7 +15,7 @@ import (
 func testUploadFS(t *testing.T, numUploads int, repoName string, startedAt time.Time) (driver.StorageDriver, context.Context) {
 	d := inmemory.New()
 	ctx := context.Background()
-	for i := 0; i < numUploads; i++ {
+	for range numUploads {
 		addUploads(ctx, t, d, uuid.NewString(), repoName, startedAt)
 	}
 	return d, ctx
@@ -91,7 +91,7 @@ func TestPurgeSome(t *testing.T) {
 
 	newUploadCount := 4
 
-	for i := 0; i < newUploadCount; i++ {
+	for range newUploadCount {
 		addUploads(ctx, t, fs, uuid.NewString(), "test-repo", time.Now().Add(1*time.Hour))
 	}
 
@@ -116,7 +116,7 @@ func TestPurgeOnlyUploads(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	nonUploadPath := strings.Replace(dataPath, "_upload", "_important", -1)
+	nonUploadPath := strings.ReplaceAll(dataPath, "_upload", "_important")
 	if strings.Contains(nonUploadPath, "_upload") {
 		t.Fatal("Non-upload path not created correctly")
 	}

@@ -39,7 +39,7 @@ type accessController struct {
 
 var _ auth.AccessController = &accessController{}
 
-func newAccessController(options map[string]interface{}) (auth.AccessController, error) {
+func newAccessController(options map[string]any) (auth.AccessController, error) {
 	realm, present := options["realm"]
 	if _, ok := realm.(string); !present || !ok {
 		return nil, fmt.Errorf(`"realm" must be set for htpasswd access controller`)
@@ -147,10 +147,10 @@ func createHtpasswdFile(path string) error {
 	if err != nil {
 		return err
 	}
-	if _, err := f.Write([]byte(fmt.Sprintf("docker:%s", string(encryptedPass[:])))); err != nil {
+	if _, err := fmt.Fprintf(f, "docker:%s", string(encryptedPass[:])); err != nil {
 		return err
 	}
-	dcontext.GetLoggerWithFields(context.Background(), map[interface{}]interface{}{
+	dcontext.GetLoggerWithFields(context.Background(), map[any]any{
 		"user":     "docker",
 		"password": pass,
 	}).Warnf("htpasswd is missing, provisioning with default user")

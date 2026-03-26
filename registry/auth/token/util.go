@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"math/big"
+	"slices"
 )
 
 // actionSet is a special type of stringSet.
@@ -28,13 +29,7 @@ func (s actionSet) contains(action string) bool {
 
 // contains returns true if q is found in ss.
 func contains(ss []string, q string) bool {
-	for _, s := range ss {
-		if s == q {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(ss, q)
 }
 
 // containsAny returns true if any of q is found in ss.
@@ -77,9 +72,9 @@ func GetJWKThumbprint(publickey crypto.PublicKey) string {
 func getJWKThumbprint(publickey crypto.PublicKey, skipED25519 bool) string {
 	switch pubkey := publickey.(type) {
 	case *rsa.PublicKey:
-		e_big := big.NewInt(int64(pubkey.E)).Bytes()
+		eBig := big.NewInt(int64(pubkey.E)).Bytes()
 
-		e := base64.RawURLEncoding.EncodeToString(e_big)
+		e := base64.RawURLEncoding.EncodeToString(eBig)
 		n := base64.RawURLEncoding.EncodeToString(pubkey.N.Bytes())
 
 		return hashAndEncode(fmt.Sprintf(`{"e":"%s","kty":"RSA","n":"%s"}`, e, n))
@@ -95,7 +90,7 @@ func getJWKThumbprint(publickey crypto.PublicKey, skipED25519 bool) string {
 		}
 		x := base64.RawURLEncoding.EncodeToString(pubkey)
 
-		return hashAndEncode(fmt.Sprintf(`{"crv":"Ed25519","kty":"OTP","x":"%s"}`, x))
+		return hashAndEncode(fmt.Sprintf(`{"crv":"Ed25519","kty":"OKP","x":"%s"}`, x))
 	default:
 		return ""
 	}

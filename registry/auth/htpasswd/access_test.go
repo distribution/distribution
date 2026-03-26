@@ -28,7 +28,7 @@ func TestBasicAccessController(t *testing.T) {
 		t.Fatal("could not write temporary htpasswd file")
 	}
 
-	options := map[string]interface{}{
+	options := map[string]any{
 		"realm": testRealm,
 		"path":  tempFile.Name(),
 	}
@@ -87,7 +87,7 @@ func TestBasicAccessController(t *testing.T) {
 		"DeokMan": {},
 	}
 
-	for i := 0; i < len(testUsers); i++ {
+	for i := range testUsers {
 		userNumber = i
 		req, err := http.NewRequest(http.MethodGet, server.URL, nil)
 		if err != nil {
@@ -123,7 +123,7 @@ func TestCreateHtpasswdFile(t *testing.T) {
 		t.Fatalf("could not create temporary htpasswd file %v", err)
 	}
 	defer tempFile.Close()
-	options := map[string]interface{}{
+	options := map[string]any{
 		"realm": "/auth/htpasswd",
 		"path":  tempFile.Name(),
 	}

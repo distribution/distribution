@@ -20,12 +20,12 @@ jobs:
     steps:
       -
         name: Checkout
-        uses: actions/checkout@v6.0.0
+        uses: actions/checkout@v6.0.2
         with:
           fetch-depth: 0
       -
         name: Build image
-        uses: docker/bake-action@v6
+        uses: docker/bake-action@v7
         with:
           source: .
           targets: image-local
@@ -43,7 +43,7 @@ jobs:
     steps:
       -
         name: Checkout
-        uses: actions/checkout@v6.0.0
+        uses: actions/checkout@v6.0.2
         with:
           fetch-depth: 0
       -

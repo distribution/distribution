@@ -177,7 +177,7 @@ func (m *DeserializedManifest) Type() string {
 // contains fields that belong to a index
 func validateManifest(b []byte) error {
 	var doc struct {
-		Manifests interface{} `json:"manifests,omitempty"`
+		Manifests any `json:"manifests,omitempty"`
 	}
 	if err := json.Unmarshal(b, &doc); err != nil {
 		return err

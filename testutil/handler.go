@@ -57,7 +57,7 @@ func (r Request) String() string {
 	}
 	var headers []string
 	if len(r.Headers) > 0 {
-		var headerKeys []string
+		headerKeys := make([]string, 0, len(r.Headers))
 		for k := range r.Headers {
 			headerKeys = append(headerKeys, k)
 		}

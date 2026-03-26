@@ -28,10 +28,10 @@ jobs:
         uses: actions/configure-pages@v5
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Build docs
-        uses: docker/bake-action@v6
+        uses: docker/bake-action@v7
         with:
           targets: docs-export
           provenance: false

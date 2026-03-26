@@ -1,8 +1,10 @@
 package logrustash
 
 import (
+	"fmt"
 	"io"
 	"sync"
+	"time"
 
 	"github.com/sirupsen/logrus"
 )
@@ -12,7 +14,6 @@ import (
 // formatter to format the entry to a Logstash format before sending.
 //
 // To initialize it use the `New` function.
-//
 type Hook struct {
 	writer    io.Writer
 	formatter logrus.Formatter
@@ -64,6 +65,12 @@ func copyEntry(e *logrus.Entry, fields logrus.Fields) *logrus.Entry {
 	ne.Level = e.Level
 	ne.Time = e.Time
 	ne.Data = logrus.Fields{}
+
+	if e.HasCaller() {
+		ne.Data["function"] = e.Caller.Function
+		ne.Data["file"] = fmt.Sprintf("%s:%d", e.Caller.File, e.Caller.Line)
+	}
+
 	for k, v := range fields {
 		ne.Data[k] = v
 	}
@@ -110,8 +117,11 @@ func DefaultFormatter(fields logrus.Fields) logrus.Formatter {
 	}
 
 	return LogstashFormatter{
-		Formatter: &logrus.JSONFormatter{FieldMap: logstashFieldMap},
-		Fields:    fields,
+		Formatter: &logrus.JSONFormatter{
+			FieldMap:        logstashFieldMap,
+			TimestampFormat: time.RFC3339Nano,
+		},
+		Fields: fields,
 	}
 }
 

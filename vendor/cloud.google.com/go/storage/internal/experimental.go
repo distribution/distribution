@@ -17,7 +17,20 @@
 package internal
 
 var (
+	// WithMetricInterval is a function which is implemented by storage package.
+	// It sets how often to emit metrics when using NewPeriodicReader and must be
+	// greater than 1 minute.
+	WithMetricInterval any // func (*time.Duration) option.ClientOption
+
+	// WithMetricExporter is a function which is implemented by storage package.
+	// Set an alternate client-side metric Exporter to emit metrics through.
+	WithMetricExporter any // func (*metric.Exporter) option.ClientOption
+
 	// WithReadStallTimeout is a function which is implemented by storage package.
 	// It takes ReadStallTimeoutConfig as inputs and returns a option.ClientOption.
 	WithReadStallTimeout any // func (*ReadStallTimeoutConfig) option.ClientOption
+
+	// WithGRPCBidiReads is a function which is implemented by the storage package.
+	// It sets the gRPC client to use the BidiReadObject API for downloads.
+	WithGRPCBidiReads any // func() option.ClientOption
 )

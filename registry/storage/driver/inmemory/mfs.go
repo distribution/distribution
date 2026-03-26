@@ -164,8 +164,8 @@ func (d *dir) mkdirs(p string) (*dir, error) {
 		return dd, nil
 	}
 
-	components := strings.Split(relative, "/")
-	for _, component := range components {
+	components := strings.SplitSeq(relative, "/")
+	for component := range components {
 		d, err := dd.mkdir(component)
 		if err != nil {
 			// This should actually never happen, since there are no children.
@@ -302,10 +302,7 @@ func (f *file) WriteAt(p []byte, offset int64) (n int, err error) {
 	if int64(cap(f.data)) < newLen {
 		// Grow slice exponentially to ensure amortized linear time complexity
 		// of reallocation
-		newCap := int64(float64(cap(f.data)) * reallocExponent)
-		if newCap < newLen {
-			newCap = newLen
-		}
+		newCap := max(int64(float64(cap(f.data))*reallocExponent), newLen)
 		data := make([]byte, len(f.data), newCap)
 		copy(data, f.data)
 		f.data = data

@@ -9,7 +9,6 @@ import (
 	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/distribution/distribution/v3/manifest/ocischema"
 	"github.com/distribution/distribution/v3/registry/storage/driver"
-	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
 	"github.com/distribution/distribution/v3/testutil"
 	"github.com/distribution/reference"
@@ -114,7 +113,7 @@ func uploadRandomSchema2Image(t *testing.T, repository distribution.Repository) 
 		t.Fatalf("%v", err)
 	}
 
-	digests := []digest.Digest{}
+	digests := make([]digest.Digest, 0, len(randomLayers))
 	for digest := range randomLayers {
 		digests = append(digests, digest)
 	}
@@ -138,7 +137,7 @@ func uploadRandomOCIImage(t *testing.T, repository distribution.Repository) imag
 		t.Fatalf("%v", err)
 	}
 
-	digests := []digest.Digest{}
+	digests := make([]digest.Digest, 0, len(randomLayers))
 	for digest := range randomLayers {
 		digests = append(digests, digest)
 	}
@@ -453,7 +452,7 @@ func TestGCWithUnusedLayerLinkPath(t *testing.T) {
 			t.Fatal(err)
 		}
 		_, err = d.Stat(ctx, layerLinkPath)
-		if _, ok := err.(storagedriver.PathNotFoundError); !ok {
+		if _, ok := err.(driver.PathNotFoundError); !ok {
 			t.Fatalf("layer link path %s should be not found", layerLinkPath)
 		}
 	}
