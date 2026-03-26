@@ -3343,3 +3343,168 @@ func pushScratch(t *testing.T, testEnv *testEnv, repo reference.Named) {
 	url, _ := startPushLayer(t, testEnv, repo)
 	pushLayer(t, testEnv.builder, repo, v1.DescriptorEmptyJSON.Digest, url, bytes.NewBuffer(v1.DescriptorEmptyJSON.Data))
 }
+
+func TestReferrersAPI(t *testing.T) {
+	testEnv := newTestEnv(t, true)
+	defer testEnv.Shutdown()
+
+	repo, err := reference.WithName("test/referrers")
+	if err != nil {
+		t.Fatalf("failed to make repo: %s", err)
+	}
+
+	// 1. Create a subject manifest (a normal image manifest).
+	args := testManifestAPISchema2(t, testEnv, repo, "subject-tag")
+	_, subjectPayload, err := args.manifest.Payload()
+	if err != nil {
+		t.Fatalf("failed to get subject payload: %s", err)
+	}
+	subjectDigest := digest.FromBytes(subjectPayload)
+
+	// 2. Push an OCI artifact manifest that references the subject.
+	pushScratch(t, testEnv, repo)
+	artifactManifest, err := ocischema.FromStruct(ocischema.Manifest{
+		Versioned:    specs.Versioned{SchemaVersion: 2},
+		MediaType:    v1.MediaTypeImageManifest,
+		ArtifactType: "application/vnd.dev.sigstore.bundle.v0.3+json",
+		Config:       emptyJsonDescriptor,
+		Subject: &distribution.Descriptor{
+			MediaType: v1.MediaTypeImageManifest,
+			Digest:    subjectDigest,
+			Size:      int64(len(subjectPayload)),
+		},
+	})
+	if err != nil {
+		t.Fatalf("failed to create artifact manifest: %s", err)
+	}
+
+	_, artifactPayload, err := artifactManifest.Payload()
+	if err != nil {
+		t.Fatalf("failed to get artifact payload: %s", err)
+	}
+	artifactDigest := digest.FromBytes(artifactPayload)
+
+	artifactRef, err := reference.WithDigest(repo, artifactDigest)
+	if err != nil {
+		t.Fatalf("failed to make reference: %s", err)
+	}
+	manifestURL, err := testEnv.builder.BuildManifestURL(artifactRef)
+	if err != nil {
+		t.Fatalf("failed to build manifest URL: %s", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPut, manifestURL, bytes.NewReader(artifactPayload))
+	if err != nil {
+		t.Fatalf("failed to create PUT request: %s", err)
+	}
+	req.Header.Set("Content-Type", v1.MediaTypeImageManifest)
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("failed to PUT artifact manifest: %s", err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusCreated {
+		t.Fatalf("unexpected status for artifact PUT: %d, expected %d", res.StatusCode, http.StatusCreated)
+	}
+
+	// 3. Query the referrers endpoint.
+	referrersURL := fmt.Sprintf("%s/v2/%s/referrers/%s", testEnv.server.URL, repo.Name(), subjectDigest)
+	resp, err := http.Get(referrersURL)
+	if err != nil {
+		t.Fatalf("failed to GET referrers: %s", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("unexpected status for referrers GET: %d, body: %s", resp.StatusCode, string(body))
+	}
+
+	if ct := resp.Header.Get("Content-Type"); ct != v1.MediaTypeImageIndex {
+		t.Errorf("unexpected Content-Type: %q, expected %q", ct, v1.MediaTypeImageIndex)
+	}
+
+	var index v1.Index
+	if err := json.NewDecoder(resp.Body).Decode(&index); err != nil {
+		t.Fatalf("failed to decode referrers response: %s", err)
+	}
+
+	if index.SchemaVersion != 2 {
+		t.Errorf("unexpected schemaVersion: %d", index.SchemaVersion)
+	}
+	if index.MediaType != v1.MediaTypeImageIndex {
+		t.Errorf("unexpected mediaType: %q", index.MediaType)
+	}
+	if len(index.Manifests) != 1 {
+		t.Fatalf("expected 1 referrer, got %d", len(index.Manifests))
+	}
+	if index.Manifests[0].Digest != artifactDigest {
+		t.Errorf("referrer digest mismatch: got %s, expected %s", index.Manifests[0].Digest, artifactDigest)
+	}
+	if index.Manifests[0].ArtifactType != "application/vnd.dev.sigstore.bundle.v0.3+json" {
+		t.Errorf("referrer artifactType mismatch: got %q", index.Manifests[0].ArtifactType)
+	}
+	if index.Manifests[0].MediaType != v1.MediaTypeImageManifest {
+		t.Errorf("referrer mediaType mismatch: got %q, expected %q", index.Manifests[0].MediaType, v1.MediaTypeImageManifest)
+	}
+
+	// 4. Test artifactType filtering — matching filter.
+	filteredURL := referrersURL + "?artifactType=" + url.QueryEscape("application/vnd.dev.sigstore.bundle.v0.3+json")
+	resp, err = http.Get(filteredURL)
+	if err != nil {
+		t.Fatalf("failed to GET filtered referrers: %s", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("unexpected status for filtered referrers GET: %d", resp.StatusCode)
+	}
+	if resp.Header.Get("OCI-Filters-Applied") != "artifactType" {
+		t.Errorf("expected OCI-Filters-Applied header, got %q", resp.Header.Get("OCI-Filters-Applied"))
+	}
+
+	var filteredIndex v1.Index
+	if err := json.NewDecoder(resp.Body).Decode(&filteredIndex); err != nil {
+		t.Fatalf("failed to decode filtered response: %s", err)
+	}
+	if len(filteredIndex.Manifests) != 1 {
+		t.Fatalf("expected 1 filtered referrer, got %d", len(filteredIndex.Manifests))
+	}
+
+	// 5. Test artifactType filtering — non-matching filter.
+	noMatchURL := referrersURL + "?artifactType=application/vnd.example.nope"
+	resp, err = http.Get(noMatchURL)
+	if err != nil {
+		t.Fatalf("failed to GET non-matching referrers: %s", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("unexpected status for non-matching referrers GET: %d", resp.StatusCode)
+	}
+
+	var emptyIndex v1.Index
+	if err := json.NewDecoder(resp.Body).Decode(&emptyIndex); err != nil {
+		t.Fatalf("failed to decode empty response: %s", err)
+	}
+	if len(emptyIndex.Manifests) != 0 {
+		t.Errorf("expected 0 referrers for non-matching filter, got %d", len(emptyIndex.Manifests))
+	}
+
+	// 6. Test referrers for a digest with no referrers — should return empty index.
+	noRefURL := fmt.Sprintf("%s/v2/%s/referrers/%s", testEnv.server.URL, repo.Name(), artifactDigest)
+	resp, err = http.Get(noRefURL)
+	if err != nil {
+		t.Fatalf("failed to GET referrers for non-subject: %s", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("unexpected status for no-referrers GET: %d", resp.StatusCode)
+	}
+
+	var noRefIndex v1.Index
+	if err := json.NewDecoder(resp.Body).Decode(&noRefIndex); err != nil {
+		t.Fatalf("failed to decode no-referrers response: %s", err)
+	}
+	if len(noRefIndex.Manifests) != 0 {
+		t.Errorf("expected 0 referrers, got %d", len(noRefIndex.Manifests))
+	}
+}
