@@ -1537,6 +1537,18 @@ var routeDescriptors = []RouteDescriptor{
 		},
 	},
 	{
+		Name:        RouteNameReferrers,
+		Path:        "/v2/{name:" + reference.NameRegexp.String() + "}/referrers/{digest:" + digest.DigestRegexp.String() + "}",
+		Entity:      "Referrers",
+		Description: "List referrers for a given manifest digest, per OCI Distribution Spec v1.1.",
+		Methods: []MethodDescriptor{
+			{
+				Method:      http.MethodGet,
+				Description: "Return an index of manifests that have the specified subject digest.",
+			},
+		},
+	},
+	{
 		Name:        RouteNameCatalog,
 		Path:        "/v2/_catalog",
 		Entity:      "Catalog",
