@@ -612,6 +612,150 @@ func TestTagsAPI(t *testing.T) {
 	}
 }
 
+// TestTagsAPISortedByUpdated tests the /v2/<name>/tags/list endpoint with sort=updated.
+func TestTagsAPISortedByUpdated(t *testing.T) {
+	env := newTestEnv(t, false)
+	defer env.Shutdown()
+
+	imageName, err := reference.WithName("test")
+	if err != nil {
+		t.Fatalf("unable to parse reference: %v", err)
+	}
+
+	// Create tags; order of creation intentionally differs from alphabetical order.
+	creationOrder := []string{"kb0j5", "2j2ar", "sb71y", "asj9e", "jyi7b"}
+	for _, tag := range creationOrder {
+		createRepository(env, t, imageName.Name(), tag)
+	}
+
+	t.Run("sort=updated returns all tags", func(t *testing.T) {
+		tagsURL, err := env.builder.BuildTagsURL(imageName, url.Values{"sort": []string{"updated"}})
+		if err != nil {
+			t.Fatalf("unexpected error building tags URL: %v", err)
+		}
+		resp, err := http.Get(tagsURL)
+		if err != nil {
+			t.Fatalf("unexpected error issuing request: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected status 200, got %d", resp.StatusCode)
+		}
+
+		var body tagsAPIResponse
+		if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+			t.Fatalf("unexpected error decoding response body: %v", err)
+		}
+
+		if body.Name != imageName.Name() {
+			t.Errorf("expected name %q, got %q", imageName.Name(), body.Name)
+		}
+
+		// All tags must be present.
+		if len(body.Tags) != len(creationOrder) {
+			t.Fatalf("expected %d tags, got %d", len(creationOrder), len(body.Tags))
+		}
+		got := make(map[string]bool, len(body.Tags))
+		for _, tag := range body.Tags {
+			got[tag] = true
+		}
+		for _, tag := range creationOrder {
+			if !got[tag] {
+				t.Errorf("tag %q missing from response", tag)
+			}
+		}
+	})
+
+	t.Run("sort=updated with n paginates correctly", func(t *testing.T) {
+		// Fetch first page.
+		tagsURL, err := env.builder.BuildTagsURL(imageName, url.Values{
+			"sort": []string{"updated"},
+			"n":    []string{"2"},
+		})
+		if err != nil {
+			t.Fatalf("unexpected error building tags URL: %v", err)
+		}
+		resp, err := http.Get(tagsURL)
+		if err != nil {
+			t.Fatalf("unexpected error issuing request: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected status 200, got %d", resp.StatusCode)
+		}
+
+		var firstPage tagsAPIResponse
+		if err := json.NewDecoder(resp.Body).Decode(&firstPage); err != nil {
+			t.Fatalf("unexpected error decoding response body: %v", err)
+		}
+		if len(firstPage.Tags) != 2 {
+			t.Fatalf("expected 2 tags on first page, got %d", len(firstPage.Tags))
+		}
+		if resp.Header.Get("Link") == "" {
+			t.Fatal("expected Link header for first page")
+		}
+
+		// Fetch second page using last tag from first page.
+		lastTag := firstPage.Tags[len(firstPage.Tags)-1]
+		tagsURL, err = env.builder.BuildTagsURL(imageName, url.Values{
+			"sort": []string{"updated"},
+			"n":    []string{"2"},
+			"last": []string{lastTag},
+		})
+		if err != nil {
+			t.Fatalf("unexpected error building tags URL: %v", err)
+		}
+		resp2, err := http.Get(tagsURL)
+		if err != nil {
+			t.Fatalf("unexpected error issuing request: %v", err)
+		}
+		defer resp2.Body.Close()
+
+		var secondPage tagsAPIResponse
+		if err := json.NewDecoder(resp2.Body).Decode(&secondPage); err != nil {
+			t.Fatalf("unexpected error decoding response body: %v", err)
+		}
+		if len(secondPage.Tags) != 2 {
+			t.Fatalf("expected 2 tags on second page, got %d", len(secondPage.Tags))
+		}
+
+		// No overlap between pages.
+		firstSet := make(map[string]bool)
+		for _, tag := range firstPage.Tags {
+			firstSet[tag] = true
+		}
+		for _, tag := range secondPage.Tags {
+			if firstSet[tag] {
+				t.Errorf("tag %q appeared on both pages", tag)
+			}
+		}
+	})
+
+	t.Run("no sort param preserves alphabetical order (backward compat)", func(t *testing.T) {
+		tagsURL, err := env.builder.BuildTagsURL(imageName, nil)
+		if err != nil {
+			t.Fatalf("unexpected error building tags URL: %v", err)
+		}
+		resp, err := http.Get(tagsURL)
+		if err != nil {
+			t.Fatalf("unexpected error issuing request: %v", err)
+		}
+		defer resp.Body.Close()
+
+		var body tagsAPIResponse
+		if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+			t.Fatalf("unexpected error decoding response body: %v", err)
+		}
+
+		alphabetical := slices.Sorted(slices.Values(creationOrder))
+		if !reflect.DeepEqual(body.Tags, alphabetical) {
+			t.Errorf("expected alphabetical order %v, got %v", alphabetical, body.Tags)
+		}
+	})
+}
+
 func checkLink(t *testing.T, urlStr string, numEntries int, last string) url.Values {
 	re := regexp.MustCompile("<(/v2/_catalog.*)>; rel=\"next\"")
 	matches := re.FindStringSubmatch(urlStr)
