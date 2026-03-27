@@ -54,7 +54,7 @@ jobs:
           make ${{ matrix.target }}
       -
         name: Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         with:
           directory: ./
 
