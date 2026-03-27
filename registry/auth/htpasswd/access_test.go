@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/distribution/distribution/v3/registry/auth"
@@ -19,31 +20,27 @@ func TestBasicAccessController(t *testing.T) {
 							frodo:$2y$05$926C3y10Quzn/LnqQH86VOEVh/18T6RnLaS.khre96jLNL/7e.K5W
 							MiShil:$2y$05$0oHgwMehvoe8iAWS8I.7l.KoECXrwVaC16RPfaSCU5eVTFrATuMI2
 							DeokMan:공주님`
-	dummyHash = []byte("$2a$05$/vyFmJBPzsrsp6EC53biLulrw8zVjsWqpw26Hb.wfMyrHmRdh2orW") // hash of "nonexistent"
-	tempFile, err := os.CreateTemp("", "htpasswd-test")
+
+	tempFile := filepath.Join(os.TempDir(), "htpasswd")
+	err := os.WriteFile(tempFile, []byte(testHtpasswdContent), 0600)
 	if err != nil {
-		t.Fatal("could not create temporary htpasswd file")
-	}
-	if _, err = tempFile.WriteString(testHtpasswdContent); err != nil {
 		t.Fatal("could not write temporary htpasswd file")
 	}
 
-	options := map[string]any{
+	accessCtrl, err := newAccessController(map[string]any{
 		"realm": testRealm,
-		"path":  tempFile.Name(),
-	}
+		"path":  tempFile,
 
-	accessController, err := newAccessController(options)
+		"overrideDummyHash": []byte("$2a$05$/vyFmJBPzsrsp6EC53biLulrw8zVjsWqpw26Hb.wfMyrHmRdh2orW"), // hash of "nonexistent"
+	})
 	if err != nil {
 		t.Fatal("error creating access controller")
 	}
 
-	tempFile.Close()
-
 	userNumber := 0
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		grant, err := accessController.Authorized(r)
+		grant, err := accessCtrl.Authorized(r)
 		if err != nil {
 			switch err := err.(type) {
 			case auth.Challenge:
@@ -117,7 +114,7 @@ func TestBasicAccessController(t *testing.T) {
 		}
 	}
 
-	for i := 0; i < len(testUsers); i++ {
+	for i := range len(testUsers) {
 		userNumber = i
 		req, err := http.NewRequest(http.MethodGet, server.URL, nil)
 		if err != nil {

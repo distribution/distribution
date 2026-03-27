@@ -2,54 +2,63 @@ package htpasswd
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"strings"
 
+	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/distribution/distribution/v3/registry/auth"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
-var dummyHash = []byte("$2a$05$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+// dummyBcryptHash is used for non-existing users to prevent timing attacks.
+const dummyBcryptHash = "$2a$05$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 
 // htpasswd holds a path to a system .htpasswd file and the machinery to parse
 // it. Only bcrypt hash entries are supported.
 type htpasswd struct {
 	entries map[string][]byte // maps username to password byte slice.
+
+	// dummyHash is used for non-existing users to prevent timing attacks.
+	dummyHash []byte
 }
 
 // newHTPasswd parses the reader and returns an htpasswd or an error.
-func newHTPasswd(rd io.Reader) (*htpasswd, error) {
+func newHTPasswd(rd io.Reader, dummyHash []byte) (*htpasswd, error) {
 	entries, err := parseHTPasswd(rd)
 	if err != nil {
 		return nil, err
 	}
-
-	return &htpasswd{entries: entries}, nil
+	if dummyHash == nil {
+		dummyHash = []byte(dummyBcryptHash)
+	}
+	return &htpasswd{
+		entries:   entries,
+		dummyHash: dummyHash,
+	}, nil
 }
 
 // AuthenticateUser checks a given user:password credential against the
 // receiving HTPasswd's file. If the check passes, nil is returned.
-func (htpasswd *htpasswd) authenticateUser(username string, password string) error {
-	credentials, userExists := htpasswd.entries[username]
-	// timing attack paranoia, always compare the hash even if the user is not found
-	if !userExists {
-		credentials = dummyHash
-	}
-	if err := bcrypt.CompareHashAndPassword(credentials, []byte(password)); err != nil {
-		// the hash is not the same as the password
-		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
-			return auth.ErrAuthenticationFailure
-		}
-		// other error, e.g. non-bcrypt hash in entries, passthrough to logger for clarity
-		return err
-	}
-	// return error if the user is not found even the dummy hash comparison is successful
-	if !userExists {
+func (htpasswd *htpasswd) authenticateUser(ctx context.Context, username string, password string) error {
+	credentials, ok := htpasswd.entries[username]
+	if !ok {
+		// timing attack paranoia, always compare the hash even if the user is not found.
+		_ = bcrypt.CompareHashAndPassword(htpasswd.dummyHash, []byte(password))
 		return auth.ErrAuthenticationFailure
 	}
+
+	if err := bcrypt.CompareHashAndPassword(credentials, []byte(password)); err != nil {
+		if !errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
+			dcontext.GetLogger(ctx).WithError(err).Errorf("error authenticating user %q", username)
+		}
+		// Always return a generic "ErrAuthenticationFailure", not the underlying error.
+		return auth.ErrAuthenticationFailure
+	}
+
 	return nil
 }
 
