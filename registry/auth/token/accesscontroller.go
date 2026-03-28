@@ -1,6 +1,7 @@
 package token
 
 import (
+	"context"
 	"crypto"
 	"crypto/x509"
 	"encoding/json"
@@ -12,6 +13,8 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/distribution/distribution/v3/registry/auth"
 	"github.com/go-jose/go-jose/v4"
@@ -152,31 +155,39 @@ func (ac authChallenge) SetHeaders(r *http.Request, w http.ResponseWriter) {
 
 // accessController implements the auth.AccessController interface.
 type accessController struct {
-	realm             string
-	autoRedirect      bool
-	autoRedirectPath  string
-	issuer            string
-	service           string
-	rootCerts         *x509.CertPool
-	trustedKeys       map[string]crypto.PublicKey
-	signingAlgorithms []jose.SignatureAlgorithm
+	realm               string
+	autoRedirect        bool
+	autoRedirectPath    string
+	issuer              string
+	service             string
+	rootCerts           *x509.CertPool
+	mu                  sync.RWMutex
+	trustedKeys         map[string]crypto.PublicKey
+	signingAlgorithms   []jose.SignatureAlgorithm
+	jwksSource          string
+	jwksRefreshInterval time.Duration
+	cancel              context.CancelFunc
 }
 
 const (
-	defaultAutoRedirectPath = "/auth/token"
+	defaultAutoRedirectPath    = "/auth/token"
+	defaultJWKSRefreshInterval = 1 * time.Hour
+	defaultJWKSRefreshTimeout  = 10 * time.Second
 )
 
 // tokenAccessOptions is a convenience type for handling
 // options to the constructor of an accessController.
 type tokenAccessOptions struct {
-	realm             string
-	autoRedirect      bool
-	autoRedirectPath  string
-	issuer            string
-	service           string
-	rootCertBundle    string
-	jwks              string
-	signingAlgorithms []string
+	realm                  string
+	autoRedirect           bool
+	autoRedirectPath       string
+	issuer                 string
+	service                string
+	rootCertBundle         string
+	jwks                   string
+	jwksRefreshInterval    time.Duration
+	jwksRefreshIntervalSet bool // true when jwksrefreshinterval was explicitly configured
+	signingAlgorithms      []string
 }
 
 // checkOptions gathers the necessary options
@@ -205,6 +216,13 @@ func checkOptions(options map[string]any) (tokenAccessOptions, error) {
 
 	opts.realm, opts.issuer, opts.service, opts.rootCertBundle, opts.jwks = vals[0], vals[1], vals[2], vals[3], vals[4]
 
+	if strings.HasPrefix(opts.jwks, "http://") || strings.HasPrefix(opts.jwks, "https://") {
+		u, err := url.ParseRequestURI(opts.jwks)
+		if err != nil || u.Host == "" {
+			return tokenAccessOptions{}, fmt.Errorf("invalid jwks URL %q: must be a valid http/https URL", opts.jwks)
+		}
+	}
+
 	autoRedirectVal, ok := options["autoredirect"]
 	if ok {
 		autoRedirect, ok := autoRedirectVal.(bool)
@@ -225,6 +243,15 @@ func checkOptions(options map[string]any) (tokenAccessOptions, error) {
 		if opts.autoRedirectPath == "" {
 			opts.autoRedirectPath = defaultAutoRedirectPath
 		}
+	}
+
+	if intervalStr, ok := options["jwksrefreshinterval"]; ok {
+		interval, err := time.ParseDuration(intervalStr.(string))
+		if err != nil {
+			return tokenAccessOptions{}, fmt.Errorf("invalid jwksrefreshinterval: %v", err)
+		}
+		opts.jwksRefreshInterval = interval
+		opts.jwksRefreshIntervalSet = true
 	}
 
 	signingAlgos, ok := options["signingalgorithms"]
@@ -282,18 +309,36 @@ func getRootCerts(path string) ([]*x509.Certificate, error) {
 	return rootCerts, nil
 }
 
-func getJwks(path string) (*jose.JSONWebKeySet, error) {
-	// TODO(milosgajdos): we should consider providing a JWKS
-	// URL from which the JWKS could be fetched
-	jp, err := os.Open(path)
-	if err != nil {
-		return nil, fmt.Errorf("unable to open jwks file %q: %s", path, err)
-	}
-	defer jp.Close()
+func getJwks(source string) (*jose.JSONWebKeySet, error) {
+	var rawJWKS []byte
 
-	rawJWKS, err := io.ReadAll(jp)
-	if err != nil {
-		return nil, fmt.Errorf("unable to read token jwks file %q: %s", path, err)
+	if strings.HasPrefix(source, "http://") || strings.HasPrefix(source, "https://") {
+		client := &http.Client{Timeout: defaultJWKSRefreshTimeout}
+		resp, err := client.Get(source)
+		if err != nil {
+			return nil, fmt.Errorf("unable to fetch JWKS from %q: %s", source, err)
+		}
+
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("unexpected status %d fetching JWKS from %q", resp.StatusCode, source)
+		}
+
+		rawJWKS, err = io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("unable to read JWKS response from %q: %s", source, err)
+		}
+	} else {
+		jp, err := os.Open(source)
+		if err != nil {
+			return nil, fmt.Errorf("unable to open jwks file %q: %s", source, err)
+		}
+
+		defer jp.Close()
+		rawJWKS, err = io.ReadAll(jp)
+		if err != nil {
+			return nil, fmt.Errorf("unable to read token jwks file %q: %s", source, err)
+		}
 	}
 
 	var jwks jose.JSONWebKeySet
@@ -373,16 +418,78 @@ func newAccessController(options map[string]any) (auth.AccessController, error) 
 		signAlgos = defaultSigningAlgorithms
 	}
 
-	return &accessController{
-		realm:             config.realm,
-		autoRedirect:      config.autoRedirect,
-		autoRedirectPath:  config.autoRedirectPath,
-		issuer:            config.issuer,
-		service:           config.service,
-		rootCerts:         rootPool,
-		trustedKeys:       trustedKeys,
-		signingAlgorithms: signAlgos,
-	}, nil
+	refreshInterval := config.jwksRefreshInterval
+	if config.jwks != "" && !config.jwksRefreshIntervalSet {
+		refreshInterval = defaultJWKSRefreshInterval
+	}
+
+	ac := &accessController{
+		realm:               config.realm,
+		autoRedirect:        config.autoRedirect,
+		autoRedirectPath:    config.autoRedirectPath,
+		issuer:              config.issuer,
+		service:             config.service,
+		rootCerts:           rootPool,
+		trustedKeys:         trustedKeys,
+		signingAlgorithms:   signAlgos,
+		jwksSource:          config.jwks,
+		jwksRefreshInterval: refreshInterval,
+	}
+
+	if ac.jwksSource != "" && ac.jwksRefreshInterval > 0 {
+		ctx, cancel := context.WithCancel(context.Background())
+		ac.cancel = cancel
+		ac.startRefresh(ctx)
+	}
+
+	return ac, nil
+}
+
+// refreshKeys fetches the JWKS from jwksSource and atomically replaces the
+// trusted key set. On failure the existing keys are preserved.
+func (ac *accessController) refreshKeys() error {
+	jwks, err := jwkFetcher(ac.jwksSource)
+	if err != nil {
+		return err
+	}
+
+	newKeys := make(map[string]crypto.PublicKey, len(jwks.Keys))
+	for _, key := range jwks.Keys {
+		newKeys[key.KeyID] = key.Public()
+	}
+
+	ac.mu.Lock()
+	ac.trustedKeys = newKeys
+	ac.mu.Unlock()
+	logrus.Debugf("token auth: refreshed %d JWKS keys from %q", len(newKeys), ac.jwksSource)
+	return nil
+}
+
+// startRefresh spawns a goroutine that periodically calls refreshKeys.
+// On fetch failure the existing keys are kept and the error is logged.
+func (ac *accessController) startRefresh(ctx context.Context) {
+	go func() {
+		ticker := time.NewTicker(ac.jwksRefreshInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				if err := ac.refreshKeys(); err != nil {
+					logrus.Errorf("token auth: failed to refresh JWKS from %q: %v", ac.jwksSource, err)
+				}
+			}
+		}
+	}()
+}
+
+// Close stops the background JWKS refresh goroutine if one was started.
+func (ac *accessController) Close() error {
+	if ac.cancel != nil {
+		ac.cancel()
+	}
+	return nil
 }
 
 // Authorized handles checking whether the given request is authorized
@@ -408,17 +515,38 @@ func (ac *accessController) Authorized(req *http.Request, accessItems ...auth.Ac
 		return nil, challenge
 	}
 
+	ac.mu.RLock()
+	trustedKeys := ac.trustedKeys
+	ac.mu.RUnlock()
+
 	verifyOpts := VerifyOptions{
 		TrustedIssuers:    []string{ac.issuer},
 		AcceptedAudiences: []string{ac.service},
 		Roots:             ac.rootCerts,
-		TrustedKeys:       ac.trustedKeys,
+		TrustedKeys:       trustedKeys,
 	}
 
 	claims, err := token.Verify(verifyOpts)
 	if err != nil {
-		challenge.err = err
-		return nil, challenge
+		// If the key ID is not in our current set and we have a remote source, re-fetch
+		if errors.Is(err, ErrUnknownKeyID) && ac.jwksSource != "" {
+			if refreshErr := ac.refreshKeys(); refreshErr != nil {
+				logrus.Errorf("token auth: on-demand JWKS refresh from %q failed: %v", ac.jwksSource, refreshErr)
+			} else {
+				ac.mu.RLock()
+				verifyOpts.TrustedKeys = ac.trustedKeys
+				ac.mu.RUnlock()
+				claims, err = token.Verify(verifyOpts)
+			}
+		}
+		if err != nil {
+			// Normalize ErrUnknownKeyID so the WWW-Authenticate header
+			if errors.Is(err, ErrUnknownKeyID) {
+				err = ErrInvalidToken
+			}
+			challenge.err = err
+			return nil, challenge
+		}
 	}
 
 	accessSet := claims.accessSet()
