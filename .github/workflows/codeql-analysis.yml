@@ -34,9 +34,10 @@ jobs:
     steps:
       -
         name: Checkout
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 2
+          persist-credentials: false
       -
         name: Checkout HEAD on PR
         if: ${{ github.event_name == 'pull_request' }}
@@ -44,12 +45,12 @@ jobs:
           git checkout HEAD^2
       -
         name: Initialize CodeQL
-        uses: github/codeql-action/init@v4.34.1
+        uses: github/codeql-action/init@38697555549f1db7851b81482ff19f1fa5c4fedc # v4.34.1
         with:
           languages: ${{ matrix.language }}
       -
         name: Autobuild
-        uses: github/codeql-action/autobuild@v4.34.1
+        uses: github/codeql-action/autobuild@38697555549f1db7851b81482ff19f1fa5c4fedc # v4.34.1
       -
         name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v4.34.1
+        uses: github/codeql-action/analyze@38697555549f1db7851b81482ff19f1fa5c4fedc # v4.34.1
