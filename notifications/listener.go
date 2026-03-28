@@ -167,7 +167,9 @@ func (bsl *blobServiceListener) Open(ctx context.Context, dgst digest.Digest) (i
 func (bsl *blobServiceListener) ServeBlob(ctx context.Context, w http.ResponseWriter, r *http.Request, dgst digest.Digest) error {
 	err := bsl.BlobStore.ServeBlob(ctx, w, r, dgst)
 	if err == nil {
-		if desc, err := bsl.Stat(ctx, dgst); err != nil {
+		// Use a detached context for Stat() since the HTTP request context may be canceled
+		// after ServeBlob completes, but we still want to send the notification.
+		if desc, err := bsl.Stat(context.WithoutCancel(ctx), dgst); err != nil {
 			dcontext.GetLogger(ctx).Errorf("error resolving descriptor in ServeBlob listener: %v", err)
 		} else {
 			if err := bsl.parent.listener.BlobPulled(bsl.parent.Repository.Named(), desc); err != nil {

@@ -1087,11 +1087,21 @@ Use these settings to configure Redis TLS:
 
 | Parameter | Required | Description                                           |
 |-----------|----------|-------------------------------------------------------|
-| `certificate`  | yes  | Absolute path to the x509 certificate file.           |
-| `key`          | yes  | Absolute path to the x509 private key file.           |
+| `certificate`  | no   | Absolute path to the x509 client certificate file. Required for mTLS.  |
+| `key`          | no   | Absolute path to the x509 client private key file. Required for mTLS.  |
 | `rootcas`      | no   | An array of absolute paths to x509 CA files.          |
 
+**Note:** For server-side TLS only (e.g., AWS Elasticache), provide only `rootcas`. For mutual TLS (mTLS), provide both `certificate` and `key` along with optional `rootcas`.
+
 ```yaml
+# Server-side TLS only (validate server certificate)
+redis:
+  tls:
+    rootcas:
+      - /path/to/ca-bundle.crt
+  addrs: [localhost:6379]
+
+# Mutual TLS (client and server certificates)
 redis:
   tls:
     certificate: /path/to/cert.crt
