@@ -115,6 +115,7 @@ type DriverParameters struct {
 	UseDualStack                bool
 	Accelerate                  bool
 	UseFIPSEndpoint             bool
+	UseDelimiterWalk            bool
 	LogLevel                    aws.LogLevelType
 }
 
@@ -153,7 +154,7 @@ func (factory *s3DriverFactory) Create(ctx context.Context, parameters map[strin
 var _ storagedriver.StorageDriver = &driver{}
 
 type driver struct {
-	S3                          *s3.S3
+	S3                          S3Client
 	Bucket                      string
 	ChunkSize                   int
 	Encrypt                     bool
@@ -164,6 +165,7 @@ type driver struct {
 	RootDirectory               string
 	StorageClass                string
 	ObjectACL                   string
+	UseDelimiterWalk            bool
 	pool                        *sync.Pool
 }
 
@@ -341,6 +343,11 @@ func FromParameters(ctx context.Context, parameters map[string]any) (*Driver, er
 		return nil, err
 	}
 
+	useDelimiterWalkBool, err := getParameterAsBool(parameters, "usedelimiterwalk", false)
+	if err != nil {
+		return nil, err
+	}
+
 	params := DriverParameters{
 		AccessKey:                   fmt.Sprint(accessKey),
 		SecretKey:                   fmt.Sprint(secretKey),
@@ -365,6 +372,7 @@ func FromParameters(ctx context.Context, parameters map[string]any) (*Driver, er
 		UseDualStack:                useDualStackBool,
 		Accelerate:                  accelerateBool,
 		UseFIPSEndpoint:             useFIPSEndpointBool,
+		UseDelimiterWalk:            useDelimiterWalkBool,
 		LogLevel:                    getS3LogLevelFromParam(parameters["loglevel"]),
 	}
 
@@ -538,6 +546,7 @@ func New(ctx context.Context, params DriverParameters) (*Driver, error) {
 		RootDirectory:               params.RootDirectory,
 		StorageClass:                params.StorageClass,
 		ObjectACL:                   params.ObjectACL,
+		UseDelimiterWalk:            params.UseDelimiterWalk,
 		pool: &sync.Pool{
 			New: func() any { return &bytes.Buffer{} },
 		},
@@ -1059,8 +1068,14 @@ func (d *driver) Walk(ctx context.Context, from string, f storagedriver.WalkFn, 
 	}
 
 	var objectCount int64
-	if err := d.doWalk(ctx, &objectCount, from, walkOptions.StartAfterHint, f); err != nil {
-		return err
+	if d.UseDelimiterWalk {
+		if err := d.doWalkWithDelimiter(ctx, &objectCount, from, walkOptions.StartAfterHint, f); err != nil {
+			return err
+		}
+	} else {
+		if err := d.doWalk(ctx, &objectCount, from, walkOptions.StartAfterHint, f); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -1178,7 +1193,7 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, from, sta
 	return nil
 }
 
-// directoryDiff finds all directories that are not in common between
+// directoryDiff returns the directories that are unique to 'current' relative to 'prev'.
 // the previous and current paths in sorted order.
 //
 // # Examples
