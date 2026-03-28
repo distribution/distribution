@@ -86,9 +86,7 @@ type Manager interface {
 // perform requests on the endpoints or cache the responses
 // to a backend.
 func NewSimpleManager() Manager {
-	return &simpleManager{
-		challenges: make(map[string][]Challenge),
-	}
+	return &simpleManager{}
 }
 
 type simpleManager struct {
@@ -105,13 +103,13 @@ func (m *simpleManager) GetChallenges(endpoint url.URL) ([]Challenge, error) {
 	normalizeURL(&endpoint)
 
 	m.mu.RLock()
-	defer m.mu.RUnlock()
 	challenges := m.challenges[endpoint.String()]
+	m.mu.RUnlock()
+
 	return challenges, nil
 }
 
 func (m *simpleManager) AddResponse(resp *http.Response) error {
-	challenges := ResponseChallenges(resp)
 	if resp.Request == nil {
 		return fmt.Errorf("missing request reference")
 	}
@@ -122,9 +120,14 @@ func (m *simpleManager) AddResponse(resp *http.Response) error {
 	}
 	normalizeURL(&urlCopy)
 
+	challenges := ResponseChallenges(resp)
 	m.mu.Lock()
-	defer m.mu.Unlock()
+	if m.challenges == nil {
+		m.challenges = make(map[string][]Challenge)
+	}
 	m.challenges[urlCopy.String()] = challenges
+	m.mu.Unlock()
+
 	return nil
 }
 
