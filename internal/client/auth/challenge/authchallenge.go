@@ -94,16 +94,11 @@ type simpleManager struct {
 	challenges map[string][]Challenge
 }
 
-func normalizeURL(endpoint *url.URL) {
-	endpoint.Host = strings.ToLower(endpoint.Host)
-	endpoint.Host = canonicalAddr(endpoint)
-}
-
 func (m *simpleManager) GetChallenges(endpoint url.URL) ([]Challenge, error) {
-	normalizeURL(&endpoint)
+	key := normalizedURL(endpoint)
 
 	m.mu.RLock()
-	challenges := m.challenges[endpoint.String()]
+	challenges := m.challenges[key]
 	m.mu.RUnlock()
 
 	return challenges, nil
@@ -113,19 +108,18 @@ func (m *simpleManager) AddResponse(resp *http.Response) error {
 	if resp.Request == nil {
 		return fmt.Errorf("missing request reference")
 	}
-	urlCopy := url.URL{
+	key := normalizedURL(url.URL{
 		Path:   resp.Request.URL.Path,
 		Host:   resp.Request.URL.Host,
 		Scheme: resp.Request.URL.Scheme,
-	}
-	normalizeURL(&urlCopy)
+	})
 
 	challenges := ResponseChallenges(resp)
 	m.mu.Lock()
 	if m.challenges == nil {
 		m.challenges = make(map[string][]Challenge)
 	}
-	m.challenges[urlCopy.String()] = challenges
+	m.challenges[key] = challenges
 	m.mu.Unlock()
 
 	return nil
