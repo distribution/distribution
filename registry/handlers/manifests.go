@@ -461,8 +461,7 @@ func (imh *manifestHandler) DeleteManifest(w http.ResponseWriter, r *http.Reques
 	err = manifests.Delete(imh, imh.Digest)
 	if err != nil {
 		switch err {
-		case digest.ErrDigestUnsupported:
-		case digest.ErrDigestInvalidFormat:
+		case digest.ErrDigestUnsupported, digest.ErrDigestInvalidFormat:
 			imh.Errors = append(imh.Errors, errcode.ErrorCodeDigestInvalid)
 			return
 		case distribution.ErrBlobUnknown:
