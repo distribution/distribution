@@ -57,6 +57,7 @@ type Configuration struct {
 	// Catalog endpoint (/v2/_catalog) configuration, it provides the configuration
 	// options to control the maximum number of entries returned by the catalog endpoint.
 	Catalog Catalog `yaml:"catalog,omitempty"`
+	Tags    Tags    `yaml:"tags,omitempty"`
 
 	// Proxy defines the configuration options for using the registry as a pull-through cache.
 	Proxy Proxy `yaml:"proxy,omitempty"`
@@ -261,6 +262,16 @@ type LetsEncrypt struct {
 	// DirectoryURL points to the CA directory endpoint.
 	// If empty, LetsEncrypt is used.
 	DirectoryURL string `yaml:"directoryurl,omitempty"`
+}
+
+// Tags is composed of MaxTags.
+// Tags endpoint (/v2/<name>/tags/list) configuration, it provides the configuration
+// options to control the maximum number of tags returned by the tags endpoint.
+type Tags struct {
+	// Max number of tags returned by the tags endpoint. Requesting n tags
+	// to the tags endpoint will return at most MaxTags tags.
+	// An empty or a negative value will set a default of 1000 maximum tags by default.
+	MaxTags int `yaml:"maxtags,omitempty"`
 }
 
 // LogHook is composed of hook Level and Type.
@@ -816,6 +827,10 @@ func Parse(rd io.Reader) (*Configuration, error) {
 
 					if v0_1.Catalog.MaxEntries <= 0 {
 						v0_1.Catalog.MaxEntries = 1000
+					}
+
+					if v0_1.Tags.MaxTags <= 0 {
+						v0_1.Tags.MaxTags = 1000
 					}
 
 					if v0_1.Storage.Type() == "" {
