@@ -199,7 +199,7 @@ func expectToken(s string) (token, rest string) {
 }
 
 func expectTokenOrQuoted(s string) (value string, rest string) {
-	if !strings.HasPrefix(s, "\"") {
+	if !strings.HasPrefix(s, `"`) {
 		return expectToken(s)
 	}
 	s = s[1:]
