@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/distribution/distribution/v3/registry/auth"
@@ -13,37 +14,33 @@ import (
 
 func TestBasicAccessController(t *testing.T) {
 	testRealm := "The-Shire"
-	testUsers := []string{"bilbo", "frodo", "MiShil", "DeokMan"}
-	testPasswords := []string{"baggins", "baggins", "새주", "공주님"}
+	testUsers := []string{"bilbo", "frodo", "MiShil", "DeokMan", "nonexistent"}
+	testPasswords := []string{"baggins", "baggins", "새주", "공주님", "nonexistent"}
 	testHtpasswdContent := `bilbo:{SHA}5siv5c0SHx681xU6GiSx9ZQryqs=
 							frodo:$2y$05$926C3y10Quzn/LnqQH86VOEVh/18T6RnLaS.khre96jLNL/7e.K5W
 							MiShil:$2y$05$0oHgwMehvoe8iAWS8I.7l.KoECXrwVaC16RPfaSCU5eVTFrATuMI2
 							DeokMan:공주님`
 
-	tempFile, err := os.CreateTemp("", "htpasswd-test")
+	tempFile := filepath.Join(os.TempDir(), "htpasswd")
+	err := os.WriteFile(tempFile, []byte(testHtpasswdContent), 0600)
 	if err != nil {
-		t.Fatal("could not create temporary htpasswd file")
-	}
-	if _, err = tempFile.WriteString(testHtpasswdContent); err != nil {
 		t.Fatal("could not write temporary htpasswd file")
 	}
 
-	options := map[string]any{
+	accessCtrl, err := newAccessController(map[string]any{
 		"realm": testRealm,
-		"path":  tempFile.Name(),
-	}
+		"path":  tempFile,
 
-	accessController, err := newAccessController(options)
+		"overrideDummyHash": []byte("$2a$05$/vyFmJBPzsrsp6EC53biLulrw8zVjsWqpw26Hb.wfMyrHmRdh2orW"), // hash of "nonexistent"
+	})
 	if err != nil {
 		t.Fatal("error creating access controller")
 	}
 
-	tempFile.Close()
-
 	userNumber := 0
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		grant, err := accessController.Authorized(r)
+		grant, err := accessCtrl.Authorized(r)
 		if err != nil {
 			switch err := err.(type) {
 			case auth.Challenge:
@@ -83,8 +80,9 @@ func TestBasicAccessController(t *testing.T) {
 	}
 
 	nonbcrypt := map[string]struct{}{
-		"bilbo":   {},
-		"DeokMan": {},
+		"bilbo":       {},
+		"DeokMan":     {},
+		"nonexistent": {},
 	}
 
 	for i := range testUsers {
@@ -113,6 +111,27 @@ func TestBasicAccessController(t *testing.T) {
 			if resp.StatusCode != http.StatusNoContent {
 				t.Fatalf("unexpected non-success response status: %v != %v for %s %s", resp.StatusCode, http.StatusNoContent, testUsers[i], testPasswords[i])
 			}
+		}
+	}
+
+	for i := range len(testUsers) {
+		userNumber = i
+		req, err := http.NewRequest(http.MethodGet, server.URL, nil)
+		if err != nil {
+			t.Fatalf("error allocating new request: %v", err)
+		}
+
+		invalidPassword := testPasswords[i] + "invalid"
+		req.SetBasicAuth(testUsers[i], invalidPassword)
+
+		resp, err = client.Do(req)
+		if err != nil {
+			t.Fatalf("unexpected error during GET: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusUnauthorized {
+			t.Fatalf("unexpected non-success response status: %v != %v for %s %s", resp.StatusCode, http.StatusUnauthorized, testUsers[i], invalidPassword)
 		}
 	}
 }
