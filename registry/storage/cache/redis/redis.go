@@ -214,8 +214,10 @@ func (rsrbds *repositoryScopedRedisBlobDescriptorService) Clear(ctx context.Cont
 		return err
 	}
 
+	pool := rsrbds.upstream.pool
+
 	// Check membership to repository first
-	member, err := rsrbds.upstream.pool.SIsMember(ctx, rsrbds.repositoryBlobSetKey(rsrbds.repo), dgst.String()).Result()
+	member, err := pool.SIsMember(ctx, rsrbds.repositoryBlobSetKey(rsrbds.repo), dgst.String()).Result()
 	if err != nil {
 		return err
 	}
@@ -223,7 +225,13 @@ func (rsrbds *repositoryScopedRedisBlobDescriptorService) Clear(ctx context.Cont
 		return distribution.ErrBlobUnknown
 	}
 
-	return rsrbds.upstream.Clear(ctx, dgst)
+	pipe := pool.TxPipeline()
+	pipe.SRem(ctx, rsrbds.repositoryBlobSetKey(rsrbds.repo), dgst.String())
+	pipe.Del(ctx, rsrbds.blobDescriptorHashKey(dgst))
+	pipe.HDel(ctx, rsrbds.upstream.blobDescriptorHashKey(dgst), "digest", "size", "mediatype")
+
+	_, err = pipe.Exec(ctx)
+	return err
 }
 
 func (rsrbds *repositoryScopedRedisBlobDescriptorService) SetDescriptor(ctx context.Context, dgst digest.Digest, desc v1.Descriptor) error {
