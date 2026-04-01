@@ -210,7 +210,21 @@ func (rsrbds *repositoryScopedRedisBlobDescriptorService) Clear(ctx context.Cont
 		return distribution.ErrBlobUnknown
 	}
 
-	return rsrbds.upstream.Clear(ctx, dgst)
+	// Remove the repository-scoped membership and descriptor metadata in one transaction.
+	if _, err := conn.Do("MULTI"); err != nil {
+		return err
+	}
+	if _, err := conn.Do("SREM", rsrbds.repositoryBlobSetKey(rsrbds.repo), dgst); err != nil {
+		return err
+	}
+	if _, err := conn.Do("DEL", rsrbds.blobDescriptorHashKey(dgst)); err != nil {
+		return err
+	}
+	if _, err := conn.Do("HDEL", rsrbds.upstream.blobDescriptorHashKey(dgst), "digest", "size", "mediatype"); err != nil {
+		return err
+	}
+	_, err = conn.Do("EXEC")
+	return err
 }
 
 func (rsrbds *repositoryScopedRedisBlobDescriptorService) SetDescriptor(ctx context.Context, dgst digest.Digest, desc distribution.Descriptor) error {
