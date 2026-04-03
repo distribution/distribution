@@ -15,7 +15,7 @@ require (
 	github.com/docker/docker-credential-helpers v0.9.5
 	github.com/docker/go-events v0.0.0-20250808211157-605354379745
 	github.com/docker/go-metrics v0.0.1
-	github.com/go-jose/go-jose/v4 v4.1.3
+	github.com/go-jose/go-jose/v4 v4.1.4
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
