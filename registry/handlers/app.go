@@ -572,6 +572,10 @@ func (app *App) configureRedis(cfg *configuration.Configuration) {
 
 	// redis TLS config
 	if cfg.Redis.TLS.Certificate != "" || cfg.Redis.TLS.Key != "" || len(cfg.Redis.TLS.RootCAs) != 0 {
+		if (cfg.Redis.TLS.Certificate == "") != (cfg.Redis.TLS.Key == "") {
+			dcontext.GetLogger(app).Warn("redis TLS client certificate configuration is incomplete; both redis.tls.certificate and redis.tls.key must be set to enable mTLS, continuing without client certificates")
+		}
+
 		var err error
 		tlsConf := &tls.Config{}
 		if cfg.Redis.TLS.Certificate != "" && cfg.Redis.TLS.Key != "" {
