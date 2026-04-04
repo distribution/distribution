@@ -163,11 +163,11 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if manifestType == ociSchema && !supports[ociSchema] {
-		imh.Errors = append(imh.Errors, errcode.ErrorCodeManifestUnknown.WithMessage("OCI manifest found, but accept header does not support OCI manifests"))
+		imh.Errors = append(imh.Errors, errcode.ErrorCodeManifestNotAcceptable.WithMessage("OCI manifest found, but accept header does not support OCI manifests"))
 		return
 	}
 	if manifestType == ociImageIndexSchema && !supports[ociImageIndexSchema] {
-		imh.Errors = append(imh.Errors, errcode.ErrorCodeManifestUnknown.WithMessage("OCI index found, but accept header does not support OCI indexes"))
+		imh.Errors = append(imh.Errors, errcode.ErrorCodeManifestNotAcceptable.WithMessage("OCI index found, but accept header does not support OCI indexes"))
 		return
 	}
 
