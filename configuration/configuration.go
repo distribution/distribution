@@ -10,6 +10,14 @@ import (
 	"time"
 )
 
+const (
+	// defaultMaxEntries is the default max number of entries returned by the catalog endpoint
+	defaultMaxEntries = 1000
+
+	// defaultMaxTags is the default max number of tags returned by the tags endpoint
+	defaultMaxTags = 1000
+)
+
 // Configuration is a versioned registry configuration, intended to be provided by a yaml file, and
 // optionally modified by environment variables.
 //
@@ -57,6 +65,10 @@ type Configuration struct {
 	// Catalog endpoint (/v2/_catalog) configuration, it provides the configuration
 	// options to control the maximum number of entries returned by the catalog endpoint.
 	Catalog Catalog `yaml:"catalog,omitempty"`
+
+	// Tags provides configuration for the tags list (/v2/<name>/tags/list) endpoint.
+	// It allows specifying the maximum number of tags returned by the endpoint.
+	Tags Tags `yaml:"tags,omitempty"`
 
 	// Proxy defines the configuration options for using the registry as a pull-through cache.
 	Proxy Proxy `yaml:"proxy,omitempty"`
@@ -261,6 +273,14 @@ type LetsEncrypt struct {
 	// DirectoryURL points to the CA directory endpoint.
 	// If empty, LetsEncrypt is used.
 	DirectoryURL string `yaml:"directoryurl,omitempty"`
+}
+
+// Tags provides configuration options for the "/v2/<name>/tags/list" endpoint.
+type Tags struct {
+	// MaxTags limits the maximum number of tags returned by the tags endpoint.
+	// Requesting n tags to the tags endpoint will return at most MaxTags tags.
+	// Default to 1000 tags if not set.
+	MaxTags int `yaml:"maxtags,omitempty"`
 }
 
 // LogHook is composed of hook Level and Type.
@@ -815,7 +835,14 @@ func Parse(rd io.Reader) (*Configuration, error) {
 					}
 
 					if v0_1.Catalog.MaxEntries <= 0 {
-						v0_1.Catalog.MaxEntries = 1000
+						v0_1.Catalog.MaxEntries = defaultMaxEntries
+					}
+
+					if v0_1.Tags.MaxTags <= 0 {
+						if v0_1.Tags.MaxTags < 0 {
+							return nil, errors.New("maxtags limit must be a non-negative integer value")
+						}
+						v0_1.Tags.MaxTags = defaultMaxTags
 					}
 
 					if v0_1.Storage.Type() == "" {
