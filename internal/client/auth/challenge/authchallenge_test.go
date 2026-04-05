@@ -122,3 +122,44 @@ func testAuthChallengeConcurrent(t *testing.T, host string) {
 	}()
 	s.Wait()
 }
+
+func TestFilteringManager(t *testing.T) {
+	t.Parallel()
+
+	base := NewSimpleManager()
+	manager := NewFilteringManager(base, func(c Challenge) bool {
+		return c.Parameters["service"] == "keep.example.com"
+	})
+
+	endpoint, err := url.Parse("https://registry.example.com/v2/")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp := &http.Response{
+		Request: &http.Request{
+			URL: endpoint,
+		},
+		Header:     make(http.Header),
+		StatusCode: http.StatusUnauthorized,
+	}
+	resp.Header.Add("WWW-Authenticate", `Bearer realm="https://auth.example.com/token",service="keep.example.com"`)
+	resp.Header.Add("WWW-Authenticate", `Bearer realm="https://evil.example.net/token",service="drop.example.net"`)
+
+	if err := manager.AddResponse(resp); err != nil {
+		t.Fatal(err)
+	}
+
+	challenges, err := manager.GetChallenges(*endpoint)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(challenges) != 1 {
+		t.Fatalf("unexpected challenge count: got %d want 1", len(challenges))
+	}
+
+	if got := challenges[0].Parameters["service"]; got != "keep.example.com" {
+		t.Fatalf("unexpected surviving challenge service: %q", got)
+	}
+}
