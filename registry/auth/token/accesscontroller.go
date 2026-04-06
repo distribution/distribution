@@ -216,7 +216,10 @@ func checkOptions(options map[string]any) (tokenAccessOptions, error) {
 
 	opts.realm, opts.issuer, opts.service, opts.rootCertBundle, opts.jwks = vals[0], vals[1], vals[2], vals[3], vals[4]
 
-	if strings.HasPrefix(opts.jwks, "http://") || strings.HasPrefix(opts.jwks, "https://") {
+	if strings.Contains(opts.jwks, "://") {
+		if !strings.HasPrefix(opts.jwks, "http://") && !strings.HasPrefix(opts.jwks, "https://") {
+			return tokenAccessOptions{}, fmt.Errorf("invalid jwks URL %q: only http and https schemes are supported", opts.jwks)
+		}
 		u, err := url.ParseRequestURI(opts.jwks)
 		if err != nil || u.Host == "" {
 			return tokenAccessOptions{}, fmt.Errorf("invalid jwks URL %q: must be a valid http/https URL", opts.jwks)

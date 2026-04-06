@@ -132,6 +132,8 @@ func TestCheckOptionsInvalidJWKSURL(t *testing.T) {
 	}{
 		{"no host", "https://"},
 		{"invalid url", "https://[::1]invalid"},
+		{"ftp scheme", "ftp://auth.example.com/jwks.json"},
+		{"ssh scheme", "ssh://auth.example.com/jwks.json"},
 	}
 
 	for _, tc := range cases {
