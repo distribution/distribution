@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"context"
+	"io"
 
 	"github.com/distribution/distribution/v3"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -67,5 +68,12 @@ func (pt proxyTagService) Lookup(ctx context.Context, digest v1.Descriptor) ([]s
 }
 
 func (pt proxyTagService) List(ctx context.Context, limit int, last string) ([]string, error) {
-	return []string{}, distribution.ErrUnsupported
+	err := pt.authChallenger.tryEstablishChallenges(ctx)
+	if err == nil {
+		tags, err := pt.remoteTags.List(ctx, limit, last)
+		if err == nil || err == io.EOF {
+			return tags, err
+		}
+	}
+	return pt.localTags.List(ctx, limit, last)
 }

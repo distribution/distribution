@@ -63,8 +63,22 @@ func (m *mockTagStore) Lookup(ctx context.Context, digest distribution.Descripto
 }
 
 func (m *mockTagStore) List(ctx context.Context, limit int, last string) ([]string, error) {
-	panic("not implemented")
+	m.Lock()
+	defer m.Unlock()
+	tags := make([]string, 0, len(m.mapping))
+	for tag := range m.mapping {
+		tags = append(tags, tag)
+	}
+	sort.Strings(tags)
+	result := make([]string, 0, limit)
+	for _, tag := range tags {
+		if tag > last && len(result) < limit {
+			result = append(result, tag)
+		}
+	}
+	return result, nil
 }
+
 func testProxyTagService(local, remote map[string]distribution.Descriptor) *proxyTagService {
 	if local == nil {
 		local = make(map[string]v1.Descriptor)
@@ -179,7 +193,33 @@ func TestGet(t *testing.T) {
 		t.Fatalf("Unexpected tags returned from All() : %v ", all)
 	}
 
-	if proxyTags.authChallenger.(*mockChallenger).count != 4 {
-		t.Fatalf("Expected 4 auth challenge calls, got %#v", proxyTags.authChallenger)
+	list, err := proxyTags.List(ctx, 1, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(list) != 1 {
+		t.Fatalf("Unexpected tag length returned from List() : %d ", len(list))
+	}
+
+	if list[0] != "funtag" {
+		t.Fatalf("Unexpected tags returned from List() : %v ", list)
+	}
+
+	list2, err := proxyTags.List(ctx, 1, "funtag")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(list2) != 1 {
+		t.Fatalf("Unexpected tag length returned from List() : %d ", len(list2))
+	}
+
+	if list2[0] != "remote" {
+		t.Fatalf("Unexpected tags returned from List() : %v ", list2)
+	}
+
+	if proxyTags.authChallenger.(*mockChallenger).count != 6 {
+		t.Fatalf("Expected 6 auth challenge calls, got %#v", proxyTags.authChallenger)
 	}
 }

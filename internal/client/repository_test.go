@@ -1660,6 +1660,88 @@ func TestManifestTagsPaginated(t *testing.T) {
 	}
 }
 
+func TestManifestTagsListPaginated(t *testing.T) {
+	s := httptest.NewServer(http.NotFoundHandler())
+	defer s.Close()
+
+	repo, _ := reference.WithName("test.example.com/repo/tags/list")
+	tagsList := []string{"tag1", "tag2", "funtag"}
+	var m testutil.RequestResponseMap
+	for i := range 3 {
+		body, err := json.Marshal(map[string]any{
+			"name": "test.example.com/repo/tags/list",
+			"tags": []string{tagsList[i]},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		queryParams := make(map[string][]string)
+		if i > 0 {
+			queryParams["n"] = []string{"1"}
+			queryParams["last"] = []string{tagsList[i-1]}
+		} else {
+			queryParams["n"] = []string{"1"}
+		}
+
+		// Test both relative and absolute links.
+		relativeLink := "/v2/" + repo.Name() + "/tags/list?n=1&last=" + tagsList[i]
+		var link string
+		switch i {
+		case 0:
+			link = relativeLink
+		case len(tagsList) - 1:
+			link = ""
+		default:
+			link = s.URL + relativeLink
+		}
+
+		headers := http.Header(map[string][]string{
+			"Content-Length": {fmt.Sprint(len(body))},
+			"Last-Modified":  {time.Now().Add(-1 * time.Second).Format(time.ANSIC)},
+		})
+		if link != "" {
+			headers.Set("Link", fmt.Sprintf(`<%s>; rel="next"`, link))
+		}
+
+		m = append(m, testutil.RequestResponseMapping{
+			Request: testutil.Request{
+				Method:      http.MethodGet,
+				Route:       "/v2/" + repo.Name() + "/tags/list",
+				QueryParams: queryParams,
+			},
+			Response: testutil.Response{
+				StatusCode: http.StatusOK,
+				Body:       body,
+				Headers:    headers,
+			},
+		})
+	}
+	s.Config.Handler = testutil.NewHandler(m)
+
+	r, err := NewRepository(repo, s.URL, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := dcontext.Background()
+	tagService := r.Tags(ctx)
+
+	last := ""
+	for i := range 3 {
+		tags, err := tagService.List(ctx, 1, last)
+		if err != nil && err != io.EOF {
+			t.Fatal(err)
+		}
+		if len(tags) != 1 {
+			t.Fatalf("Wrong number of tags returned: %d, expected 1", len(tags))
+		}
+		if tags[0] != tagsList[i] {
+			t.Fatalf("Wrong tag returned: %s, expected %s", tags[0], tagsList[i])
+		}
+		last = tags[0]
+	}
+}
+
 func TestManifestUnauthorized(t *testing.T) {
 	repo, _ := reference.WithName("test.example.com/repo")
 	_, dgst, _ := newRandomOCIManifest(t, 6)
