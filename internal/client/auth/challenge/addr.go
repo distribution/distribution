@@ -16,12 +16,18 @@ var portMap = map[string]string{
 	"https": "443",
 }
 
-// canonicalAddr returns url.Host but always with a ":port" suffix
+// canonicalAddr returns url.Host but always lower-cased with a ":port" suffix
 // FROM: http://golang.org/src/net/http/transport.go
 func canonicalAddr(url *url.URL) string {
-	addr := url.Host
+	addr := strings.ToLower(url.Host)
 	if !hasPort(addr) {
 		return addr + ":" + portMap[url.Scheme]
 	}
 	return addr
+}
+
+// normalizedURL returns the endpoint URL in canonical form.
+func normalizedURL(endpoint url.URL) string {
+	endpoint.Host = canonicalAddr(&endpoint)
+	return endpoint.String()
 }
