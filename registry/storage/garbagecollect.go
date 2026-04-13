@@ -113,7 +113,11 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 		if err := acquireLock(opts.CheckpointDir, opts.Timeout); err != nil {
 			return fmt.Errorf("failed to acquire lock: %v", err)
 		}
-		defer releaseLock(opts.CheckpointDir)
+		defer func() {
+			if err := releaseLock(opts.CheckpointDir); err != nil {
+				dcontext.GetLogger(ctx).Warnf("Failed to release GC lock: %v", err)
+			}
+		}()
 	}
 
 	// Create context with timeout
