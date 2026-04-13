@@ -584,8 +584,7 @@ func markAndSweepWithStats(ctx context.Context, storageDriver driver.StorageDriv
 
 				// Get blob size before deletion
 				var blobSize int64
-				blobPath := fmt.Sprintf("/docker/registry/v2/blobs/%s/%s/%s/data",
-					dgst.Algorithm(), dgst.Hex()[0:2], dgst.Hex())
+				blobPath, _ := pathFor(blobDataPathSpec{digest: dgst})
 				if fi, err := storageDriver.Stat(groupCtx, blobPath); err == nil {
 					blobSize = fi.Size()
 				}
