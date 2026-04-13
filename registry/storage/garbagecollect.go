@@ -99,10 +99,10 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 
 	// Validate options
 	if opts.MarkOnly && opts.SweepOnly {
-		return fmt.Errorf("cannot specify both --mark-only and --sweep")
+		return fmt.Errorf("cannot specify both --mark-only and --sweep-only")
 	}
 	if opts.SweepOnly && opts.CheckpointDir == "" {
-		return fmt.Errorf("--sweep requires --checkpoint-dir to load candidates")
+		return fmt.Errorf("--sweep-only requires --checkpoint-dir to load candidates")
 	}
 	if opts.MarkOnly && opts.CheckpointDir == "" {
 		return fmt.Errorf("--mark-only requires --checkpoint-dir to save candidates")
