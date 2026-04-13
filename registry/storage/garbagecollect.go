@@ -214,7 +214,6 @@ func markAndSweepWithStats(ctx context.Context, storageDriver driver.StorageDriv
 	var statsMu sync.Mutex
 	lastProgress := time.Now()
 
-
 	// Collect all repository names first
 	var repoNames []string
 	err := repositoryEnumerator.Enumerate(ctx, func(repoName string) error {
