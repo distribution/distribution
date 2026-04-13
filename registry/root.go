@@ -35,7 +35,7 @@ func init() {
 	GCCmd.Flags().DurationVarP(&timeout, "timeout", "t", 24*time.Hour, "maximum runtime before stopping")
 	GCCmd.Flags().StringVar(&checkpointDir, "checkpoint-dir", "", "directory for checkpoint/resume and two-pass mode")
 	GCCmd.Flags().BoolVar(&markOnly, "mark-only", false, "only run mark phase and save candidates (requires --checkpoint-dir)")
-	GCCmd.Flags().BoolVar(&sweepOnly, "sweep", false, "only run sweep phase from checkpoint (requires --checkpoint-dir)")
+	GCCmd.Flags().BoolVar(&sweepOnly, "sweep-only", false, "only run sweep phase from checkpoint (requires --checkpoint-dir)")
 	RootCmd.Flags().BoolVarP(&showVersion, "version", "v", false, "show the version and exit")
 }
 
