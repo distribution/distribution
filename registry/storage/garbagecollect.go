@@ -685,7 +685,7 @@ func unmarkReferencedManifest(manifestArr []ManifestDel, markSet map[digest.Dige
 
 // acquireLock creates a distributed lock file to prevent concurrent GC runs
 func acquireLock(checkpointDir string, timeout time.Duration) error {
-	if err := os.MkdirAll(checkpointDir, 0755); err != nil {
+	if err := os.MkdirAll(checkpointDir, 0700); err != nil {
 		return fmt.Errorf("failed to create checkpoint dir: %v", err)
 	}
 
@@ -774,7 +774,7 @@ func saveCheckpoint(checkpointDir string, state CheckpointState) error {
 	}
 
 	// Atomic write: write to temp file, then rename
-	if err := os.WriteFile(tmpPath, data, 0644); err != nil {
+	if err := os.WriteFile(tmpPath, data, 0600); err != nil {
 		return fmt.Errorf("failed to write checkpoint: %v", err)
 	}
 
