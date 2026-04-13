@@ -26,7 +26,7 @@ registry garbage-collect config.yml --workers=8 --timeout=4h
 registry garbage-collect config.yml --checkpoint-dir=/var/lib/registry/gc --mark-only --workers=8
 
 # Day 2 (24h later): Sweep phase
-registry garbage-collect config.yml --checkpoint-dir=/var/lib/registry/gc --sweep --workers=8
+registry garbage-collect config.yml --checkpoint-dir=/var/lib/registry/gc --sweep-only --workers=8
 ```
 
 ---
@@ -39,7 +39,7 @@ registry garbage-collect config.yml --checkpoint-dir=/var/lib/registry/gc --swee
 | `--timeout` | 24h | Max runtime |
 | `--checkpoint-dir` | "" | Checkpoint directory |
 | `--mark-only` | false | Mark phase only |
-| `--sweep` | false | Sweep phase only |
+| `--sweep-only` | false | Sweep phase only |
 | `--delete-untagged` | false | Delete untagged manifests |
 | `--dry-run` | false | Don't actually delete |
 | `--quiet` | false | Silence output |
@@ -81,7 +81,7 @@ registry garbage-collect config.yml --workers=16 --timeout=8h
 0 2 * * * registry garbage-collect config.yml --checkpoint-dir=/var/lib/registry/gc --mark-only --workers=8
 
 # Cron: Daily 2 AM next day - Sweep
-0 2 * * * registry garbage-collect config.yml --checkpoint-dir=/var/lib/registry/gc --sweep --workers=8
+0 2 * * * registry garbage-collect config.yml --checkpoint-dir=/var/lib/registry/gc --sweep-only --workers=8
 ```
 - Zero downtime
 - Safe with active pushes
@@ -101,7 +101,7 @@ Mark Phase → Save Checkpoint → Exit
 - Safe to run on live registry
 - No deletions occur
 
-### Sweep-Only Mode (`--sweep`)
+### Sweep-Only Mode (`--sweep-only`)
 Load Checkpoint → Re-Mark Phase → Filter Candidates → Sweep Phase → Done
 - Safe to run on live registry
 - Double-check ensures safety
