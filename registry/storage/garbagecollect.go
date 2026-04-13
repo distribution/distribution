@@ -213,8 +213,7 @@ func markAndSweepWithStats(ctx context.Context, storageDriver driver.StorageDriv
 	// Progress tracking
 	var statsMu sync.Mutex
 	lastProgress := time.Now()
-	progressTicker := time.NewTicker(opts.ProgressInterval)
-	defer progressTicker.Stop()
+
 
 	// Collect all repository names first
 	var repoNames []string
