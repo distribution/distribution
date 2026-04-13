@@ -686,20 +686,12 @@ func unmarkReferencedManifest(manifestArr []ManifestDel, markSet map[digest.Dige
 
 // acquireLock creates a distributed lock file to prevent concurrent GC runs
 func acquireLock(checkpointDir string, timeout time.Duration) error {
-	lockPath := filepath.Join(checkpointDir, ".lock")
-
-	// Check if lock exists and is still valid
-	if data, err := os.ReadFile(lockPath); err == nil {
-		var lock LockFile
-		if err := json.Unmarshal(data, &lock); err == nil {
-			// Check if lock is expired
-			if time.Since(lock.Timestamp) < timeout {
-				return fmt.Errorf("another GC instance is running (locked by %s at %v)", lock.Hostname, lock.Timestamp)
-			}
-		}
+	if err := os.MkdirAll(checkpointDir, 0755); err != nil {
+		return fmt.Errorf("failed to create checkpoint dir: %v", err)
 	}
 
-	// Create lock
+	lockPath := filepath.Join(checkpointDir, ".lock")
+
 	hostname, _ := os.Hostname()
 	lock := LockFile{
 		Hostname:  hostname,
@@ -707,20 +699,58 @@ func acquireLock(checkpointDir string, timeout time.Duration) error {
 		Timestamp: time.Now(),
 		Timeout:   timeout.String(),
 	}
-
 	data, err := json.MarshalIndent(lock, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal lock: %v", err)
 	}
 
-	if err := os.MkdirAll(checkpointDir, 0755); err != nil {
-		return fmt.Errorf("failed to create checkpoint dir: %v", err)
+	writeLock := func() error {
+		f, err := os.OpenFile(lockPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+		if err != nil {
+			return err
+		}
+		_, werr := f.Write(data)
+		cerr := f.Close()
+		if werr != nil || cerr != nil {
+			os.Remove(lockPath)
+			if werr != nil {
+				return fmt.Errorf("failed to write lock file: %v", werr)
+			}
+			return fmt.Errorf("failed to close lock file: %v", cerr)
+		}
+		return nil
 	}
 
-	if err := os.WriteFile(lockPath, data, 0644); err != nil {
-		return fmt.Errorf("failed to write lock file: %v", err)
+	err = writeLock()
+	if err == nil {
+		return nil
+	}
+	if !os.IsExist(err) {
+		return fmt.Errorf("failed to create lock file: %v", err)
 	}
 
+	existing, rerr := os.ReadFile(lockPath)
+	if rerr != nil {
+		return fmt.Errorf("another GC instance is running (lock file unreadable: %v)", rerr)
+	}
+	var held LockFile
+	if jerr := json.Unmarshal(existing, &held); jerr != nil {
+		return fmt.Errorf("another GC instance is running (lock file unparseable)")
+	}
+	heldTimeout, perr := time.ParseDuration(held.Timeout)
+	if perr != nil {
+		heldTimeout = timeout
+	}
+	if time.Since(held.Timestamp) < heldTimeout {
+		return fmt.Errorf("another GC instance is running (locked by %s at %v)", held.Hostname, held.Timestamp)
+	}
+
+	if rerr := os.Remove(lockPath); rerr != nil && !os.IsNotExist(rerr) {
+		return fmt.Errorf("failed to remove expired lock: %v", rerr)
+	}
+	if err := writeLock(); err != nil {
+		return fmt.Errorf("another GC instance is running (lost expired-lock race)")
+	}
 	return nil
 }
 
