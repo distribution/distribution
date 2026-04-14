@@ -34,7 +34,7 @@ jobs:
       matrix:
         go:
           - 1.25.x
-          - 1.26.1
+          - 1.26.2
         target:
           - test-coverage
           - test-s3-storage
