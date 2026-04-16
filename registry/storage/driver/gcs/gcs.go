@@ -25,6 +25,7 @@ import (
 	"os"
 	"reflect"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -767,8 +768,8 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 		// docs: Objects will be iterated over lexicographically by name.
 		// This means we don't have to reverse order the slice; we can
 		// range over the keys slice in reverse order
-		for i := len(keys) - 1; i >= 0; i-- {
-			key := keys[i]
+		for _, v := range slices.Backward(keys) {
+			key := v
 			err := d.bucket.Object(key).Delete(ctx)
 			// GCS only guarantees eventual consistency, so listAll might return
 			// paths that no longer exist. If this happens, just ignore any not

@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"path"
+	"slices"
 	"strings"
 	"time"
 
@@ -115,8 +116,8 @@ func getOutstandingUploads(ctx context.Context, driver storageDriver.StorageDriv
 // directory for all upload files
 func uuidFromPath(path string) (string, bool) {
 	components := strings.Split(path, "/")
-	for i := len(components) - 1; i >= 0; i-- {
-		if u, err := uuid.Parse(components[i]); err == nil {
+	for i, v := range slices.Backward(components) {
+		if u, err := uuid.Parse(v); err == nil {
 			return u.String(), i == len(components)-1
 		}
 	}
