@@ -193,6 +193,7 @@ auth:
     issuer: registry-token-issuer
     rootcertbundle: /root/certs/bundle
     jwks: /path/to/jwks
+    jwksrefreshinterval: 1h
     signingalgorithms:
         - EdDSA
         - HS256
@@ -617,6 +618,7 @@ auth:
     issuer: registry-token-issuer
     rootcertbundle: /root/certs/bundle
     jwks: /path/to/jwks
+    jwksrefreshinterval: 1h
     signingalgorithms:
         - EdDSA
         - HS256
@@ -665,7 +667,8 @@ security.
 | `autoredirect`       | no       | When set to `true`, `realm` will be set to the Host header of the request as the domain and a path of `/auth/token/`(or specified by `autoredirectpath`), the `realm` URL Scheme will use `X-Forwarded-Proto` header if set, otherwise it will be set to `https`. |
 | `autoredirectpath`   | no       | The path to redirect to if `autoredirect` is set to `true`, default: `/auth/token/`. |
 | `signingalgorithms`  | no       | A list of token signing algorithms to use for verifying token signatures. If left empty the default list of signing algorithms is used. Please see below for allowed values and default. |
-| `jwks`               | no       | The absolute path to the JSON Web Key Set (JWKS) file. The JWKS file contains the trusted keys used to verify the signature of authentication tokens. |
+| `jwks`               | no       | The path or URL of the JSON Web Key Set (JWKS). Accepts either an absolute file path or an `http`/`https` URL. The JWKS contains the trusted public keys used to verify the signature of authentication tokens. |
+| `jwksrefreshinterval` | no      | How often to re-fetch the JWKS source and refresh the trusted keys. Accepts any Go duration string (e.g. `10m`, `1h`). Defaults to `1h` when `jwks` is set. Set to `0` to disable periodic refresh. |
 
 Available `signingalgorithms`:
 - EdDSA
@@ -701,6 +704,14 @@ Additional notes on `rootcertbundle`:
 
 - The public key of this certificate will be automatically added to the list of known keys.
 - The public key will be identified by its JWK Thumbprint. See [RFC 7638](https://datatracker.ietf.org/doc/html/rfc7638) and [RFC 8037](https://datatracker.ietf.org/doc/html/rfc8037) for reference.
+
+Additional notes on `jwks` and `jwksrefreshinterval`:
+
+- `jwks` accepts either a local file path (e.g. `/etc/registry/jwks.json`) or a remote URL (e.g. `https://auth.example.com/.well-known/jwks.json`).
+- When `jwksrefreshinterval` is set (or defaulted to `1h`), a background goroutine periodically re-fetches the JWKS and replaces the trusted keys. Set `jwksrefreshinterval` to `0` to disable periodic refresh.
+- When a token arrives signed with an unknown key ID, the registry performs an immediate on-demand re-fetch of the JWKS before rejecting the request. This covers the window between a key rotation on the auth server and the next periodic refresh tick. On-demand refresh is active regardless of the `jwksrefreshinterval` value, as long as `jwks` is configured.
+- If any refresh attempt fails (network error, non-200 response, or invalid JSON), the previously loaded keys are kept and the error is logged. The registry continues to serve requests using the existing keys.
+- `rootcertbundle` and `jwks` can be used together; the registry will trust keys from both sources.
 
 For more information about Token based authentication configuration, see the
 [specification](../spec/auth/token.md).
