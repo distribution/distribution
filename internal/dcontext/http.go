@@ -19,6 +19,16 @@ var (
 	ErrNoResponseWriterContext = errors.New("no http response in context")
 )
 
+// getXRequestID get X-Request-ID from HTTP header
+// or generate an UUID if not found in header
+func getXRequestID(r *http.Request) string {
+	rid := r.Header.Get("X-Request-ID")
+	if rid != "" {
+		return rid
+	}
+	return uuid.NewString()
+}
+
 // WithRequest places the request on the context. The context of the request
 // is assigned a unique id, available at "http.request.id". The request itself
 // is available at "http.request". Other common attributes are available under
@@ -35,7 +45,7 @@ func WithRequest(ctx context.Context, r *http.Request) context.Context {
 	return &httpRequestContext{
 		Context:   ctx,
 		startedAt: time.Now(),
-		id:        uuid.NewString(),
+		id:        getXRequestID(r),
 		r:         r,
 	}
 }
