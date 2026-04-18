@@ -41,17 +41,19 @@ func (th *tagsHandler) GetTags(w http.ResponseWriter, r *http.Request) {
 
 	limit := -1
 
-	// parse n, if n unparseable, or negative assign it to defaultReturnedEntries
 	if n := q.Get("n"); n != "" {
-		if th.App.Config.Tags.MaxTags > 0 {
-			limit = th.App.Config.Tags.MaxTags
-		}
 		parsedMax, err := strconv.Atoi(n)
-		if err != nil || (limit > 0 && parsedMax > limit) || parsedMax < 0 {
+		if err != nil || parsedMax < 0 {
 			th.Errors = append(th.Errors, errcode.ErrorCodePaginationNumberInvalid.WithDetail(map[string]int{"n": parsedMax}))
 			return
 		}
 		limit = parsedMax
+		// Per the OCI distribution-spec, a server MAY return fewer than n
+		// results when a Link header is provided for continuation. Clamp to
+		// MaxTags instead of rejecting oversized requests.
+		if maxTags := th.App.Config.Tags.MaxTags; maxTags > 0 && limit > maxTags {
+			limit = maxTags
+		}
 	}
 
 	filled := make([]string, 0)
