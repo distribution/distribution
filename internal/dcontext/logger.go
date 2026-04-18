@@ -104,7 +104,6 @@ func SetDefaultLogger(logger Logger) {
 // required.
 func getLogrusLogger(ctx context.Context, keys ...any) *logrus.Entry {
 	var logger *logrus.Entry
-
 	// Get a logger, if it is present.
 	loggerInterface := ctx.Value(loggerKey{})
 	if loggerInterface != nil {
