@@ -82,6 +82,7 @@ var s3StorageClasses = []string{
 	s3.StorageClassIntelligentTiering,
 	s3.StorageClassOutposts,
 	s3.StorageClassGlacierIr,
+	s3.StorageClassExpressOnezone,
 }
 
 // validRegions maps known s3 region identifiers to region descriptors
@@ -288,14 +289,7 @@ func FromParameters(ctx context.Context, parameters map[string]any) (*Driver, er
 		}
 		// All valid storage class parameters are UPPERCASE, so be a bit more flexible here
 		storageClassString = strings.ToUpper(storageClassString)
-		if storageClassString != noStorageClass &&
-			storageClassString != s3.StorageClassStandard &&
-			storageClassString != s3.StorageClassReducedRedundancy &&
-			storageClassString != s3.StorageClassStandardIa &&
-			storageClassString != s3.StorageClassOnezoneIa &&
-			storageClassString != s3.StorageClassIntelligentTiering &&
-			storageClassString != s3.StorageClassOutposts &&
-			storageClassString != s3.StorageClassGlacierIr {
+		if !slices.Contains(s3StorageClasses, storageClassString) {
 			return nil, fmt.Errorf(
 				"the storageclass parameter must be one of %v, %v invalid",
 				s3StorageClasses,
