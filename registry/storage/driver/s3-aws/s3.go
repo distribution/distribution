@@ -21,7 +21,7 @@ import (
 	"math"
 	"net/http"
 	"os"
-	"path/filepath"
+	"path"
 	"slices"
 	"sort"
 	"strconv"
@@ -1254,7 +1254,7 @@ func directoryDiff(prev, current string) []string {
 
 	parent := current
 	for {
-		parent = filepath.Dir(parent)
+		parent = path.Dir(parent)
 		if parent == "/" || parent == prev || strings.HasPrefix(prev+"/", parent+"/") {
 			break
 		}
