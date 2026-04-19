@@ -1,0 +1,374 @@
+# commit to be tagged for new release
+commit = "HEAD"
+
+project_name = "registry"
+github_repo = "distribution/distribution"
+
+# previous release
+previous = "v3.0.0"
+
+pre_release = false
+
+preface = """\
+registry 3.1.0
+
+Welcome to the v3.1.0 release of registry!
+
+*This is a stable release*
+
+registry 3.1.0
+
+Please try out the release binaries and report any issues at
+https://github.com/distribution/distribution/issues.
+
+### Notable Changes
+
+* Fixes CVE-2026-35172
+* Fixes CVE-2026-33540
+* Adds support for tag pagination (#4360, #4353)
+* Fixes default credentials in Azure storage provider (#4619)
+* Drops support for go1.23 and updates to go1.25
+
+See the changelog below for the full list of changes.
+
+### Contributors
+
+* Milos Gajdos
+* Sebastiaan van Stijn
+* João Pereira
+* Wang Yan
+* evanebb
+* ChandonPierre
+* Joonas Bergius
+* Oded Porat
+* 1seal
+* Artem Tkachuk
+* Omar Trigui
+* Pat Riehecky
+* Raghav Mahajan
+* Sumedh Vats
+* Xiaolei.Liang
+* ningmingxiao
+* njucjc
+* Adrian Callejas
+* Alexsandr
+* Andy Castille
+* Anže Luzar
+* Artem Khoroshev
+* Benjamin Schanzel
+* Chen Qi
+* Cloudfleet Technology Team
+* Dane Wagner
+* Dave Pedu
+* Guillaume pelletier
+* HexMix
+* Joonas Bergius
+* Lucas Melchior
+* Mateusz Urbanek
+* Raj Siva-Rajah
+* Sam Jia
+* Shan Desai
+* Thomas Cuthbert
+* Youfu Zhang
+* closeobserve
+* efcking
+* kub3let
+* nkaaf
+* tranthang2404
+* whosehang
+
+### Changes
+<details><summary>208 commits</summary>
+<p>
+
+  * [`078b0783`](https://github.com/distribution/distribution/commit/078b0783f239b4115d1a979e66f08832084e9d1d) Merge commit from fork
+  * [`5cda7286`](https://github.com/distribution/distribution/commit/5cda72868f901ad2634e14ab5f04b62044e587b0) fix redis repo-scoped blob descriptor revocation
+  * [`cccd0d4f`](https://github.com/distribution/distribution/commit/cccd0d4fb75066dbec314a78e13535bdf2bc857c) fix(vendor): fix broke vendor validation (#4839)
+  * [`49447e8e`](https://github.com/distribution/distribution/commit/49447e8e12de62ffc6f25565f8de158ed344e454) fix(vendor): fix broke vendpor validation
+  * [`cc5d5fa4`](https://github.com/distribution/distribution/commit/cc5d5fa4ba02157501e6afa2cc6a903ad0338e7b) Merge commit from fork
+  * [`f215e513`](https://github.com/distribution/distribution/commit/f215e513dee57590142d70a008732a50eda6897c) proxy: bind bearer realms to upstream trust boundary
+  * [`4cfa1789`](https://github.com/distribution/distribution/commit/4cfa178962a087ca4312e0173b58ca945e69d8f9) build(deps): bump actions/configure-pages from 5.0.0 to 6.0.0 (#4834)
+  * [`bbc6f54c`](https://github.com/distribution/distribution/commit/bbc6f54c06f78642078e56b961d21e26645a713f) build(deps): bump actions/configure-pages from 5.0.0 to 6.0.0
+  * [`c4bac3bc`](https://github.com/distribution/distribution/commit/c4bac3bcd67ed844ad14d278447277bda4d009cc) build(deps): bump codecov/codecov-action from 5.5.4 to 6.0.0 (#4836)
+  * [`f91da114`](https://github.com/distribution/distribution/commit/f91da1146493684353c4579d07148f2a56936c04) build(deps): bump codecov/codecov-action from 5.5.4 to 6.0.0
+  * [`2f2ce9fb`](https://github.com/distribution/distribution/commit/2f2ce9fb6c5f67236ca960c889e9a2fb0719a6f7) Opt: refactor tag list pagination support (#4353)
+  * [`6a02a0e8`](https://github.com/distribution/distribution/commit/6a02a0e81d1b4d8cc9f6dce28a314f007f1d6c0b) Opt: refactor tag list pagination support
+  * [`7482bff4`](https://github.com/distribution/distribution/commit/7482bff437d0198449cec7ea49cd12bc4b8f02ff) feat(registry): enhance authentication checks in htpasswd implementation (#4758)
+  * [`7ed654e0`](https://github.com/distribution/distribution/commit/7ed654e0a79e8ccc19b90322389f0e713a01db8e) feat(registry): enhance authentication checks in htpasswd implementation
+  * [`30210f45`](https://github.com/distribution/distribution/commit/30210f45f4f99c7749c3eb5ff9da14f2e01e576c) chore(app): warn when partial TLS config is used in Redis (#4838)
+  * [`00056726`](https://github.com/distribution/distribution/commit/000567267f49f23ae5391b0700cb2cc7d1844649) chore(app): warn when partial TLS config is used in Redis
+  * [`17de9dfa`](https://github.com/distribution/distribution/commit/17de9dfab2c3c8a8a7cc5ab3c94b9400648dd4cb) build(deps): bump github.com/go-jose/go-jose/v4 from 4.1.3 to 4.1.4 in the go_modules group across 1 directory (#4837)
+  * [`2bf6ae00`](https://github.com/distribution/distribution/commit/2bf6ae006548dbb1e3fd0943741c5882cb53b3df) build(deps): bump github.com/go-jose/go-jose/v4
+  * [`4045624d`](https://github.com/distribution/distribution/commit/4045624d53b8b224bb2ecfb4ab2acb87ddc71f5e) build(deps): bump actions/setup-go from 6.3.0 to 6.4.0 (#4833)
+  * [`0f4a2c5f`](https://github.com/distribution/distribution/commit/0f4a2c5f917889087d39e697c8ee0791249e2471) build(deps): bump actions/setup-go from 6.3.0 to 6.4.0
+  * [`c7c980d7`](https://github.com/distribution/distribution/commit/c7c980d7957dd8fc3012cfa13a1b467066d95b23) ci: pin actions and apply zizmor auto-fixes (#4831)
+  * [`9304afc1`](https://github.com/distribution/distribution/commit/9304afc11ce48a6684f701637f4ee6e890b7264c) ci: update ${{ secrets.GITHUB_TOKEN }} -> ${{ github.token }}
+  * [`187c1f9b`](https://github.com/distribution/distribution/commit/187c1f9bdea972a924c9a63b374057892bc78127) ci: apply zizmor auto-fixes
+  * [`e9eb3c2f`](https://github.com/distribution/distribution/commit/e9eb3c2fb4f9b64db163e77cb866834ba78baa91) ci: pin all actions by sha
+  * [`b01c36a6`](https://github.com/distribution/distribution/commit/b01c36a6aedef7b3cfc39ccb9981247a60f37393) ci: labeler: fix indentation
+  * [`a7541f08`](https://github.com/distribution/distribution/commit/a7541f080846364a8211665695d5db5a21d46e8d) fix(registry/proxy): use detached context when flushing write buffer (#4793)
+  * [`e0bac483`](https://github.com/distribution/distribution/commit/e0bac4837514ad7e3339fdbd3fe2fbb67a81b899) fix(registry/proxy): do not re-use http request context for background writes
+  * [`5d3a61a3`](https://github.com/distribution/distribution/commit/5d3a61a3e67e3d4da565d348c2ce82e87d56f098) build(deps): bump github/codeql-action from 4.32.5 to 4.34.1 (#4823)
+  * [`6d5a05cb`](https://github.com/distribution/distribution/commit/6d5a05cb85eed91ff9572f0c8fb35041d972b9f3) build(deps): bump github/codeql-action from 4.32.5 to 4.34.1
+  * [`e69ad5c1`](https://github.com/distribution/distribution/commit/e69ad5c1ca89fd34778d295ed2c1ebf976e26d6e) build(deps): bump actions/deploy-pages from 4 to 5 (#4826)
+  * [`b6946f4c`](https://github.com/distribution/distribution/commit/b6946f4cb4d88f2356cc8d5cbd0fb62ccaf11694) build(deps): bump actions/deploy-pages from 4 to 5
+  * [`3e4f4a8b`](https://github.com/distribution/distribution/commit/3e4f4a8bde53bb1b500b770ebacf5b849a01451d) Enable Redis TLS without client certificates (#4770)
+  * [`e7475483`](https://github.com/distribution/distribution/commit/e74754839eb262c1600c1cc71e9d71d70b5bc6b9) Update Redis TLS configuration docs
+  * [`6780dbbb`](https://github.com/distribution/distribution/commit/6780dbbba465db5feb41e978e6a878224b00988c) Enable Redis TLS without client certificates
+  * [`d4164c1e`](https://github.com/distribution/distribution/commit/d4164c1edb9c6e8b0e090588b5ade24fbe02954f) Correctly match environment variables to YAML-inlined structs in configuration (#4639)
+  * [`56ba10a6`](https://github.com/distribution/distribution/commit/56ba10a608e1aa131f9cdbff60dc3a8b29c95072) Return error instead of panicking in parser
+  * [`3b8ac2d2`](https://github.com/distribution/distribution/commit/3b8ac2d270019a5fa216e3183b2fa92d1385ecd2) Apply code review suggestions
+  * [`714b78c4`](https://github.com/distribution/distribution/commit/714b78c4c9aa8ec50055f933e978d1646f43b430) Add test for inlined structs to configuration package
+  * [`54b56cdb`](https://github.com/distribution/distribution/commit/54b56cdb3f490cfd9ad12b55844c004fe56ee315) Inline env variables if the underlying struct is YAML inlined
+  * [`7a7c44d3`](https://github.com/distribution/distribution/commit/7a7c44d3f9ebefcc9f74de2b4065e287227de5ab) Opt: refector tag list pagination support (stage 1) (#4360)
+  * [`b1ae1b21`](https://github.com/distribution/distribution/commit/b1ae1b211ec42c7242b896383b3afd98a326b7fe) Opt: refector tag list pagination support
+  * [`ee3ba929`](https://github.com/distribution/distribution/commit/ee3ba929f66d709f5166c4b14f2e3abcc6a885c8) Update vacuum.go (#4610)
+  * [`10a83bad`](https://github.com/distribution/distribution/commit/10a83bad91473471ee66962f1d0daa15ec731f36) fix: removerepository skip pathNotfound error.
+  * [`54c58910`](https://github.com/distribution/distribution/commit/54c589101f9c451202ea33680d002e14eb714618) Update vacuum.go
+  * [`764d1315`](https://github.com/distribution/distribution/commit/764d131502ac0116d14a411054b26274336f51f1) fix: correct Ed25519 JWK thumbprint `kty` from `"OTP"` to `"OKP"` (#4801)
+  * [`830758b5`](https://github.com/distribution/distribution/commit/830758b5b2f0338c204169009c31fe07a11ee135) fix: correct Ed25519 JWK thumbprint `kty` from `"OTP"` to `"OKP"`
+  * [`ddf6218c`](https://github.com/distribution/distribution/commit/ddf6218cd35aebaa69fe6665c97551e80b29e590) chore(deps): Bump Go to latest 1.25 in CI workflows and go.mod (#4819)
+  * [`fa05d6fa`](https://github.com/distribution/distribution/commit/fa05d6fa31cf923c6e8f03fe1b22ee8148635285) chore(deps): Bump Go to latest 1.25 in CI workflows and go.mod
+  * [`d18d6cb9`](https://github.com/distribution/distribution/commit/d18d6cb923e6aa2decf5698bb55f03fe08562332) Update s3.md regionendpoint option (#4534)
+  * [`f89be310`](https://github.com/distribution/distribution/commit/f89be310673f4d3cca39cebe4e4575b5b7450614) Update docs/content/storage-drivers/s3.md
+  * [`075b5824`](https://github.com/distribution/distribution/commit/075b5824cef21158ab6c05fd40fdc9e0b21d52ef) Update s3.md regionendpoint option
+  * [`bd213792`](https://github.com/distribution/distribution/commit/bd2137921581321923800d654f31436ccf61b36b) docs: pull through cache will pull from remote multiple times (#4664)
+  * [`8a5addfc`](https://github.com/distribution/distribution/commit/8a5addfc34321eb25ea70a659ecbcd3b9a1cbd79) Update the docs with correct information
+  * [`83dd8202`](https://github.com/distribution/distribution/commit/83dd82021c50707aaed286048e5371549b1189ea) fix: set MD5 on GCS writer before first `Write` call in `putContent` (#4803)
+  * [`33240507`](https://github.com/distribution/distribution/commit/332405077abe7aae34977c4bdfd469ab92fa70a7) chore: fix typo in comment
+  * [`2957c891`](https://github.com/distribution/distribution/commit/2957c891d49bb369cfb2b2592d55fc86fc19193e) fix: set MD5 on GCS writer before first `Write` call in `putContent`
+  * [`78a447df`](https://github.com/distribution/distribution/commit/78a447df8e39a055bdf330c07061b66928d30436) fix: nil-check scheduler in `proxyingRegistry.Close()` (#4805)
+  * [`021b69d5`](https://github.com/distribution/distribution/commit/021b69d5a65d0200cd3dfcc05271758cddd96a03) fix: nil-check scheduler in `proxyingRegistry.Close()`
+  * [`43a380e1`](https://github.com/distribution/distribution/commit/43a380e1e1ba4a2c5ca7898f7370442bfa6a31ea) build(deps): bump docker/metadata-action from 5 to 6 (#4810)
+  * [`d56f9dae`](https://github.com/distribution/distribution/commit/d56f9dae3d7e58718c2cd8197731b94aa5b9bd09) build(deps): bump docker/metadata-action from 5 to 6
+  * [`c4e0be60`](https://github.com/distribution/distribution/commit/c4e0be60452a98610d66df60e0620e10ddef4519) build(deps): bump docker/bake-action from 6 to 7 (#4809)
+  * [`33bb5f60`](https://github.com/distribution/distribution/commit/33bb5f601cf8b2ca327b4b27565f8662081cb8b1) build(deps): bump docker/bake-action from 6 to 7
+  * [`dcd6df96`](https://github.com/distribution/distribution/commit/dcd6df96449f92e8df8eb7ef2eed93edf6fd8fe8) build(deps): bump docker/setup-buildx-action from 3 to 4 (#4811)
+  * [`6b6081e3`](https://github.com/distribution/distribution/commit/6b6081e39cca08b2919dba44e94675182c9e61cc) build(deps): bump docker/setup-buildx-action from 3 to 4
+  * [`90786adc`](https://github.com/distribution/distribution/commit/90786adc267fe41ffcf0b829f5ba247b87c00ad5) build(deps): bump actions/upload-artifact from 6.0.0 to 7.0.0 (#4800)
+  * [`fca6b9f8`](https://github.com/distribution/distribution/commit/fca6b9f855f6049eab765a6c2c9a04d1e786c29b) build(deps): bump actions/upload-artifact from 6.0.0 to 7.0.0
+  * [`bfd3cea5`](https://github.com/distribution/distribution/commit/bfd3cea551c4a3fc2dbf65f0311c94bcee9ddcda) build(deps): bump docker/login-action from 3 to 4 (#4807)
+  * [`887c2272`](https://github.com/distribution/distribution/commit/887c227241ac01e951be0cc60377fdfd3b205efd) build(deps): bump docker/login-action from 3 to 4
+  * [`aa6ea57a`](https://github.com/distribution/distribution/commit/aa6ea57a949f2822a942722f49cda1ba0b063fb3) build(deps): bump github/codeql-action from 4.32.2 to 4.32.5 (#4806)
+  * [`d1f8bd9c`](https://github.com/distribution/distribution/commit/d1f8bd9c92f44fdad4b19dde942e99b93cc17f63) build(deps): bump github/codeql-action from 4.32.2 to 4.32.5
+  * [`ab67ffa0`](https://github.com/distribution/distribution/commit/ab67ffa0bda3712991194841d0fde727464feeb9) vendor: github.com/go-jose/go-jose/v4 v4.1.3 (#4790)
+  * [`01a853e4`](https://github.com/distribution/distribution/commit/01a853e429f55f2eb732d1b5582aac5b046f6e51) go.mod: remove outdated comment
+  * [`2a52e901`](https://github.com/distribution/distribution/commit/2a52e9015f8ae8431239f543cb024e6b31fdbb32) vendor: github.com/go-jose/go-jose/v4 v4.1.3
+  * [`8f509066`](https://github.com/distribution/distribution/commit/8f5090660a8c71680664a9e70594b3eeb077b758) vendor: github.com/docker/go-events 605354379745 (#4791)
+  * [`eba1fb48`](https://github.com/distribution/distribution/commit/eba1fb4803a0191fde35670ebd6da3913ed5d73a) vendor: github.com/docker/go-events 605354379745
+  * [`3cf5a086`](https://github.com/distribution/distribution/commit/3cf5a08615bf230c5a7fd11607ed6c5071d40182) modernize code (#4784)
+  * [`f18b8d70`](https://github.com/distribution/distribution/commit/f18b8d707e33f0c15b80dbf7846938082dd9e40b) fix "prealloc" linting
+  * [`775d3734`](https://github.com/distribution/distribution/commit/775d3734eb75fa3aa0183fff136765d872ae53e6) modernize code
+  * [`423d1213`](https://github.com/distribution/distribution/commit/423d1213d37aa1bcc474aa68189049aa7c48e03d) fix: sync parent dir to ensure data is reliably stored (#4774)
+  * [`b4f2af3f`](https://github.com/distribution/distribution/commit/b4f2af3f60f386b3415f1ff24e07fbc4eb6b4217) fix: sync parent dir to ensure data is reliably stored
+  * [`5ddf7898`](https://github.com/distribution/distribution/commit/5ddf7898fa63b57f24efd327f678bad19d7e138d) use filepath instead of path
+  * [`1cc06157`](https://github.com/distribution/distribution/commit/1cc061570cb6837438cbde0bc591fadd67fb794e) vendor: github.com/bshuster-repo/logrus-logstash-hook v1.1.0 (#4788)
+  * [`10e0e8e4`](https://github.com/distribution/distribution/commit/10e0e8e4c0d05ca903ed63e68a33a0a7c854df59) vendor: github.com/bshuster-repo/logrus-logstash-hook v1.1.0
+  * [`c52376bc`](https://github.com/distribution/distribution/commit/c52376bcb948a54bda2a2b4442271ab2b88e850e) vendor: github.com/spf13/cobra v1.10.2 (#4789)
+  * [`3e841a3d`](https://github.com/distribution/distribution/commit/3e841a3d7868a4d542442db6b1d977dbbe04c8e3) vendor: github.com/spf13/cobra v1.10.2
+  * [`afaf0c0a`](https://github.com/distribution/distribution/commit/afaf0c0aa76fa6ae716e2bde44a456a1375cbfc2) fix: prefer otel variables over hard coded service name (#4771)
+  * [`abcf7ebe`](https://github.com/distribution/distribution/commit/abcf7ebec69ce7a6bf6e4cb637e8509779777f89) fix: prefer otel variables over hard coded service name
+  * [`d2398c56`](https://github.com/distribution/distribution/commit/d2398c56f27c005037a699c4436ea436f499ed56) vendor: github.com/klauspost/compress v1.18.4
+  * [`c4a0bd3f`](https://github.com/distribution/distribution/commit/c4a0bd3fe9aa98a993d97468a44b532ba6fabfe0) vendor: github.com/opencontainers/image-spec v1.1.1
+  * [`abc9debf`](https://github.com/distribution/distribution/commit/abc9debf418fc4cce72d034f887d15df2383c38a) vendor: github.com/docker/docker-credential-helpers v0.9.5
+  * [`9b79cf51`](https://github.com/distribution/distribution/commit/9b79cf51052e07f98f2bf0b700bd8fa8bde6982b) vendor: golang.org/x/oauth2 v0.35.0
+  * [`ae7c498d`](https://github.com/distribution/distribution/commit/ae7c498d28d2a9bd38edc428d967123def26983e) vendor: golang.org/x/time v0.14.0
+  * [`87a9711c`](https://github.com/distribution/distribution/commit/87a9711c888b04e4fa20d08472a6d56adc5ef8b2) vendor: golang.org/x/crypto v0.48.0, golang.org/x/net v0.50.0
+  * [`aebf0612`](https://github.com/distribution/distribution/commit/aebf0612ee584dce8a8fab4791c5b418bd731c2a) vendor: golang.org/x/text v0.34.0
+  * [`3e3e1539`](https://github.com/distribution/distribution/commit/3e3e1539009b7fcfb9dd79e5ceb7315113b95685) vendor: golang.org/x/sys v0.41.0
+  * [`00464063`](https://github.com/distribution/distribution/commit/00464063d5619eb40fac4239a0a8312edb027461) vendor: github.com/sirupsen/logrus v1.9.4
+  * [`f5d656e6`](https://github.com/distribution/distribution/commit/f5d656e686d11e5ee4f870ded8eaa4783a4ec4be) drop support for go1.23
+  * [`60d2cd5c`](https://github.com/distribution/distribution/commit/60d2cd5c448e03f2a84482ba46caa8a2c7cb5ba4) update to go1.25.7, alpine 3.23
+  * [`efd7ffb9`](https://github.com/distribution/distribution/commit/efd7ffb9c90178e3f3fa67353a1ac7dddb7211c2) Dockerfile: update tonistiigi/xx v1.9.0
+  * [`2cd77a0f`](https://github.com/distribution/distribution/commit/2cd77a0f4c3d621f5a15e6c33d3dff4bc2a5845a) update golangci-lint to v2.9 and fix linting issues (#4780)
+  * [`f5e1a893`](https://github.com/distribution/distribution/commit/f5e1a8931a984289f182d99f83ee4be99418758b) update golangci-lint to v2.9 and fix linting issues
+  * [`2a2c13c5`](https://github.com/distribution/distribution/commit/2a2c13c5c8341760a05b72e0992c38cbe7159f06) build(deps): bump actions/checkout from 6.0.1 to 6.0.2 (#4768)
+  * [`3658dc56`](https://github.com/distribution/distribution/commit/3658dc56d9190ef9a352ab0181fb2c885a6f5499) build(deps): bump actions/checkout from 6.0.1 to 6.0.2
+  * [`f2c2cf37`](https://github.com/distribution/distribution/commit/f2c2cf37bcfc4cd41e8eb9540df6b7f0883c1ebe) build(deps): bump github/codeql-action from 4.31.10 to 4.32.2 (#4778)
+  * [`9e377670`](https://github.com/distribution/distribution/commit/9e3776704635c4f9155e81e59ad5f8301ceec2c2) build(deps): bump github/codeql-action from 4.31.10 to 4.32.2
+  * [`40594bd9`](https://github.com/distribution/distribution/commit/40594bd98e6d6ed993b5c6021c93fdf96d2e5851) build(deps): bump github/codeql-action from 4.31.3 to 4.31.10 (#4766)
+  * [`a89f0a40`](https://github.com/distribution/distribution/commit/a89f0a4016a81a42444b57f4a2e933a2237bbac1) build(deps): bump github/codeql-action from 4.31.3 to 4.31.10
+  * [`b8292771`](https://github.com/distribution/distribution/commit/b8292771da46c075f01d2371afe2ab0ac78761ac) build(deps): bump actions/upload-artifact from 4.6.2 to 6.0.0 (#4760)
+  * [`b256f39b`](https://github.com/distribution/distribution/commit/b256f39b0098874c3977a8ba43dab7ca59cba10c) build(deps): bump actions/upload-artifact from 4.6.2 to 6.0.0
+  * [`49b81320`](https://github.com/distribution/distribution/commit/49b813205c475f1e3bd7975de8840e5dcfb6d814) build(deps): bump actions/checkout from 6.0.0 to 6.0.1 (#4761)
+  * [`a260baf2`](https://github.com/distribution/distribution/commit/a260baf21c2d8f7b0d74ddaf573b5e76ae860192) build(deps): bump actions/checkout from 6.0.0 to 6.0.1
+  * [`ac541ed4`](https://github.com/distribution/distribution/commit/ac541ed446824797e119a37877ff4c9a1e1524c2) BUG: Fix notification filtering to work with actions when mediatypes is empty (#4730)
+  * [`ce3fa7fc`](https://github.com/distribution/distribution/commit/ce3fa7fc36a86dde3db668a5bd6d9c85caf2714e) Fix notification filtering to work with actions when mediatypes is empty
+  * [`961d0fab`](https://github.com/distribution/distribution/commit/961d0fab75be74d591bb19d5c68b35af4c0b4deb) fix(ci): Fix broken Azure e2e storage tests (#4767)
+  * [`0db7f0ce`](https://github.com/distribution/distribution/commit/0db7f0ced57a074a5b43e80829b7a6c2956b98af) fix(ci): Fix broken Azure e2e storage tests
+  * [`4b93a062`](https://github.com/distribution/distribution/commit/4b93a062386b87ae82ecbe735374f57160096207) Add Cloudfleet Container Registry to adopters (#4765)
+  * [`31a63333`](https://github.com/distribution/distribution/commit/31a63333707026cba1e0e35f7daf6f4e4cbcd602) Add Cloudfleet Container Registry to adopters
+  * [`814452f2`](https://github.com/distribution/distribution/commit/814452f20b6eccb6b8603d3f9bd277f29ac4316d) Expose `useFIPSEndpoint` for S3 (#4764)
+  * [`33dab393`](https://github.com/distribution/distribution/commit/33dab3939ea6ae7705d12bd0f0021e646337653a) Expose `useFIPSEndpoint` for S3
+  * [`f61aa941`](https://github.com/distribution/distribution/commit/f61aa941b374a32d5e47c13caa7acb6c43187b2a) Add boolean parsing util (#4763)
+  * [`75a14d4d`](https://github.com/distribution/distribution/commit/75a14d4d318843fdb569c597a21bac70a7b08d5a) Add boolean parsing util
+  * [`47c426cf`](https://github.com/distribution/distribution/commit/47c426cf2e352618cbf52c1459c8670ca098a90b) fix: Logging regression for manifest HEAD requests (#4756)
+  * [`1ad03da6`](https://github.com/distribution/distribution/commit/1ad03da6877434c9caca43e1c727d068968e90ed) fix: Logging regression for manifest HEAD requests
+  * [`2b2e2f47`](https://github.com/distribution/distribution/commit/2b2e2f47592631c280753affbc1657a00e31421b) build(deps): bump peter-evans/dockerhub-description from 4 to 5 (#4707)
+  * [`864a3212`](https://github.com/distribution/distribution/commit/864a32122f53435b4d764b840ffed225ea8822ea) build(deps): bump peter-evans/dockerhub-description from 4 to 5
+  * [`1b2f7efb`](https://github.com/distribution/distribution/commit/1b2f7efbd095b9f0bb949a4db4d298d590a860f2) build(deps): bump actions/checkout from 5.0.1 to 6.0.0 (#4745)
+  * [`d2b3a1fe`](https://github.com/distribution/distribution/commit/d2b3a1fe7f5c297b7dfe70f2c24c42fa9d6e62c5) build(deps): bump actions/checkout from 5.0.1 to 6.0.0
+  * [`0e23b537`](https://github.com/distribution/distribution/commit/0e23b5375f374e9efe39fa96d0443b9c159a020e) Add return error when list object (#4753)
+  * [`f1e4ae3d`](https://github.com/distribution/distribution/commit/f1e4ae3de7b20a311b25e04f5866d7d6e8e9a565) add return error when list object
+  * [`1796e65d`](https://github.com/distribution/distribution/commit/1796e65db96bebe9a651b9b4e77bfc20f61a87c2) Incorrect warning hint (#4708)
+  * [`b1c0fc55`](https://github.com/distribution/distribution/commit/b1c0fc5530c4bd309436c46b55d0cc67a7b3b1d6) Incorrect warning hint * Fix incorrect (old) warning hint
+  * [`10e4312e`](https://github.com/distribution/distribution/commit/10e4312e62ab3b0c53bc0e31ade82fbe38af1b43) build(deps): bump actions/checkout from 5 to 6 (#4744)
+  * [`f7d65991`](https://github.com/distribution/distribution/commit/f7d659916cd04b646157639e3ab54dc75392314a) build(deps): bump actions/checkout from 5 to 6
+  * [`abad58b9`](https://github.com/distribution/distribution/commit/abad58b9b165800587658121626035ce22dffd7d) "should" -> "must" regarding redis eviction policy (#4742)
+  * [`c7da31eb`](https://github.com/distribution/distribution/commit/c7da31eb4aabd0dbaf56f3f25602b2f4fef9d0fd) "should" -> "must" regarding redis eviction policy
+  * [`d1218cef`](https://github.com/distribution/distribution/commit/d1218cefd0ee30ee6ec3b1cfb950fe4aa55c3564) refactor: remove redundant variable declarations in for loops (#4741)
+  * [`64f4511a`](https://github.com/distribution/distribution/commit/64f4511a277944387f0c76fb9eb7231ae7468d03) refactor: remove redundant variable declarations in for loops
+  * [`c360968e`](https://github.com/distribution/distribution/commit/c360968eb56ba49338186289add7e0c55d717a5c) build(deps): bump github/codeql-action from 4.30.9 to 4.31.3 (#4735)
+  * [`e0cb1712`](https://github.com/distribution/distribution/commit/e0cb1712f8146b695e0426594d39d2cf620b03bc) build(deps): bump github/codeql-action from 4.30.9 to 4.31.3
+  * [`c287c775`](https://github.com/distribution/distribution/commit/c287c7755b60349d79ef1576d47de7b6fabb4370) build(deps): bump github/codeql-action from 4.30.8 to 4.30.9 (#4722)
+  * [`6f719029`](https://github.com/distribution/distribution/commit/6f719029eac93f076e520cf9e07cd7066fb127ff) build(deps): bump github/codeql-action from 4.30.8 to 4.30.9
+  * [`41681617`](https://github.com/distribution/distribution/commit/41681617f2fb871829dc6e15328fcbc301a6b4db) fix(registry): Correct log formatting for upstream challenge (#4721)
+  * [`f1323c5b`](https://github.com/distribution/distribution/commit/f1323c5bc78997c0425805098f15ac3829f6be77) fix(proxy): sanitize challenge URL logs using Redacted()
+  * [`4d613f77`](https://github.com/distribution/distribution/commit/4d613f771f4565f0ab2eaaf14ce34037ab033e2c) feat(registry): Make graceful shutdown test robust (#4720)
+  * [`edde36cd`](https://github.com/distribution/distribution/commit/edde36cd9e6818491399602ab6f9374bba3e4416) feat(registry): Make graceful shutdown test robust
+  * [`76fe6170`](https://github.com/distribution/distribution/commit/76fe6170526f0a1046c340c20b041a090d8dbfc9) client: add Accept headers to Exists() HEAD (#4715)
+  * [`2f1a51dc`](https://github.com/distribution/distribution/commit/2f1a51dc72cba095ee81ff7d7f2e76ce6b7240b7) client: add Accept headers to Exists() HEAD
+  * [`8ce82199`](https://github.com/distribution/distribution/commit/8ce8219982a188733ad67ae91c5983aa79941cc3) chore: labeler: add area/client mapping for internal/client/** (#4716)
+  * [`0e77b285`](https://github.com/distribution/distribution/commit/0e77b28593405e0422eb05debe10a0c8fcb5d04a) chore: labeler: add area/client mapping for internal/client/**
+  * [`283bd92b`](https://github.com/distribution/distribution/commit/283bd92b7846426d13af2257553c17226baa96be) build(deps): bump github/codeql-action from 4.30.7 to 4.30.8 (#4714)
+  * [`ad5d9994`](https://github.com/distribution/distribution/commit/ad5d9994dfd82be09d7fbfdcdc2204cb3cacabb5) build(deps): bump github/codeql-action from 4.30.7 to 4.30.8
+  * [`7d4be412`](https://github.com/distribution/distribution/commit/7d4be412e97c47726b0931b5f71b87a9d8e8cd2e) build(deps): bump github/codeql-action from 3.26.5 to 4.30.7 (#4710)
+  * [`6d764586`](https://github.com/distribution/distribution/commit/6d7645869a094f0a3950927982e55ff848aeb1bf) build(deps): bump github/codeql-action from 3.26.5 to 4.30.7
+  * [`d595e0a1`](https://github.com/distribution/distribution/commit/d595e0a17013ea18069f6e6f6e4ea0fa4002c8c0) build(deps): bump ossf/scorecard-action from 2.4.2 to 2.4.3 (#4706)
+  * [`11519e6d`](https://github.com/distribution/distribution/commit/11519e6d92dde3565299648a707ff4c716e62cab) build(deps): bump ossf/scorecard-action from 2.4.2 to 2.4.3
+  * [`4ead5a10`](https://github.com/distribution/distribution/commit/4ead5a108593cec429ec57d0eb698d5825e037d0) build(deps): bump actions/upload-pages-artifact from 3 to 4 (#4691)
+  * [`f5512709`](https://github.com/distribution/distribution/commit/f5512709bf7e516e3175301889d7d704e2e01f3f) build(deps): bump actions/upload-pages-artifact from 3 to 4
+  * [`cf6a5ce3`](https://github.com/distribution/distribution/commit/cf6a5ce3460a835dd09b265228ed625419d6d7d9) build(deps): bump actions/setup-go from 5 to 6 (#4693)
+  * [`e1e5d051`](https://github.com/distribution/distribution/commit/e1e5d051134681baa982fb2f3c023879d16e2f8c) build(deps): bump actions/setup-go from 5 to 6
+  * [`6de7cd9d`](https://github.com/distribution/distribution/commit/6de7cd9d0dc742d231df7733c8ccd4117236e54c) build(deps): bump actions/labeler from 5 to 6 (#4694)
+  * [`99c47b61`](https://github.com/distribution/distribution/commit/99c47b61cc5195a669b8c1afd7b784e28f4a24a5) build(deps): bump actions/labeler from 5 to 6
+  * [`979a0747`](https://github.com/distribution/distribution/commit/979a07472ec489136d54d6d4ebfa7791393f549f) fix(registry/handlers/app): redis CAs (#4668)
+  * [`1fc84617`](https://github.com/distribution/distribution/commit/1fc8461710bb390614b334f37b09db2a655947cd) fix tests
+  * [`02b1f6e3`](https://github.com/distribution/distribution/commit/02b1f6e3af00ee16f4e1aa4cea743d6864d9512d) fix(registry/handlers/app): redis CAs
+  * [`412a8ae0`](https://github.com/distribution/distribution/commit/412a8ae033e4ca14193c7d613f6886fb054db500) Fix broken link to Docker Hub fair use policy (#4688)
+  * [`0fb77d6a`](https://github.com/distribution/distribution/commit/0fb77d6a7553ed139fdc974586f46e89cc89fb7c) Fix broken link to Docker Hub fair use policy
+  * [`f2b08cd9`](https://github.com/distribution/distribution/commit/f2b08cd917f8228ed55c06dc44befbdeceebf936) build(deps): bump actions/checkout from 4 to 5 (#4687)
+  * [`251bf1b9`](https://github.com/distribution/distribution/commit/251bf1b9238f04311c6e0bc5b93093be6ac17f66) build(deps): bump actions/checkout from 4 to 5
+  * [`8c60ad70`](https://github.com/distribution/distribution/commit/8c60ad709b0bb2da085ecec48580cb0e330f5674) Fixes #4683 - uses X/Y instead of Gx/Gy for thumbprint of ecdsa keys (#4684)
+  * [`6e59b824`](https://github.com/distribution/distribution/commit/6e59b82417d04c03fba84096b65f498f89ed194f) Fixes #4683 - uses X/Y instead of Gx/Gy for thumbprint of ecdsa keys
+  * [`7f2dad44`](https://github.com/distribution/distribution/commit/7f2dad4420da9b0b43b18f2eb8396c77e64c798f) Fixed data race in TestSchedule test (#4647)
+  * [`bb278c2b`](https://github.com/distribution/distribution/commit/bb278c2be6660a5b715d4fcfdc14e14b6cba1e69) fix: fixed data race in TestSchedule test
+  * [`7d74ee71`](https://github.com/distribution/distribution/commit/7d74ee7186c9a53535638c083f65196c024f1b90) Fix S3 driver loglevel param (#4617)
+  * [`369663e4`](https://github.com/distribution/distribution/commit/369663e4be6c1916881081e1ec171bbecdb7668e) Fix S3 driver loglevel param
+  * [`0966daec`](https://github.com/distribution/distribution/commit/0966daece76ee87454687d9e1a99ad27bb50701a) docs: Add OpenTelemetry links to quickstart docs (#4270) (#4640)
+  * [`e629f886`](https://github.com/distribution/distribution/commit/e629f886708f14b8c650f4ed6ec9af5996f8e9f6) docs: Add OpenTelemetry links to quickstart docs (#4270)
+  * [`c54bcb37`](https://github.com/distribution/distribution/commit/c54bcb377096dcc4773d562d42780f857b46b00b) s3-aws: fix build for 386 (#4642)
+  * [`6970080b`](https://github.com/distribution/distribution/commit/6970080b10a53d858dd444a643a2bd911de12940) s3-aws: fix build for 386
+  * [`f6e54e61`](https://github.com/distribution/distribution/commit/f6e54e6189bf524e547f4b6e5f357f8920dc33d9) refactor: replace map iteration with maps.Copy/Clone (#4632)
+  * [`fea36383`](https://github.com/distribution/distribution/commit/fea363838464739c8e77a8aff685d285a977db8c) refactor: replace map iteration with maps.Copy/Clone
+  * [`f9fa2059`](https://github.com/distribution/distribution/commit/f9fa2059927341b615e47b656bce6326ecc7a595) Switch UUIDs to UUIDv7 (#4666)
+  * [`b559f27a`](https://github.com/distribution/distribution/commit/b559f27a08fac631c070e836a132a14f7798c448) Switch to UUIDv7
+  * [`e7b4fa06`](https://github.com/distribution/distribution/commit/e7b4fa06f2c89d1dc4427d87030e169269ab9142) Fix markdown syntax for OTEL traces link in docs (#4676)
+  * [`b39441b1`](https://github.com/distribution/distribution/commit/b39441b1e6ddd5bf353f8f639bc7800014b9446c) Fix markdown syntax for OTEL traces link in docs
+  * [`c9760ebe`](https://github.com/distribution/distribution/commit/c9760ebe959d791050567e5e221d292166951bad) fix: set OTEL traces to disabled by default (#4671)
+  * [`53dde7fc`](https://github.com/distribution/distribution/commit/53dde7fc86df311c564f24496fb550ed1670b48e) fix: set OTEL traces to disabled by default
+  * [`17dc6f9c`](https://github.com/distribution/distribution/commit/17dc6f9cdabf4a427497ab54bb33e24dcb5a9a5b) docs: Add note about `OTEL_TRACES_EXPORTER` (#4669)
+  * [`68cd681b`](https://github.com/distribution/distribution/commit/68cd681bad7e0dd9bf6767a5b1dd1f8485e10ba5) docs: Add note about `OTEL_TRACES_EXPORTER`
+  * [`da404778`](https://github.com/distribution/distribution/commit/da404778edd3faa665e48ca3bb791b6144f3355e) build(deps): bump ossf/scorecard-action from 2.4.1 to 2.4.2 (#4645)
+  * [`b09be3d6`](https://github.com/distribution/distribution/commit/b09be3d605fabc18513778cc7941bab1a1d1fb50) build(deps): bump ossf/scorecard-action from 2.4.1 to 2.4.2
+  * [`97495e53`](https://github.com/distribution/distribution/commit/97495e53977ff5178fd5ca01608db1d71c9073d7) Fix: resolve issue #4478 by using a temporary file for non-append writes (#4624)
+  * [`dde1e49f`](https://github.com/distribution/distribution/commit/dde1e49f2368d46471adb9488b01611afdebeb85) Changes: Append a UUID to ensure uniqueness Join delete error
+  * [`a5a6f1ba`](https://github.com/distribution/distribution/commit/a5a6f1ba3d9047914c43d6ea0de4c55258a4a322) To address the issue where empty files are created when the write process is interrupted, the solution involves writing to a temporary file first and then atomically renaming it to the target file. This ensures that the target file is only updated if the write completes successfully, preventing empty or partially written files.
+  * [`78456caf`](https://github.com/distribution/distribution/commit/78456caf466811af53d3b712af6504cbc64284e2) Fix: resolve issue #4478 by using a temporary file for non-append writes
+  * [`95647cba`](https://github.com/distribution/distribution/commit/95647cba1d992a4da614bbae725022b5215c98c4) feat: extract redis config to separate struct (#4620)
+  * [`fcb2deac`](https://github.com/distribution/distribution/commit/fcb2deac0b6d2e9c5f840dcebe580b46d4e99a0f) feat: extract redis config to separate struct
+  * [`45e5f78d`](https://github.com/distribution/distribution/commit/45e5f78dd98a9fc02c643008e913fe29ec8a7890) fix: Annotate code block from validation.indexes configuration docs (#4629)
+  * [`c460aa63`](https://github.com/distribution/distribution/commit/c460aa63e17d8530ee590da9aef857835c0955c3) fix: Annotate code block from validation.indexes docs
+  * [`e827ce27`](https://github.com/distribution/distribution/commit/e827ce2772e08f38884e5774846ffb1610965a0d) fix: implement JWK thumbprint for Ed25519 public keys (#4626)
+  * [`4aab88fe`](https://github.com/distribution/distribution/commit/4aab88fedee23307e88e4bf11860a0965bce2a81) fix: implement JWK thumbprint for Ed25519 public keys
+  * [`e016d959`](https://github.com/distribution/distribution/commit/e016d9595f538d2622ce281638707cd61fbef700) build(deps): bump golang.org/x/net from 0.37.0 to 0.38.0 in the go_modules group across 1 directory (#4625)
+  * [`5a71303e`](https://github.com/distribution/distribution/commit/5a71303e5959e49d793f95dc7a7b0e823a576808) build(deps): bump golang.org/x/net
+  * [`523791cb`](https://github.com/distribution/distribution/commit/523791cb5f2b3316a26a44206c2a97d51eb9ef92) chore: make function comment match function name (#4622)
+  * [`a6ce1a79`](https://github.com/distribution/distribution/commit/a6ce1a799594880fa15a9c226151575ccdc4118d) chore: make function comment match function name
+  * [`e028a30e`](https://github.com/distribution/distribution/commit/e028a30ecd61805236281ee73a3d411981572a6a) Fix default_credentials in azure storage provider (#4619)
+  * [`ea6ab365`](https://github.com/distribution/distribution/commit/ea6ab3652c181f6756afd63da2b5b3bc74696590) fix newClient in azure storage provider
+  * [`dbca4995`](https://github.com/distribution/distribution/commit/dbca4995c83ccb5d252c5efce6cb4e292c3b1079) docs: Update to refer to new image tag v3 (#4373)
+  * [`7b3e6d50`](https://github.com/distribution/distribution/commit/7b3e6d50e9c81a8d5bc72d88516b8a4dd0001b69) docs: Update to refer to new image tag v3
+</p>
+</details>
+
+### Dependency Changes
+
+* **cel.dev/expr**                                                              v0.16.1 -> v0.25.1
+* **cloud.google.com/go**                                                       v0.115.1 -> v0.116.0
+* **cloud.google.com/go/auth**                                                  v0.9.3 -> v0.13.0
+* **cloud.google.com/go/auth/oauth2adapt**                                      v0.2.4 -> v0.2.6
+* **cloud.google.com/go/compute/metadata**                                      v0.5.1 -> v0.9.0
+* **cloud.google.com/go/iam**                                                   v1.2.1 -> v1.2.2
+* **cloud.google.com/go/monitoring**                                            v1.21.0 -> v1.21.2
+* **cloud.google.com/go/storage**                                               v1.45.0 -> v1.50.0
+* **github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp**  v1.24.1 -> v1.30.0
+* **github.com/alicebob/miniredis/v2**                                          v2.35.0 **_new_**
+* **github.com/bshuster-repo/logrus-logstash-hook**                             v1.0.0 -> v1.1.0
+* **github.com/cenkalti/backoff/v5**                                            v5.0.3 **_new_**
+* **github.com/cncf/xds/go**                                                    b4127c9b8d78 -> ee656c7534f5
+* **github.com/davecgh/go-spew**                                                v1.1.1 -> d8f796af33cc
+* **github.com/docker/docker-credential-helpers**                               v0.8.2 -> v0.9.5
+* **github.com/docker/go-events**                                               e31b211e4f1c -> 605354379745
+* **github.com/envoyproxy/go-control-plane/envoy**                              v1.36.0 **_new_**
+* **github.com/envoyproxy/protoc-gen-validate**                                 v1.1.0 -> v1.3.0
+* **github.com/go-jose/go-jose/v4**                                             v4.0.5 -> v4.1.4
+* **github.com/go-logr/logr**                                                   v1.4.2 -> v1.4.3
+* **github.com/golang-jwt/jwt/v5**                                              v5.2.2 -> v5.3.0
+* **github.com/googleapis/gax-go/v2**                                           v2.13.0 -> v2.14.0
+* **github.com/grpc-ecosystem/grpc-gateway/v2**                                 v2.23.0 -> v2.28.0
+* **github.com/klauspost/compress**                                             v1.17.11 -> v1.18.4
+* **github.com/opencontainers/image-spec**                                      v1.1.0 -> v1.1.1
+* **github.com/pmezard/go-difflib**                                             v1.0.0 -> 5d4384ee4fb2
+* **github.com/prometheus/client_golang**                                       v1.20.5 -> v1.23.2
+* **github.com/prometheus/client_model**                                        v0.6.1 -> v0.6.2
+* **github.com/prometheus/common**                                              v0.60.1 -> v0.67.5
+* **github.com/prometheus/otlptranslator**                                      v1.0.0 **_new_**
+* **github.com/prometheus/procfs**                                              v0.15.1 -> v0.20.1
+* **github.com/sirupsen/logrus**                                                v1.9.3 -> v1.9.4
+* **github.com/spf13/cobra**                                                    v1.8.0 -> v1.10.2
+* **github.com/spf13/pflag**                                                    v1.0.5 -> v1.0.10
+* **github.com/spiffe/go-spiffe/v2**                                            v2.6.0 **_new_**
+* **github.com/stretchr/testify**                                               v1.10.0 -> v1.11.1
+* **github.com/yuin/gopher-lua**                                                v1.1.1 **_new_**
+* **go.opentelemetry.io/auto/sdk**                                              v1.2.1 **_new_**
+* **go.opentelemetry.io/contrib/bridges/prometheus**                            v0.57.0 -> v0.67.0
+* **go.opentelemetry.io/contrib/detectors/gcp**                                 v1.29.0 -> v1.39.0
+* **go.opentelemetry.io/contrib/exporters/autoexport**                          v0.57.0 -> v0.67.0
+* **go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp**             v0.57.0 -> v0.67.0
+* **go.opentelemetry.io/otel**                                                  v1.32.0 -> v1.42.0
+* **go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc**               v0.8.0 -> v0.18.0
+* **go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp**               v0.8.0 -> v0.18.0
+* **go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc**         v1.32.0 -> v1.42.0
+* **go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp**         v1.32.0 -> v1.42.0
+* **go.opentelemetry.io/otel/exporters/otlp/otlptrace**                         v1.32.0 -> v1.42.0
+* **go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc**           v1.32.0 -> v1.42.0
+* **go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp**           v1.32.0 -> v1.42.0
+* **go.opentelemetry.io/otel/exporters/prometheus**                             v0.54.0 -> v0.64.0
+* **go.opentelemetry.io/otel/exporters/stdout/stdoutlog**                       v0.8.0 -> v0.18.0
+* **go.opentelemetry.io/otel/exporters/stdout/stdoutmetric**                    v1.32.0 -> v1.42.0
+* **go.opentelemetry.io/otel/exporters/stdout/stdouttrace**                     v1.32.0 -> v1.42.0
+* **go.opentelemetry.io/otel/log**                                              v0.8.0 -> v0.18.0
+* **go.opentelemetry.io/otel/metric**                                           v1.32.0 -> v1.42.0
+* **go.opentelemetry.io/otel/sdk**                                              v1.32.0 -> v1.42.0
+* **go.opentelemetry.io/otel/sdk/log**                                          v0.8.0 -> v0.18.0
+* **go.opentelemetry.io/otel/sdk/metric**                                       v1.32.0 -> v1.42.0
+* **go.opentelemetry.io/otel/trace**                                            v1.32.0 -> v1.42.0
+* **go.opentelemetry.io/proto/otlp**                                            v1.3.1 -> v1.9.0
+* **go.yaml.in/yaml/v2**                                                        v2.4.3 **_new_**
+* **golang.org/x/crypto**                                                       v0.36.0 -> v0.48.0
+* **golang.org/x/net**                                                          v0.37.0 -> v0.51.0
+* **golang.org/x/oauth2**                                                       v0.28.0 -> v0.35.0
+* **golang.org/x/sync**                                                         v0.12.0 -> v0.19.0
+* **golang.org/x/sys**                                                          v0.31.0 -> v0.41.0
+* **golang.org/x/text**                                                         v0.23.0 -> v0.34.0
+* **golang.org/x/time**                                                         v0.6.0 -> v0.14.0
+* **google.golang.org/api**                                                     v0.197.0 -> v0.214.0
+* **google.golang.org/genproto**                                                8af14fe29dc1 -> e639e219e697
+* **google.golang.org/genproto/googleapis/api**                                 dd2ea8efbc28 -> a57be14db171
+* **google.golang.org/genproto/googleapis/rpc**                                 dd2ea8efbc28 -> a57be14db171
+* **google.golang.org/grpc**                                                    v1.68.0 -> v1.79.3
+* **google.golang.org/protobuf**                                                v1.35.1 -> v1.36.11
+
+Previous release can be found at [v3.0.0](https://github.com/distribution/distribution/releases/tag/v3.0.0)
+"""

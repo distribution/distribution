@@ -2,7 +2,7 @@
 
 # GO_VERSION sets the version of the golang base image to use.
 # It must be a supported tag in the docker.io/library/golang image repository.
-ARG GO_VERSION=1.25.8
+ARG GO_VERSION=1.25.9
 
 # ALPINE_VERSION sets the version of the alpine base image to use, including for the golang image.
 # It must be a supported tag in the docker.io/library/alpine image repository

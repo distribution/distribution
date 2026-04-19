@@ -345,7 +345,66 @@ func (t *tags) Lookup(ctx context.Context, digest v1.Descriptor) ([]string, erro
 }
 
 func (t *tags) List(ctx context.Context, limit int, last string) ([]string, error) {
-	panic("not implemented")
+	if limit < 0 {
+		tags, err := t.All(ctx)
+		if err != nil {
+			return tags, err
+		}
+		// return io.EOF, indicating that there are no more tags to list
+		return tags, io.EOF
+	}
+	v := url.Values{}
+	v.Add("n", strconv.Itoa(limit))
+	if last != "" {
+		v.Add("last", last)
+	}
+	listURLStr, err := t.ub.BuildTagsURL(t.name, v)
+	if err != nil {
+		return nil, err
+	}
+
+	listURL, err := url.Parse(listURLStr)
+	if err != nil {
+		return nil, err
+	}
+
+	preAlloc := 1000
+	if limit < preAlloc {
+		preAlloc = limit
+	}
+	tags := make([]string, 0, preAlloc)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, listURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := t.client.Do(req)
+	if err != nil {
+		return tags, err
+	}
+	defer resp.Body.Close()
+
+	if err := HandleHTTPResponseError(resp); err != nil {
+		return tags, err
+	}
+
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return tags, err
+	}
+
+	tagsResponse := struct {
+		Tags []string `json:"tags"`
+	}{}
+	if err := json.Unmarshal(b, &tagsResponse); err != nil {
+		return tags, err
+	}
+	tags = append(tags, tagsResponse.Tags...)
+	// if there is a Link header, return nil to indicate that there are more tags to list
+	// otherwise return io.EOF to indicate that there are no more tags to list
+	if link := resp.Header.Get("Link"); link != "" {
+		return tags, nil
+	}
+	return tags, io.EOF
 }
 
 func (t *tags) Tag(ctx context.Context, tag string, desc distribution.Descriptor) error {

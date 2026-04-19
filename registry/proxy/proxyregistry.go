@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -263,7 +264,9 @@ func (r *remoteAuthChallenger) credentialStore() auth.CredentialStore {
 }
 
 func (r *remoteAuthChallenger) challengeManager() challenge.Manager {
-	return r.cm
+	return challenge.NewFilteringManager(r.cm, func(c challenge.Challenge) bool {
+		return !strings.EqualFold(c.Scheme, "bearer") || realmAllowed(&r.remoteURL, c.Parameters["realm"])
+	})
 }
 
 // tryEstablishChallenges will attempt to get a challenge type for the upstream if none currently exist

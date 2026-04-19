@@ -2256,6 +2256,9 @@ func newTestEnv(t *testing.T, deleteEnabled bool) *testEnv {
 		Catalog: configuration.Catalog{
 			MaxEntries: 5,
 		},
+		Tags: configuration.Tags{
+			MaxTags: 1000,
+		},
 	}
 
 	config.HTTP.Headers = headerConfig

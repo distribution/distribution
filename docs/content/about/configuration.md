@@ -223,6 +223,8 @@ middleware:
     - name: redirect
       options:
         baseurl: https://example.com/
+tags:
+  maxtags: 1000
 http:
   addr: localhost:5000
   prefix: /my/nested/registry/
@@ -799,6 +801,21 @@ location of a proxy for the layer stored by the S3 storage driver.
 | Parameter | Required | Description                                                                                                 |
 |-----------|----------|-------------------------------------------------------------------------------------------------------------|
 | `baseurl` | yes      | `SCHEME://HOST` at which layers are served. Can also contain port. For example, `https://example.com:5443`. |
+
+## `tags`
+
+The `tags` subsection provides configuration to limit the maximum number of tags
+returned by the tags API endpoint. When a client requests the list of tags for
+a repository, the registry will return at most `maxtags` tags.
+
+```yaml
+tags: 
+  maxtags: 100
+```
+
+| Parameter | Required | Description                                                                         |
+|-----------|----------|-------------------------------------------------------------------------------------|
+| `maxtags` | no       | Overrides the maximum number of tags returned by the tags endpoint, default: `1000` |
 
 ## `http`
 
