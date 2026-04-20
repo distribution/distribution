@@ -29,7 +29,7 @@ func APIVersions(resp *http.Response, versionHeader string) []APIVersion {
 	versions := []APIVersion{}
 	if versionHeader != "" {
 		for _, supportedVersions := range resp.Header[http.CanonicalHeaderKey(versionHeader)] {
-			for _, version := range strings.Fields(supportedVersions) {
+			for version := range strings.FieldsSeq(supportedVersions) {
 				versions = append(versions, ParseAPIVersion(version))
 			}
 		}

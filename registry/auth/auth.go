@@ -47,7 +47,7 @@ var (
 
 // InitFunc is the type of an AccessController factory function and is used
 // to register the constructor for different AccessController backends.
-type InitFunc func(options map[string]interface{}) (AccessController, error)
+type InitFunc func(options map[string]any) (AccessController, error)
 
 var accessControllers map[string]InitFunc
 
@@ -128,7 +128,7 @@ func Register(name string, initFunc InitFunc) error {
 
 // GetAccessController constructs an AccessController
 // with the given options using the named backend.
-func GetAccessController(name string, options map[string]interface{}) (AccessController, error) {
+func GetAccessController(name string, options map[string]any) (AccessController, error) {
 	if initFunc, exists := accessControllers[name]; exists {
 		return initFunc(options)
 	}

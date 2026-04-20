@@ -15,6 +15,7 @@ import (
 	"path"
 	"reflect"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -34,6 +35,7 @@ import (
 	"github.com/opencontainers/go-digest"
 	"github.com/opencontainers/image-spec/specs-go"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
+	hookstest "github.com/sirupsen/logrus/hooks/test"
 )
 
 var headerConfig = http.Header{
@@ -564,9 +566,11 @@ func TestTagsAPI(t *testing.T) {
 			queryParams:        url.Values{"last": []string{"does-not-exist"}, "n": []string{"3"}},
 			expectedStatusCode: http.StatusOK,
 			expectedBody: tagsAPIResponse{Name: imageName.Name(), Tags: []string{
+				"jyi7b",
 				"kb0j5",
 				"sb71y",
 			}},
+			expectedLinkHeader: `</v2/test/tags/list?last=sb71y&n=3>; rel="next"`,
 		},
 	}
 
@@ -630,19 +634,14 @@ func checkLink(t *testing.T, urlStr string, numEntries int, last string) url.Val
 }
 
 func contains(elems []string, e string) bool {
-	for _, elem := range elems {
-		if elem == e {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(elems, e)
 }
 
 func TestURLPrefix(t *testing.T) {
 	config := configuration.Configuration{
 		Storage: configuration.Storage{
 			"inmemory": configuration.Parameters{},
-			"maintenance": configuration.Parameters{"uploadpurging": map[interface{}]interface{}{
+			"maintenance": configuration.Parameters{"uploadpurging": map[any]any{
 				"enabled": false,
 			}},
 		},
@@ -725,7 +724,7 @@ func TestRelativeURL(t *testing.T) {
 	config := configuration.Configuration{
 		Storage: configuration.Storage{
 			"inmemory": configuration.Parameters{},
-			"maintenance": configuration.Parameters{"uploadpurging": map[interface{}]interface{}{
+			"maintenance": configuration.Parameters{"uploadpurging": map[any]any{
 				"enabled": false,
 			}},
 		},
@@ -1404,7 +1403,7 @@ const (
 	repositoryWithGenericStorageError = "genericstorageerr"
 )
 
-func (factory *storageManifestErrDriverFactory) Create(ctx context.Context, parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
+func (factory *storageManifestErrDriverFactory) Create(ctx context.Context, parameters map[string]any) (storagedriver.StorageDriver, error) {
 	// Initialize the mock driver
 	errGenericStorage := errors.New("generic storage error")
 	return &mockErrorDriver{
@@ -1459,7 +1458,7 @@ func TestGetManifestWithStorageError(t *testing.T) {
 	config := configuration.Configuration{
 		Storage: configuration.Storage{
 			"storagemanifesterror": configuration.Parameters{},
-			"maintenance": configuration.Parameters{"uploadpurging": map[interface{}]interface{}{
+			"maintenance": configuration.Parameters{"uploadpurging": map[any]any{
 				"enabled": false,
 			}},
 		},
@@ -1709,7 +1708,10 @@ func testManifestAPISchema2(t *testing.T, env *testEnv, imageName reference.Name
 	// ------------------
 	// Fetch by tag name
 
-	// HEAD requests should not contain a body
+	// HEAD requests should emit a logging entry and not contain a body
+	hook := hookstest.NewGlobal()
+	defer hook.Reset()
+
 	headReq, err := http.NewRequest(http.MethodHead, manifestURL, nil)
 	if err != nil {
 		t.Fatalf("Error constructing request: %s", err)
@@ -1725,6 +1727,14 @@ func testManifestAPISchema2(t *testing.T, env *testEnv, imageName reference.Name
 		"Docker-Content-Digest": []string{dgst.String()},
 		"ETag":                  []string{fmt.Sprintf(`"%s"`, dgst)},
 	})
+
+	lastMsg := hook.LastEntry()
+	if v := lastMsg.Data["http.request.method"]; v != http.MethodHead {
+		t.Errorf("expected http.request.method to be %q, got %q", http.MethodHead, v)
+	}
+	if v := lastMsg.Data["http.response.status"]; v != http.StatusOK {
+		t.Errorf("expected http.response.status to be %d, got %d", http.StatusOK, v)
+	}
 
 	headBody, err := io.ReadAll(headResp.Body)
 	if err != nil {
@@ -2219,7 +2229,7 @@ func newTestEnvMirror(t *testing.T, deleteEnabled bool) *testEnv {
 		Storage: configuration.Storage{
 			"inmemory": configuration.Parameters{},
 			"delete":   configuration.Parameters{"enabled": deleteEnabled},
-			"maintenance": configuration.Parameters{"uploadpurging": map[interface{}]interface{}{
+			"maintenance": configuration.Parameters{"uploadpurging": map[any]any{
 				"enabled": false,
 			}},
 		},
@@ -2239,12 +2249,15 @@ func newTestEnv(t *testing.T, deleteEnabled bool) *testEnv {
 		Storage: configuration.Storage{
 			"inmemory": configuration.Parameters{},
 			"delete":   configuration.Parameters{"enabled": deleteEnabled},
-			"maintenance": configuration.Parameters{"uploadpurging": map[interface{}]interface{}{
+			"maintenance": configuration.Parameters{"uploadpurging": map[any]any{
 				"enabled": false,
 			}},
 		},
 		Catalog: configuration.Catalog{
 			MaxEntries: 5,
+		},
+		Tags: configuration.Tags{
+			MaxTags: 1000,
 		},
 	}
 
@@ -2277,7 +2290,7 @@ func (t *testEnv) Shutdown() {
 	t.server.Close()
 }
 
-func putManifest(t *testing.T, msg, url, contentType string, v interface{}) *http.Response {
+func putManifest(t *testing.T, msg, url, contentType string, v any) *http.Response {
 	var body []byte
 
 	switch m := v.(type) {
@@ -2793,7 +2806,7 @@ func TestProxyManifestGetByTag(t *testing.T) {
 	truthConfig := configuration.Configuration{
 		Storage: configuration.Storage{
 			"inmemory": configuration.Parameters{},
-			"maintenance": configuration.Parameters{"uploadpurging": map[interface{}]interface{}{
+			"maintenance": configuration.Parameters{"uploadpurging": map[any]any{
 				"enabled": false,
 			}},
 		},

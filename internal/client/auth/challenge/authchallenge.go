@@ -35,7 +35,7 @@ func init() {
 	// token      = 1*<any CHAR except CTLs or separators>
 	// qdtext     = <any TEXT except <">>
 
-	for c := 0; c < 256; c++ {
+	for c := range 256 {
 		var t octetType
 		isCtl := c <= 31 || c == 127
 		isChar := 0 <= c && c <= 127
@@ -86,45 +86,42 @@ type Manager interface {
 // perform requests on the endpoints or cache the responses
 // to a backend.
 func NewSimpleManager() Manager {
-	return &simpleManager{
-		Challenges: make(map[string][]Challenge),
-	}
+	return &simpleManager{}
 }
 
 type simpleManager struct {
-	sync.RWMutex
-	Challenges map[string][]Challenge
-}
-
-func normalizeURL(endpoint *url.URL) {
-	endpoint.Host = strings.ToLower(endpoint.Host)
-	endpoint.Host = canonicalAddr(endpoint)
+	mu         sync.RWMutex
+	challenges map[string][]Challenge
 }
 
 func (m *simpleManager) GetChallenges(endpoint url.URL) ([]Challenge, error) {
-	normalizeURL(&endpoint)
+	key := normalizedURL(endpoint)
 
-	m.RLock()
-	defer m.RUnlock()
-	challenges := m.Challenges[endpoint.String()]
+	m.mu.RLock()
+	challenges := m.challenges[key]
+	m.mu.RUnlock()
+
 	return challenges, nil
 }
 
 func (m *simpleManager) AddResponse(resp *http.Response) error {
-	challenges := ResponseChallenges(resp)
 	if resp.Request == nil {
 		return fmt.Errorf("missing request reference")
 	}
-	urlCopy := url.URL{
+	key := normalizedURL(url.URL{
 		Path:   resp.Request.URL.Path,
 		Host:   resp.Request.URL.Host,
 		Scheme: resp.Request.URL.Scheme,
-	}
-	normalizeURL(&urlCopy)
+	})
 
-	m.Lock()
-	defer m.Unlock()
-	m.Challenges[urlCopy.String()] = challenges
+	challenges := ResponseChallenges(resp)
+	m.mu.Lock()
+	if m.challenges == nil {
+		m.challenges = make(map[string][]Challenge)
+	}
+	m.challenges[key] = challenges
+	m.mu.Unlock()
+
 	return nil
 }
 
@@ -202,7 +199,7 @@ func expectToken(s string) (token, rest string) {
 }
 
 func expectTokenOrQuoted(s string) (value string, rest string) {
-	if !strings.HasPrefix(s, "\"") {
+	if !strings.HasPrefix(s, `"`) {
 		return expectToken(s)
 	}
 	s = s[1:]

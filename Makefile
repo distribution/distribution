@@ -166,7 +166,7 @@ test-azure-storage: start-azure-storage run-azure-tests stop-azure-storage ## ru
 
 .PHONY: start-azure-storage
 start-azure-storage: ## start local Azure storage (Azurite)
-	$(COMPOSE) -f tests/docker-compose-azure-blob-store.yaml up azurite azurite-init -d
+	$(COMPOSE) -f tests/docker-compose-azure-blob-store.yaml up azurite azurite-init -d --wait
 
 .PHONY: stop-azure-storage
 stop-azure-storage: ## stop local Azure storage (minio)

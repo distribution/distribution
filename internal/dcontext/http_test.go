@@ -21,7 +21,7 @@ func TestWithRequest(t *testing.T) {
 	ctx := WithRequest(Background(), &req)
 	for _, tc := range []struct {
 		key      string
-		expected interface{}
+		expected any
 	}{
 		{
 			key:      "http.request",
@@ -194,7 +194,7 @@ func TestWithVars(t *testing.T) {
 	ctx := WithVars(Background(), &req)
 	for _, tc := range []struct {
 		key      string
-		expected interface{}
+		expected any
 	}{
 		{
 			key:      "vars",

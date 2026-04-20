@@ -34,5 +34,5 @@ storage:
     encrypt: false
     secure: false
     chunksize: 33554432
-    secure: true
     v4auth: true
+    usefipsendpoint: false

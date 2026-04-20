@@ -254,7 +254,6 @@ func checkTestRouter(t *testing.T, tests []routeTestCase, prefix string, deeplyE
 	server := httptest.NewServer(router)
 
 	for _, tc := range tests {
-		tc := tc
 		requestURI := strings.TrimSuffix(prefix, "/") + tc.RequestURI
 		t.Run("("+tc.RouteName+")"+requestURI, func(t *testing.T) {
 			t.Parallel()

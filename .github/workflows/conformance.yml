@@ -17,7 +17,7 @@ jobs:
     steps:
       -
         name: Build image
-        uses: docker/bake-action@v6
+        uses: docker/bake-action@a66e1c87e2eca0503c343edf1d208c716d54b8a8 # v7.1.0
         with:
           targets: image-local
       -
@@ -30,7 +30,7 @@ jobs:
           docker run --rm -p 5000:5000 -e REGISTRY_STORAGE_DELETE_ENABLED=true -idt "registry:local"
       -
         name: Run OCI Distribution Spec conformance tests
-        uses: opencontainers/distribution-spec@v1.0.1
+        uses: opencontainers/distribution-spec@10efb871ee08eb13678fe275e2cf89b3df86542b # v1.0.1
         env:
           OCI_ROOT_URL: ${{ env.OCI_ROOT_URL }}
           OCI_NAMESPACE: oci-conformance/distribution-test
@@ -44,7 +44,7 @@ jobs:
         run: mkdir -p out/ && mv {report.html,junit.xml} out/
       -
         name: Upload test results
-        uses: actions/upload-artifact@v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: oci-test-results-${{ github.sha }}
           path: out/

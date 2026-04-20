@@ -19,7 +19,7 @@ func (reg *registry) Repositories(ctx context.Context, repos []string, last stri
 	foundRepos := 0
 
 	if len(repos) == 0 {
-		return 0, errors.New("Attempted to list 0 repositories")
+		return 0, errors.New("attempted to list 0 repositories")
 	}
 
 	root, err := pathFor(repositoriesRootPathSpec{})
@@ -107,10 +107,7 @@ func compareReplaceInline(s1, s2 string, old, new byte) int {
 	// the exact same slice header. It will make the code unsafe but can
 	// provide some extra performance.
 
-	l := len(s1)
-	if len(s2) < l {
-		l = len(s2)
-	}
+	l := min(len(s2), len(s1))
 
 	for i := 0; i < l; i++ {
 		c1, c2 := s1[i], s2[i]

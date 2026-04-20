@@ -9,7 +9,7 @@ import (
 type AudienceList []string
 
 func (s *AudienceList) UnmarshalJSON(data []byte) (err error) {
-	var value interface{}
+	var value any
 
 	if err = json.Unmarshal(data, &value); err != nil {
 		return err
@@ -22,7 +22,7 @@ func (s *AudienceList) UnmarshalJSON(data []byte) (err error) {
 	case []string:
 		*s = v
 
-	case []interface{}:
+	case []any:
 		var ss []string
 
 		for _, vv := range v {

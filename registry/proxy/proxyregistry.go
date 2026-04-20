@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -29,13 +30,14 @@ var repositoryTTL = 24 * 7 * time.Hour
 
 // proxyingRegistry fetches content from a remote registry and caches it locally
 type proxyingRegistry struct {
-	embedded       distribution.Namespace // provides local registry functionality
-	scheduler      *scheduler.TTLExpirationScheduler
-	ttl            *time.Duration
-	remoteURL      url.URL
-	authChallenger authChallenger
-	basicAuth      auth.CredentialStore
-	baseTransport  http.RoundTripper
+	embedded          distribution.Namespace // provides local registry functionality
+	scheduler         *scheduler.TTLExpirationScheduler
+	ttl               *time.Duration
+	cacheWriteTimeout time.Duration
+	remoteURL         url.URL
+	authChallenger    authChallenger
+	basicAuth         auth.CredentialStore
+	baseTransport     http.RoundTripper
 }
 
 // NewRegistryPullThroughCache creates a registry acting as a pull through cache
@@ -57,6 +59,12 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 	} else {
 		// TTL is disabled, never expire
 		ttl = nil
+	}
+
+	// Set default cache write timeout if not specified
+	cacheWriteTimeout := 5 * time.Minute
+	if config.CacheWriteTimeout != nil && *config.CacheWriteTimeout > 0 {
+		cacheWriteTimeout = *config.CacheWriteTimeout
 	}
 
 	if ttl != nil {
@@ -137,10 +145,11 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 	}
 
 	return &proxyingRegistry{
-		embedded:  registry,
-		scheduler: s,
-		ttl:       ttl,
-		remoteURL: *remoteURL,
+		embedded:          registry,
+		scheduler:         s,
+		ttl:               ttl,
+		cacheWriteTimeout: cacheWriteTimeout,
+		remoteURL:         *remoteURL,
 		authChallenger: &remoteAuthChallenger{
 			remoteURL: *remoteURL,
 			cm:        challenge.NewSimpleManager(),
@@ -200,12 +209,13 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named
 
 	return &proxiedRepository{
 		blobStore: &proxyBlobStore{
-			localStore:     localRepo.Blobs(ctx),
-			remoteStore:    remoteRepo.Blobs(ctx),
-			scheduler:      pr.scheduler,
-			ttl:            pr.ttl,
-			repositoryName: name,
-			authChallenger: pr.authChallenger,
+			localStore:        localRepo.Blobs(ctx),
+			remoteStore:       remoteRepo.Blobs(ctx),
+			scheduler:         pr.scheduler,
+			ttl:               pr.ttl,
+			cacheWriteTimeout: pr.cacheWriteTimeout,
+			repositoryName:    name,
+			authChallenger:    pr.authChallenger,
 		},
 		manifests: &proxyManifestStore{
 			repositoryName:  name,
@@ -271,6 +281,9 @@ type Closer interface {
 }
 
 func (pr *proxyingRegistry) Close() error {
+	if pr.scheduler == nil {
+		return nil
+	}
 	return pr.scheduler.Stop()
 }
 
@@ -293,7 +306,9 @@ func (r *remoteAuthChallenger) credentialStore() auth.CredentialStore {
 }
 
 func (r *remoteAuthChallenger) challengeManager() challenge.Manager {
-	return r.cm
+	return challenge.NewFilteringManager(r.cm, func(c challenge.Challenge) bool {
+		return !strings.EqualFold(c.Scheme, "bearer") || realmAllowed(&r.remoteURL, c.Parameters["realm"])
+	})
 }
 
 // tryEstablishChallenges will attempt to get a challenge type for the upstream if none currently exist
@@ -316,8 +331,8 @@ func (r *remoteAuthChallenger) tryEstablishChallenges(ctx context.Context) error
 	if err := ping(r.cm, remoteURL.String(), challengeHeader); err != nil {
 		return err
 	}
+	dcontext.GetLogger(ctx).Infof("Challenge established with upstream: %s", remoteURL.Redacted())
 
-	dcontext.GetLogger(ctx).Infof("Challenge established with upstream : %s %s", remoteURL, r.cm)
 	return nil
 }
 

@@ -42,7 +42,7 @@ type Context struct {
 
 // Value overrides context.Context.Value to ensure that calls are routed to
 // correct context.
-func (ctx *Context) Value(key interface{}) interface{} {
+func (ctx *Context) Value(key any) any {
 	return ctx.Context.Value(key)
 }
 
@@ -117,7 +117,7 @@ type userInfoContext struct {
 	user auth.UserInfo
 }
 
-func (uic userInfoContext) Value(key interface{}) interface{} {
+func (uic userInfoContext) Value(key any) any {
 	switch key {
 	case userKey:
 		return uic.user
@@ -143,7 +143,7 @@ type resourceContext struct {
 
 type resourceKey struct{}
 
-func (rc resourceContext) Value(key interface{}) interface{} {
+func (rc resourceContext) Value(key any) any {
 	if key == (resourceKey{}) {
 		return rc.resources
 	}

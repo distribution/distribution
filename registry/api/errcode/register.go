@@ -268,8 +268,7 @@ func (a byValue) Less(i, j int) bool { return a[i].Value < a[j].Value }
 
 // GetGroupNames returns the list of Error group names that are registered
 func GetGroupNames() []string {
-	keys := []string{}
-
+	keys := make([]string, 0, len(groupToDescriptors))
 	for k := range groupToDescriptors {
 		keys = append(keys, k)
 	}
@@ -287,9 +286,9 @@ func GetErrorCodeGroup(name string) []ErrorDescriptor {
 // GetErrorAllDescriptors returns a slice of all ErrorDescriptors that are
 // registered, irrespective of what group they're in
 func GetErrorAllDescriptors() []ErrorDescriptor {
-	result := []ErrorDescriptor{}
-
-	for _, group := range GetGroupNames() {
+	groups := GetGroupNames()
+	result := make([]ErrorDescriptor, 0, len(groups))
+	for _, group := range groups {
 		result = append(result, GetErrorCodeGroup(group)...)
 	}
 	sort.Sort(byValue(result))

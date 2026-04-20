@@ -56,6 +56,12 @@ REGISTRY_HTTP_TLS_LETSENCRYPT_HOSTS_0=registry.example.com
 > be configured to tweak individual values. Overriding configuration sections
 > with environment variables is not recommended.
 
+### Disable traces export
+
+Currently traces are set to `https://localhost:4318/v1/traces` by default.
+You can control this by setting the [environment variable](https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#exporter-selection) `OTEL_TRACES_EXPORTER`
+to either `none` or your trace collector.
+
 ## Overriding the entire configuration file
 
 If the default configuration is not a sound basis for your usage, or if you are
@@ -156,6 +162,7 @@ storage:
     multipartcopythresholdsize: 33554432
     rootdirectory: /s3/object/name/prefix
     usedualstack: false
+    usefipsendpoint: false
     loglevel: debug
   inmemory:  # This driver takes no parameters
   tag:
@@ -216,6 +223,8 @@ middleware:
     - name: redirect
       options:
         baseurl: https://example.com/
+tags:
+  maxtags: 1000
 http:
   addr: localhost:5000
   prefix: /my/nested/registry/
@@ -268,7 +277,7 @@ redis:
   tls:
     certificate: /path/to/cert.crt
     key: /path/to/key.pem
-    clientcas:
+    rootcas:
       - /path/to/ca.pem
   addrs: [localhost:6379]
   password: asecret
@@ -449,6 +458,7 @@ storage:
     multipartcopymaxconcurrency: 100
     multipartcopythresholdsize: 33554432
     rootdirectory: /s3/object/name/prefix
+    usefipsendpoint: false
     loglevel: debug
   inmemory:
   delete:
@@ -792,6 +802,21 @@ location of a proxy for the layer stored by the S3 storage driver.
 |-----------|----------|-------------------------------------------------------------------------------------------------------------|
 | `baseurl` | yes      | `SCHEME://HOST` at which layers are served. Can also contain port. For example, `https://example.com:5443`. |
 
+## `tags`
+
+The `tags` subsection provides configuration to limit the maximum number of tags
+returned by the tags API endpoint. When a client requests the list of tags for
+a repository, the registry will return at most `maxtags` tags.
+
+```yaml
+tags: 
+  maxtags: 100
+```
+
+| Parameter | Required | Description                                                                         |
+|-----------|----------|-------------------------------------------------------------------------------------|
+| `maxtags` | no       | Overrides the maximum number of tags returned by the tags endpoint, default: `1000` |
+
 ## `http`
 
 ```yaml
@@ -1042,6 +1067,15 @@ accept event notifications.
 | `mediatypes`|no| A list of target media types to ignore. Events with these target media types are not published to the endpoint. |
 | `actions`   |no| A list of actions to ignore. Events with these actions are not published to the endpoint. |
 
+The `mediatypes` and `actions` filters work independently. You can specify:
+
+- Only `mediatypes` to filter by media type.
+- Only `actions` to filter by action (e.g., `pull`, `push`, `delete`, `mount`)
+- Both to filter events matching either condition (OR logic)
+- Neither to receive all events
+
+Common use case: Set `mediatypes: []` with `actions: [pull, delete, mount]` to receive only push events regardless of media type.
+
 ### `events`
 
 The `events` structure configures the information provided in event notifications.
@@ -1057,8 +1091,8 @@ may use the Redis instance for several applications. Currently, it caches
 information about immutable blobs. Most of the `redis` options control
 how the registry connects to the `redis` instance.
 
-You should configure Redis with the **allkeys-lru** eviction policy, because the
-registry does not set an expiration value on keys.
+You **must** configure Redis with the **allkeys-lru** eviction policy, because
+the registry does not set an expiration value on keys.
 
 Under the hood distribution uses [`go-redis`](https://github.com/redis/go-redis) Go module for
 Redis connectivity and its [`UniversalOptions`](https://pkg.go.dev/github.com/redis/go-redis/v9#UniversalOptions)
@@ -1070,16 +1104,26 @@ Use these settings to configure Redis TLS:
 
 | Parameter | Required | Description                                           |
 |-----------|----------|-------------------------------------------------------|
-| `certificate`  | yes  | Absolute path to the x509 certificate file.           |
-| `key`          | yes  | Absolute path to the x509 private key file.           |
-| `clientcas`    | no   | An array of absolute paths to x509 CA files.          |
+| `certificate`  | no   | Absolute path to the x509 client certificate file. Required for mTLS.  |
+| `key`          | no   | Absolute path to the x509 client private key file. Required for mTLS.  |
+| `rootcas`      | no   | An array of absolute paths to x509 CA files.          |
+
+**Note:** For server-side TLS only (e.g., AWS Elasticache), provide only `rootcas`. For mutual TLS (mTLS), provide both `certificate` and `key` along with optional `rootcas`.
 
 ```yaml
+# Server-side TLS only (validate server certificate)
+redis:
+  tls:
+    rootcas:
+      - /path/to/ca-bundle.crt
+  addrs: [localhost:6379]
+
+# Mutual TLS (client and server certificates)
 redis:
   tls:
     certificate: /path/to/cert.crt
     key: /path/to/key.pem
-    clientcas:
+    rootcas:
       - /path/to/ca.pem
   addrs: [localhost:6379]
   password: asecret

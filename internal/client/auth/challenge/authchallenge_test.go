@@ -50,27 +50,26 @@ func TestAuthChallengeNormalization(t *testing.T) {
 func testAuthChallengeNormalization(t *testing.T, host string) {
 	scm := NewSimpleManager()
 
-	url, err := url.Parse(fmt.Sprintf("http://%s/v2/", host))
+	hostURL, err := url.Parse(fmt.Sprintf("https://%s/v2/", host))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	resp := &http.Response{
 		Request: &http.Request{
-			URL: url,
+			URL: hostURL,
 		},
 		Header:     make(http.Header),
 		StatusCode: http.StatusUnauthorized,
 	}
-	resp.Header.Add("WWW-Authenticate", fmt.Sprintf("Bearer realm=\"https://%s/token\",service=\"registry.example.com\"", host))
+	resp.Header.Add("WWW-Authenticate", fmt.Sprintf(`Bearer realm="https://%s/token",service="registry.example.com"`, host))
 
 	err = scm.AddResponse(resp)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	lowered := *url
-	lowered.Host = strings.ToLower(lowered.Host)
+	lowered := *hostURL
 	lowered.Host = canonicalAddr(&lowered)
 	c, err := scm.GetChallenges(lowered)
 	if err != nil {
@@ -85,24 +84,24 @@ func testAuthChallengeNormalization(t *testing.T, host string) {
 func testAuthChallengeConcurrent(t *testing.T, host string) {
 	scm := NewSimpleManager()
 
-	url, err := url.Parse(fmt.Sprintf("http://%s/v2/", host))
+	hostURL, err := url.Parse(fmt.Sprintf("https://%s/v2/", host))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	resp := &http.Response{
 		Request: &http.Request{
-			URL: url,
+			URL: hostURL,
 		},
 		Header:     make(http.Header),
 		StatusCode: http.StatusUnauthorized,
 	}
-	resp.Header.Add("WWW-Authenticate", fmt.Sprintf("Bearer realm=\"https://%s/token\",service=\"registry.example.com\"", host))
+	resp.Header.Add("WWW-Authenticate", fmt.Sprintf(`Bearer realm="https://%s/token",service="registry.example.com"`, host))
 	var s sync.WaitGroup
 	s.Add(2)
 	go func() {
 		defer s.Done()
-		for i := 0; i < 200; i++ {
+		for range 200 {
 			err = scm.AddResponse(resp)
 			if err != nil {
 				t.Error(err)
@@ -111,9 +110,9 @@ func testAuthChallengeConcurrent(t *testing.T, host string) {
 	}()
 	go func() {
 		defer s.Done()
-		lowered := *url
+		lowered := *hostURL
 		lowered.Host = strings.ToLower(lowered.Host)
-		for k := 0; k < 200; k++ {
+		for range 200 {
 			_, err := scm.GetChallenges(lowered)
 			if err != nil {
 				t.Error(err)
@@ -121,4 +120,45 @@ func testAuthChallengeConcurrent(t *testing.T, host string) {
 		}
 	}()
 	s.Wait()
+}
+
+func TestFilteringManager(t *testing.T) {
+	t.Parallel()
+
+	base := NewSimpleManager()
+	manager := NewFilteringManager(base, func(c Challenge) bool {
+		return c.Parameters["service"] == "keep.example.com"
+	})
+
+	endpoint, err := url.Parse("https://registry.example.com/v2/")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp := &http.Response{
+		Request: &http.Request{
+			URL: endpoint,
+		},
+		Header:     make(http.Header),
+		StatusCode: http.StatusUnauthorized,
+	}
+	resp.Header.Add("WWW-Authenticate", `Bearer realm="https://auth.example.com/token",service="keep.example.com"`)
+	resp.Header.Add("WWW-Authenticate", `Bearer realm="https://evil.example.net/token",service="drop.example.net"`)
+
+	if err := manager.AddResponse(resp); err != nil {
+		t.Fatal(err)
+	}
+
+	challenges, err := manager.GetChallenges(*endpoint)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(challenges) != 1 {
+		t.Fatalf("unexpected challenge count: got %d want 1", len(challenges))
+	}
+
+	if got := challenges[0].Parameters["service"]; got != "keep.example.com" {
+		t.Fatalf("unexpected surviving challenge service: %q", got)
+	}
 }

@@ -1,6 +1,8 @@
 # syntax=docker/dockerfile:1
 
-ARG ALPINE_VERSION=3.21
+# ALPINE_VERSION sets the version of the alpine base image to use.
+# It must be a supported tag in the docker.io/library/alpine image repository.
+ARG ALPINE_VERSION=3.23
 
 FROM alpine:${ALPINE_VERSION} AS gen
 RUN apk add --no-cache git

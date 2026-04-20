@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"mime"
 	"net/http"
+	"slices"
 	"strings"
 	"sync"
 
@@ -95,7 +96,7 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 
 		// we need to split each header value on "," to get the full list of "Accept" values (per RFC 2616)
 		// https://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.1
-		for _, mediaType := range strings.Split(acceptHeader, ",") {
+		for mediaType := range strings.SplitSeq(acceptHeader, ",") {
 			if mediaType, _, err = mime.ParseMediaType(mediaType); err != nil {
 				continue
 			}
@@ -153,9 +154,10 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 	if _, isOCImanifest := manifest.(*ocischema.DeserializedManifest); isOCImanifest {
 		manifestType = ociSchema
 	} else if isManifestList {
-		if manifestList.MediaType == manifestlist.MediaTypeManifestList {
+		switch manifestList.MediaType {
+		case manifestlist.MediaTypeManifestList:
 			manifestType = manifestlistSchema
-		} else if manifestList.MediaType == v1.MediaTypeImageIndex {
+		case v1.MediaTypeImageIndex:
 			manifestType = ociImageIndexSchema
 		}
 	}
@@ -217,6 +219,7 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 	w.Header().Set("Etag", fmt.Sprintf(`"%s"`, imh.Digest))
 
 	if r.Method == http.MethodHead {
+		w.WriteHeader(http.StatusOK)
 		return
 	}
 
@@ -393,11 +396,8 @@ func (imh *manifestHandler) applyResourcePolicy(manifest distribution.Manifest) 
 
 	// Check to see if class is allowed in registry
 	var allowedClass bool
-	for _, c := range allowedClasses {
-		if class == c {
-			allowedClass = true
-			break
-		}
+	if slices.Contains(allowedClasses, class) {
+		allowedClass = true
 	}
 	if !allowedClass {
 		return errcode.ErrorCodeDenied.WithMessage(fmt.Sprintf("registry does not allow %s manifest", class))
@@ -491,7 +491,6 @@ func (imh *manifestHandler) DeleteManifest(w http.ResponseWriter, r *http.Reques
 	g := errgroup.Group{}
 	g.SetLimit(storage.DefaultConcurrencyLimit)
 	for _, tag := range referencedTags {
-		tag := tag
 
 		g.Go(func() error {
 			if err := tagService.Untag(imh, tag); err != nil {

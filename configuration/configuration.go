@@ -10,6 +10,14 @@ import (
 	"time"
 )
 
+const (
+	// defaultMaxEntries is the default max number of entries returned by the catalog endpoint
+	defaultMaxEntries = 1000
+
+	// defaultMaxTags is the default max number of tags returned by the tags endpoint
+	defaultMaxTags = 1000
+)
+
 // Configuration is a versioned registry configuration, intended to be provided by a yaml file, and
 // optionally modified by environment variables.
 //
@@ -58,6 +66,10 @@ type Configuration struct {
 	// options to control the maximum number of entries returned by the catalog endpoint.
 	Catalog Catalog `yaml:"catalog,omitempty"`
 
+	// Tags provides configuration for the tags list (/v2/<name>/tags/list) endpoint.
+	// It allows specifying the maximum number of tags returned by the endpoint.
+	Tags Tags `yaml:"tags,omitempty"`
+
 	// Proxy defines the configuration options for using the registry as a pull-through cache.
 	Proxy Proxy `yaml:"proxy,omitempty"`
 
@@ -105,7 +117,7 @@ type Log struct {
 
 	// Fields allows users to specify static string fields to include in
 	// the logger context.
-	Fields map[string]interface{} `yaml:"fields,omitempty"`
+	Fields map[string]any `yaml:"fields,omitempty"`
 
 	// Hooks allows users to configure the log hooks, to enabling the
 	// sequent handling behavior, when defined levels of log message emit.
@@ -263,6 +275,14 @@ type LetsEncrypt struct {
 	DirectoryURL string `yaml:"directoryurl,omitempty"`
 }
 
+// Tags provides configuration options for the "/v2/<name>/tags/list" endpoint.
+type Tags struct {
+	// MaxTags limits the maximum number of tags returned by the tags endpoint.
+	// Requesting n tags to the tags endpoint will return at most MaxTags tags.
+	// Default to 1000 tags if not set.
+	MaxTags int `yaml:"maxtags,omitempty"`
+}
+
 // LogHook is composed of hook Level and Type.
 // After hooks configuration, it can execute the next handling automatically,
 // when defined levels of log message emitted.
@@ -409,7 +429,7 @@ type v0_1Configuration Configuration
 
 // UnmarshalYAML implements the yaml.Unmarshaler interface
 // Unmarshals a string of the form X.Y into a Version, validating that X and Y can represent unsigned integers
-func (version *Version) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (version *Version) UnmarshalYAML(unmarshal func(any) error) error {
 	var versionString string
 	err := unmarshal(&versionString)
 	if err != nil {
@@ -439,7 +459,7 @@ type Loglevel string
 // UnmarshalYAML implements the yaml.Umarshaler interface
 // Unmarshals a string into a Loglevel, lowercasing the string and validating that it represents a
 // valid loglevel
-func (loglevel *Loglevel) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (loglevel *Loglevel) UnmarshalYAML(unmarshal func(any) error) error {
 	var loglevelString string
 	err := unmarshal(&loglevelString)
 	if err != nil {
@@ -458,7 +478,7 @@ func (loglevel *Loglevel) UnmarshalYAML(unmarshal func(interface{}) error) error
 }
 
 // Parameters defines a key-value parameters mapping
-type Parameters map[string]interface{}
+type Parameters map[string]any
 
 // Storage defines the configuration for registry object storage
 type Storage map[string]Parameters
@@ -499,7 +519,7 @@ func (storage Storage) TagParameters() Parameters {
 }
 
 // setTagParameter changes the parameter at the provided key to the new value
-func (storage Storage) setTagParameter(key string, value interface{}) {
+func (storage Storage) setTagParameter(key string, value any) {
 	if _, ok := storage["tag"]; !ok {
 		storage["tag"] = make(Parameters)
 	}
@@ -512,13 +532,13 @@ func (storage Storage) Parameters() Parameters {
 }
 
 // setParameter changes the parameter at the provided key to the new value
-func (storage Storage) setParameter(key string, value interface{}) {
+func (storage Storage) setParameter(key string, value any) {
 	storage[storage.Type()][key] = value
 }
 
 // UnmarshalYAML implements the yaml.Unmarshaler interface
 // Unmarshals a single item map into a Storage or a string into a Storage type with no parameters
-func (storage *Storage) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (storage *Storage) UnmarshalYAML(unmarshal func(any) error) error {
 	var storageMap map[string]Parameters
 	err := unmarshal(&storageMap)
 	if err == nil {
@@ -560,7 +580,7 @@ func (storage *Storage) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 // MarshalYAML implements the yaml.Marshaler interface
-func (storage Storage) MarshalYAML() (interface{}, error) {
+func (storage Storage) MarshalYAML() (any, error) {
 	if storage.Parameters() == nil {
 		return storage.Type(), nil
 	}
@@ -585,13 +605,13 @@ func (auth Auth) Parameters() Parameters {
 }
 
 // setParameter changes the parameter at the provided key to the new value
-func (auth Auth) setParameter(key string, value interface{}) {
+func (auth Auth) setParameter(key string, value any) {
 	auth[auth.Type()][key] = value
 }
 
 // UnmarshalYAML implements the yaml.Unmarshaler interface
 // Unmarshals a single item map into a Storage or a string into a Storage type with no parameters
-func (auth *Auth) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (auth *Auth) UnmarshalYAML(unmarshal func(any) error) error {
 	var m map[string]Parameters
 	err := unmarshal(&m)
 	if err == nil {
@@ -621,7 +641,7 @@ func (auth *Auth) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 // MarshalYAML implements the yaml.Marshaler interface
-func (auth Auth) MarshalYAML() (interface{}, error) {
+func (auth Auth) MarshalYAML() (any, error) {
 	if auth.Parameters() == nil {
 		return auth.Type(), nil
 	}
@@ -695,6 +715,12 @@ type Proxy struct {
 
 	// TLS configures client TLS for proxying to the remote registry
 	TLS *ProxyTLS `yaml:"tls,omitempty"`
+
+	// CacheWriteTimeout is the maximum duration allowed for cache write operations
+	// to complete when pulling blobs from the remote registry. This timeout ensures
+	// that cache writes don't hang indefinitely if the storage backend is slow.
+	// If not set, defaults to 5 minutes.
+	CacheWriteTimeout *time.Duration `yaml:"cachewritetimeout,omitempty"`
 }
 
 // ExecConfig defines the configuration for executing a command as a credential helper.
@@ -778,7 +804,7 @@ type Platforms string
 // UnmarshalYAML implements the yaml.Umarshaler interface
 // Unmarshals a string into a Platforms option, lowercasing the string and validating that it represents a
 // valid option
-func (platforms *Platforms) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (platforms *Platforms) UnmarshalYAML(unmarshal func(any) error) error {
 	var platformsString string
 	err := unmarshal(&platformsString)
 	if err != nil {
@@ -812,8 +838,8 @@ func Parse(rd io.Reader) (*Configuration, error) {
 	p := NewParser("registry", []VersionedParseInfo{
 		{
 			Version: MajorMinorVersion(0, 1),
-			ParseAs: reflect.TypeOf(v0_1Configuration{}),
-			ConversionFunc: func(c interface{}) (interface{}, error) {
+			ParseAs: reflect.TypeFor[v0_1Configuration](),
+			ConversionFunc: func(c any) (any, error) {
 				if v0_1, ok := c.(*v0_1Configuration); ok {
 					if v0_1.Log.Level == Loglevel("") {
 						if v0_1.Loglevel != Loglevel("") {
@@ -827,7 +853,14 @@ func Parse(rd io.Reader) (*Configuration, error) {
 					}
 
 					if v0_1.Catalog.MaxEntries <= 0 {
-						v0_1.Catalog.MaxEntries = 1000
+						v0_1.Catalog.MaxEntries = defaultMaxEntries
+					}
+
+					if v0_1.Tags.MaxTags <= 0 {
+						if v0_1.Tags.MaxTags < 0 {
+							return nil, errors.New("maxtags limit must be a non-negative integer value")
+						}
+						v0_1.Tags.MaxTags = defaultMaxTags
 					}
 
 					if v0_1.Storage.Type() == "" {
@@ -960,9 +993,9 @@ type RedisTLSOptions struct {
 	// This key is used to authenticate the client during the TLS handshake.
 	Key string `yaml:"key,omitempty"`
 
-	// ClientCAs specifies a list of certificates to be used to verify the server's
-	// certificate during the TLS handshake. This can be used for mutual TLS authentication.
-	ClientCAs []string `yaml:"clientcas,omitempty"`
+	// RootCAs specifies a list of root certificate authorities that clients use when
+	// verifying server certificates. If RootCAs is nil, TLS uses the host's root CA set.
+	RootCAs []string `yaml:"rootcas,omitempty"`
 }
 
 // Redis represents the configuration for connecting to a Redis server. It includes
@@ -989,7 +1022,7 @@ type ClientAuth string
 
 // UnmarshalYAML implements the yaml.Umarshaler interface
 // Unmarshals a string into a ClientAuth, validating that it represents a valid ClientAuth mod
-func (clientAuth *ClientAuth) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (clientAuth *ClientAuth) UnmarshalYAML(unmarshal func(any) error) error {
 	var clientAuthString string
 	err := unmarshal(&clientAuthString)
 	if err != nil {

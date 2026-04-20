@@ -40,7 +40,6 @@ func TestErrorCodes(t *testing.T) {
 	}
 
 	for ec := range errorCodeToDescriptors {
-		ec := ec
 		t.Run(ec.String(), func(t *testing.T) {
 			t.Parallel()
 			desc := errorCodeToDescriptors[ec]
@@ -67,7 +66,7 @@ func TestErrorCodes(t *testing.T) {
 			}
 
 			// First, unmarshal to interface and ensure we have a string.
-			var ecUnspecified interface{}
+			var ecUnspecified any
 			if err := json.Unmarshal(p, &ecUnspecified); err != nil {
 				t.Fatalf("error unmarshaling error code %v: %v", ec, err)
 			}
@@ -86,7 +85,7 @@ func TestErrorCodes(t *testing.T) {
 				t.Fatalf("unexpected error code during error code marshal/unmarshal: %v != %v", ecUnmarshaled, ec)
 			}
 
-			expectedErrorString := strings.ToLower(strings.Replace(ec.Descriptor().Value, "_", " ", -1))
+			expectedErrorString := strings.ToLower(strings.ReplaceAll(ec.Descriptor().Value, "_", " "))
 			if ec.Error() != expectedErrorString {
 				t.Fatalf("unexpected return from %v.Error(): %q != %q", ec, ec.Error(), expectedErrorString)
 			}
@@ -99,7 +98,7 @@ func TestErrorsManagement(t *testing.T) {
 
 	errs = append(errs, ErrorCodeTest1)
 	errs = append(errs, ErrorCodeTest2.WithDetail(
-		map[string]interface{}{"digest": "sometestblobsumdoesntmatter"}))
+		map[string]any{"digest": "sometestblobsumdoesntmatter"}))
 	errs = append(errs, ErrorCodeTest3.WithArgs("BOOGIE"))
 	errs = append(errs, ErrorCodeTest3.WithArgs("BOOGIE").WithDetail("data"))
 

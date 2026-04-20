@@ -33,7 +33,7 @@ type accessController struct {
 
 var _ auth.AccessController = &accessController{}
 
-func newAccessController(options map[string]interface{}) (auth.AccessController, error) {
+func newAccessController(options map[string]any) (auth.AccessController, error) {
 	realm, present := options["realm"]
 	if _, ok := realm.(string); !present || !ok {
 		return nil, fmt.Errorf(`"realm" must be set for silly access controller`)
@@ -57,7 +57,7 @@ func (ac *accessController) Authorized(req *http.Request, accessRecords ...auth.
 		}
 
 		if len(accessRecords) > 0 {
-			var scopes []string
+			scopes := make([]string, 0, len(accessRecords))
 			for _, access := range accessRecords {
 				scopes = append(scopes, fmt.Sprintf("%s:%s:%s", access.Type, access.Resource.Name, access.Action))
 			}

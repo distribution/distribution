@@ -21,8 +21,8 @@ func TestLinkedBlobStoreEnumerator(t *testing.T) {
 	fooEnv := newManifestStoreTestEnv(t, fooRepoName, "thetag")
 	ctx := context.Background()
 
-	var expected []string
-	for i := 0; i < 2; i++ {
+	expected := make([]string, 0, 2)
+	for range 2 {
 		rs, dgst, err := testutil.CreateRandomTarFile()
 		if err != nil {
 			t.Fatal("unexpected error generating test layer file")
@@ -76,7 +76,7 @@ func TestLinkedBlobStoreCreateWithMountFrom(t *testing.T) {
 	// Build up some test layers and add them to the manifest, saving the
 	// readseekers for upload later.
 	testLayers := map[digest.Digest]io.ReadSeeker{}
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		rs, dgst, err := testutil.CreateRandomTarFile()
 		if err != nil {
 			t.Fatal("unexpected error generating test layer file")
@@ -249,7 +249,7 @@ type statCrossMountCreateOption struct {
 
 var _ distribution.BlobCreateOption = statCrossMountCreateOption{}
 
-func (f statCrossMountCreateOption) Apply(v interface{}) error {
+func (f statCrossMountCreateOption) Apply(v any) error {
 	opts, ok := v.(*distribution.CreateOptions)
 	if !ok {
 		return fmt.Errorf("Unexpected create options: %#v", v)

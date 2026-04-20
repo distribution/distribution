@@ -128,7 +128,7 @@ type ignoredSink struct {
 }
 
 func newIgnoredSink(sink events.Sink, ignored []string, ignoreActions []string) events.Sink {
-	if len(ignored) == 0 {
+	if len(ignored) == 0 && len(ignoreActions) == 0 {
 		return sink
 	}
 

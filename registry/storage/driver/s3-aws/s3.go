@@ -114,6 +114,7 @@ type DriverParameters struct {
 	SessionToken                string
 	UseDualStack                bool
 	Accelerate                  bool
+	UseFIPSEndpoint             bool
 	LogLevel                    aws.LogLevelType
 }
 
@@ -145,7 +146,7 @@ func init() {
 // s3DriverFactory implements the factory.StorageDriverFactory interface
 type s3DriverFactory struct{}
 
-func (factory *s3DriverFactory) Create(ctx context.Context, parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
+func (factory *s3DriverFactory) Create(ctx context.Context, parameters map[string]any) (storagedriver.StorageDriver, error) {
 	return FromParameters(ctx, parameters)
 }
 
@@ -183,7 +184,7 @@ type Driver struct {
 // - region
 // - bucket
 // - encrypt
-func FromParameters(ctx context.Context, parameters map[string]interface{}) (*Driver, error) {
+func FromParameters(ctx context.Context, parameters map[string]any) (*Driver, error) {
 	// Providing no values for these is valid in case the user is authenticating
 	// with an IAM on an ec2 instance (in which case the instance credentials will
 	// be summoned when GetAuth is called)
@@ -201,21 +202,9 @@ func FromParameters(ctx context.Context, parameters map[string]interface{}) (*Dr
 		regionEndpoint = ""
 	}
 
-	forcePathStyleBool := false
-	forcePathStyle := parameters["forcepathstyle"]
-	switch forcePathStyle := forcePathStyle.(type) {
-	case string:
-		b, err := strconv.ParseBool(forcePathStyle)
-		if err != nil {
-			return nil, fmt.Errorf("the forcePathStyle parameter should be a boolean")
-		}
-		forcePathStyleBool = b
-	case bool:
-		forcePathStyleBool = forcePathStyle
-	case nil:
-		// do nothing
-	default:
-		return nil, fmt.Errorf("the forcePathStyle parameter should be a boolean")
+	forcePathStyleBool, err := getParameterAsBool(parameters, "forcepathstyle", false)
+	if err != nil {
+		return nil, err
 	}
 
 	regionName := parameters["region"]
@@ -236,72 +225,24 @@ func FromParameters(ctx context.Context, parameters map[string]interface{}) (*Dr
 		return nil, fmt.Errorf("no bucket parameter provided")
 	}
 
-	encryptBool := false
-	encrypt := parameters["encrypt"]
-	switch encrypt := encrypt.(type) {
-	case string:
-		b, err := strconv.ParseBool(encrypt)
-		if err != nil {
-			return nil, fmt.Errorf("the encrypt parameter should be a boolean")
-		}
-		encryptBool = b
-	case bool:
-		encryptBool = encrypt
-	case nil:
-		// do nothing
-	default:
-		return nil, fmt.Errorf("the encrypt parameter should be a boolean")
+	encryptBool, err := getParameterAsBool(parameters, "encrypt", false)
+	if err != nil {
+		return nil, err
 	}
 
-	secureBool := true
-	secure := parameters["secure"]
-	switch secure := secure.(type) {
-	case string:
-		b, err := strconv.ParseBool(secure)
-		if err != nil {
-			return nil, fmt.Errorf("the secure parameter should be a boolean")
-		}
-		secureBool = b
-	case bool:
-		secureBool = secure
-	case nil:
-		// do nothing
-	default:
-		return nil, fmt.Errorf("the secure parameter should be a boolean")
+	secureBool, err := getParameterAsBool(parameters, "secure", true)
+	if err != nil {
+		return nil, err
 	}
 
-	skipVerifyBool := false
-	skipVerify := parameters["skipverify"]
-	switch skipVerify := skipVerify.(type) {
-	case string:
-		b, err := strconv.ParseBool(skipVerify)
-		if err != nil {
-			return nil, fmt.Errorf("the skipVerify parameter should be a boolean")
-		}
-		skipVerifyBool = b
-	case bool:
-		skipVerifyBool = skipVerify
-	case nil:
-		// do nothing
-	default:
-		return nil, fmt.Errorf("the skipVerify parameter should be a boolean")
+	skipVerifyBool, err := getParameterAsBool(parameters, "skipverify", false)
+	if err != nil {
+		return nil, err
 	}
 
-	v4Bool := true
-	v4auth := parameters["v4auth"]
-	switch v4auth := v4auth.(type) {
-	case string:
-		b, err := strconv.ParseBool(v4auth)
-		if err != nil {
-			return nil, fmt.Errorf("the v4auth parameter should be a boolean")
-		}
-		v4Bool = b
-	case bool:
-		v4Bool = v4auth
-	case nil:
-		// do nothing
-	default:
-		return nil, fmt.Errorf("the v4auth parameter should be a boolean")
+	v4Bool, err := getParameterAsBool(parameters, "v4auth", true)
+	if err != nil {
+		return nil, err
 	}
 
 	keyID := parameters["keyid"]
@@ -383,40 +324,21 @@ func FromParameters(ctx context.Context, parameters map[string]interface{}) (*Dr
 		objectACL = objectACLString
 	}
 
-	useDualStackBool := false
-	useDualStack := parameters["usedualstack"]
-	switch useDualStack := useDualStack.(type) {
-	case string:
-		b, err := strconv.ParseBool(useDualStack)
-		if err != nil {
-			return nil, fmt.Errorf("the useDualStack parameter should be a boolean")
-		}
-		useDualStackBool = b
-	case bool:
-		useDualStackBool = useDualStack
-	case nil:
-		// do nothing
-	default:
-		return nil, fmt.Errorf("the useDualStack parameter should be a boolean")
+	useDualStackBool, err := getParameterAsBool(parameters, "usedualstack", false)
+	if err != nil {
+		return nil, err
 	}
 
 	sessionToken := ""
 
-	accelerateBool := false
-	accelerate := parameters["accelerate"]
-	switch accelerate := accelerate.(type) {
-	case string:
-		b, err := strconv.ParseBool(accelerate)
-		if err != nil {
-			return nil, fmt.Errorf("the accelerate parameter should be a boolean")
-		}
-		accelerateBool = b
-	case bool:
-		accelerateBool = accelerate
-	case nil:
-		// do nothing
-	default:
-		return nil, fmt.Errorf("the accelerate parameter should be a boolean")
+	accelerateBool, err := getParameterAsBool(parameters, "accelerate", false)
+	if err != nil {
+		return nil, err
+	}
+
+	useFIPSEndpointBool, err := getParameterAsBool(parameters, "usefipsendpoint", false)
+	if err != nil {
+		return nil, err
 	}
 
 	params := DriverParameters{
@@ -442,17 +364,27 @@ func FromParameters(ctx context.Context, parameters map[string]interface{}) (*Dr
 		SessionToken:                fmt.Sprint(sessionToken),
 		UseDualStack:                useDualStackBool,
 		Accelerate:                  accelerateBool,
+		UseFIPSEndpoint:             useFIPSEndpointBool,
 		LogLevel:                    getS3LogLevelFromParam(parameters["loglevel"]),
 	}
 
 	return New(ctx, params)
 }
 
-func getS3LogLevelFromParam(param interface{}) aws.LogLevelType {
+func getS3LogLevelFromParam(param any) aws.LogLevelType {
 	if param == nil {
 		return aws.LogOff
 	}
-	logLevelParam := param.(string)
+	// YAML 1.X interprets "off" as false
+	if b, ok := param.(bool); ok && !b {
+		return aws.LogOff
+	}
+	// if it's not a string, return off
+	logLevelParam, ok := param.(string)
+	if !ok {
+		return aws.LogOff
+	}
+
 	var logLevel aws.LogLevelType
 	switch strings.ToLower(logLevelParam) {
 	case "off":
@@ -500,6 +432,26 @@ func getParameterAsInteger[T integer](parameters map[string]any, name string, de
 	return v, nil
 }
 
+// getParameterAsBool converts parameters[name] to a boolean (using defaultValue if
+// nil). It accepts both string and bool types.
+func getParameterAsBool(parameters map[string]any, name string, defaultValue bool) (bool, error) {
+	if p := parameters[name]; p != nil {
+		switch v := p.(type) {
+		case string:
+			b, err := strconv.ParseBool(v)
+			if err != nil {
+				return false, fmt.Errorf("the %s parameter should be a boolean", name)
+			}
+			return b, nil
+		case bool:
+			return v, nil
+		default:
+			return false, fmt.Errorf("the %s parameter should be a boolean", name)
+		}
+	}
+	return defaultValue, nil
+}
+
 // New constructs a new Driver with the given AWS credentials, region, encryption flag, and
 // bucketName
 func New(ctx context.Context, params DriverParameters) (*Driver, error) {
@@ -530,6 +482,9 @@ func New(ctx context.Context, params DriverParameters) (*Driver, error) {
 	awsConfig.WithDisableSSL(!params.Secure)
 	if params.UseDualStack {
 		awsConfig.UseDualStackEndpoint = endpoints.DualStackEndpointStateEnabled
+	}
+	if params.UseFIPSEndpoint {
+		awsConfig.UseFIPSEndpoint = endpoints.FIPSEndpointStateEnabled
 	}
 
 	if params.SkipVerify {
@@ -1004,11 +959,13 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 	for {
 		// list all the objects
 		resp, err := d.S3.ListObjectsV2WithContext(ctx, listObjectsInput)
-
+		if err != nil {
+			return err
+		}
 		// resp.Contents can only be empty on the first call
 		// if there were no more results to return after the first call, resp.IsTruncated would have been false
 		// and the loop would exit without recalling ListObjects
-		if err != nil || len(resp.Contents) == 0 {
+		if len(resp.Contents) == 0 {
 			return storagedriver.PathNotFoundError{Path: path}
 		}
 

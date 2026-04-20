@@ -2,9 +2,10 @@ package dcontext
 
 import (
 	"context"
+	"maps"
 	"sync"
 
-	"github.com/google/uuid"
+	"github.com/distribution/distribution/v3/internal/uuid"
 )
 
 // instanceContext is a context that provides only an instance id. It is
@@ -15,7 +16,7 @@ type instanceContext struct {
 	once sync.Once // once protect generation of the id
 }
 
-func (ic *instanceContext) Value(key interface{}) interface{} {
+func (ic *instanceContext) Value(key any) any {
 	if key == "instance.id" {
 		ic.once.Do(func() {
 			// We want to lazy initialize the UUID such that we don't
@@ -45,16 +46,14 @@ func Background() context.Context {
 // key, falling back to a parent if not present.
 type stringMapContext struct {
 	context.Context
-	m map[string]interface{}
+	m map[string]any
 }
 
 // WithValues returns a context that proxies lookups through a map. Only
 // supports string keys.
-func WithValues(ctx context.Context, m map[string]interface{}) context.Context {
-	mo := make(map[string]interface{}, len(m)) // make our own copy.
-	for k, v := range m {
-		mo[k] = v
-	}
+func WithValues(ctx context.Context, m map[string]any) context.Context {
+	mo := make(map[string]any, len(m)) // make our own copy.
+	maps.Copy(mo, m)
 
 	return stringMapContext{
 		Context: ctx,
@@ -62,7 +61,7 @@ func WithValues(ctx context.Context, m map[string]interface{}) context.Context {
 	}
 }
 
-func (smc stringMapContext) Value(key interface{}) interface{} {
+func (smc stringMapContext) Value(key any) any {
 	if ks, ok := key.(string); ok {
 		if v, ok := smc.m[ks]; ok {
 			return v

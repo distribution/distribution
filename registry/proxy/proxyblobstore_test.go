@@ -134,7 +134,7 @@ func makeTestEnv(t *testing.T, name string) *testEnv {
 	truthDir := t.TempDir()
 	cacheDir := t.TempDir()
 
-	localDriver, err := filesystem.FromParameters(map[string]interface{}{
+	localDriver, err := filesystem.FromParameters(map[string]any{
 		"rootdirectory": truthDir,
 	})
 	if err != nil {
@@ -151,7 +151,7 @@ func makeTestEnv(t *testing.T, name string) *testEnv {
 		t.Fatalf("unexpected error getting repo: %v", err)
 	}
 
-	cacheDriver, err := filesystem.FromParameters(map[string]interface{}{
+	cacheDriver, err := filesystem.FromParameters(map[string]any{
 		"rootdirectory": cacheDir,
 	})
 	if err != nil {
@@ -196,7 +196,7 @@ func makeTestEnv(t *testing.T, name string) *testEnv {
 
 func makeBlob(size int) []byte {
 	blob := make([]byte, size)
-	for i := 0; i < size; i++ {
+	for i := range size {
 		blob[i] = byte('A' + randSource.Int()%48)
 	}
 	return blob
@@ -205,7 +205,7 @@ func makeBlob(size int) []byte {
 func populate(t *testing.T, te *testEnv, blobCount, size, numUnique int) {
 	var inRemote []v1.Descriptor
 
-	for i := 0; i < numUnique; i++ {
+	for range numUnique {
 		bytes := makeBlob(size)
 		for j := 0; j < blobCount/numUnique; j++ {
 			desc, err := te.store.remoteStore.Put(te.ctx, "", bytes)
@@ -430,7 +430,7 @@ func testProxyStoreServe(t *testing.T, te *testEnv, numClients int) {
 		descHitMap[remoteBlob.Digest] = true
 	}
 
-	for i := 0; i < numClients; i++ {
+	for range numClients {
 		// Serveblob - pulls through blobs
 		wg.Add(1)
 		go func() {

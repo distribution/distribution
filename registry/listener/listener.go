@@ -40,7 +40,7 @@ func (ln tcpKeepAliveListener) Accept() (c net.Conn, err error) {
 func NewListener(net, laddr string) (net.Listener, error) {
 	listeners, err := activation.Listeners()
 	if err != nil {
-		return nil, fmt.Errorf("Socket activation failed: %v", err)
+		return nil, fmt.Errorf("socket activation failed: %v", err)
 	}
 	switch len(listeners) {
 	case 0:
@@ -57,7 +57,7 @@ func NewListener(net, laddr string) (net.Listener, error) {
 		log.Info("Using systemd socket activation instead of any configured network listeners")
 		return listeners[0], nil
 	default:
-		return nil, fmt.Errorf("Found %d socket-activation listeners, only expected 1", len(listeners))
+		return nil, fmt.Errorf("found %d socket-activation listeners, only expected 1", len(listeners))
 	}
 }
 

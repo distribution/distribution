@@ -2,13 +2,15 @@ package scheduler
 
 import (
 	"encoding/json"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/distribution/reference"
+
 	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
-	"github.com/distribution/reference"
 )
 
 func testRefs(t *testing.T) (reference.Reference, reference.Reference, reference.Reference) {
@@ -30,13 +32,34 @@ func testRefs(t *testing.T) (reference.Reference, reference.Reference, reference
 	return ref1, ref2, ref3
 }
 
+func testRefsN(t *testing.T, n int) []reference.Canonical {
+	refs := make([]reference.Canonical, 0, n)
+	for i := range n {
+		name := "testrepo@sha256:" + fmt.Sprintf("%064d", i)
+
+		ref, err := reference.Parse(name)
+		if err != nil {
+			t.Fatalf("could not parse reference: %v", err)
+		}
+
+		canonical, ok := ref.(reference.Canonical)
+		if !ok {
+			t.Fatalf("not canonical reference: %v", ref)
+		}
+
+		refs = append(refs, canonical)
+	}
+
+	return refs
+}
+
 func TestSchedule(t *testing.T) {
-	ref1, ref2, ref3 := testRefs(t)
+	refs := testRefsN(t, 20)
 	timeUnit := time.Millisecond
-	remainingRepos := map[string]bool{
-		ref1.String(): true,
-		ref2.String(): true,
-		ref3.String(): true,
+
+	remainingRepos := map[string]bool{}
+	for _, ref := range refs {
+		remainingRepos[ref.String()] = true
 	}
 
 	var mu sync.Mutex
@@ -62,14 +85,9 @@ func TestSchedule(t *testing.T) {
 		t.Fatalf("Error starting ttlExpirationScheduler: %s", err)
 	}
 
-	s.add(ref1, 3*timeUnit, entryTypeBlob)
-	s.add(ref2, 1*timeUnit, entryTypeBlob)
-
-	func() {
-		s.Lock()
-		s.add(ref3, 1*timeUnit, entryTypeBlob)
-		s.Unlock()
-	}()
+	for i, ref := range refs {
+		_ = s.AddBlob(ref, time.Duration(i)*timeUnit)
+	}
 
 	// Ensure all repos are deleted
 	<-time.After(50 * timeUnit)

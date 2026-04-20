@@ -157,7 +157,7 @@ type BlobIngester interface {
 // BlobIngester receiving them.
 // TODO (brianbland): unify this with ManifestServiceOption in the future
 type BlobCreateOption interface {
-	Apply(interface{}) error
+	Apply(any) error
 }
 
 // CreateOptions is a collection of blob creation modifiers relevant to general

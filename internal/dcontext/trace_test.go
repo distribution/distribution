@@ -41,7 +41,6 @@ func TestWithTrace(t *testing.T) {
 		expected: f.Name(),
 	})
 	for _, tc := range tests {
-		tc := tc
 		t.Run(tc.key, func(t *testing.T) {
 			t.Parallel()
 			v := ctx.Value(tc.key)
@@ -74,7 +73,6 @@ func TestWithTrace(t *testing.T) {
 			expected: parentID,
 		})
 		for _, tc := range tests {
-			tc := tc
 			t.Run(tc.key, func(t *testing.T) {
 				t.Parallel()
 				v := ctx.Value(tc.key)
@@ -98,6 +96,6 @@ func TestWithTrace(t *testing.T) {
 
 type valueTestCase struct {
 	key           string
-	expected      interface{}
+	expected      any
 	notnilorempty bool // just check not empty/not nil
 }

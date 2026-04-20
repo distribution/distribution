@@ -18,7 +18,7 @@ func (*mockSD) RedirectURL(_ *http.Request, urlPath string) (string, error) {
 }
 
 func TestNoConfig(t *testing.T) {
-	options := make(map[string]interface{})
+	options := make(map[string]any)
 	middleware, err := newRewriteStorageMiddleware(context.Background(), &mockSD{}, options)
 	require.NoError(t, err)
 
@@ -31,7 +31,7 @@ func TestNoConfig(t *testing.T) {
 }
 
 func TestWrongType(t *testing.T) {
-	options := map[string]interface{}{
+	options := map[string]any{
 		"scheme": 1,
 	}
 	_, err := newRewriteStorageMiddleware(context.TODO(), nil, options)
@@ -39,7 +39,7 @@ func TestWrongType(t *testing.T) {
 }
 
 func TestRewriteHostsScheme(t *testing.T) {
-	options := map[string]interface{}{
+	options := map[string]any{
 		"scheme": "https",
 		"host":   "example.com",
 	}
@@ -58,7 +58,7 @@ func TestRewriteHostsScheme(t *testing.T) {
 }
 
 func TestTrimPrefix(t *testing.T) {
-	options := map[string]interface{}{
+	options := map[string]any{
 		"trimpathprefix": "/some/path",
 	}
 

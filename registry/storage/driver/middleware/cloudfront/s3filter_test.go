@@ -15,7 +15,7 @@ import (
 )
 
 // Rather than pull in all of testify
-func assertEqual(t *testing.T, x, y interface{}) {
+func assertEqual(t *testing.T, x, y any) {
 	if !reflect.DeepEqual(x, y) {
 		t.Errorf("%s: Not equal! Expected='%v', Actual='%v'\n", t.Name(), x, y)
 		t.FailNow()
@@ -311,7 +311,6 @@ func TestEligibleForS3(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		tc := tc
 		t.Run(fmt.Sprintf("Client IP = %v", tc.RemoteAddr), func(t *testing.T) {
 			t.Parallel()
 			req := &http.Request{RemoteAddr: tc.RemoteAddr}
@@ -340,7 +339,6 @@ func TestEligibleForS3WithAWSIPNotInitialized(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		tc := tc
 		t.Run(fmt.Sprintf("Client IP = %v", tc.RemoteAddr), func(t *testing.T) {
 			t.Parallel()
 			req := &http.Request{RemoteAddr: tc.RemoteAddr}
@@ -353,14 +351,14 @@ func TestEligibleForS3WithAWSIPNotInitialized(t *testing.T) {
 // of benchmarking contains() performance.
 func populateRandomNetworks(b *testing.B, ips *awsIPs, ipv4Count, ipv6Count int) {
 	generateNetworks := func(dest *[]net.IPNet, bytes int, count int) {
-		for i := 0; i < count; i++ {
+		for range count {
 			ip := make([]byte, bytes)
 			_, err := rand.Read(ip)
 			if err != nil {
 				b.Fatalf("failed to generate network for test : %s", err.Error())
 			}
 			mask := make([]byte, bytes)
-			for i := 0; i < bytes; i++ {
+			for i := range bytes {
 				mask[i] = 0xff
 			}
 			*dest = append(*dest, net.IPNet{

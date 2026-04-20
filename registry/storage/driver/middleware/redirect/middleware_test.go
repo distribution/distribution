@@ -8,20 +8,20 @@ import (
 )
 
 func TestNoConfig(t *testing.T) {
-	options := make(map[string]interface{})
+	options := make(map[string]any)
 	_, err := newRedirectStorageMiddleware(context.Background(), nil, options)
 	require.ErrorContains(t, err, "no baseurl provided")
 }
 
 func TestMissingScheme(t *testing.T) {
-	options := make(map[string]interface{})
+	options := make(map[string]any)
 	options["baseurl"] = "example.com"
 	_, err := newRedirectStorageMiddleware(context.Background(), nil, options)
 	require.ErrorContains(t, err, "no scheme specified for redirect baseurl")
 }
 
 func TestHttpsPort(t *testing.T) {
-	options := make(map[string]interface{})
+	options := make(map[string]any)
 	options["baseurl"] = "https://example.com:5443"
 	middleware, err := newRedirectStorageMiddleware(context.Background(), nil, options)
 	require.NoError(t, err)
@@ -37,7 +37,7 @@ func TestHttpsPort(t *testing.T) {
 }
 
 func TestHTTP(t *testing.T) {
-	options := make(map[string]interface{})
+	options := make(map[string]any)
 	options["baseurl"] = "http://example.com"
 	middleware, err := newRedirectStorageMiddleware(context.Background(), nil, options)
 	require.NoError(t, err)
@@ -54,7 +54,7 @@ func TestHTTP(t *testing.T) {
 
 func TestPath(t *testing.T) {
 	// basePath: end with no slash
-	options := make(map[string]interface{})
+	options := make(map[string]any)
 	options["baseurl"] = "https://example.com/path"
 	middleware, err := newRedirectStorageMiddleware(context.Background(), nil, options)
 	require.NoError(t, err)

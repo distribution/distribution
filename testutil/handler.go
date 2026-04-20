@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/url"
 	"sort"
@@ -56,7 +57,7 @@ func (r Request) String() string {
 	}
 	var headers []string
 	if len(r.Headers) > 0 {
-		var headerKeys []string
+		headerKeys := make([]string, 0, len(r.Headers))
 		for k := range r.Headers {
 			headerKeys = append(headerKeys, k)
 		}
@@ -137,9 +138,7 @@ func (app *testHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	app.responseMap[request.String()] = responses[1:]
 
 	responseHeader := w.Header()
-	for k, v := range response.Headers {
-		responseHeader[k] = v
-	}
+	maps.Copy(responseHeader, response.Headers)
 
 	w.WriteHeader(response.StatusCode)
 

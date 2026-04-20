@@ -53,6 +53,9 @@ func (c *Client) registerRFC(ctx context.Context, acct *Account, prompt func(tos
 		Contact: acct.Contact,
 	}
 	if c.dir.Terms != "" {
+		if prompt == nil {
+			return nil, errors.New("acme: missing Manager.Prompt to accept server's terms of service")
+		}
 		req.TermsAgreed = prompt(c.dir.Terms)
 	}
 
@@ -232,7 +235,7 @@ func (c *Client) AuthorizeOrder(ctx context.Context, id []AuthzID, opt ...OrderO
 	return responseOrder(res)
 }
 
-// GetOrder retrives an order identified by the given URL.
+// GetOrder retrieves an order identified by the given URL.
 // For orders created with AuthorizeOrder, the url value is Order.URI.
 //
 // If a caller needs to poll an order until its status is final,
@@ -272,7 +275,7 @@ func (c *Client) WaitOrder(ctx context.Context, url string) (*Order, error) {
 		case err != nil:
 			// Skip and retry.
 		case o.Status == StatusInvalid:
-			return nil, &OrderError{OrderURL: o.URI, Status: o.Status}
+			return nil, &OrderError{OrderURL: o.URI, Status: o.Status, Problem: o.Error}
 		case o.Status == StatusReady || o.Status == StatusValid:
 			return o, nil
 		}
@@ -369,7 +372,7 @@ func (c *Client) CreateOrderCert(ctx context.Context, url string, csr []byte, bu
 	}
 	// The only acceptable status post finalize and WaitOrder is "valid".
 	if o.Status != StatusValid {
-		return nil, "", &OrderError{OrderURL: o.URI, Status: o.Status}
+		return nil, "", &OrderError{OrderURL: o.URI, Status: o.Status, Problem: o.Error}
 	}
 	crt, err := c.fetchCertRFC(ctx, o.CertURL, bundle)
 	return crt, o.CertURL, err
