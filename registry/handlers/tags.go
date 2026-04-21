@@ -12,7 +12,7 @@ import (
 )
 
 // tagsDispatcher constructs the tags handler api endpoint.
-func tagsDispatcher(ctx *Context, r *http.Request) http.Handler {
+func tagsDispatcher(ctx *Context, app *App, r *http.Request) http.Handler {
 	tagsHandler := &tagsHandler{
 		Context: ctx,
 	}
