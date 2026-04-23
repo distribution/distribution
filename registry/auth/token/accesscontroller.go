@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -15,13 +16,12 @@ import (
 
 	"github.com/distribution/distribution/v3/registry/auth"
 	"github.com/go-jose/go-jose/v4"
-	"github.com/sirupsen/logrus"
 )
 
 // init handles registering the token auth backend.
 func init() {
 	if err := auth.Register("token", auth.InitFunc(newAccessController)); err != nil {
-		logrus.Errorf("failed to register token auth: %v", err)
+		slog.Error(fmt.Sprintf("failed to register token auth: %v", err))
 	}
 }
 

@@ -1,17 +1,17 @@
 package requestutil
 
 import (
+	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"strings"
-
-	log "github.com/sirupsen/logrus"
 )
 
 func parseIP(ipStr string) net.IP {
 	ip := net.ParseIP(ipStr)
 	if ip == nil {
-		log.Warnf("invalid remote IP address: %q", ipStr)
+		slog.Warn(fmt.Sprintf("invalid remote IP address: %q", ipStr))
 	}
 	return ip
 }
