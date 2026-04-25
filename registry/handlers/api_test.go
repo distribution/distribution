@@ -1304,7 +1304,7 @@ func TestManifestAPI(t *testing.T) {
 }
 
 func TestManifestAPI_DeleteTag(t *testing.T) {
-	env := newTestEnv(t, false)
+	env := newTestEnv(t, true)
 	defer env.Shutdown()
 
 	imageName, err := reference.WithName("foo/bar")
@@ -1349,7 +1349,7 @@ func TestManifestAPI_DeleteTag(t *testing.T) {
 }
 
 func TestManifestAPI_DeleteTag_Unknown(t *testing.T) {
-	env := newTestEnv(t, false)
+	env := newTestEnv(t, true)
 	defer env.Shutdown()
 
 	imageName, err := reference.WithName("foo/bar")
@@ -1391,6 +1391,38 @@ func TestManifestAPI_DeleteTag_ReadOnly(t *testing.T) {
 	defer resp.Body.Close()
 
 	checkResponse(t, msg, resp, http.StatusMethodNotAllowed)
+}
+
+func TestManifestAPI_DeleteTag_DeleteDisabled(t *testing.T) {
+	env := newTestEnv(t, false)
+	defer env.Shutdown()
+
+	imageName, err := reference.WithName("foo/bar")
+	checkErr(t, err, "building named object")
+
+	tag := "latest"
+	createRepository(env, t, imageName.Name(), tag)
+
+	ref, err := reference.WithTag(imageName, tag)
+	checkErr(t, err, "building tag reference")
+
+	u, err := env.builder.BuildManifestURL(ref)
+	checkErr(t, err, "building tag URL")
+
+	resp, err := httpDelete(u)
+	msg := "deleting tag with delete disabled"
+	checkErr(t, err, msg)
+	defer resp.Body.Close()
+
+	checkResponse(t, msg, resp, http.StatusMethodNotAllowed)
+	// nolint:errcheck
+	checkBodyHasErrorCodes(t, msg, resp, errcode.ErrorCodeUnsupported)
+
+	msg = "checking tag exists after rejected delete"
+	resp, err = http.Get(u)
+	checkErr(t, err, msg)
+	defer resp.Body.Close()
+	checkResponse(t, msg, resp, http.StatusOK)
 }
 
 // storageManifestErrDriverFactory implements the factory.StorageDriverFactory interface.
