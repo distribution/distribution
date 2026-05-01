@@ -1,0 +1,112 @@
+# commit to be tagged for new release
+commit = "HEAD"
+
+project_name = "registry"
+github_repo = "distribution/distribution"
+
+# previous release
+previous = "v3.1.0"
+
+pre_release = false
+
+preface = """\
+registry 3.1.1
+
+Welcome to the v3.1.1 release of registry!
+
+*This is a stable release*
+
+registry 3.1.1
+
+Please try out the release binaries and report any issues at
+https://github.com/distribution/distribution/issues.
+
+### Notable Changes
+
+* Fixes CVE-2026-41888
+* Bounds-check the file basename in PurgeUploads Walk callback
+* Add S3 Express One Zone support to the S3 storage driver (#4858)
+* Fix tag list endpoint in proxy mode (#4846)
+* Clamp oversized `n` query parameter in proxy mode instead of returning 400 (#4856)
+
+See the changelog below for the full list of changes.
+
+### Contributors
+
+* Milos Gajdos
+* Sebastiaan van Stijn
+* John de Graaff
+* Joonas Bergius
+* SAY-5
+* chuanshanjida
+* njucjc
+
+### Changes
+<details><summary>36 commits</summary>
+<p>
+
+  * [`e09ff101`](https://github.com/distribution/distribution/commit/e09ff101555362930420f12295f6e0f6e4c85793) Merge commit from fork
+  * [`8baf3e08`](https://github.com/distribution/distribution/commit/8baf3e08266a19590cc5d4725f3976a9a876d4bf) fix: prevent tag deletion when storage.delete.enabled is false
+  * [`f3af4de0`](https://github.com/distribution/distribution/commit/f3af4de047a01241bea867e755be18ac8b109f91) fix(storage): bounds-check the file basename in PurgeUploads Walk callback (#4860)
+  * [`72c88bc9`](https://github.com/distribution/distribution/commit/72c88bc960cb19a39a5da7032ad7e0b661107bdc) fix(storage): bounds-check the file basename in PurgeUploads Walk callback
+  * [`1b5e226b`](https://github.com/distribution/distribution/commit/1b5e226b6fe946708189f47cb4c3d3a5d6e5ca41) feat(s3): add express zone one support to S3 driver (#4858)
+  * [`835c1c58`](https://github.com/distribution/distribution/commit/835c1c581fa234355deb83a5d8ae587a6b22580d) feat(s3): add express zone one support to S3 driver
+  * [`afd2bf0b`](https://github.com/distribution/distribution/commit/afd2bf0b23bbac95f1de74f81b797329e3f7c598) fix(proxy): clamp oversized n query param instead of returning 400 (#4856)
+  * [`c6f552e5`](https://github.com/distribution/distribution/commit/c6f552e5dbce1082fc206b65a395fc1b1c5547e2) fix(proxy): clamp oversized n query param instead of returning 400
+  * [`0f3e6279`](https://github.com/distribution/distribution/commit/0f3e62793783d13f0baca8fc3e261776f91ef504) build(deps): bump docker/bake-action from 7.0.0 to 7.1.0 (#4853)
+  * [`203c505c`](https://github.com/distribution/distribution/commit/203c505cd3174b479746e4392b5c60253fbb367c) build(deps): bump docker/bake-action from 7.0.0 to 7.1.0
+  * [`e39652ca`](https://github.com/distribution/distribution/commit/e39652ca1f145ee1e2390356ec96571b8db489fe) build(deps): bump docker/login-action from 4.0.0 to 4.1.0 (#4847)
+  * [`445af38d`](https://github.com/distribution/distribution/commit/445af38d68bcef97dc330bdea38f8325f2533ecb) build(deps): bump docker/login-action from 4.0.0 to 4.1.0
+  * [`3d916b8c`](https://github.com/distribution/distribution/commit/3d916b8c4f7ddbb3414c3bc9d56b792764058386) build(deps): bump actions/upload-pages-artifact from 4.0.0 to 5.0.0 (#4852)
+  * [`fed26101`](https://github.com/distribution/distribution/commit/fed2610157e076cef52471173874383a4d5c0ba2) build(deps): bump actions/upload-pages-artifact from 4.0.0 to 5.0.0
+  * [`17e760a9`](https://github.com/distribution/distribution/commit/17e760a9f097918bf0b96cf0c56c0902eb4dad00) build(deps): bump actions/upload-artifact from 7.0.0 to 7.0.1 (#4854)
+  * [`4b5154db`](https://github.com/distribution/distribution/commit/4b5154db23df9c36113bb7bb220fd8e615002b8e) build(deps): bump actions/upload-artifact from 7.0.0 to 7.0.1
+  * [`acabfb4b`](https://github.com/distribution/distribution/commit/acabfb4b9084baf159013a9dccb6b950e7ad96bd) Update docker-compose structure in deploying.md (#4855)
+  * [`3cf44639`](https://github.com/distribution/distribution/commit/3cf4463982806116d4bc54ecfda3975d8a16f05a) Update docker-compose structure in deploying.md
+  * [`ca7d4de0`](https://github.com/distribution/distribution/commit/ca7d4de0ee71c9e71cde93233bc63ecfbeff0893) fix(proxy): fix tag list endpoint in proxy mode (#4846)
+  * [`60de6e34`](https://github.com/distribution/distribution/commit/60de6e344351b111bcddae02f04d107aa29cee8c) fix(proxy): fix tag list endpoint in proxy mode
+  * [`ece70d98`](https://github.com/distribution/distribution/commit/ece70d987fedae6db4da4a13938dcc536d7509c0) refactor: use slices.Backward to simplify the code (#4848)
+  * [`0679fc13`](https://github.com/distribution/distribution/commit/0679fc13c55be13410872e0f669298f4dcd2dffe) refactor: use slices.Backward to simplify the code
+  * [`24a4d24a`](https://github.com/distribution/distribution/commit/24a4d24a244bd133f2e6a5c840d4495341e33d98) chore(build): Bump go version to latest (#4851)
+  * [`0102b581`](https://github.com/distribution/distribution/commit/0102b581598ac8eac682f04c34697e00f8bcb21c) Bump Go 1.26 in CI
+  * [`29eb2149`](https://github.com/distribution/distribution/commit/29eb2149dfe6c38f7b9a519778658f195b4c4bec) chore(build): Bump go version to latest 1.25
+  * [`839e4a71`](https://github.com/distribution/distribution/commit/839e4a7119d650db938dac5004119704968d8526) build(deps): bump github/codeql-action from 4.34.1 to 4.35.1 (#4840)
+  * [`5e721744`](https://github.com/distribution/distribution/commit/5e721744448141318edef1926f2ecdc7e8b7997f) build(deps): bump github/codeql-action from 4.34.1 to 4.35.1
+  * [`3090068a`](https://github.com/distribution/distribution/commit/3090068a9b022280e45936e897d293acb66d1669) build(deps): bump go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp from 1.42.0 to 1.43.0 in the go_modules group across 1 directory (#4850)
+  * [`326a0d0b`](https://github.com/distribution/distribution/commit/326a0d0b7bb50005058e1cdf55a7cb25b7e26da6) build(deps): bump go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp
+  * [`9a07978f`](https://github.com/distribution/distribution/commit/9a07978fe3eefd0678faba2e49628f2bfc54e5b9) build(deps): bump go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp from 0.18.0 to 0.19.0 in the go_modules group across 1 directory (#4843)
+  * [`567670f6`](https://github.com/distribution/distribution/commit/567670f6ebb77d746129260af424056db8532f28) build(deps): bump go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp
+  * [`6ae29aad`](https://github.com/distribution/distribution/commit/6ae29aadd7b2a70e3b74aeb9cc3ef066e51aeb52) internal/client/auth/challenge: cleanups and minor refactor (#4832)
+  * [`3c670635`](https://github.com/distribution/distribution/commit/3c670635c27de9a41278af03c12837be9e5d0b78) internal/client/auth/challenge: fix minor linting issues
+  * [`055cc71b`](https://github.com/distribution/distribution/commit/055cc71b4e5c06eb1a277401a6b50695ad778375) internal/client/auth/challenge: cleanup URL-normalization
+  * [`a35ff435`](https://github.com/distribution/distribution/commit/a35ff435a6f9338782306e54ce715927927de5a0) internal/client/auth/challenge: simpleManager: make zero value usable
+  * [`069947f6`](https://github.com/distribution/distribution/commit/069947f6fd5e1007ea1a029f2fbe1b4c07ba59b8) internal/client/auth/challenge: simpleManager: un-export fields
+</p>
+</details>
+
+### Dependency Changes
+
+* **github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp**  v1.30.0 -> v1.31.0
+* **go.opentelemetry.io/otel**                                                  v1.42.0 -> v1.43.0
+* **go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp**               v0.18.0 -> v0.19.0
+* **go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp**         v1.42.0 -> v1.43.0
+* **go.opentelemetry.io/otel/exporters/otlp/otlptrace**                         v1.42.0 -> v1.43.0
+* **go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp**           v1.42.0 -> v1.43.0
+* **go.opentelemetry.io/otel/log**                                              v0.18.0 -> v0.19.0
+* **go.opentelemetry.io/otel/metric**                                           v1.42.0 -> v1.43.0
+* **go.opentelemetry.io/otel/sdk**                                              v1.42.0 -> v1.43.0
+* **go.opentelemetry.io/otel/sdk/log**                                          v0.18.0 -> v0.19.0
+* **go.opentelemetry.io/otel/sdk/metric**                                       v1.42.0 -> v1.43.0
+* **go.opentelemetry.io/otel/trace**                                            v1.42.0 -> v1.43.0
+* **go.opentelemetry.io/proto/otlp**                                            v1.9.0 -> v1.10.0
+* **golang.org/x/crypto**                                                       v0.48.0 -> v0.49.0
+* **golang.org/x/net**                                                          v0.51.0 -> v0.52.0
+* **golang.org/x/sync**                                                         v0.19.0 -> v0.20.0
+* **golang.org/x/sys**                                                          v0.41.0 -> v0.42.0
+* **golang.org/x/text**                                                         v0.34.0 -> v0.35.0
+* **google.golang.org/genproto/googleapis/api**                                 a57be14db171 -> 9d38bb4040a9
+* **google.golang.org/genproto/googleapis/rpc**                                 a57be14db171 -> 9d38bb4040a9
+* **google.golang.org/grpc**                                                    v1.79.3 -> v1.80.0
+
+Previous release can be found at [v3.1.0](https://github.com/distribution/distribution/releases/tag/v3.1.0)
+"""
