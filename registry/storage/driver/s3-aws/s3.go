@@ -20,7 +20,8 @@ import (
 	"io"
 	"math"
 	"net/http"
-	"path/filepath"
+	"os"
+	"path"
 	"slices"
 	"sort"
 	"strconv"
@@ -31,6 +32,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
+	"github.com/aws/aws-sdk-go/aws/credentials/endpointcreds"
+	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -117,6 +121,13 @@ type DriverParameters struct {
 	Accelerate                  bool
 	UseFIPSEndpoint             bool
 	LogLevel                    aws.LogLevelType
+	// ExpiryWindow configures how early the IAM credentials will be refreshed
+	// before they expire, in minutes. Defaults to 5 minutes.
+	// A value of 0 disables early refresh.
+	ExpiryWindow time.Duration
+	// URLExpiry configures the expiry duration of presigned URLs, in minutes.
+	// Defaults to 20 minutes.
+	URLExpiry time.Duration
 }
 
 func init() {
@@ -165,6 +176,7 @@ type driver struct {
 	RootDirectory               string
 	StorageClass                string
 	ObjectACL                   string
+	URLExpiry                   time.Duration
 	pool                        *sync.Pool
 }
 
@@ -335,6 +347,16 @@ func FromParameters(ctx context.Context, parameters map[string]any) (*Driver, er
 		return nil, err
 	}
 
+	expiryWindowMins, err := getParameterAsInteger[int64](parameters, "expirywindow", 5, 0, math.MaxInt64)
+	if err != nil {
+		return nil, err
+	}
+
+	urlExpiryMins, err := getParameterAsInteger[int64](parameters, "urlexpiry", 20, 1, math.MaxInt64)
+	if err != nil {
+		return nil, err
+	}
+
 	params := DriverParameters{
 		AccessKey:                   fmt.Sprint(accessKey),
 		SecretKey:                   fmt.Sprint(secretKey),
@@ -360,6 +382,8 @@ func FromParameters(ctx context.Context, parameters map[string]any) (*Driver, er
 		Accelerate:                  accelerateBool,
 		UseFIPSEndpoint:             useFIPSEndpointBool,
 		LogLevel:                    getS3LogLevelFromParam(parameters["loglevel"]),
+		ExpiryWindow:                time.Duration(expiryWindowMins) * time.Minute,
+		URLExpiry:                   time.Duration(urlExpiryMins) * time.Minute,
 	}
 
 	return New(ctx, params)
@@ -494,6 +518,26 @@ func New(ctx context.Context, params DriverParameters) (*Driver, error) {
 		return nil, fmt.Errorf("failed to create new session with aws config: %v", err)
 	}
 
+	// When using IAM role credentials (no static keys provided), override the
+	// credential chain with the configured ExpiryWindow so tokens are refreshed
+	// before they expire. This avoids S3 400 errors caused by expired tokens.
+	expiryWindow := params.ExpiryWindow
+	if expiryWindow <= 0 {
+		expiryWindow = 5 * time.Minute
+	}
+
+	if params.AccessKey == "" && params.SecretKey == "" {
+		remoteProvider := newRemoteCredProvider(*sess.Config, sess.Handlers, expiryWindow)
+		sess.Config.Credentials = credentials.NewCredentials(&credentials.ChainProvider{
+			VerboseErrors: aws.BoolValue(sess.Config.CredentialsChainVerboseErrors),
+			Providers: []credentials.Provider{
+				&credentials.EnvProvider{},
+				&credentials.SharedCredentialsProvider{Filename: "", Profile: ""},
+				remoteProvider,
+			},
+		})
+	}
+
 	if params.UserAgent != "" {
 		sess.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler(params.UserAgent))
 	}
@@ -520,6 +564,11 @@ func New(ctx context.Context, params DriverParameters) (*Driver, error) {
 	// 	}
 	// }
 
+	urlExpiry := params.URLExpiry
+	if urlExpiry <= 0 {
+		urlExpiry = 20 * time.Minute
+	}
+
 	d := &driver{
 		S3:                          s3obj,
 		Bucket:                      params.Bucket,
@@ -532,6 +581,7 @@ func New(ctx context.Context, params DriverParameters) (*Driver, error) {
 		RootDirectory:               params.RootDirectory,
 		StorageClass:                params.StorageClass,
 		ObjectACL:                   params.ObjectACL,
+		URLExpiry:                   urlExpiry,
 		pool: &sync.Pool{
 			New: func() any { return &bytes.Buffer{} },
 		},
@@ -1022,8 +1072,6 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 
 // RedirectURL returns a URL which may be used to retrieve the content stored at the given path.
 func (d *driver) RedirectURL(r *http.Request, path string) (string, error) {
-	expiresIn := 20 * time.Minute
-
 	var req *request.Request
 
 	switch r.Method {
@@ -1041,7 +1089,7 @@ func (d *driver) RedirectURL(r *http.Request, path string) (string, error) {
 		return "", nil
 	}
 
-	return req.Presign(expiresIn)
+	return req.Presign(d.URLExpiry)
 }
 
 // Walk traverses a filesystem defined within driver, starting
@@ -1200,7 +1248,7 @@ func directoryDiff(prev, current string) []string {
 
 	parent := current
 	for {
-		parent = filepath.Dir(parent)
+		parent = path.Dir(parent)
 		if parent == "/" || parent == prev || strings.HasPrefix(prev+"/", parent+"/") {
 			break
 		}
@@ -1555,4 +1603,35 @@ func (w *writer) done() error {
 		return fmt.Errorf("already cancelled")
 	}
 	return nil
+}
+
+// newRemoteCredProvider returns a credentials provider for remote endpoints
+// (EC2 IAM role or ECS/EKS container credentials) with a custom ExpiryWindow.
+func newRemoteCredProvider(cfg aws.Config, handlers request.Handlers, expiryWindow time.Duration) credentials.Provider {
+	if u := os.Getenv("AWS_CONTAINER_CREDENTIALS_FULL_URI"); len(u) > 0 {
+		return endpointcreds.NewProviderClient(cfg, handlers, u,
+			func(p *endpointcreds.Provider) {
+				p.ExpiryWindow = expiryWindow
+			},
+		)
+	}
+
+	if uri := os.Getenv("AWS_ECS_CONTAINER_METADATA_URI_V4"); len(uri) > 0 {
+		u := fmt.Sprintf("%s%s", "http://169.254.170.2", uri)
+		return endpointcreds.NewProviderClient(cfg, handlers, u,
+			func(p *endpointcreds.Provider) {
+				p.ExpiryWindow = expiryWindow
+			},
+		)
+	}
+
+	resolver := cfg.EndpointResolver
+	if resolver == nil {
+		resolver = endpoints.DefaultResolver()
+	}
+	e, _ := resolver.EndpointFor(ec2metadata.ServiceName, "")
+	return &ec2rolecreds.EC2RoleProvider{
+		Client:       ec2metadata.NewClient(cfg, handlers, e.URL, e.SigningRegion),
+		ExpiryWindow: expiryWindow,
+	}
 }
