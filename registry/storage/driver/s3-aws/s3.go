@@ -103,6 +103,7 @@ type DriverParameters struct {
 	KeyID                       string
 	Secure                      bool
 	SkipVerify                  bool
+	MaxIdleConnsPerHost         int
 	V4Auth                      bool
 	ChunkSize                   int
 	MultipartCopyChunkSize      int64
@@ -241,6 +242,11 @@ func FromParameters(ctx context.Context, parameters map[string]any) (*Driver, er
 		return nil, err
 	}
 
+	maxIdleConnsPerHostInt, err := getParameterAsInteger(parameters, "maxidleconnsperhost", 0, 0, math.MaxInt)
+	if err != nil {
+		return nil, err
+	}
+
 	v4Bool, err := getParameterAsBool(parameters, "v4auth", true)
 	if err != nil {
 		return nil, err
@@ -346,6 +352,7 @@ func FromParameters(ctx context.Context, parameters map[string]any) (*Driver, er
 		KeyID:                       fmt.Sprint(keyID),
 		Secure:                      secureBool,
 		SkipVerify:                  skipVerifyBool,
+		MaxIdleConnsPerHost:         maxIdleConnsPerHostInt,
 		V4Auth:                      v4Bool,
 		ChunkSize:                   chunkSize,
 		MultipartCopyChunkSize:      multipartCopyChunkSize,
@@ -481,9 +488,10 @@ func New(ctx context.Context, params DriverParameters) (*Driver, error) {
 		awsConfig.UseFIPSEndpoint = endpoints.FIPSEndpointStateEnabled
 	}
 
-	if params.SkipVerify {
+	if params.SkipVerify || params.MaxIdleConnsPerHost > 0 {
 		httpTransport := http.DefaultTransport.(*http.Transport).Clone()
-		httpTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		httpTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: params.SkipVerify}
+		httpTransport.MaxIdleConnsPerHost = params.MaxIdleConnsPerHost
 		awsConfig.WithHTTPClient(&http.Client{
 			Transport: httpTransport,
 		})
