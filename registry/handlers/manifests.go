@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"mime"
 	"net/http"
@@ -436,10 +437,19 @@ func (imh *manifestHandler) DeleteManifest(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	if !imh.App.deleteEnabled {
+		imh.Errors = append(imh.Errors, errcode.ErrorCodeUnsupported)
+		return
+	}
+
 	if imh.Tag != "" {
 		dcontext.GetLogger(imh).Debug("DeleteImageTag")
 		tagService := imh.Repository.Tags(imh.Context)
 		if err := tagService.Untag(imh.Context, imh.Tag); err != nil {
+			if errors.Is(err, distribution.ErrUnsupported) {
+				imh.Errors = append(imh.Errors, errcode.ErrorCodeUnsupported.WithDetail(err))
+				return
+			}
 			switch err.(type) {
 			case distribution.ErrTagUnknown, driver.PathNotFoundError:
 				imh.Errors = append(imh.Errors, errcode.ErrorCodeManifestUnknown.WithDetail(err))
