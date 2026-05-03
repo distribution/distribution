@@ -552,6 +552,163 @@ func TestBlobUploadChunked(t *testing.T) {
 	}
 }
 
+func TestBlobUploadChunkedOCIChunkMaxLength(t *testing.T) {
+	const numberOfBlobs = 10
+	const blobSize = 5
+	const lastBlobOffset = 2
+	const totalSize = numberOfBlobs*blobSize + lastBlobOffset
+	dgst, b1 := newRandomBlob(totalSize)
+	originalBlob := b1
+	var m testutil.RequestResponseMap
+	repo, _ := reference.WithName("test.example.com/uploadrepo")
+	uuids := []string{uuid.NewString()}
+	m = append(m, testutil.RequestResponseMapping{
+		Request: testutil.Request{
+			Method: http.MethodPost,
+			Route:  "/v2/" + repo.Name() + "/blobs/uploads/",
+		},
+		Response: testutil.Response{
+			StatusCode: http.StatusAccepted,
+			Headers: http.Header(map[string][]string{
+				"Content-Length":       {"0"},
+				"Location":             {"/v2/" + repo.Name() + "/blobs/uploads/" + uuids[0]},
+				"Docker-Upload-UUID":   {uuids[0]},
+				"Range":                {"0-0"},
+				"OCI-Chunk-Max-Length": {fmt.Sprintf("%d", blobSize)},
+			}),
+		},
+	})
+	for blob := 0; blob < numberOfBlobs; blob++ {
+		start := blob * blobSize
+		end := ((blob + 1) * blobSize) - 1
+		uuids = append(uuids, uuid.NewString())
+		m = append(m, testutil.RequestResponseMapping{
+			Request: testutil.Request{
+				Method: http.MethodPatch,
+				Route:  "/v2/" + repo.Name() + "/blobs/uploads/" + uuids[blob],
+				Body:   b1[start : end+1],
+			},
+			Response: testutil.Response{
+				StatusCode: http.StatusAccepted,
+				Headers: http.Header(map[string][]string{
+					"Content-Length":     {"0"},
+					"Location":           {"/v2/" + repo.Name() + "/blobs/uploads/" + uuids[blob+1]},
+					"Docker-Upload-UUID": {uuids[blob+1]},
+					"Range":              {fmt.Sprintf("%d-%d", start, end)},
+				}),
+			},
+		})
+	}
+
+	uuids = append(uuids, uuid.NewString())
+	m = append(m, testutil.RequestResponseMapping{
+		Request: testutil.Request{
+			Method: http.MethodPatch,
+			Route:  "/v2/" + repo.Name() + "/blobs/uploads/" + uuids[len(uuids)-2],
+			Body:   b1[numberOfBlobs*blobSize:],
+		},
+		Response: testutil.Response{
+			StatusCode: http.StatusAccepted,
+			Headers: http.Header(map[string][]string{
+				"Content-Length":     {"0"},
+				"Location":           {"/v2/" + repo.Name() + "/blobs/uploads/" + uuids[len(uuids)-1]},
+				"Docker-Upload-UUID": {uuids[len(uuids)-1]},
+				"Range":              {fmt.Sprintf("%d-%d", numberOfBlobs*blobSize, len(b1)-1)},
+			}),
+		},
+	})
+
+	m = append(m, testutil.RequestResponseMapping{
+		Request: testutil.Request{
+			Method: http.MethodPut,
+			Route:  "/v2/" + repo.Name() + "/blobs/uploads/" + uuids[len(uuids)-1],
+			QueryParams: map[string][]string{
+				"digest": {dgst.String()},
+			},
+		},
+		Response: testutil.Response{
+			StatusCode: http.StatusCreated,
+			Headers: http.Header(map[string][]string{
+				"Content-Length":        {"0"},
+				"Docker-Content-Digest": {dgst.String()},
+				"Content-Range":         {fmt.Sprintf("0-%d", totalSize-1)},
+			}),
+		},
+	})
+	m = append(m, testutil.RequestResponseMapping{
+		Request: testutil.Request{
+			Method: http.MethodHead,
+			Route:  "/v2/" + repo.Name() + "/blobs/" + dgst.String(),
+		},
+		Response: testutil.Response{
+			StatusCode: http.StatusOK,
+			Headers: http.Header(map[string][]string{
+				"Content-Length": {fmt.Sprint(totalSize)},
+				"Last-Modified":  {time.Now().Add(-1 * time.Second).Format(time.ANSIC)},
+			}),
+		},
+	})
+
+	e, c := testServer(m)
+	defer c()
+
+	ctx := context.Background()
+	r, err := NewRepository(repo, e, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	l := r.Blobs(ctx)
+
+	upload, err := l.Create(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if upload.ID() != uuids[0] {
+		log.Fatalf("Unexpected UUID %s; expected %s", upload.ID(), uuids[0])
+	}
+
+	for i := 0; i < numberOfBlobs; i++ {
+		n, err := upload.Write(b1)
+		if err != nil {
+			t.Fatalf("unexpected error in blob %v: %+v", i, err)
+		}
+
+		if n != blobSize {
+			t.Fatalf("Unexpected length returned from write: %d; expected: %d", n, blobSize)
+		}
+
+		b1 = b1[n:]
+	}
+
+	n, err := upload.Write(b1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if n != lastBlobOffset {
+		t.Fatalf("Unexpected length returned from write: %d; expected: %d", n, lastBlobOffset)
+	}
+
+	b1 = b1[n:]
+
+	blob, err := upload.Commit(ctx, distribution.Descriptor{
+		Digest: dgst,
+		Size:   int64(len(b1)),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if blob.Size != int64(len(originalBlob)) {
+		t.Fatalf("Unexpected blob size: %d; expected: %d", blob.Size, len(originalBlob))
+	}
+
+	if len(b1) != 0 {
+		t.Fatalf("Expected to have consumed to the entire buffer at the end, got size %v", len(b1))
+	}
+}
+
 func TestBlobUploadMonolithic(t *testing.T) {
 	dgst, b1 := newRandomBlob(1024)
 	var m testutil.RequestResponseMap
