@@ -86,6 +86,9 @@ type App struct {
 
 	// readOnly is true if the registry is in a read-only maintenance mode
 	readOnly bool
+
+	// deleteEnabled is true if the registry is configured to enable deletions.
+	deleteEnabled bool
 }
 
 // NewApp takes a configuration and returns a configured app, ready to serve
@@ -185,6 +188,7 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 		e, ok := d["enabled"]
 		if ok {
 			if deleteEnabled, ok := e.(bool); ok && deleteEnabled {
+				app.deleteEnabled = deleteEnabled
 				options = append(options, storage.EnableDelete)
 			}
 		}

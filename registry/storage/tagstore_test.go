@@ -25,7 +25,7 @@ type tagsTestEnv struct {
 func testTagStore(t *testing.T) *tagsTestEnv {
 	ctx := context.Background()
 	d := inmemory.New()
-	reg, err := NewRegistry(ctx, d)
+	reg, err := NewRegistry(ctx, d, EnableDelete)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,6 +117,23 @@ func TestTagStoreUnTag(t *testing.T) {
 	_, err = tags.Get(ctx, "latest")
 	if err == nil || err.Error() != errExpect {
 		t.Error("Expected error getting untagged tag")
+	}
+}
+
+func TestTagStoreUnTag_DeleteDisabled(t *testing.T) {
+	ctx := context.Background()
+	d := inmemory.New()
+	reg, err := NewRegistry(ctx, d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	repoRef, _ := reference.WithName("a/b")
+	repo, err := reg.Repository(ctx, repoRef)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.Tags(ctx).Untag(ctx, "latest"); err != distribution.ErrUnsupported {
+		t.Errorf("expected distribution.ErrUnsupported, got %v", err)
 	}
 }
 

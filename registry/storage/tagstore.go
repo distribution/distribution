@@ -28,6 +28,7 @@ type tagStore struct {
 	repository       *repository
 	blobStore        *blobStore
 	concurrencyLimit int
+	deleteEnabled    bool
 }
 
 // All returns all tags
@@ -109,6 +110,9 @@ func (ts *tagStore) Get(ctx context.Context, tag string) (v1.Descriptor, error) 
 
 // Untag removes the tag association
 func (ts *tagStore) Untag(ctx context.Context, tag string) error {
+	if !ts.deleteEnabled {
+		return distribution.ErrUnsupported
+	}
 	tagPath, err := pathFor(manifestTagPathSpec{
 		name: ts.repository.Named().Name(),
 		tag:  tag,

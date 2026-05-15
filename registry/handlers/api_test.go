@@ -612,6 +612,63 @@ func TestTagsAPI(t *testing.T) {
 	}
 }
 
+// TestTagsAPIMaxTagsClamp verifies that the tags/list endpoint clamps an n
+// query parameter greater than the server's configured MaxTags down to MaxTags
+// rather than returning 400 — the OCI distribution-spec permits a server to
+// return fewer than n results when a Link header is provided.
+func TestTagsAPIMaxTagsClamp(t *testing.T) {
+	config := configuration.Configuration{
+		Storage: configuration.Storage{
+			"inmemory":    configuration.Parameters{},
+			"maintenance": configuration.Parameters{"uploadpurging": map[any]any{"enabled": false}},
+		},
+		Catalog: configuration.Catalog{MaxEntries: 5},
+		Tags:    configuration.Tags{MaxTags: 2},
+	}
+	config.HTTP.Headers = headerConfig
+	env := newTestEnvWithConfig(t, &config)
+	defer env.Shutdown()
+
+	imageName, err := reference.WithName("test")
+	if err != nil {
+		t.Fatalf("unable to parse reference: %v", err)
+	}
+
+	tags := []string{"2j2ar", "asj9e", "jyi7b", "kb0j5", "sb71y"}
+	for _, tag := range tags {
+		createRepository(env, t, imageName.Name(), tag)
+	}
+
+	tagsURL, err := env.builder.BuildTagsURL(imageName, url.Values{"n": []string{"100"}})
+	if err != nil {
+		t.Fatalf("unexpected error building tags URL: %v", err)
+	}
+
+	resp, err := http.Get(tagsURL)
+	if err != nil {
+		t.Fatalf("unexpected error issuing request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected response status code to be %d, got %d", http.StatusOK, resp.StatusCode)
+	}
+
+	var body tagsAPIResponse
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		t.Fatalf("unexpected error decoding response body: %v", err)
+	}
+	expected := tagsAPIResponse{Name: imageName.Name(), Tags: []string{"2j2ar", "asj9e"}}
+	if !reflect.DeepEqual(body, expected) {
+		t.Fatalf("expected response body to be:\n%+v\ngot:\n%+v", expected, body)
+	}
+
+	wantLink := `</v2/test/tags/list?last=asj9e&n=2>; rel="next"`
+	if got := resp.Header.Get("Link"); got != wantLink {
+		t.Fatalf("expected response Link header to be %q, got %q", wantLink, got)
+	}
+}
+
 func checkLink(t *testing.T, urlStr string, numEntries int, last string) url.Values {
 	re := regexp.MustCompile("<(/v2/_catalog.*)>; rel=\"next\"")
 	matches := re.FindStringSubmatch(urlStr)
@@ -1304,7 +1361,7 @@ func TestManifestAPI(t *testing.T) {
 }
 
 func TestManifestAPI_DeleteTag(t *testing.T) {
-	env := newTestEnv(t, false)
+	env := newTestEnv(t, true)
 	defer env.Shutdown()
 
 	imageName, err := reference.WithName("foo/bar")
@@ -1349,7 +1406,7 @@ func TestManifestAPI_DeleteTag(t *testing.T) {
 }
 
 func TestManifestAPI_DeleteTag_Unknown(t *testing.T) {
-	env := newTestEnv(t, false)
+	env := newTestEnv(t, true)
 	defer env.Shutdown()
 
 	imageName, err := reference.WithName("foo/bar")
@@ -1391,6 +1448,38 @@ func TestManifestAPI_DeleteTag_ReadOnly(t *testing.T) {
 	defer resp.Body.Close()
 
 	checkResponse(t, msg, resp, http.StatusMethodNotAllowed)
+}
+
+func TestManifestAPI_DeleteTag_DeleteDisabled(t *testing.T) {
+	env := newTestEnv(t, false)
+	defer env.Shutdown()
+
+	imageName, err := reference.WithName("foo/bar")
+	checkErr(t, err, "building named object")
+
+	tag := "latest"
+	createRepository(env, t, imageName.Name(), tag)
+
+	ref, err := reference.WithTag(imageName, tag)
+	checkErr(t, err, "building tag reference")
+
+	u, err := env.builder.BuildManifestURL(ref)
+	checkErr(t, err, "building tag URL")
+
+	resp, err := httpDelete(u)
+	msg := "deleting tag with delete disabled"
+	checkErr(t, err, msg)
+	defer resp.Body.Close()
+
+	checkResponse(t, msg, resp, http.StatusMethodNotAllowed)
+	// nolint:errcheck
+	checkBodyHasErrorCodes(t, msg, resp, errcode.ErrorCodeUnsupported)
+
+	msg = "checking tag exists after rejected delete"
+	resp, err = http.Get(u)
+	checkErr(t, err, msg)
+	defer resp.Body.Close()
+	checkResponse(t, msg, resp, http.StatusOK)
 }
 
 // storageManifestErrDriverFactory implements the factory.StorageDriverFactory interface.

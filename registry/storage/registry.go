@@ -244,6 +244,7 @@ func (repo *repository) Tags(ctx context.Context) distribution.TagService {
 		repository:       repo,
 		blobStore:        repo.registry.blobStore,
 		concurrencyLimit: limit,
+		deleteEnabled:    repo.registry.deleteEnabled,
 	}
 
 	return tags

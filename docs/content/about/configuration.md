@@ -805,8 +805,10 @@ location of a proxy for the layer stored by the S3 storage driver.
 ## `tags`
 
 The `tags` subsection provides configuration to limit the maximum number of tags
-returned by the tags API endpoint. When a client requests the list of tags for
-a repository, the registry will return at most `maxtags` tags.
+returned in a single response from the tags API endpoint. When a client requests
+more than `maxtags` via the `n` query parameter, the server returns `maxtags`
+results along with a `Link` header so the client can paginate to retrieve the
+rest.
 
 ```yaml
 tags: 
