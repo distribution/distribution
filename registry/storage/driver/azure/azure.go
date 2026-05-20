@@ -126,24 +126,23 @@ func (d *driver) PutContent(ctx context.Context, path string, contents []byte) e
 		return fmt.Errorf("content size exceeds max allowed limit (%d): %d", blockblob.MaxUploadBlobBytes, len(contents))
 	}
 
-	// Historically, blobs uploaded via PutContent used to be of type AppendBlob
-	// (https://github.com/distribution/distribution/pull/1438). We can't replace
-	// these blobs atomically via a single "Put Blob" operation without
-	// deleting them first. Once we detect they are BlockBlob type, we can
-	// overwrite them with an atomically "Put Blob" operation.
+	// PutContent creates blobs as AppendBlob. Blobs written by older versions
+	// of the driver may be BlockBlob (or other types), and Azure returns
+	// 409 InvalidBlobType if we try to create an AppendBlob over an existing
+	// blob of a different type. Delete any such legacy blob first so the
+	// subsequent Create succeeds.
 	//
 	// While we delete the blob and create a new one, there will be a small
-	// window of inconsistency and if the Put Blob fails, we may end up with
-	// losing the existing data while migrating it to BlockBlob type. However,
-	// expectation is the clients pushing will be retrying when they get an error
-	// response.
+	// window of inconsistency and if the Create fails, we may end up losing
+	// the existing data. However, the expectation is that clients pushing
+	// will retry when they get an error response.
 	blobName := d.blobName(path)
 	blobRef := d.client.NewBlobClient(blobName)
 	props, err := blobRef.GetProperties(ctx, nil)
 	if err != nil && !is404(err) {
 		return fmt.Errorf("failed to get blob properties: %v", err)
 	}
-	if err == nil && props.BlobType != nil && *props.BlobType != blob.BlobTypeBlockBlob {
+	if err == nil && props.BlobType != nil && *props.BlobType != blob.BlobTypeAppendBlob {
 		if _, err := blobRef.Delete(ctx, nil); err != nil {
 			return fmt.Errorf("failed to delete legacy blob (%v): %v", *props.BlobType, err)
 		}
