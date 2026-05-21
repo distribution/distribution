@@ -134,3 +134,49 @@ func TestDigestFromPath(t *testing.T) {
 		}
 	}
 }
+
+func TestExportedPathHelpers(t *testing.T) {
+	const repo = "foo/bar"
+	dgst := digest.Digest("sha256:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789")
+
+	got, err := BlobLinkPath(repo, dgst)
+	if err != nil {
+		t.Fatalf("BlobLinkPath: %v", err)
+	}
+	want, err := pathFor(layerLinkPathSpec{name: repo, digest: dgst})
+	if err != nil {
+		t.Fatalf("pathFor(layerLinkPathSpec): %v", err)
+	}
+	if got != want {
+		t.Errorf("BlobLinkPath = %q; want %q", got, want)
+	}
+
+	got, err = ManifestRevisionLinkPath(repo, dgst)
+	if err != nil {
+		t.Fatalf("ManifestRevisionLinkPath: %v", err)
+	}
+	want, err = pathFor(manifestRevisionLinkPathSpec{name: repo, revision: dgst})
+	if err != nil {
+		t.Fatalf("pathFor(manifestRevisionLinkPathSpec): %v", err)
+	}
+	if got != want {
+		t.Errorf("ManifestRevisionLinkPath = %q; want %q", got, want)
+	}
+
+	gotRoot := RepositoriesRootPath()
+	wantRoot, err := pathFor(repositoriesRootPathSpec{})
+	if err != nil {
+		t.Fatalf("pathFor(repositoriesRootPathSpec): %v", err)
+	}
+	if gotRoot != wantRoot {
+		t.Errorf("RepositoriesRootPath = %q; want %q", gotRoot, wantRoot)
+	}
+
+	// Invalid digest should surface as an error rather than a bogus path.
+	if _, err := BlobLinkPath(repo, digest.Digest("not-a-digest")); err == nil {
+		t.Error("BlobLinkPath: want error for invalid digest, got nil")
+	}
+	if _, err := ManifestRevisionLinkPath(repo, digest.Digest("not-a-digest")); err == nil {
+		t.Error("ManifestRevisionLinkPath: want error for invalid digest, got nil")
+	}
+}

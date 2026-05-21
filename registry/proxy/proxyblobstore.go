@@ -88,6 +88,17 @@ func (pbs *proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter,
 	}
 
 	if served {
+		// Cache hit: refresh the scheduler entry so frequently-accessed
+		// blobs do not expire on the original TTL. Failures here are
+		// logged but do not fail the response — the bytes have already
+		// been written to the client.
+		if pbs.scheduler != nil && pbs.ttl != nil {
+			if blobRef, refErr := reference.WithDigest(pbs.repositoryName, dgst); refErr != nil {
+				dcontext.GetLogger(ctx).Errorf("Error creating reference for cache-hit touch: %s", refErr)
+			} else if addErr := pbs.scheduler.AddBlob(blobRef, *pbs.ttl); addErr != nil {
+				dcontext.GetLogger(ctx).Errorf("Error refreshing scheduler entry on cache hit for %s: %s", blobRef, addErr)
+			}
+		}
 		return nil
 	}
 
