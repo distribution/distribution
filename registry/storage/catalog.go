@@ -109,7 +109,7 @@ func compareReplaceInline(s1, s2 string, old, new byte) int {
 
 	l := min(len(s2), len(s1))
 
-	for i := 0; i < l; i++ {
+	for i := range l {
 		c1, c2 := s1[i], s2[i]
 		if c1 == old {
 			c1 = new

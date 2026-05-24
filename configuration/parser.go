@@ -155,7 +155,7 @@ func (p *Parser) Parse(in []byte, v any) error {
 // through the environment. Precondition: an empty path slice must never be
 // passed in.
 func (p *Parser) overwriteFields(v reflect.Value, fullpath string, path []string, payload string) error {
-	for v.Kind() == reflect.Ptr {
+	for v.Kind() == reflect.Pointer {
 		if v.IsNil() {
 			return fmt.Errorf("encountered nil pointer while handling environment variable %s", fullpath)
 		}
@@ -191,8 +191,7 @@ func (p *Parser) overwriteFields(v reflect.Value, fullpath string, path []string
 				return p.overwriteFields(v.Elem(), fullpath, path, payload)
 			}
 			// Interface was empty; create an implicit map
-			var template map[string]any
-			wrappedV := reflect.MakeMap(reflect.TypeOf(template))
+			wrappedV := reflect.MakeMap(reflect.TypeFor[map[string]any]())
 			v.Set(wrappedV)
 			return p.overwriteMap(wrappedV, fullpath, path, payload)
 		}
@@ -252,7 +251,7 @@ func (p *Parser) overwriteStruct(v reflect.Value, fullpath string, path []string
 		if field.IsNil() {
 			field.Set(reflect.MakeMap(sf.Type))
 		}
-	case reflect.Ptr:
+	case reflect.Pointer:
 		if field.IsNil() {
 			field.Set(reflect.New(field.Type().Elem()))
 		}
@@ -281,7 +280,7 @@ func (p *Parser) overwriteMap(m reflect.Value, fullpath string, path []string, p
 				mapValue := m.MapIndex(k)
 				// If the existing value is nil, we want to
 				// recreate it instead of using this value.
-				if (mapValue.Kind() == reflect.Ptr ||
+				if (mapValue.Kind() == reflect.Pointer ||
 					mapValue.Kind() == reflect.Interface ||
 					mapValue.Kind() == reflect.Map) &&
 					mapValue.IsNil() {
