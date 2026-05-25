@@ -482,7 +482,7 @@ func (suite *ConfigSuite) TestParseEnvInlinedStruct() {
 func checkStructs(tt *testing.T, t reflect.Type, structsChecked map[string]struct{}) {
 	tt.Helper()
 
-	for t.Kind() == reflect.Ptr || t.Kind() == reflect.Map || t.Kind() == reflect.Slice {
+	for t.Kind() == reflect.Pointer || t.Kind() == reflect.Map || t.Kind() == reflect.Slice {
 		t = t.Elem()
 	}
 

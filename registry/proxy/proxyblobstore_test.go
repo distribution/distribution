@@ -432,9 +432,7 @@ func testProxyStoreServe(t *testing.T, te *testEnv, numClients int) {
 
 	for range numClients {
 		// Serveblob - pulls through blobs
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for _, remoteBlob := range te.inRemote {
 				w := httptest.NewRecorder()
 				r, err := http.NewRequest(http.MethodGet, "", nil)
@@ -475,7 +473,7 @@ func testProxyStoreServe(t *testing.T, te *testEnv, numClients int) {
 				delete(descHitMap, desc.Digest)
 				hitLock.Unlock()
 			}
-		}()
+		})
 	}
 
 	wg.Wait()

@@ -122,8 +122,8 @@ func TestParseInlinedStruct(t *testing.T) {
 	p := NewParser("registry", []VersionedParseInfo{
 		{
 			Version: "0.1",
-			ParseAs: reflect.TypeOf(config),
-			ConversionFunc: func(c interface{}) (interface{}, error) {
+			ParseAs: reflect.TypeFor[localConfiguration](),
+			ConversionFunc: func(c any) (any, error) {
 				return c, nil
 			},
 		},
