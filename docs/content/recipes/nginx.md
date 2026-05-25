@@ -142,6 +142,7 @@ Review the [requirements](../#requirements), then follow these steps.
          proxy_set_header  X-Real-IP         $remote_addr; # pass on real client's IP
          proxy_set_header  X-Forwarded-For   $proxy_add_x_forwarded_for;
          proxy_set_header  X-Forwarded-Proto $scheme;
+         proxy_set_header  X-Forwarded-Ssl   off;
          proxy_read_timeout                  900;
        }
      }
