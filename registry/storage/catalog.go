@@ -36,19 +36,18 @@ func (reg *registry) Repositories(ctx context.Context, repos []string, last stri
 	}
 
 	err = reg.blobStore.driver.Walk(ctx, root, func(fileInfo driver.FileInfo) error {
-		err := handleRepository(fileInfo, root, last, func(repoPath string) error {
+		err := HandleRepository(fileInfo, root, last, func(repoPath string) error {
+			// if we've filled our slice, no need to walk any further
+			if foundRepos >= len(repos) {
+				filledBuffer = true
+				return driver.ErrFilledBuffer
+			}
 			repos[foundRepos] = repoPath
 			foundRepos += 1
 			return nil
 		})
 		if err != nil {
 			return err
-		}
-
-		// if we've filled our slice, no need to walk any further
-		if foundRepos == len(repos) {
-			filledBuffer = true
-			return driver.ErrFilledBuffer
 		}
 
 		return nil
@@ -75,7 +74,7 @@ func (reg *registry) Enumerate(ctx context.Context, ingester func(string) error)
 	}
 
 	err = reg.blobStore.driver.Walk(ctx, root, func(fileInfo driver.FileInfo) error {
-		return handleRepository(fileInfo, root, "", ingester)
+		return HandleRepository(fileInfo, root, "", ingester)
 	})
 
 	return err
@@ -139,12 +138,12 @@ func compareReplaceInline(s1, s2 string, old, new byte) int {
 	return 0
 }
 
-// handleRepository calls function fn with a repository path if fileInfo
+// HandleRepository calls function fn with a repository path if fileInfo
 // has a path of a repository under root and that it is lexographically
 // after last. Otherwise, it will return ErrSkipDir or ErrFilledBuffer.
 // These should be used with Walk to do handling with repositories in a
 // storage.
-func handleRepository(fileInfo driver.FileInfo, root, last string, fn func(repoPath string) error) error {
+func HandleRepository(fileInfo driver.FileInfo, root, last string, fn func(repoPath string) error) error {
 	filePath := fileInfo.Path()
 
 	// lop the base path off
