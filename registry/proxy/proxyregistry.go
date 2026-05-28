@@ -311,10 +311,16 @@ func (pr *proxiedRepository) Tags(ctx context.Context) distribution.TagService {
 // than racing; only then it deletes the per-repository link (clearing the
 // descriptor cache for the expiring repo). The shared blob file is
 // vacuumed only when no other scheduled entry is still live for the
-// digest and no other on-disk link still references it — by the time the
-// last serialised eviction runs, every prior link has been deleted and
-// every prior entry has been dropped, so that callback observes "no
-// surviving references" and reclaims the blob.
+// digest — by the time the last serialised eviction runs, every prior
+// link has been deleted and every prior entry has been dropped, so that
+// callback observes "no surviving references" and reclaims the blob.
+//
+// Before bootstrap reconcile finishes, the scheduler may not yet know
+// about orphan on-disk links left over from prior unclean shutdowns, so
+// an extra on-disk walk runs as a safety net. Once s.Reconciled() flips
+// true the scheduler is authoritative and the walk is skipped — that
+// keeps the steady-state eviction cheap even on S3, where a recursive
+// LIST is expensive.
 // Split out from the OnBlobExpire closure so it can be unit-tested without
 // constructing a full HTTP-backed proxyingRegistry.
 func evictBlob(ctx context.Context, registry distribution.Namespace, drv driver.StorageDriver, v storage.Vacuum, s *scheduler.TTLExpirationScheduler, r reference.Canonical) error {
@@ -331,23 +337,31 @@ func evictBlob(ctx context.Context, registry distribution.Namespace, drv driver.
 		return err
 	}
 
-	expiringKey := r.String()
-	if s.HasOtherReferencesToDigest(expiringKey, r.Digest()) {
+	// Atomically drop our own scheduler entry and check whether any
+	// sibling entry still references this digest. Doing both under one
+	// scheduler lock acquisition prevents the mutual-skip race that
+	// otherwise appears when N timers for the same digest fire in the
+	// same instant: each callback removes itself before observing the
+	// remainder, so the callers naturally form a serial chain in which
+	// only the last one sees an empty map and proceeds to vacuum.
+	if !s.ClaimVacuum(r.String(), r.Digest()) {
 		dcontext.GetLogger(ctx).Infof(
 			"skipping blob vacuum for %s: another scheduled entry still references the digest",
 			r.Digest())
 		return nil
 	}
 
-	hasLink, err := anyRepoHasBlobLink(ctx, drv, r.Digest())
-	if err != nil {
-		return fmt.Errorf("checking surviving blob links for %s: %w", r.Digest(), err)
-	}
-	if hasLink {
-		dcontext.GetLogger(ctx).Infof(
-			"skipping blob vacuum for %s: a repository link still references the digest on disk",
-			r.Digest())
-		return nil
+	if !s.Reconciled() {
+		hasLink, err := anyRepoHasBlobLink(ctx, drv, r.Digest())
+		if err != nil {
+			return fmt.Errorf("checking surviving blob links for %s: %w", r.Digest(), err)
+		}
+		if hasLink {
+			dcontext.GetLogger(ctx).Infof(
+				"skipping blob vacuum for %s: a repository link still references the digest on disk (pre-reconcile)",
+				r.Digest())
+			return nil
+		}
 	}
 
 	return v.RemoveBlob(r.Digest().String())
