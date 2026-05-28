@@ -174,6 +174,75 @@ func TestCommitAfterMove(t *testing.T) {
 	}
 }
 
+// TestPutContentOverExistingBlob regression-tests the migration check above
+// the AppendBlob Create call in PutContent. PutContent creates AppendBlobs,
+// and Azure returns 409 InvalidBlobType if Create is called over an existing
+// blob of a different type. The check must delete only blobs whose type does
+// not match what we're about to create.
+//
+// Two cases:
+//   - BlockBlob: written by an older version of the driver. Without the fix
+//     this failed with 409 InvalidBlobType.
+//   - AppendBlob: written by the current driver. Must still overwrite cleanly
+//     (one Put Blob, no delete) — the previous code reached this by deleting
+//     and recreating.
+func TestPutContentOverExistingBlob(t *testing.T) {
+	skipCheck(t)
+
+	sd, err := azureDriverConstructor()
+	if err != nil {
+		t.Fatalf("unexpected error creating azure driver: %v", err)
+	}
+	d := sd.(*Driver).Base.StorageDriver.(*driver)
+	ctx := context.Background()
+
+	tests := []struct {
+		name string
+		seed func(t *testing.T, blobName string)
+	}{
+		{
+			name: "BlockBlob",
+			seed: func(t *testing.T, blobName string) {
+				if _, err := d.client.NewBlockBlobClient(blobName).UploadBuffer(ctx, []byte("legacy"), nil); err != nil {
+					t.Fatalf("seeding BlockBlob: %v", err)
+				}
+			},
+		},
+		{
+			name: "AppendBlob",
+			seed: func(t *testing.T, blobName string) {
+				if err := sd.PutContent(ctx, "/regression/"+t.Name(), []byte("legacy")); err != nil {
+					t.Fatalf("seeding AppendBlob via PutContent: %v", err)
+				}
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			path := "/regression/" + t.Name()
+			blobName := d.blobName(path)
+			// nolint:errcheck
+			defer sd.Delete(ctx, path)
+
+			tc.seed(t, blobName)
+
+			newContents := []byte("new content")
+			if err := sd.PutContent(ctx, path, newContents); err != nil {
+				t.Fatalf("PutContent over existing %s: %v", tc.name, err)
+			}
+
+			got, err := sd.GetContent(ctx, path)
+			if err != nil {
+				t.Fatalf("GetContent after PutContent: %v", err)
+			}
+			if string(got) != string(newContents) {
+				t.Fatalf("GetContent: got %q, want %q", got, newContents)
+			}
+		})
+	}
+}
+
 func TestParamParsing(t *testing.T) {
 	expectErrors := []map[string]any{
 		{},
