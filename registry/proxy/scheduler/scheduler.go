@@ -2,10 +2,12 @@ package scheduler
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/distribution/distribution/v3/internal/dcontext"
@@ -27,6 +29,14 @@ const (
 	entryTypeBlob = iota
 	entryTypeManifest
 	indexSaveFrequency = 5 * time.Second
+
+	// evictLockStripes bounds the per-digest eviction lock pool. Digests
+	// are hashed (taking the first byte of the encoded hex) into one of
+	// these stripes; collisions only over-serialise unrelated digests and
+	// never cause a correctness issue. 256 keeps the table tiny while
+	// reducing contention to a negligible level for realistic working
+	// sets.
+	evictLockStripes = 256
 )
 
 // schedulerEntry represents an entry in the scheduler
@@ -49,6 +59,7 @@ func New(ctx context.Context, driver driver.StorageDriver, path string) *TTLExpi
 		stopped:         true,
 		doneChan:        make(chan struct{}),
 		saveTimer:       time.NewTicker(indexSaveFrequency),
+		evictLocks:      new([evictLockStripes]sync.Mutex),
 	}
 }
 
@@ -77,8 +88,18 @@ type TTLExpirationScheduler struct {
 	// map until the in-flight callback returns) or the other in-flight
 	// links on disk, conclude "another ref exists", and skip the vacuum —
 	// leaking the blob with no scheduler entry left to recover it.
-	// Concurrency across *different* digests stays parallel.
-	evictLocks sync.Map // digest.Digest -> *sync.Mutex
+	// Concurrency across *different* digests stays parallel. The pool is
+	// a fixed-size striped lock table (see evictLockStripes) so memory
+	// stays bounded regardless of how many distinct digests are seen over
+	// the lifetime of the scheduler.
+	evictLocks *[evictLockStripes]sync.Mutex
+
+	// reconciled flips to true once the bootstrap reconcile goroutine has
+	// finished registering every on-disk link with the scheduler. After
+	// that point the scheduler entries are the authoritative reference
+	// count for shared blobs and the on-disk link walk in evictBlob can
+	// be skipped.
+	reconciled atomic.Bool
 
 	indexDirty bool
 	saveTimer  *time.Ticker
@@ -141,8 +162,8 @@ func (ttles *TTLExpirationScheduler) AddManifest(manifestRef reference.Canonical
 // AddBlobIfAbsent schedules a blob cleanup only when no entry exists for
 // blobRef. Used by bootstrap reconcile to register orphan links found on
 // disk without overwriting state already loaded from scheduler-state.json.
-// Returns added=true when a new entry was created.
-func (ttles *TTLExpirationScheduler) AddBlobIfAbsent(blobRef reference.Canonical, ttl time.Duration) (added bool, err error) {
+// Returns true when a new entry was created.
+func (ttles *TTLExpirationScheduler) AddBlobIfAbsent(blobRef reference.Canonical, ttl time.Duration) (bool, error) {
 	ttles.Lock()
 	defer ttles.Unlock()
 
@@ -159,7 +180,7 @@ func (ttles *TTLExpirationScheduler) AddBlobIfAbsent(blobRef reference.Canonical
 
 // AddManifestIfAbsent schedules a manifest cleanup only when no entry
 // exists for manifestRef. See AddBlobIfAbsent.
-func (ttles *TTLExpirationScheduler) AddManifestIfAbsent(manifestRef reference.Canonical, ttl time.Duration) (added bool, err error) {
+func (ttles *TTLExpirationScheduler) AddManifestIfAbsent(manifestRef reference.Canonical, ttl time.Duration) (bool, error) {
 	ttles.Lock()
 	defer ttles.Unlock()
 
@@ -174,43 +195,87 @@ func (ttles *TTLExpirationScheduler) AddManifestIfAbsent(manifestRef reference.C
 	return true, nil
 }
 
-// EvictionLock returns a per-digest mutex used to serialise OnBlobExpire
+// EvictionLock returns a striped mutex used to serialise OnBlobExpire
 // processing across all repositories sharing dgst. The proxy callback
 // acquires this lock for the full delete-link / ref-count / vacuum
 // sequence so that concurrent expiries for the same digest do not race
-// each other into a blob leak. The lock is allocated on first use and
-// retained for the lifetime of the scheduler — one entry per unique
-// digest the scheduler has ever vacuumed, which is bounded by the
-// working set and small in practice.
+// each other into a blob leak. Digests are hashed into a fixed-size
+// table (evictLockStripes); two digests hashing to the same stripe are
+// over-serialised but never deadlock or lose correctness. Memory is
+// O(evictLockStripes), independent of how many digests are seen.
 func (ttles *TTLExpirationScheduler) EvictionLock(dgst digest.Digest) *sync.Mutex {
-	if m, ok := ttles.evictLocks.Load(dgst); ok {
-		return m.(*sync.Mutex)
-	}
-	actual, _ := ttles.evictLocks.LoadOrStore(dgst, &sync.Mutex{})
-	return actual.(*sync.Mutex)
+	return &ttles.evictLocks[stripeIndex(dgst)]
 }
 
-// HasOtherReferencesToDigest reports whether any scheduled entry other than
-// excludeKey targets dgst AND is still live (its Expiry is in the future).
-// Entries whose timer has already fired but whose callback has not yet
-// returned are excluded — they are on the path to vacuum themselves and
-// must not be treated as a live reference, or the fast path turns into a
-// mutual-skip deadlock during a concurrent expiry burst.
+// Reconciled reports whether bootstrap reconcile has finished registering
+// every on-disk link with the scheduler. Once true, the scheduler's
+// entries map is the authoritative reference count for shared blobs and
+// callers may skip any compensating on-disk scans.
+func (ttles *TTLExpirationScheduler) Reconciled() bool {
+	return ttles.reconciled.Load()
+}
+
+// stripeIndex picks a stripe for dgst by taking the first byte of the
+// encoded portion as a hex pair. Digest encodings are always hex, so
+// this distributes evenly across the 256 stripes; non-conforming inputs
+// fall back to stripe 0 (still correct, just slightly more contention).
+func stripeIndex(dgst digest.Digest) uint8 {
+	enc := dgst.Encoded()
+	if len(enc) < 2 {
+		return 0
+	}
+	b, err := hex.DecodeString(enc[:2])
+	if err != nil || len(b) == 0 {
+		return 0
+	}
+	return b[0]
+}
+
+// HasOtherReferencesToDigest reports whether any scheduled entry other
+// than excludeKey targets dgst. Presence in the entries map is the
+// authoritative signal: an entry only leaves the map once it has been
+// processed (via ClaimVacuum from the eviction callback or via the
+// scheduler's timer cleanup), so an entry whose timer has fired but
+// whose callback has not yet run still counts as a live reference. This
+// is intended as a read-only query; eviction code paths should call
+// ClaimVacuum so the remove-self and check-others happen atomically.
 func (ttles *TTLExpirationScheduler) HasOtherReferencesToDigest(excludeKey string, dgst digest.Digest) bool {
-	now := time.Now()
 	ttles.Lock()
 	defer ttles.Unlock()
+	return ttles.hasOtherRefsLocked(excludeKey, dgst)
+}
 
+// ClaimVacuum atomically removes the entry keyed by selfKey and reports
+// whether the caller may safely vacuum the shared blob for dgst (true
+// means no other scheduled entry references the digest). The eviction
+// callback must hold the per-digest EvictionLock when calling this so
+// the remove-self / check-siblings pair stays consistent against
+// concurrent expiries for the same digest. Atomic remove-then-check is
+// what prevents the mutual-skip race during a concurrent expiry burst:
+// once an entry has been claimed it cannot be observed by a later
+// caller, so callers naturally form a single chain in which only the
+// last one sees an empty map and proceeds to vacuum.
+func (ttles *TTLExpirationScheduler) ClaimVacuum(selfKey string, dgst digest.Digest) bool {
+	ttles.Lock()
+	defer ttles.Unlock()
+	if _, ok := ttles.entries[selfKey]; ok {
+		delete(ttles.entries, selfKey)
+		ttles.indexDirty = true
+	}
+	return !ttles.hasOtherRefsLocked(selfKey, dgst)
+}
+
+// hasOtherRefsLocked must be called with ttles.Mutex held. It scans the
+// entries map for any reference to dgst other than excludeKey.
+// Canonical reference.String() is "<name>@<digest>"; the suffix match
+// uses the last '@' because repository names may contain ':' but not
+// '@'.
+func (ttles *TTLExpirationScheduler) hasOtherRefsLocked(excludeKey string, dgst digest.Digest) bool {
 	suffix := dgst.String()
-	for key, entry := range ttles.entries {
+	for key := range ttles.entries {
 		if key == excludeKey {
 			continue
 		}
-		if !entry.Expiry.After(now) {
-			continue
-		}
-		// Canonical reference.String() is "<name>@<digest>"; split on the
-		// last '@' because repository names may contain ':' but not '@'.
 		idx := strings.LastIndexByte(key, '@')
 		if idx < 0 {
 			continue
@@ -249,13 +314,21 @@ func (ttles *TTLExpirationScheduler) Start() error {
 	reconciler := ttles.onReconcile
 	ttles.Unlock()
 
-	// Reconcile runs after the mutex is released so its I/O does not widen
-	// the critical section. It publishes via AddBlobIfAbsent /
-	// AddManifestIfAbsent, which take the lock per-entry.
-	if reconciler != nil {
-		if err := reconciler(ttles); err != nil {
-			dcontext.GetLogger(ttles.ctx).Warnf("scheduler bootstrap reconcile failed (continuing): %v", err)
-		}
+	// Reconcile runs in a goroutine so the (potentially slow on object
+	// storage) full repositories walk does not block registry startup. It
+	// publishes discoveries via AddBlobIfAbsent / AddManifestIfAbsent,
+	// which take the lock per-entry. Until the goroutine flips reconciled
+	// to true, evictBlob falls back to its on-disk safety walk so
+	// orphan links not yet registered cannot be vacuumed prematurely.
+	if reconciler == nil {
+		ttles.reconciled.Store(true)
+	} else {
+		go func() {
+			if err := reconciler(ttles); err != nil {
+				dcontext.GetLogger(ttles.ctx).Warnf("scheduler bootstrap reconcile failed (continuing): %v", err)
+			}
+			ttles.reconciled.Store(true)
+		}()
 	}
 
 	// Start a ticker to periodically save the entries index
