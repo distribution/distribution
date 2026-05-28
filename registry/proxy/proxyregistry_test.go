@@ -3,6 +3,7 @@ package proxy
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -207,7 +208,10 @@ func TestReconcileFromStorage_DiscoversOrphans(t *testing.T) {
 	}
 	defer s.Stop()
 
-	// Reconcile runs synchronously inside Start.
+	// Reconcile runs in a background goroutine; wait for it to finish
+	// before sampling the scheduler state.
+	waitForReconciled(t, s, 2*time.Second)
+
 	wantBlob := mkCanonical(t, "team/svc", dBlob).String()
 	wantManifest := mkCanonical(t, "team/svc", dManifest).String()
 
@@ -217,6 +221,20 @@ func TestReconcileFromStorage_DiscoversOrphans(t *testing.T) {
 	if !s.HasOtherReferencesToDigest("never", dManifest) {
 		t.Fatalf("expected scheduler entry for manifest %s after reconcile", wantManifest)
 	}
+}
+
+// waitForReconciled polls Reconciled() with a short interval until the
+// reconcile goroutine finishes or timeout elapses.
+func waitForReconciled(t *testing.T, s *scheduler.TTLExpirationScheduler, timeout time.Duration) {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		if s.Reconciled() {
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Fatalf("scheduler did not finish reconcile within %s", timeout)
 }
 
 func TestReconcileFromStorage_NoOpWhenInSync(t *testing.T) {
@@ -229,11 +247,11 @@ func TestReconcileFromStorage_NoOpWhenInSync(t *testing.T) {
 	s := scheduler.New(ctx, drv, "/ttl-noop")
 	// Pre-populate scheduler so the link is already known.
 	preRef := mkCanonical(t, "team/svc", d)
-	added, ranOnce := false, false
+	var added, ranOnce atomic.Bool
 	s.OnReconcile(func(s *scheduler.TTLExpirationScheduler) error {
-		ranOnce = true
-		var err error
-		added, err = reconcileAddProbe(s, preRef, time.Hour)
+		ranOnce.Store(true)
+		got, err := reconcileAddProbe(s, preRef, time.Hour)
+		added.Store(got)
 		return err
 	})
 
@@ -244,10 +262,12 @@ func TestReconcileFromStorage_NoOpWhenInSync(t *testing.T) {
 	}
 	defer s.Stop()
 
-	if !ranOnce {
+	waitForReconciled(t, s, 2*time.Second)
+
+	if !ranOnce.Load() {
 		t.Fatal("custom reconciler did not run")
 	}
-	if !added {
+	if !added.Load() {
 		t.Fatal("seed AddBlobIfAbsent should report added=true (entry was new)")
 	}
 
@@ -286,6 +306,14 @@ func TestReconcileFromStorage_NoRepositoriesTree(t *testing.T) {
 // Returns the scheduler and a channel that receives one event per
 // callback completion so the tests can wait deterministically.
 func startSchedulerWithEvict(t *testing.T, ctx context.Context, drv driver.StorageDriver, statePath string) (*scheduler.TTLExpirationScheduler, <-chan error) {
+	return startSchedulerWithEvictAndReconcile(t, ctx, drv, statePath, nil)
+}
+
+// startSchedulerWithEvictAndReconcile is like startSchedulerWithEvict
+// but lets the caller install an OnReconcile hook. Useful for tests
+// that need to control whether the scheduler is in its pre- or
+// post-reconcile state when an eviction fires.
+func startSchedulerWithEvictAndReconcile(t *testing.T, ctx context.Context, drv driver.StorageDriver, statePath string, rec scheduler.Reconciler) (*scheduler.TTLExpirationScheduler, <-chan error) {
 	t.Helper()
 	reg, err := storage.NewRegistry(ctx, drv, storage.EnableDelete)
 	if err != nil {
@@ -295,6 +323,9 @@ func startSchedulerWithEvict(t *testing.T, ctx context.Context, drv driver.Stora
 
 	done := make(chan error, 16)
 	s := scheduler.New(ctx, drv, statePath)
+	if rec != nil {
+		s.OnReconcile(rec)
+	}
 	s.OnBlobExpire(func(ref reference.Reference) error {
 		r, ok := ref.(reference.Canonical)
 		if !ok {
@@ -428,11 +459,20 @@ func TestEvictBlob_SlowPathDetectsLinkOnDisk(t *testing.T) {
 	// Two links on disk, but only the first is registered with the
 	// scheduler — the second simulates an orphan link the bootstrap
 	// reconcile would normally pick up, while also exercising the slow
-	// path here in isolation.
+	// path here in isolation. The slow on-disk walk only fires before
+	// reconcile has finished, so this test wires a reconciler that
+	// blocks until the eviction has already run, keeping the scheduler
+	// in the pre-reconcile state for the duration of the test.
 	putLink(t, ctx, drv, "team/scheduled", d, false)
 	putLink(t, ctx, drv, "team/orphan", d, false)
 
-	s, done := startSchedulerWithEvict(t, ctx, drv, "/ttl-evict-slow")
+	releaseReconcile := make(chan struct{})
+	s, done := startSchedulerWithEvictAndReconcile(t, ctx, drv, "/ttl-evict-slow",
+		func(*scheduler.TTLExpirationScheduler) error {
+			<-releaseReconcile
+			return nil
+		})
+	defer close(releaseReconcile)
 	defer s.Stop()
 
 	rSched := mkCanonical(t, "team/scheduled", d)

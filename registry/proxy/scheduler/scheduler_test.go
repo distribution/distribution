@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -331,8 +332,11 @@ func TestAddBlobIfAbsent(t *testing.T) {
 }
 
 func TestEvictionLock(t *testing.T) {
-	d := digest.Digest("sha256:" + fmt.Sprintf("%064d", 1))
-	other := digest.Digest("sha256:" + fmt.Sprintf("%064d", 2))
+	// Pick digests whose first encoded byte differs so they land in
+	// different stripes of the lock table.
+	d := digest.Digest("sha256:11" + fmt.Sprintf("%062d", 1))
+	sameStripe := digest.Digest("sha256:11" + fmt.Sprintf("%062d", 2))
+	otherStripe := digest.Digest("sha256:22" + fmt.Sprintf("%062d", 1))
 
 	s := New(dcontext.Background(), inmemory.New(), "/ttl-evictlock")
 
@@ -342,9 +346,15 @@ func TestEvictionLock(t *testing.T) {
 	if m1 != m2 {
 		t.Fatalf("EvictionLock for the same digest must return the same mutex: %p vs %p", m1, m2)
 	}
-	// Different digest → different mutex (so unrelated digests stay parallel).
-	if m1 == s.EvictionLock(other) {
-		t.Fatalf("EvictionLock must return distinct mutexes per digest")
+	// Digests in the same stripe share a mutex by design (collisions
+	// over-serialise but never break correctness).
+	if m1 != s.EvictionLock(sameStripe) {
+		t.Fatalf("digests hashing to the same stripe should share a mutex")
+	}
+	// Different stripe → different mutex (so unrelated digests stay
+	// parallel for the common case).
+	if m1 == s.EvictionLock(otherStripe) {
+		t.Fatalf("digests in different stripes must return distinct mutexes")
 	}
 	// And it actually locks.
 	m1.Lock()
@@ -363,42 +373,46 @@ func TestEvictionLock(t *testing.T) {
 	<-locked
 }
 
-func TestHasOtherReferencesToDigest_IgnoresAlreadyExpiredEntries(t *testing.T) {
+// TestClaimVacuumSerialisesConcurrentExpiries verifies the protocol
+// that protects the shared blob in a concurrent expiry burst: every
+// caller atomically drops its own entry and observes the remainder, so
+// exactly the last caller in the chain receives the green light to
+// vacuum. ClaimVacuum is the primitive that eliminates the
+// mutual-skip race that the older HasOtherReferencesToDigest-only path
+// required the on-disk walk to mop up.
+func TestClaimVacuumSerialisesConcurrentExpiries(t *testing.T) {
 	d := digest.Digest("sha256:" + fmt.Sprintf("%064d", 5))
-	live := canonicalRef(t, "repo-live@"+d.String())
-	stale := canonicalRef(t, "repo-stale@"+d.String())
+	refs := []reference.Canonical{
+		canonicalRef(t, "repo-a@"+d.String()),
+		canonicalRef(t, "repo-b@"+d.String()),
+		canonicalRef(t, "repo-c@"+d.String()),
+	}
 
-	s := New(dcontext.Background(), inmemory.New(), "/ttl-expired")
+	s := New(dcontext.Background(), inmemory.New(), "/ttl-claim")
 	if err := s.Start(); err != nil {
 		t.Fatal(err)
 	}
 	defer s.Stop()
-
-	// A live entry counts.
-	if err := s.AddBlob(live, time.Hour); err != nil {
-		t.Fatal(err)
-	}
-	if !s.HasOtherReferencesToDigest("never", d) {
-		t.Fatal("live entry should count as a reference")
+	for _, r := range refs {
+		if err := s.AddBlob(r, time.Hour); err != nil {
+			t.Fatal(err)
+		}
 	}
 
-	// Add a stale entry through the public API (gets a real timer that
-	// Stop can clean up) and then back-date its Expiry directly. This
-	// mirrors the in-flight expiry state during a concurrent burst.
-	if err := s.AddBlob(stale, time.Hour); err != nil {
-		t.Fatal(err)
+	if got := s.ClaimVacuum(refs[0].String(), d); got {
+		t.Fatal("first claim must observe siblings; got vacuum=true")
 	}
-	s.Lock()
-	s.entries[stale.String()].Expiry = time.Now().Add(-time.Second)
-	s.Unlock()
+	if got := s.ClaimVacuum(refs[1].String(), d); got {
+		t.Fatal("second claim must observe the remaining sibling; got vacuum=true")
+	}
+	if got := s.ClaimVacuum(refs[2].String(), d); !got {
+		t.Fatal("last claim must observe an empty map and proceed to vacuum")
+	}
 
-	if !s.HasOtherReferencesToDigest("never", d) {
-		t.Fatal("the live entry must still be counted even with a stale one alongside")
-	}
-	// Excluding the live entry, only the stale one remains — it must
-	// NOT be reported as a surviving reference.
-	if s.HasOtherReferencesToDigest(live.String(), d) {
-		t.Fatal("a stale (expired) entry must not count as a surviving reference")
+	// Idempotency: a repeat claim on an already-removed entry must not
+	// flap or panic, and must still report vacuum=true (no entries).
+	if got := s.ClaimVacuum(refs[2].String(), d); !got {
+		t.Fatal("repeat claim on a removed entry should still report vacuum=true")
 	}
 }
 
@@ -427,9 +441,9 @@ func TestStartReconcileRuns(t *testing.T) {
 	ref := canonicalRef(t, "discovered@"+d.String())
 
 	s := New(dcontext.Background(), inmemory.New(), "/ttl")
-	called := 0
+	var called atomic.Int32
 	s.OnReconcile(func(s *TTLExpirationScheduler) error {
-		called++
+		called.Add(1)
 		_, err := s.AddBlobIfAbsent(ref, time.Hour)
 		return err
 	})
@@ -439,9 +453,12 @@ func TestStartReconcileRuns(t *testing.T) {
 	}
 	defer s.Stop()
 
-	// Reconcile runs synchronously inside Start.
-	if called != 1 {
-		t.Fatalf("reconciler called %d times; want 1", called)
+	// Reconcile now runs in a background goroutine; poll Reconciled()
+	// instead of asserting synchronously.
+	waitForReconciled(t, s, 2*time.Second)
+
+	if got := called.Load(); got != 1 {
+		t.Fatalf("reconciler called %d times; want 1", got)
 	}
 
 	s.Lock()
@@ -450,6 +467,19 @@ func TestStartReconcileRuns(t *testing.T) {
 	if !present {
 		t.Fatalf("reconciler discovery was not committed to the entries map")
 	}
+}
+
+// waitForReconciled polls until s.Reconciled() is true or timeout elapses.
+func waitForReconciled(t *testing.T, s *TTLExpirationScheduler, timeout time.Duration) {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		if s.Reconciled() {
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Fatalf("scheduler did not finish reconcile within %s", timeout)
 }
 
 func TestStartReconcileErrorIsNonFatal(t *testing.T) {
