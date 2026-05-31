@@ -20,6 +20,7 @@ import (
 	"io"
 	"math"
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -117,6 +118,7 @@ type DriverParameters struct {
 	Accelerate                  bool
 	UseFIPSEndpoint             bool
 	LogLevel                    aws.LogLevelType
+	RedirectEndpoint            string
 }
 
 func init() {
@@ -165,6 +167,7 @@ type driver struct {
 	RootDirectory               string
 	StorageClass                string
 	ObjectACL                   string
+	RedirectEndpoint            *url.URL
 	pool                        *sync.Pool
 }
 
@@ -335,6 +338,11 @@ func FromParameters(ctx context.Context, parameters map[string]any) (*Driver, er
 		return nil, err
 	}
 
+	redirectEndpoint := parameters["redirectendpoint"]
+	if redirectEndpoint == nil {
+		redirectEndpoint = ""
+	}
+
 	params := DriverParameters{
 		AccessKey:                   fmt.Sprint(accessKey),
 		SecretKey:                   fmt.Sprint(secretKey),
@@ -360,6 +368,7 @@ func FromParameters(ctx context.Context, parameters map[string]any) (*Driver, er
 		Accelerate:                  accelerateBool,
 		UseFIPSEndpoint:             useFIPSEndpointBool,
 		LogLevel:                    getS3LogLevelFromParam(parameters["loglevel"]),
+		RedirectEndpoint:            fmt.Sprint(redirectEndpoint),
 	}
 
 	return New(ctx, params)
@@ -535,6 +544,29 @@ func New(ctx context.Context, params DriverParameters) (*Driver, error) {
 		pool: &sync.Pool{
 			New: func() any { return &bytes.Buffer{} },
 		},
+	}
+
+	if params.RedirectEndpoint != "" {
+		u, err := url.Parse(params.RedirectEndpoint)
+		if err != nil {
+			return nil, fmt.Errorf("unable to parse redirectendpoint: %w", err)
+		}
+		if u.Scheme == "" {
+			return nil, fmt.Errorf("no scheme specified for redirectendpoint")
+		}
+		if u.Host == "" {
+			return nil, fmt.Errorf("no host specified for redirectendpoint")
+		}
+		// Edge Case: Reject trailing paths (e.g., /cdn/v1) because the hot path ignores them
+		if u.Path != "" && u.Path != "/" {
+			return nil, fmt.Errorf("redirectendpoint cannot contain a base path: %s", u.Path)
+		}
+		// Edge Case: Reject query parameters because they break AWS SigV4 signatures
+		if u.RawQuery != "" {
+			return nil, fmt.Errorf("redirectendpoint cannot contain query parameters")
+		}
+
+		d.RedirectEndpoint = u
 	}
 
 	return &Driver{
@@ -1039,6 +1071,13 @@ func (d *driver) RedirectURL(r *http.Request, path string) (string, error) {
 		})
 	default:
 		return "", nil
+	}
+
+	// If a public redirect endpoint is configured, use it for the signed URL
+	// This allows using a different public endpoint for downloads with signed URLs
+	if d.RedirectEndpoint != nil && req.HTTPRequest != nil {
+		req.HTTPRequest.URL.Host = d.RedirectEndpoint.Host
+		req.HTTPRequest.URL.Scheme = d.RedirectEndpoint.Scheme
 	}
 
 	return req.Presign(expiresIn)
