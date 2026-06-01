@@ -56,11 +56,8 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 	// mark
 	manifestMarkStart := time.Now()
 	markSet := make(map[digest.Digest]struct{})
-	// repoNames collects the repositories enumerated, so that layer-link
-	// deletion can be computed after all mark workers have finished and the
-	// global markSet is fully populated.
-	var repoNames []string
 	manifestArr := make([]ManifestDel, 0)
+	deleteLayerSet := make(map[string][]digest.Digest)
 
 	var mu sync.Mutex
 
@@ -72,29 +69,13 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 	inFlight := make(map[string]workerState)
 	var inFlightMu sync.Mutex
 
-	// layerPhase tracks the current repository being processed in the
-	// sequential layer-link enumeration phase, for diagnostic dumps on SIGUSR1.
-	var (
-		layerPhaseMu    sync.Mutex
-		layerPhaseRepo  string
-		layerPhaseStart time.Time
-	)
-
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGUSR1)
 	go func() {
 		for range sigCh {
 			inFlightMu.Lock()
 			if len(inFlight) == 0 {
-				layerPhaseMu.Lock()
-				repo := layerPhaseRepo
-				start := layerPhaseStart
-				layerPhaseMu.Unlock()
-				if repo == "" {
-					logger.Infof("gc: no phase currently running (waiting for workers to be scheduled or between phases)")
-				} else {
-					logger.Infof("gc: layer-link enumeration phase, last dispatched repo %s (%s ago)", repo, time.Since(start).Round(time.Second))
-				}
+				logger.Infof("gc: no phase currently running (waiting for workers to be scheduled)")
 			} else {
 				logger.Infof("gc: mark phase, %d worker(s) in flight:", len(inFlight))
 				for repo, state := range inFlight {
@@ -218,15 +199,42 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 				}
 			}
 
-			// Merge local mark results into shared state.
-			// Layer-link deletion is deferred until after all workers finish
-			// so it can be checked against the fully populated markSet.
+			// Enumerate layer links for this repo and check against localMarkSet.
+			// Using localMarkSet is safe because layer links are repo-scoped: the
+			// only question is whether this repo's own manifests reference the blob.
+			blobService := repository.Blobs(gctx)
+			layerEnumerator, ok := blobService.(*linkedBlobStore)
+			if !ok {
+				return errors.New("unable to convert BlobService into linkedBlobStore")
+			}
+			var deleteLayers []digest.Digest
+			var skipped int
+			err = layerEnumerator.EnumerateWithMeta(gctx, func(meta BlobMeta) error {
+				if _, ok := localMarkSet[meta.Digest]; !ok {
+					if meta.ModTime.After(ageCutoff) {
+						skipped++
+						return nil
+					}
+					deleteLayers = append(deleteLayers, meta.Digest)
+				}
+				return nil
+			})
+			if err != nil {
+				return fmt.Errorf("failed to enumerate layers for %s: %v", repoName, err)
+			}
+			if skipped > 0 && !opts.Quiet {
+				logger.Infof("%s: skipping %d layer link(s) younger than %s", repoName, skipped, minAge)
+			}
+
+			// Merge local mark results and layer deletions into shared state.
 			mu.Lock()
 			for d := range localMarkSet {
 				markSet[d] = struct{}{}
 			}
 			manifestArr = append(manifestArr, localManifestArr...)
-			repoNames = append(repoNames, repoName)
+			if len(deleteLayers) > 0 {
+				deleteLayerSet[repoName] = deleteLayers
+			}
 			mu.Unlock()
 
 			return nil
@@ -241,79 +249,7 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 		return fmt.Errorf("failed to mark: %v", err)
 	}
 
-	logger.Infof("mark manifest phase completed in %s, %d blobs marked", time.Since(manifestMarkStart), len(markSet))
-
-	// Compute layer-link deletions now that markSet is fully populated across
-	// all repositories. Doing this inside the mark workers would cause false
-	// deletions: a blob marked by repo A would not be visible in repo B's
-	// local mark set, incorrectly scheduling shared layer links for deletion.
-	layerMarkStart := time.Now()
-	deleteLayerSet := make(map[string][]digest.Digest)
-
-	layerGroup, layerGroupCtx := errgroup.WithContext(ctx)
-	layerGroup.SetLimit(workers)
-
-	for _, repoName := range repoNames {
-		layerPhaseMu.Lock()
-		layerPhaseRepo = repoName
-		layerPhaseStart = time.Now()
-		layerPhaseMu.Unlock()
-
-		if layerGroupCtx.Err() != nil {
-			break
-		}
-
-		layerGroup.Go(func() error {
-			named, err := reference.WithName(repoName)
-			if err != nil {
-				return fmt.Errorf("failed to parse repo name %s: %v", repoName, err)
-			}
-			repository, err := registry.Repository(layerGroupCtx, named)
-			if err != nil {
-				return fmt.Errorf("failed to construct repository: %v", err)
-			}
-			blobService := repository.Blobs(layerGroupCtx)
-			layerEnumerator, ok := blobService.(*linkedBlobStore)
-			if !ok {
-				return errors.New("unable to convert BlobService into linkedBlobStore")
-			}
-			var deleteLayers []digest.Digest
-			var skipped int
-			err = layerEnumerator.EnumerateWithMeta(layerGroupCtx, func(meta BlobMeta) error {
-				if _, ok := markSet[meta.Digest]; !ok {
-					if meta.ModTime.After(ageCutoff) {
-						skipped++
-						return nil
-					}
-					deleteLayers = append(deleteLayers, meta.Digest)
-				}
-				return nil
-			})
-			if err != nil {
-				return fmt.Errorf("failed to enumerate layers for %s: %v", repoName, err)
-			}
-			if skipped > 0 {
-				if !opts.Quiet {
-					logger.Infof("%s: skipping %d layer link(s) younger than %s", repoName, skipped, minAge)
-				}
-			}
-			if len(deleteLayers) > 0 {
-				mu.Lock()
-				deleteLayerSet[repoName] = deleteLayers
-				mu.Unlock()
-			}
-			return nil
-		})
-	}
-	if err := layerGroup.Wait(); err != nil {
-		return fmt.Errorf("failed to enumerate layer links: %v", err)
-	}
-
-	layerPhaseMu.Lock()
-	layerPhaseRepo = ""
-	layerPhaseMu.Unlock()
-
-	logger.Infof("mark layer phase completed in %s", time.Since(layerMarkStart))
+	logger.Infof("mark phase completed in %s, %d blobs marked", time.Since(manifestMarkStart), len(markSet))
 
 	manifestArr = unmarkReferencedManifest(manifestArr, markSet, opts.Quiet)
 
