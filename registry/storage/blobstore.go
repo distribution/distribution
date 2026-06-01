@@ -4,7 +4,6 @@ import (
 	"context"
 	"io"
 	"path"
-	"time"
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/internal/dcontext"
@@ -12,12 +11,6 @@ import (
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
-
-// BlobMeta holds a blob digest together with its storage metadata.
-type BlobMeta struct {
-	Digest  digest.Digest
-	ModTime time.Time
-}
 
 // blobStore implements the read side of the blob store interface over a
 // driver without enforcing per-repository membership. This object is
@@ -121,37 +114,6 @@ func (bs *blobStore) Enumerate(ctx context.Context, ingester func(dgst digest.Di
 		}
 
 		return ingester(digest)
-	})
-}
-
-// EnumerateWithMeta calls ingester for each blob in the store, providing the
-// digest and storage metadata (modification time) for each one.
-func (bs *blobStore) EnumerateWithMeta(ctx context.Context, ingester func(meta BlobMeta) error) error {
-	specPath, err := pathFor(blobsPathSpec{})
-	if err != nil {
-		return err
-	}
-
-	return bs.driver.Walk(ctx, specPath, func(fileInfo driver.FileInfo) error {
-		if fileInfo.IsDir() {
-			return nil
-		}
-
-		currentPath := fileInfo.Path()
-		_, fileName := path.Split(currentPath)
-		if fileName != "data" {
-			return nil
-		}
-
-		dgst, err := digestFromPath(currentPath)
-		if err != nil {
-			return err
-		}
-
-		return ingester(BlobMeta{
-			Digest:  dgst,
-			ModTime: fileInfo.ModTime(),
-		})
 	})
 }
 

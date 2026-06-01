@@ -31,10 +31,6 @@ type GCOpts struct {
 	// Workers is the number of repositories to mark in parallel during the
 	// mark phase. A value of 0 or 1 uses a single goroutine (no parallelism).
 	Workers int
-	// MinAge is the minimum age a blob or layer link must have before it is
-	// eligible for deletion. Blobs and links modified more recently than
-	// time.Now()-MinAge are preserved. Defaults to 30 days if zero.
-	MinAge time.Duration
 }
 
 // ManifestDel contains manifest structure which will be deleted
@@ -48,10 +44,6 @@ type ManifestDel struct {
 func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, registry distribution.Namespace, opts GCOpts) error {
 	logger := dcontext.GetLogger(ctx)
 	gcStart := time.Now()
-
-	minAge := opts.MinAge
-	ageCutoff := time.Now().Add(-minAge)
-	logger.Infof("garbage collection: blobs and layer links modified after %s will be preserved", ageCutoff.Format(time.RFC3339))
 
 	// mark
 	manifestMarkStart := time.Now()
@@ -208,22 +200,14 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 				return errors.New("unable to convert BlobService into linkedBlobStore")
 			}
 			var deleteLayers []digest.Digest
-			var skipped int
-			err = layerEnumerator.EnumerateWithMeta(gctx, func(meta BlobMeta) error {
-				if _, ok := localMarkSet[meta.Digest]; !ok {
-					if meta.ModTime.After(ageCutoff) {
-						skipped++
-						return nil
-					}
-					deleteLayers = append(deleteLayers, meta.Digest)
+			err = layerEnumerator.Enumerate(gctx, func(dgst digest.Digest) error {
+				if _, ok := localMarkSet[dgst]; !ok {
+					deleteLayers = append(deleteLayers, dgst)
 				}
 				return nil
 			})
 			if err != nil {
 				return fmt.Errorf("failed to enumerate layers for %s: %v", repoName, err)
-			}
-			if skipped > 0 && !opts.Quiet {
-				logger.Infof("%s: skipping %d layer link(s) younger than %s", repoName, skipped, minAge)
 			}
 
 			// Merge local mark results and layer deletions into shared state.
@@ -272,15 +256,11 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 	deleteSet := make(map[digest.Digest]struct{})
 	var skippedBlobs int
 	var totalBlobs int
-	err = blobStoreService.EnumerateWithMeta(ctx, func(meta BlobMeta) error {
+	err = blobStoreService.Enumerate(ctx, func(dgst digest.Digest) error {
 		totalBlobs++
 		// check if digest is in markSet. If not, delete it!
-		if _, ok := markSet[meta.Digest]; !ok {
-			if meta.ModTime.After(ageCutoff) {
-				skippedBlobs++
-				return nil
-			}
-			deleteSet[meta.Digest] = struct{}{}
+		if _, ok := markSet[dgst]; !ok {
+			deleteSet[dgst] = struct{}{}
 		}
 		return nil
 	})
