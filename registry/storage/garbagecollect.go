@@ -254,7 +254,6 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 		return errors.New("unable to convert BlobService into blobStore")
 	}
 	deleteSet := make(map[digest.Digest]struct{})
-	var skippedBlobs int
 	var totalBlobs int
 	err = blobStoreService.Enumerate(ctx, func(dgst digest.Digest) error {
 		totalBlobs++
@@ -267,7 +266,7 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 	if err != nil {
 		return fmt.Errorf("error enumerating blobs: %v", err)
 	}
-	logger.Infof("%d blobs marked out of %d total blobs, %d blobs and %d manifests eligible for deletion, %d blobs skipped (too young)", len(markSet), totalBlobs, len(deleteSet), len(manifestArr), skippedBlobs)
+	logger.Infof("%d blobs marked out of %d total blobs, %d blobs and %d manifests eligible for deletion", len(markSet), totalBlobs, len(deleteSet), len(manifestArr))
 	for dgst := range deleteSet {
 		if opts.DryRun {
 			continue
