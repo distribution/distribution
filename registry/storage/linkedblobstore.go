@@ -271,6 +271,44 @@ func (lbs *linkedBlobStore) Enumerate(ctx context.Context, ingestor func(digest.
 	})
 }
 
+// EnumerateWithMeta calls ingestor for each layer link in the repository,
+// providing the digest and the link file's modification time.
+func (lbs *linkedBlobStore) EnumerateWithMeta(ctx context.Context, ingestor func(meta BlobMeta) error) error {
+	rootPath, err := pathFor(lbs.linkDirectoryPathSpec)
+	if err != nil {
+		return err
+	}
+	return lbs.driver.Walk(ctx, rootPath, func(fileInfo driver.FileInfo) error {
+		if fileInfo.IsDir() {
+			return nil
+		}
+		filePath := fileInfo.Path()
+
+		_, fileName := path.Split(filePath)
+		if fileName != "link" {
+			return nil
+		}
+
+		dgst, err := lbs.blobStore.readlink(ctx, filePath)
+		if err != nil {
+			return err
+		}
+
+		_, err = lbs.Stat(ctx, dgst)
+		if err != nil {
+			if err == distribution.ErrBlobUnknown {
+				return nil
+			}
+			return err
+		}
+
+		return ingestor(BlobMeta{
+			Digest:  dgst,
+			ModTime: fileInfo.ModTime(),
+		})
+	})
+}
+
 func (lbs *linkedBlobStore) mount(ctx context.Context, sourceRepo reference.Named, dgst digest.Digest, sourceStat *v1.Descriptor) (v1.Descriptor, error) {
 	var stat v1.Descriptor
 	if sourceStat == nil {

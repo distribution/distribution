@@ -3,6 +3,7 @@ package registry
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/distribution/distribution/v3/registry/storage"
@@ -19,6 +20,8 @@ func init() {
 	GCCmd.Flags().BoolVarP(&dryRun, "dry-run", "d", false, "do everything except remove the blobs")
 	GCCmd.Flags().BoolVarP(&removeUntagged, "delete-untagged", "m", false, "delete manifests that are not currently referenced via tag")
 	GCCmd.Flags().BoolVarP(&quiet, "quiet", "q", false, "silence output")
+	GCCmd.Flags().IntVarP(&parallelism, "parallelism", "p", 1, "number of repositories to mark in parallel (no parallelism by default)")
+	GCCmd.Flags().DurationVarP(&minAge, "min-age", "", 0, "minimum age of blobs and layer links to delete (e.g. 24h, 720h) (default: 0 seconds so any candidate to deletion will be deleted)")
 	RootCmd.Flags().BoolVarP(&showVersion, "version", "v", false, "show the version and exit")
 }
 
@@ -41,6 +44,8 @@ var (
 	dryRun         bool
 	removeUntagged bool
 	quiet          bool
+	parallelism    int
+	minAge         time.Duration
 )
 
 // GCCmd is the cobra command that corresponds to the garbage-collect subcommand
@@ -80,6 +85,8 @@ var GCCmd = &cobra.Command{
 			DryRun:         dryRun,
 			RemoveUntagged: removeUntagged,
 			Quiet:          quiet,
+			Workers:        parallelism,
+			MinAge:         minAge,
 		})
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to garbage collect: %v", err)
