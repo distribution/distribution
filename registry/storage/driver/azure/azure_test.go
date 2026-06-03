@@ -1,13 +1,17 @@
 package azure
 
 import (
+	"bytes"
 	"context"
 	"math/rand"
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/streaming"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/blob"
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/distribution/v3/registry/storage/driver/testsuites"
 )
@@ -174,72 +178,143 @@ func TestCommitAfterMove(t *testing.T) {
 	}
 }
 
-// TestPutContentOverExistingBlob regression-tests the migration check above
-// the AppendBlob Create call in PutContent. PutContent creates AppendBlobs,
-// and Azure returns 409 InvalidBlobType if Create is called over an existing
-// blob of a different type. The check must delete only blobs whose type does
-// not match what we're about to create.
-//
-// Two cases:
-//   - BlockBlob: written by an older version of the driver. Without the fix
-//     this failed with 409 InvalidBlobType.
-//   - AppendBlob: written by the current driver. Must still overwrite cleanly
-//     (one Put Blob, no delete) — the previous code reached this by deleting
-//     and recreating.
-func TestPutContentOverExistingBlob(t *testing.T) {
+func azureDriverForTest(t *testing.T) (storagedriver.StorageDriver, *driver) {
+	t.Helper()
 	skipCheck(t)
 
-	sd, err := azureDriverConstructor()
+	storageDriver, err := azureDriverConstructor()
 	if err != nil {
 		t.Fatalf("unexpected error creating azure driver: %v", err)
 	}
-	d := sd.(*Driver).Base.StorageDriver.(*driver)
-	ctx := context.Background()
 
-	tests := []struct {
-		name string
-		seed func(t *testing.T, blobName string)
-	}{
-		{
-			name: "BlockBlob",
-			seed: func(t *testing.T, blobName string) {
-				if _, err := d.client.NewBlockBlobClient(blobName).UploadBuffer(ctx, []byte("legacy"), nil); err != nil {
-					t.Fatalf("seeding BlockBlob: %v", err)
-				}
-			},
-		},
-		{
-			name: "AppendBlob",
-			seed: func(t *testing.T, blobName string) {
-				if err := sd.PutContent(ctx, "/regression/"+t.Name(), []byte("legacy")); err != nil {
-					t.Fatalf("seeding AppendBlob via PutContent: %v", err)
-				}
-			},
-		},
+	azureDriver, ok := storageDriver.(*Driver)
+	if !ok {
+		t.Fatalf("unexpected azure driver type: %T", storageDriver)
+	}
+	internalDriver, ok := azureDriver.baseEmbed.Base.StorageDriver.(*driver)
+	if !ok {
+		t.Fatalf("unexpected internal azure driver type: %T", azureDriver.baseEmbed.Base.StorageDriver)
 	}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			path := "/regression/" + t.Name()
-			blobName := d.blobName(path)
-			// nolint:errcheck
-			defer sd.Delete(ctx, path)
+	return storageDriver, internalDriver
+}
 
-			tc.seed(t, blobName)
+func assertBlobType(t *testing.T, internalDriver *driver, path string, expected blob.BlobType) {
+	t.Helper()
 
-			newContents := []byte("new content")
-			if err := sd.PutContent(ctx, path, newContents); err != nil {
-				t.Fatalf("PutContent over existing %s: %v", tc.name, err)
-			}
+	props, err := internalDriver.client.NewBlobClient(internalDriver.blobName(path)).GetProperties(context.Background(), nil)
+	if err != nil {
+		t.Fatalf("GetProperties(%s): unexpected error: %v", path, err)
+	}
+	if props.BlobType == nil {
+		t.Fatalf("GetProperties(%s): missing BlobType", path)
+	}
+	if *props.BlobType != expected {
+		t.Fatalf("GetProperties(%s): expected blob type %s, got %s", path, expected, *props.BlobType)
+	}
+}
 
-			got, err := sd.GetContent(ctx, path)
-			if err != nil {
-				t.Fatalf("GetContent after PutContent: %v", err)
-			}
-			if string(got) != string(newContents) {
-				t.Fatalf("GetContent: got %q, want %q", got, newContents)
-			}
-		})
+func TestPutContentCreatesBlockBlob(t *testing.T) {
+	storageDriver, internalDriver := azureDriverForTest(t)
+
+	ctx := context.Background()
+	path := "/putcontent-blockblob-" + randStringRunes(16)
+	contents := []byte("sha256:b708172ade643851b2b21c7b543bee28f732fd76d68e550b9dab16eb007ae4c0")
+
+	defer func() {
+		_ = storageDriver.Delete(ctx, path)
+	}()
+
+	if err := storageDriver.PutContent(ctx, path, contents); err != nil {
+		t.Fatalf("PutContent: unexpected error: %v", err)
+	}
+
+	assertBlobType(t, internalDriver, path, blob.BlobTypeBlockBlob)
+
+	got, err := storageDriver.GetContent(ctx, path)
+	if err != nil {
+		t.Fatalf("GetContent: unexpected error: %v", err)
+	}
+	if !bytes.Equal(got, contents) {
+		t.Fatalf("GetContent: expected %q, got %q", contents, got)
+	}
+}
+
+func TestPutContentMigratesLegacyAppendBlob(t *testing.T) {
+	storageDriver, internalDriver := azureDriverForTest(t)
+
+	ctx := context.Background()
+	path := "/putcontent-legacy-appendblob-" + randStringRunes(16)
+	contents := []byte("sha256:b708172ade643851b2b21c7b543bee28f732fd76d68e550b9dab16eb007ae4c0")
+	legacyContents := append(append([]byte{}, contents...), contents...)
+	appendBlobRef := internalDriver.client.NewAppendBlobClient(internalDriver.blobName(path))
+
+	defer func() {
+		_ = storageDriver.Delete(ctx, path)
+	}()
+
+	_ = storageDriver.Delete(ctx, path)
+	if _, err := appendBlobRef.Create(ctx, nil); err != nil {
+		t.Fatalf("AppendBlob.Create: unexpected error: %v", err)
+	}
+	if _, err := appendBlobRef.AppendBlock(ctx, streaming.NopCloser(bytes.NewReader(legacyContents)), nil); err != nil {
+		t.Fatalf("AppendBlob.AppendBlock: unexpected error: %v", err)
+	}
+
+	if err := storageDriver.PutContent(ctx, path, contents); err != nil {
+		t.Fatalf("PutContent: unexpected error: %v", err)
+	}
+
+	assertBlobType(t, internalDriver, path, blob.BlobTypeBlockBlob)
+
+	got, err := storageDriver.GetContent(ctx, path)
+	if err != nil {
+		t.Fatalf("GetContent: unexpected error: %v", err)
+	}
+	if !bytes.Equal(got, contents) {
+		t.Fatalf("GetContent: expected %q, got %q", contents, got)
+	}
+}
+
+func TestConcurrentPutContentSamePath(t *testing.T) {
+	storageDriver, internalDriver := azureDriverForTest(t)
+
+	ctx := context.Background()
+	path := "/putcontent-concurrent-" + randStringRunes(16)
+	contents := []byte("sha256:b708172ade643851b2b21c7b543bee28f732fd76d68e550b9dab16eb007ae4c0")
+
+	defer func() {
+		_ = storageDriver.Delete(ctx, path)
+	}()
+
+	const writers = 16
+	var wg sync.WaitGroup
+	errs := make(chan error, writers)
+
+	wg.Add(writers)
+	for i := 0; i < writers; i++ {
+		go func() {
+			defer wg.Done()
+			errs <- storageDriver.PutContent(ctx, path, contents)
+		}()
+	}
+	wg.Wait()
+	close(errs)
+
+	for err := range errs {
+		if err != nil {
+			t.Fatalf("PutContent: unexpected error: %v", err)
+		}
+	}
+
+	assertBlobType(t, internalDriver, path, blob.BlobTypeBlockBlob)
+
+	got, err := storageDriver.GetContent(ctx, path)
+	if err != nil {
+		t.Fatalf("GetContent: unexpected error: %v", err)
+	}
+	if !bytes.Equal(got, contents) {
+		t.Fatalf("GetContent: expected %q, got %q", contents, got)
 	}
 }
 
