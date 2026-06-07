@@ -530,3 +530,92 @@ func testProxyStoreServe(t *testing.T, te *testEnv, numClients int) {
 		t.Fatalf("unexpected remote stats: %#v", remoteStats)
 	}
 }
+
+// TestProxyStoreServeBlobTouchesScheduler asserts that a cache hit refreshes
+// the scheduler entry so a hot blob does not expire on its first-pull TTL.
+// We register a short TTL, hit ServeBlob repeatedly with gaps shorter than
+// that TTL but whose sum exceeds it, and verify the expiry callback never
+// fires within the observation window. Without the touch this would expire
+// after the first TTL elapses.
+func TestProxyStoreServeBlobTouchesScheduler(t *testing.T) {
+	ctx := context.Background()
+
+	nameRef, err := reference.WithName("touch/hot")
+	if err != nil {
+		t.Fatalf("WithName: %v", err)
+	}
+
+	drv := inmemory.New()
+	reg, err := storage.NewRegistry(ctx, drv,
+		storage.BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)),
+		storage.EnableRedirect, storage.DisableDigestResumption)
+	if err != nil {
+		t.Fatalf("NewRegistry: %v", err)
+	}
+	repo, err := reg.Repository(ctx, nameRef)
+	if err != nil {
+		t.Fatalf("Repository: %v", err)
+	}
+
+	// Put a blob into the local store so serveLocal returns served=true.
+	blob := []byte("touch-on-hit payload")
+	desc, err := repo.Blobs(ctx).Put(ctx, "", blob)
+	if err != nil {
+		t.Fatalf("local Put: %v", err)
+	}
+
+	var fired int32
+	var firedMu sync.Mutex
+	s := scheduler.New(ctx, drv, "/scheduler-touch.json")
+	s.OnBlobExpire(func(ref reference.Reference) error {
+		firedMu.Lock()
+		fired++
+		firedMu.Unlock()
+		return nil
+	})
+	if err := s.Start(); err != nil {
+		t.Fatalf("scheduler Start: %v", err)
+	}
+	defer s.Stop()
+
+	ttl := 100 * time.Millisecond
+	pbs := &proxyBlobStore{
+		repositoryName: nameRef,
+		localStore:     repo.Blobs(ctx),
+		remoteStore:    repo.Blobs(ctx), // unused on cache hits
+		scheduler:      s,
+		ttl:            &ttl,
+		authChallenger: &mockChallenger{},
+	}
+
+	canonical, err := reference.WithDigest(nameRef, desc.Digest)
+	if err != nil {
+		t.Fatalf("WithDigest: %v", err)
+	}
+	if err := s.AddBlob(canonical, ttl); err != nil {
+		t.Fatalf("seed AddBlob: %v", err)
+	}
+
+	// Three ServeBlob calls separated by 60 ms (each well under the 100 ms
+	// TTL). Total elapsed time across all calls is 180 ms — without touch,
+	// the entry would have expired around the 100 ms mark, firing the
+	// callback at least once.
+	for i := 0; i < 3; i++ {
+		w := httptest.NewRecorder()
+		r, err := http.NewRequest("GET", "/", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := pbs.ServeBlob(ctx, w, r, desc.Digest); err != nil {
+			t.Fatalf("ServeBlob call %d: %v", i+1, err)
+		}
+		time.Sleep(60 * time.Millisecond)
+	}
+
+	firedMu.Lock()
+	got := fired
+	firedMu.Unlock()
+	if got != 0 {
+		t.Fatalf("expiry callback fired %d times during repeated cache hits; touch did not refresh the timer", got)
+	}
+}
