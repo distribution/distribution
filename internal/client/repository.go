@@ -514,6 +514,7 @@ func (ms *manifests) Get(ctx context.Context, dgst digest.Digest, options ...dis
 		err         error
 		contentDgst *digest.Digest
 		mediaTypes  []string
+		byDigest    bool
 	)
 
 	for _, option := range options {
@@ -542,6 +543,7 @@ func (ms *manifests) Get(ctx context.Context, dgst digest.Digest, options ...dis
 		if err != nil {
 			return nil, err
 		}
+		byDigest = true
 	}
 
 	if len(mediaTypes) == 0 {
@@ -588,6 +590,20 @@ func (ms *manifests) Get(ctx context.Context, dgst digest.Digest, options ...dis
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
+	}
+	if byDigest {
+		// When the manifest is requested by digest, the response body is
+		// content-addressed: confirm it actually hashes to the digest we
+		// asked for before handing it back. Otherwise a tampered or
+		// misbehaving registry could return arbitrary content under a
+		// trusted digest.
+		verifier := dgst.Verifier()
+		if _, err := verifier.Write(body); err != nil {
+			return nil, err
+		}
+		if !verifier.Verified() {
+			return nil, fmt.Errorf("manifest digest mismatch: requested %s but content does not match", dgst)
+		}
 	}
 	m, _, err := distribution.UnmarshalManifest(mt, body)
 	if err != nil {

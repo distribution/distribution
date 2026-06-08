@@ -1139,6 +1139,39 @@ func TestOCIManifestFetch(t *testing.T) {
 	}
 }
 
+func TestManifestFetchByDigestMismatch(t *testing.T) {
+	ctx := dcontext.Background()
+	repo, _ := reference.WithName("test.example.com/repo")
+	_, realDgst, pl := newRandomOCIManifest(t, 6)
+
+	// A valid-format digest that does not match the manifest content.
+	wrongDgst := digest.FromBytes([]byte("not the manifest content"))
+	if wrongDgst == realDgst {
+		t.Fatal("digests unexpectedly equal")
+	}
+
+	var m testutil.RequestResponseMap
+	// The registry answers a by-digest request for wrongDgst with content
+	// whose actual digest is realDgst.
+	addTestManifest(repo, wrongDgst.String(), v1.MediaTypeImageManifest, pl, &m)
+
+	e, c := testServer(m)
+	defer c()
+
+	r, err := NewRepository(repo, e, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ms, err := r.Manifests(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := ms.Get(ctx, wrongDgst); err == nil {
+		t.Fatal("expected Get to reject content that does not match the requested digest")
+	}
+}
+
 func TestManifestFetchWithEtag(t *testing.T) {
 	repo, _ := reference.WithName("test.example.com/repo/by/tag")
 	_, d1, p1 := newRandomOCIManifest(t, 6)
