@@ -90,6 +90,56 @@ func TestCacheError(t *testing.T) {
 	}
 }
 
+func TestCacheStaleClearAfterGC(t *testing.T) {
+	cache := newTestStatter()
+	backend := newTestStatter()
+	st := NewCachedBlobStatter(cache, backend)
+	ctx := context.Background()
+
+	dgst := digest.Digest("dontvalidate")
+	desc := v1.Descriptor{
+		Digest: dgst,
+	}
+
+	// Populate both cache and backend with a descriptor.
+	if err := cache.SetDescriptor(ctx, dgst, desc); err != nil {
+		t.Fatal(err)
+	}
+	if err := backend.SetDescriptor(ctx, dgst, desc); err != nil {
+		t.Fatal(err)
+	}
+
+	// Sanity check: Stat should succeed while both agree.
+	actual, err := st.Stat(ctx, dgst)
+	if err != nil {
+		t.Fatalf("unexpected error on stat with warm cache: %v", err)
+	}
+	if actual.Digest != desc.Digest {
+		t.Fatalf("unexpected descriptor %v, expected %v", actual, desc)
+	}
+
+	// Simulate garbage collection removing the blob from backend storage
+	// while the in-process cache retains the stale entry.
+	delete(backend.sets, dgst)
+
+	// Stat should now detect the stale entry and return ErrBlobUnknown.
+	_, err = st.Stat(ctx, dgst)
+	if err != distribution.ErrBlobUnknown {
+		t.Fatalf("expected ErrBlobUnknown after GC, got: %v", err)
+	}
+
+	// The stale cache entry should have been cleared.
+	if _, ok := cache.sets[dgst]; ok {
+		t.Fatal("expected stale cache entry to be cleared")
+	}
+
+	// A subsequent Stat should also return ErrBlobUnknown (no stale hit).
+	_, err = st.Stat(ctx, dgst)
+	if err != distribution.ErrBlobUnknown {
+		t.Fatalf("expected ErrBlobUnknown on second call, got: %v", err)
+	}
+}
+
 func newTestStatter() *testStatter {
 	return &testStatter{
 		stats: []digest.Digest{},
@@ -128,5 +178,9 @@ func (s *testStatter) SetDescriptor(ctx context.Context, dgst digest.Digest, des
 }
 
 func (s *testStatter) Clear(ctx context.Context, dgst digest.Digest) error {
-	return s.err
+	if s.err != nil {
+		return s.err
+	}
+	delete(s.sets, dgst)
+	return nil
 }
