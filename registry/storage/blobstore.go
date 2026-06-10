@@ -59,31 +59,34 @@ func (bs *blobStore) Open(ctx context.Context, dgst digest.Digest) (io.ReadSeekC
 
 // Put stores the content p in the blob store, calculating the digest. If the
 // content is already present, only the digest will be returned. This should
-// only be used for small objects, such as manifests. This implemented as a convenience for other Put implementations
+// only be used for small objects, such as manifests.
 func (bs *blobStore) Put(ctx context.Context, mediaType string, p []byte) (v1.Descriptor, error) {
 	dgst := digest.FromBytes(p)
-	desc, err := bs.statter.Stat(ctx, dgst)
-	if err == nil {
-		// content already present
-		return desc, nil
-	} else if err != distribution.ErrBlobUnknown {
-		dcontext.GetLogger(ctx).Errorf("blobStore: error stating content (%v): %v", dgst, err)
-		// real error, return it
-		return v1.Descriptor{}, err
-	}
 
 	bp, err := bs.path(dgst)
 	if err != nil {
 		return v1.Descriptor{}, err
 	}
 
-	// TODO(stevvooe): Write out mediatype here, as well.
-	return v1.Descriptor{
-		Size: int64(len(p)),
+	// Check backend directly, NOT via the cached statter —
+	// the cache may report stale "exists" after GC, causing
+	// Put to skip writing and leading to MANIFEST_UNKNOWN.
+	fi, err := bs.driver.Stat(ctx, bp)
+	if err != nil {
+		if _, ok := err.(driver.PathNotFoundError); !ok {
+			dcontext.GetLogger(ctx).Warnf("blobStore: stat %s before put: %v (writing anyway)", dgst, err)
+		}
+	}
+	if err == nil && !fi.IsDir() {
+		return v1.Descriptor{
+			Size:      fi.Size(),
+			MediaType: "application/octet-stream",
+			Digest:    dgst,
+		}, nil
+	}
 
-		// NOTE(stevvooe): The central blob store firewalls media types from
-		// other users. The caller should look this up and override the value
-		// for the specific repository.
+	return v1.Descriptor{
+		Size:      int64(len(p)),
 		MediaType: "application/octet-stream",
 		Digest:    dgst,
 	}, bs.driver.PutContent(ctx, bp, p)
@@ -133,9 +136,11 @@ func (bs *blobStore) path(dgst digest.Digest) (string, error) {
 // link links the path to the provided digest by writing the digest into the
 // target file. Caller must ensure that the blob actually exists.
 func (bs *blobStore) link(ctx context.Context, path string, dgst digest.Digest) error {
-	// The contents of the "link" file are the exact string contents of the
-	// digest, which is specified in that package.
-	return bs.driver.PutContent(ctx, path, []byte(dgst))
+	err := bs.driver.PutContent(ctx, path, []byte(dgst))
+	if err != nil {
+		dcontext.GetLogger(ctx).Warnf("failed to link blob %s at path %s: %v", dgst, path, err)
+	}
+	return err
 }
 
 // readlink returns the linked digest at path.
