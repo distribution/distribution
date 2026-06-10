@@ -10,6 +10,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -20,12 +21,11 @@ import (
 
 	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/distribution/distribution/v3/registry/auth"
-	"github.com/sirupsen/logrus"
 )
 
 func init() {
 	if err := auth.Register("htpasswd", auth.InitFunc(newAccessController)); err != nil {
-		logrus.Errorf("failed to register htpasswd auth: %v", err)
+		slog.Error(fmt.Sprintf("failed to register htpasswd auth: %v", err))
 	}
 }
 

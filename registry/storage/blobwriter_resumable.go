@@ -7,11 +7,11 @@ import (
 	"encoding"
 	"fmt"
 	"hash"
+	"log/slog"
 	"path"
 	"strconv"
 
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
-	"github.com/sirupsen/logrus"
 )
 
 // resumeDigest attempts to restore the state of the internal hash function
@@ -104,7 +104,7 @@ func (bw *blobWriter) getStoredHashStates(ctx context.Context) ([]hashStateEntry
 		// The suffix should be the offset.
 		offset, err := strconv.ParseInt(pathSuffix, 0, 64)
 		if err != nil {
-			logrus.Errorf("unable to parse offset from upload state path %q: %s", p, err)
+			slog.Error(fmt.Sprintf("unable to parse offset from upload state path %q: %s", p, err))
 		}
 
 		hashStateEntries = append(hashStateEntries, hashStateEntry{offset: offset, path: p})

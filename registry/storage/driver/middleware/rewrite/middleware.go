@@ -3,18 +3,18 @@ package middleware
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
 
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	storagemiddleware "github.com/distribution/distribution/v3/registry/storage/driver/middleware"
-	"github.com/sirupsen/logrus"
 )
 
 func init() {
 	if err := storagemiddleware.Register("rewrite", newRewriteStorageMiddleware); err != nil {
-		logrus.Errorf("failed to register rewrite storage middleware: %v", err)
+		slog.Error(fmt.Sprintf("failed to register rewrite storage middleware: %v", err))
 	}
 }
 
