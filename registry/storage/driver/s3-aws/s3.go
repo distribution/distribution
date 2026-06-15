@@ -1178,7 +1178,7 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, from, sta
 
 		for _, walkInfo := range walkInfos {
 			// skip any results under the last skip directory
-			if prevSkipDir != "" && strings.HasPrefix(walkInfo.Path(), prevSkipDir) {
+			if isSubpath(walkInfo.Path(), prevSkipDir) {
 				continue
 			}
 
@@ -1247,6 +1247,19 @@ func directoryDiff(prev, current string) []string {
 	}
 	slices.Reverse(paths)
 	return paths
+}
+
+func isSubpath(path, parent string) bool {
+	if parent == "" {
+		return false
+	}
+	if path == parent {
+		return true
+	}
+	if parent == "/" {
+		return strings.HasPrefix(path, "/")
+	}
+	return strings.HasPrefix(path, parent+"/")
 }
 
 func (d *driver) s3Path(path string) string {
