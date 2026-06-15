@@ -91,13 +91,15 @@ func (lbs *linkedBlobStore) Put(ctx context.Context, mediaType string, p []byte)
 		return v1.Descriptor{}, err
 	}
 
+	// Preserve the repository-local media type. The central blob store
+	// deliberately returns application/octet-stream.
+	if mediaType != "" {
+		desc.MediaType = mediaType
+	}
+
 	if err := lbs.blobAccessController.SetDescriptor(ctx, dgst, desc); err != nil {
 		return v1.Descriptor{}, err
 	}
-
-	// TODO(stevvooe): Write out mediatype if incoming differs from what is
-	// returned by Put above. Note that we should allow updates for a given
-	// repository.
 
 	return desc, lbs.linkBlob(ctx, desc)
 }

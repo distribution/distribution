@@ -820,9 +820,27 @@ func TestManifestStorageCache(t *testing.T) {
 		t.Fatalf("unexpected error putting manifest: %v", err)
 	}
 
-	_, err = repositoryScopedCacheProvider.Stat(ctx, manifestDigest)
+	manifestMediaType, _, err := sm.Payload()
 	if err != nil {
-		t.Errorf("Manifest should be cached")
+		t.Fatalf("unexpected error getting manifest payload: %v", err)
+	}
+
+	// Regression coverage for #4812: cached manifest descriptors can later be
+	// consumed through Blobs().Stat for /blobs/<manifest-digest>.
+	cachedDesc, err := repositoryScopedCacheProvider.Stat(ctx, manifestDigest)
+	if err != nil {
+		t.Fatalf("manifest should be cached: %v", err)
+	}
+	if cachedDesc.MediaType != manifestMediaType {
+		t.Fatalf("cached manifest media type = %q, want %q", cachedDesc.MediaType, manifestMediaType)
+	}
+
+	blobDesc, err := blobStore.Stat(ctx, manifestDigest)
+	if err != nil {
+		t.Fatalf("unexpected error statting cached manifest as blob: %v", err)
+	}
+	if blobDesc.MediaType != manifestMediaType {
+		t.Fatalf("cached blob media type = %q, want %q", blobDesc.MediaType, manifestMediaType)
 	}
 
 	exists, err := ms.Exists(ctx, manifestDigest)

@@ -879,6 +879,65 @@ func TestBlobDeleteDisabled(t *testing.T) {
 	checkResponse(t, "status of disabled delete", resp, http.StatusMethodNotAllowed)
 }
 
+func TestBlobAPIManifestDigestContentTypeFromCache(t *testing.T) {
+	config := configuration.Configuration{
+		Storage: configuration.Storage{
+			"inmemory": configuration.Parameters{},
+			"cache": configuration.Parameters{
+				"blobdescriptor": "inmemory",
+			},
+			"maintenance": configuration.Parameters{"uploadpurging": map[any]any{
+				"enabled": false,
+			}},
+		},
+		Catalog: configuration.Catalog{
+			MaxEntries: 5,
+		},
+		Tags: configuration.Tags{
+			MaxTags: 1000,
+		},
+	}
+	config.HTTP.Headers = headerConfig
+
+	env := newTestEnvWithConfig(t, &config)
+	defer env.Shutdown()
+
+	imageName, err := reference.WithName("foo/bar")
+	if err != nil {
+		t.Fatalf("unable to parse reference: %v", err)
+	}
+	manifestDigest := createRepository(env, t, imageName.Name(), "latest")
+
+	ref, err := reference.WithDigest(imageName, manifestDigest)
+	if err != nil {
+		t.Fatalf("unable to build digest reference: %v", err)
+	}
+	blobURL, err := env.builder.BuildBlobURL(ref)
+	if err != nil {
+		t.Fatalf("unexpected error building blob URL: %v", err)
+	}
+
+	for _, method := range []string{http.MethodHead, http.MethodGet} {
+		t.Run(method, func(t *testing.T) {
+			req, err := http.NewRequest(method, blobURL, nil)
+			if err != nil {
+				t.Fatalf("unexpected error building request: %v", err)
+			}
+
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				t.Fatalf("unexpected error requesting manifest as blob: %v", err)
+			}
+			defer resp.Body.Close()
+
+			checkResponse(t, "requesting manifest digest through blob API", resp, http.StatusOK)
+			if got := resp.Header.Get("Content-Type"); got != schema2.MediaTypeManifest {
+				t.Fatalf("Content-Type = %q, want %q", got, schema2.MediaTypeManifest)
+			}
+		})
+	}
+}
+
 func testBlobAPI(t *testing.T, env *testEnv, args blobArgs) *testEnv {
 	// TODO(stevvooe): This test code is complete junk but it should cover the
 	// complete flow. This must be broken down and checked against the
