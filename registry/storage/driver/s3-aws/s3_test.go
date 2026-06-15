@@ -292,6 +292,55 @@ func TestGetS3LogLevelFromParam(t *testing.T) {
 	}
 }
 
+func TestIsSubpath(t *testing.T) {
+	tests := []struct {
+		name     string
+		path     string
+		parent   string
+		expected bool
+	}{
+		{
+			name:     "empty parent",
+			path:     "/tags/1.2",
+			parent:   "",
+			expected: false,
+		},
+		{
+			name:     "same path",
+			path:     "/tags/1.2",
+			parent:   "/tags/1.2",
+			expected: true,
+		},
+		{
+			name:     "descendant path",
+			path:     "/tags/1.2/current/link",
+			parent:   "/tags/1.2",
+			expected: true,
+		},
+		{
+			name:     "sibling with lexical prefix",
+			path:     "/tags/1.20/current/link",
+			parent:   "/tags/1.2",
+			expected: false,
+		},
+		{
+			name:     "root parent",
+			path:     "/tags/1.2",
+			parent:   "/",
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := isSubpath(tt.path, tt.parent)
+			if actual != tt.expected {
+				t.Fatalf("isSubpath(%q, %q) = %t, want %t", tt.path, tt.parent, actual, tt.expected)
+			}
+		})
+	}
+}
+
 func TestEmptyRootList(t *testing.T) {
 	skipCheck(t)
 
