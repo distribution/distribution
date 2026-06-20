@@ -920,22 +920,32 @@ func (suite *DriverSuite) TestStatCall() {
 	createdTime := fi.ModTime()
 
 	// Sleep and modify the file
-	time.Sleep(time.Second * 10)
+	if !testing.Short() {
+		time.Sleep(time.Second * 10)
+	}
 	content = randomContents(4096)
 	err = suite.StorageDriver.PutContent(suite.ctx, filePath, content)
 	suite.Require().NoError(err)
 	fi, err = suite.StorageDriver.Stat(suite.ctx, filePath)
 	suite.Require().NoError(err)
 	suite.Require().NotNil(fi)
-	time.Sleep(time.Second * 5) // allow changes to propagate (eventual consistency)
+	if !testing.Short() {
+		time.Sleep(time.Second * 5) // allow changes to propagate (eventual consistency)
+	}
 
 	// Check if the modification time is after the creation time.
 	// In case of cloud storage services, storage frontend nodes might have
 	// time drift between them, however that should be solved with sleeping
 	// before update.
 	modTime := fi.ModTime()
-	if !modTime.After(createdTime) {
-		suite.T().Errorf("modtime (%s) is before the creation time (%s)", modTime, createdTime)
+	if testing.Short() {
+		if modTime.Before(createdTime) {
+			suite.T().Errorf("modtime (%s) is before the creation time (%s)", modTime, createdTime)
+		}
+	} else {
+		if !modTime.After(createdTime) {
+			suite.T().Errorf("modtime (%s) is before the creation time (%s)", modTime, createdTime)
+		}
 	}
 
 	// Call on directory (do not check ModTime as dirs don't need to support it)
@@ -1002,6 +1012,7 @@ func (suite *DriverSuite) TestConcurrentStreamReads() {
 		offset := rand.Int63n(int64(len(contents)))
 		reader, err := suite.StorageDriver.Reader(suite.ctx, filename, offset)
 		suite.Require().NoError(err)
+		defer reader.Close()
 
 		readContents, err := io.ReadAll(reader)
 		suite.Require().NoError(err)
