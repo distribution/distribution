@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"time"
 
@@ -142,48 +143,32 @@ func (d *driver) PutContent(ctx context.Context, subPath string, contents []byte
 	if err != nil {
 		return err
 	}
+	// Defensive backstop to release the file handle on any early return.
+	// Close is idempotent, so this is a no-op after the explicit Close below
+	// (or after Cancel on an error path).
 	defer writer.Close()
 
-	_, err = io.Copy(writer, bytes.NewReader(contents))
-	if err != nil {
-		if cErr := writer.Cancel(ctx); cErr != nil {
-			return errors.Join(err, cErr)
-		}
-		// Attempt to clean up the temporary file on error.
-		dErr := d.Delete(ctx, tempPath)
-		return errors.Join(err, dErr)
+	if _, err := io.Copy(writer, bytes.NewReader(contents)); err != nil {
+		// Cancel removes the temporary file.
+		return errors.Join(err, writer.Cancel(ctx))
 	}
 
 	if err := writer.Commit(ctx); err != nil {
-		return err
+		return errors.Join(err, writer.Cancel(ctx))
+	}
+
+	// Close before Move: Windows cannot rename a file while a handle to it is
+	// still open.
+	if err := writer.Close(); err != nil {
+		return errors.Join(err, d.Delete(ctx, tempPath))
 	}
 
 	// Atomically replace the target file with the temporary file.
 	if err := d.Move(ctx, tempPath, subPath); err != nil {
 		// Clean up the temporary file if rename fails.
-		dErr := d.Delete(ctx, tempPath)
-		return errors.Join(err, dErr)
+		return errors.Join(err, d.Delete(ctx, tempPath))
 	}
 	return syncDir(filepath.Dir(d.fullPath(subPath)))
-}
-
-func syncDir(dir string) (retErr error) {
-	dirF, err := os.Open(dir)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return nil
-		}
-		return fmt.Errorf("sync dir: %w", err)
-	}
-	defer func() {
-		if err := dirF.Close(); err != nil {
-			retErr = errors.Join(retErr, fmt.Errorf("failed to close dir: %w", err))
-		}
-	}()
-	if err := dirF.Sync(); err != nil {
-		return fmt.Errorf("sync dir: %w", err)
-	}
-	return nil
 }
 
 // Reader retrieves an io.ReadCloser for the content stored at "path" with a
@@ -284,7 +269,7 @@ func (d *driver) List(ctx context.Context, subPath string) ([]string, error) {
 
 	keys := make([]string, 0, len(fileNames))
 	for _, fileName := range fileNames {
-		keys = append(keys, filepath.Join(subPath, fileName))
+		keys = append(keys, path.Join(subPath, fileName))
 	}
 
 	return keys, nil
@@ -304,8 +289,7 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 		return err
 	}
 
-	err := os.Rename(source, dest)
-	return err
+	return rename(source, dest)
 }
 
 // Delete recursively deletes all objects stored at "path" and its subpaths.
@@ -336,7 +320,7 @@ func (d *driver) Walk(ctx context.Context, path string, f storagedriver.WalkFn, 
 
 // fullPath returns the absolute path of a key within the Driver's storage.
 func (d *driver) fullPath(subPath string) string {
-	return filepath.Join(d.rootDirectory, subPath)
+	return filepath.Join(filepath.FromSlash(d.rootDirectory), filepath.FromSlash(subPath))
 }
 
 type fileInfo struct {
@@ -348,7 +332,7 @@ var _ storagedriver.FileInfo = fileInfo{}
 
 // Path provides the full path of the target of this file info.
 func (fi fileInfo) Path() string {
-	return fi.path
+	return filepath.ToSlash(fi.path)
 }
 
 // Size returns current length in bytes of the file. The return value can
@@ -409,7 +393,7 @@ func (fw *fileWriter) Size() int64 {
 
 func (fw *fileWriter) Close() (retErr error) {
 	if fw.closed {
-		return fmt.Errorf("already closed")
+		return nil
 	}
 	fw.closed = true
 	defer func() {
@@ -432,7 +416,7 @@ func (fw *fileWriter) Close() (retErr error) {
 
 func (fw *fileWriter) Cancel(ctx context.Context) error {
 	if fw.closed {
-		return fmt.Errorf("already closed")
+		return nil
 	}
 
 	fw.cancelled = true
