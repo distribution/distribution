@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"path"
 	"time"
 
@@ -13,7 +14,6 @@ import (
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/sirupsen/logrus"
 )
 
 var errResumableDigestNotAvailable = errors.New("resumable digest not available")
@@ -332,9 +332,7 @@ func (bw *blobWriter) moveBlob(ctx context.Context, desc v1.Descriptor) error {
 			}
 
 			// We let this fail during the move below.
-			logrus.
-				WithField("upload.id", bw.ID()).
-				WithField("digest", desc.Digest).Warnf("attempted to move zero-length content with non-zero digest")
+			slog.Warn("attempted to move zero-length content with non-zero digest", "upload.id", bw.ID(), "digest", desc.Digest)
 		default:
 			return err // unrelated error
 		}

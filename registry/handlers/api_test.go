@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -18,7 +19,9 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/configuration"
@@ -35,8 +38,52 @@ import (
 	"github.com/opencontainers/go-digest"
 	"github.com/opencontainers/image-spec/specs-go"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
-	hookstest "github.com/sirupsen/logrus/hooks/test"
 )
+
+// syncBuffer is a bytes.Buffer safe for concurrent use, for capturing log
+// output written from the request handling goroutines.
+type syncBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (b *syncBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Write(p)
+}
+
+func (b *syncBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.String()
+}
+
+// findLogRecord polls the captured JSON log output for a record with the
+// given message. Polling is required because "response completed" is logged
+// in a deferred function that may run after the client received the response.
+func findLogRecord(t *testing.T, buf *syncBuffer, msg string) map[string]any {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		for _, line := range strings.Split(buf.String(), "\n") {
+			if line == "" {
+				continue
+			}
+			var record map[string]any
+			if err := json.Unmarshal([]byte(line), &record); err != nil {
+				t.Fatalf("failed to parse log line %q: %v", line, err)
+			}
+			if record["msg"] == msg {
+				return record
+			}
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("timed out waiting for log record %q, got: %q", msg, buf.String())
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+}
 
 var headerConfig = http.Header{
 	"X-Content-Type-Options": []string{"nosniff"},
@@ -1798,8 +1845,13 @@ func testManifestAPISchema2(t *testing.T, env *testEnv, imageName reference.Name
 	// Fetch by tag name
 
 	// HEAD requests should emit a logging entry and not contain a body
-	hook := hookstest.NewGlobal()
-	defer hook.Reset()
+
+	// Capture the request log by temporarily swapping the default slog
+	// logger, from which the request logger is derived.
+	logBuf := &syncBuffer{}
+	origLogger := slog.Default()
+	slog.SetDefault(slog.New(slog.NewJSONHandler(logBuf, nil)))
+	defer slog.SetDefault(origLogger)
 
 	headReq, err := http.NewRequest(http.MethodHead, manifestURL, nil)
 	if err != nil {
@@ -1817,12 +1869,13 @@ func testManifestAPISchema2(t *testing.T, env *testEnv, imageName reference.Name
 		"ETag":                  []string{fmt.Sprintf(`"%s"`, dgst)},
 	})
 
-	lastMsg := hook.LastEntry()
-	if v := lastMsg.Data["http.request.method"]; v != http.MethodHead {
+	lastMsg := findLogRecord(t, logBuf, "response completed")
+	slog.SetDefault(origLogger)
+	if v := lastMsg["http.request.method"]; v != http.MethodHead {
 		t.Errorf("expected http.request.method to be %q, got %q", http.MethodHead, v)
 	}
-	if v := lastMsg.Data["http.response.status"]; v != http.StatusOK {
-		t.Errorf("expected http.response.status to be %d, got %d", http.StatusOK, v)
+	if v, ok := lastMsg["http.response.status"].(float64); !ok || int(v) != http.StatusOK {
+		t.Errorf("expected http.response.status to be %d, got %v", http.StatusOK, lastMsg["http.response.status"])
 	}
 
 	headBody, err := io.ReadAll(headResp.Body)
