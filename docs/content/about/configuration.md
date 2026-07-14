@@ -223,6 +223,8 @@ middleware:
     - name: redirect
       options:
         baseurl: https://example.com/
+catalog:
+  maxentries: 1000
 tags:
   maxtags: 1000
 http:
@@ -801,6 +803,29 @@ location of a proxy for the layer stored by the S3 storage driver.
 | Parameter | Required | Description                                                                                                 |
 |-----------|----------|-------------------------------------------------------------------------------------------------------------|
 | `baseurl` | yes      | `SCHEME://HOST` at which layers are served. Can also contain port. For example, `https://example.com:5443`. |
+
+## `catalog`
+
+The `catalog` subsection provides configuration to limit the maximum number of
+entries returned in a single response from the catalog API endpoint
+(`/v2/_catalog`). When a client does not specify the `n` query parameter, at
+most 100 entries are returned. When a client requests more than `maxentries`
+via the `n` query parameter, the server rejects the request with a
+`400 Bad Request` response and a `PAGINATION_NUMBER_INVALID` error.
+
+The catalog endpoint is designed for registry synchronization with search or
+other API systems, and serving a request may put significant load on the
+backend storage. It is strongly recommended to keep this endpoint behind
+heightened privilege and avoid exposing it to the internet.
+
+```yaml
+catalog:
+  maxentries: 1000
+```
+
+| Parameter    | Required | Description                                                                               |
+|--------------|----------|-------------------------------------------------------------------------------------------|
+| `maxentries` | no       | Overrides the maximum number of entries returned by the catalog endpoint, default: `1000` |
 
 ## `tags`
 
