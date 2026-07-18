@@ -53,6 +53,61 @@ func TestNextProtos(t *testing.T) {
 	}
 }
 
+func TestServerProtocols(t *testing.T) {
+	tests := []struct {
+		name          string
+		h2cEnabled    bool
+		http2Disabled bool
+		wantNil       bool
+		wantHTTP2     bool
+	}{
+		{
+			name:    "default protocols",
+			wantNil: true,
+		},
+		{
+			name:       "h2c enabled",
+			h2cEnabled: true,
+			wantHTTP2:  true,
+		},
+		{
+			name:          "h2c enabled with tls http2 disabled",
+			h2cEnabled:    true,
+			http2Disabled: true,
+			wantHTTP2:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := &configuration.Configuration{}
+			config.HTTP.H2C.Enabled = tt.h2cEnabled
+			config.HTTP.HTTP2.Disabled = tt.http2Disabled
+
+			protocols := serverProtocols(config)
+			if tt.wantNil {
+				if protocols != nil {
+					t.Fatalf("expected nil protocols, got %s", protocols)
+				}
+				return
+			}
+			if protocols == nil {
+				t.Fatal("expected protocols, got nil")
+				return
+			}
+			if !protocols.HTTP1() {
+				t.Fatal("expected HTTP/1 to be enabled")
+			}
+			if got := protocols.HTTP2(); got != tt.wantHTTP2 {
+				t.Fatalf("HTTP/2 enabled = %v, want %v", got, tt.wantHTTP2)
+			}
+			if !protocols.UnencryptedHTTP2() {
+				t.Fatal("expected unencrypted HTTP/2 to be enabled")
+			}
+		})
+	}
+}
+
 type registryTLSConfig struct {
 	cipherSuites    []string
 	certificatePath string

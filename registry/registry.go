@@ -21,8 +21,6 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"golang.org/x/crypto/acme"
 	"golang.org/x/crypto/acme/autocert"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 
 	"github.com/distribution/distribution/v3/configuration"
 	"github.com/distribution/distribution/v3/health"
@@ -167,13 +165,11 @@ func NewRegistry(ctx context.Context, config *configuration.Configuration) (*Reg
 	if err != nil {
 		return nil, fmt.Errorf("error during open telemetry initialization: %v", err)
 	}
-	if config.HTTP.H2C.Enabled {
-		handler = h2c.NewHandler(handler, &http2.Server{})
-	}
 	handler = otelHandler(handler)
 
 	server := &http.Server{
-		Handler: handler,
+		Handler:   handler,
+		Protocols: serverProtocols(config),
 	}
 
 	return &Registry{
@@ -505,4 +501,16 @@ func nextProtos(config *configuration.Configuration) []string {
 	default:
 		return []string{"h2", "http/1.1"}
 	}
+}
+
+func serverProtocols(config *configuration.Configuration) *http.Protocols {
+	if !config.HTTP.H2C.Enabled {
+		return nil
+	}
+
+	protocols := new(http.Protocols)
+	protocols.SetHTTP1(true)
+	protocols.SetHTTP2(!config.HTTP.HTTP2.Disabled)
+	protocols.SetUnencryptedHTTP2(true)
+	return protocols
 }
