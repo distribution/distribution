@@ -80,6 +80,8 @@ func setv2Handlers(svc *s3.S3) {
 		parsedURL, err := url.Parse(r.HTTPRequest.URL.String())
 		if err != nil {
 			slog.Error("Failed to parse URL", "error", err)
+			r.Error = err
+			return
 		}
 		r.HTTPRequest.URL.Opaque = parsedURL.Path
 	})
