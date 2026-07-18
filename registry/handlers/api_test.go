@@ -669,6 +669,225 @@ func TestTagsAPIMaxTagsClamp(t *testing.T) {
 	}
 }
 
+// TestTagsAPISortedByUpdated tests the /v2/<name>/tags/list endpoint with sort=updated.
+func TestTagsAPISortedByUpdated(t *testing.T) {
+	env := newTestEnv(t, false)
+	defer env.Shutdown()
+
+	imageName, err := reference.WithName("test")
+	if err != nil {
+		t.Fatalf("unable to parse reference: %v", err)
+	}
+
+	// Create tags; order of creation intentionally differs from alphabetical order.
+	creationOrder := []string{"kb0j5", "2j2ar", "sb71y", "asj9e", "jyi7b"}
+	for _, tag := range creationOrder {
+		createRepository(env, t, imageName.Name(), tag)
+	}
+
+	t.Run("sort=updated returns all tags", func(t *testing.T) {
+		tagsURL, err := env.builder.BuildTagsURL(imageName, url.Values{"sort": []string{"updated"}})
+		if err != nil {
+			t.Fatalf("unexpected error building tags URL: %v", err)
+		}
+		resp, err := http.Get(tagsURL)
+		if err != nil {
+			t.Fatalf("unexpected error issuing request: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected status 200, got %d", resp.StatusCode)
+		}
+
+		var body tagsAPIResponse
+		if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+			t.Fatalf("unexpected error decoding response body: %v", err)
+		}
+
+		if body.Name != imageName.Name() {
+			t.Errorf("expected name %q, got %q", imageName.Name(), body.Name)
+		}
+
+		// All tags must be present.
+		if len(body.Tags) != len(creationOrder) {
+			t.Fatalf("expected %d tags, got %d", len(creationOrder), len(body.Tags))
+		}
+		got := make(map[string]bool, len(body.Tags))
+		for _, tag := range body.Tags {
+			got[tag] = true
+		}
+		for _, tag := range creationOrder {
+			if !got[tag] {
+				t.Errorf("tag %q missing from response", tag)
+			}
+		}
+	})
+
+	t.Run("sort=updated with n paginates correctly", func(t *testing.T) {
+		// Fetch first page.
+		tagsURL, err := env.builder.BuildTagsURL(imageName, url.Values{
+			"sort": []string{"updated"},
+			"n":    []string{"2"},
+		})
+		if err != nil {
+			t.Fatalf("unexpected error building tags URL: %v", err)
+		}
+		resp, err := http.Get(tagsURL)
+		if err != nil {
+			t.Fatalf("unexpected error issuing request: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected status 200, got %d", resp.StatusCode)
+		}
+
+		var firstPage tagsAPIResponse
+		if err := json.NewDecoder(resp.Body).Decode(&firstPage); err != nil {
+			t.Fatalf("unexpected error decoding response body: %v", err)
+		}
+		if len(firstPage.Tags) != 2 {
+			t.Fatalf("expected 2 tags on first page, got %d", len(firstPage.Tags))
+		}
+
+		// Parse the Link header and verify sort=updated is preserved, then use
+		// the URL from the header directly (not reconstructed) for the next page.
+		linkHeader := resp.Header.Get("Link")
+		if linkHeader == "" {
+			t.Fatal("expected Link header for first page")
+		}
+		nextURL := checkTagsLink(t, linkHeader, env.server.URL, 2, firstPage.Tags[len(firstPage.Tags)-1], "updated")
+
+		// Fetch second page via the Link header URL.
+		resp2, err := http.Get(nextURL)
+		if err != nil {
+			t.Fatalf("unexpected error issuing request: %v", err)
+		}
+		defer resp2.Body.Close()
+
+		if resp2.StatusCode != http.StatusOK {
+			t.Fatalf("expected status 200, got %d", resp2.StatusCode)
+		}
+
+		var secondPage tagsAPIResponse
+		if err := json.NewDecoder(resp2.Body).Decode(&secondPage); err != nil {
+			t.Fatalf("unexpected error decoding response body: %v", err)
+		}
+		if len(secondPage.Tags) != 2 {
+			t.Fatalf("expected 2 tags on second page, got %d", len(secondPage.Tags))
+		}
+
+		// No overlap between pages.
+		firstSet := make(map[string]bool)
+		for _, tag := range firstPage.Tags {
+			firstSet[tag] = true
+		}
+		for _, tag := range secondPage.Tags {
+			if firstSet[tag] {
+				t.Errorf("tag %q appeared on both pages", tag)
+			}
+		}
+	})
+
+	t.Run("no sort param preserves alphabetical order (backward compat)", func(t *testing.T) {
+		tagsURL, err := env.builder.BuildTagsURL(imageName, nil)
+		if err != nil {
+			t.Fatalf("unexpected error building tags URL: %v", err)
+		}
+		resp, err := http.Get(tagsURL)
+		if err != nil {
+			t.Fatalf("unexpected error issuing request: %v", err)
+		}
+		defer resp.Body.Close()
+
+		var body tagsAPIResponse
+		if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+			t.Fatalf("unexpected error decoding response body: %v", err)
+		}
+
+		alphabetical := slices.Sorted(slices.Values(creationOrder))
+		if !reflect.DeepEqual(body.Tags, alphabetical) {
+			t.Errorf("expected alphabetical order %v, got %v", alphabetical, body.Tags)
+		}
+	})
+
+	t.Run("unrecognized sort value returns 400", func(t *testing.T) {
+		tagsURL, err := env.builder.BuildTagsURL(imageName, url.Values{"sort": []string{"invalid"}})
+		if err != nil {
+			t.Fatalf("unexpected error building tags URL: %v", err)
+		}
+		resp, err := http.Get(tagsURL)
+		if err != nil {
+			t.Fatalf("unexpected error issuing request: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusBadRequest {
+			t.Fatalf("expected status 400, got %d", resp.StatusCode)
+		}
+	})
+}
+
+// TestTagsAPISortedByUpdatedMaxTagsClamp verifies that sort=updated respects
+// the server's configured MaxTags limit, clamping an oversized n rather than
+// returning 400.
+func TestTagsAPISortedByUpdatedMaxTagsClamp(t *testing.T) {
+	config := configuration.Configuration{
+		Storage: configuration.Storage{
+			"inmemory":    configuration.Parameters{},
+			"maintenance": configuration.Parameters{"uploadpurging": map[any]any{"enabled": false}},
+		},
+		Catalog: configuration.Catalog{MaxEntries: 5},
+		Tags:    configuration.Tags{MaxTags: 2},
+	}
+	config.HTTP.Headers = headerConfig
+	env := newTestEnvWithConfig(t, &config)
+	defer env.Shutdown()
+
+	imageName, err := reference.WithName("test")
+	if err != nil {
+		t.Fatalf("unable to parse reference: %v", err)
+	}
+
+	tags := []string{"2j2ar", "asj9e", "jyi7b", "kb0j5", "sb71y"}
+	for _, tag := range tags {
+		createRepository(env, t, imageName.Name(), tag)
+	}
+
+	tagsURL, err := env.builder.BuildTagsURL(imageName, url.Values{
+		"sort": []string{"updated"},
+		"n":    []string{"100"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error building tags URL: %v", err)
+	}
+
+	resp, err := http.Get(tagsURL)
+	if err != nil {
+		t.Fatalf("unexpected error issuing request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected response status code to be %d, got %d", http.StatusOK, resp.StatusCode)
+	}
+
+	var body tagsAPIResponse
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		t.Fatalf("unexpected error decoding response body: %v", err)
+	}
+	if len(body.Tags) != 2 {
+		t.Fatalf("expected 2 tags (clamped by MaxTags), got %d", len(body.Tags))
+	}
+
+	linkHeader := resp.Header.Get("Link")
+	if linkHeader == "" {
+		t.Fatal("expected Link header indicating more results")
+	}
+	checkTagsLink(t, linkHeader, env.server.URL, 2, body.Tags[len(body.Tags)-1], "updated")
+}
+
 func checkLink(t *testing.T, urlStr string, numEntries int, last string) url.Values {
 	re := regexp.MustCompile("<(/v2/_catalog.*)>; rel=\"next\"")
 	matches := re.FindStringSubmatch(urlStr)
@@ -688,6 +907,32 @@ func checkLink(t *testing.T, urlStr string, numEntries int, last string) url.Val
 	}
 
 	return urlValues
+}
+
+// checkTagsLink parses a tags Link header, asserts n, last, and sort values,
+// and returns the full URL (prefixed with serverURL) ready for the next request.
+func checkTagsLink(t *testing.T, linkHeader, serverURL string, numEntries int, last, sort string) string {
+	t.Helper()
+	re := regexp.MustCompile(`<(/v2/[^>]*/tags/list[^>]*)>; rel="next"`)
+	matches := re.FindStringSubmatch(linkHeader)
+	if len(matches) != 2 {
+		t.Fatalf("tags link header was incorrect: %q", linkHeader)
+	}
+	linkURL, err := url.Parse(matches[1])
+	if err != nil {
+		t.Fatalf("failed to parse tags link URL: %v", err)
+	}
+	q := linkURL.Query()
+	if q.Get("n") != strconv.Itoa(numEntries) {
+		t.Errorf("link n param: expected %d, got %q", numEntries, q.Get("n"))
+	}
+	if q.Get("last") != last {
+		t.Errorf("link last param: expected %q, got %q", last, q.Get("last"))
+	}
+	if sort != "" && q.Get("sort") != sort {
+		t.Errorf("link sort param: expected %q, got %q", sort, q.Get("sort"))
+	}
+	return serverURL + matches[1]
 }
 
 func contains(elems []string, e string) bool {
