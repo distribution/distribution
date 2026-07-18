@@ -6,17 +6,17 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
 
-	logstash "github.com/bshuster-repo/logrus-logstash-hook"
 	"github.com/docker/go-metrics"
 	gorhandlers "github.com/gorilla/handlers"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"golang.org/x/crypto/acme"
@@ -116,13 +116,13 @@ var ServeCmd = &cobra.Command{
 		}
 		registry, err := NewRegistry(ctx, config)
 		if err != nil {
-			logrus.Fatalln(err)
+			dcontext.GetLogger(ctx).Fatalln(err)
 		}
 
 		configureDebugServer(config)
 
 		if err = registry.ListenAndServe(); err != nil {
-			logrus.Fatalln(err)
+			dcontext.GetLogger(ctx).Fatalln(err)
 		}
 	},
 }
@@ -360,9 +360,10 @@ func (registry *Registry) Shutdown(ctx context.Context) error {
 func configureDebugServer(config *configuration.Configuration) {
 	if config.HTTP.Debug.Addr != "" {
 		go func(addr string) {
-			logrus.Infof("debug server listening %v", addr)
+			slog.Info("debug server listening", "addr", addr)
 			if err := http.ListenAndServe(addr, nil); err != nil {
-				logrus.Fatalf("error listening on debug interface: %v", err)
+				slog.Error("error listening on debug interface", "error", err)
+				os.Exit(1)
 			}
 		}(config.HTTP.Debug.Addr)
 		configurePrometheus(config)
@@ -375,7 +376,7 @@ func configurePrometheus(config *configuration.Configuration) {
 		if path == "" {
 			path = "/metrics"
 		}
-		logrus.Info("providing prometheus metrics on ", path)
+		slog.Info("providing prometheus metrics", "path", path)
 		http.Handle(path, metrics.Handler())
 	}
 }
@@ -383,33 +384,41 @@ func configurePrometheus(config *configuration.Configuration) {
 // configureLogging prepares the context with a logger using the
 // configuration.
 func configureLogging(ctx context.Context, config *configuration.Configuration) (context.Context, error) {
-	logrus.SetLevel(logLevel(config.Log.Level))
-	logrus.SetReportCaller(config.Log.ReportCaller)
+	opts := &slog.HandlerOptions{
+		Level:       logLevel(config.Log.Level),
+		AddSource:   config.Log.ReportCaller,
+		ReplaceAttr: replaceLogAttr,
+	}
 
 	formatter := config.Log.Formatter
 	if formatter == "" {
 		formatter = defaultLogFormatter
 	}
 
+	var handler slog.Handler
 	switch formatter {
 	case "json":
-		logrus.SetFormatter(&logrus.JSONFormatter{
-			TimestampFormat:   time.RFC3339Nano,
-			DisableHTMLEscape: true,
-		})
+		handler = slog.NewJSONHandler(os.Stderr, opts)
 	case "text":
-		logrus.SetFormatter(&logrus.TextFormatter{
-			TimestampFormat: time.RFC3339Nano,
-		})
+		handler = slog.NewTextHandler(os.Stderr, opts)
 	case "logstash":
-		logrus.SetFormatter(&logstash.LogstashFormatter{
-			Formatter: &logrus.JSONFormatter{TimestampFormat: time.RFC3339Nano},
-		})
+		opts.ReplaceAttr = replaceLogstashAttr
+		handler = slog.NewJSONHandler(os.Stderr, opts)
 	default:
 		return ctx, fmt.Errorf("unsupported logging formatter: %q", formatter)
 	}
 
-	logrus.Debugf("using %q logging formatter", formatter)
+	logger := slog.New(handler)
+	if formatter == "logstash" {
+		logger = logger.With("@version", "1")
+	}
+	slog.SetDefault(logger)
+	// Rebase the default context logger on the newly configured handler; the
+	// context fields below and the hooks configured by the application are
+	// layered on top of it.
+	dcontext.SetDefaultLogger(dcontext.NewLogger(logger.With("go.version", runtime.Version())))
+
+	slog.Debug("using logging formatter", "formatter", formatter)
 	if len(config.Log.Fields) > 0 {
 		// build up the static fields, if present.
 		var fields []any
@@ -425,24 +434,60 @@ func configureLogging(ctx context.Context, config *configuration.Configuration) 
 	return ctx, nil
 }
 
-func logLevel(level configuration.Loglevel) logrus.Level {
-	l, err := logrus.ParseLevel(string(level))
+// replaceLogAttr renders the level names in lower case, including the names
+// of the custom trace, fatal and panic levels, and renders timestamps in the
+// RFC3339Nano format, both for consistency with the former logrus output.
+func replaceLogAttr(groups []string, a slog.Attr) slog.Attr {
+	if len(groups) > 0 {
+		return a
+	}
+	switch a.Key {
+	case slog.LevelKey:
+		if level, ok := a.Value.Any().(slog.Level); ok {
+			a.Value = slog.StringValue(dcontext.LevelName(level))
+		}
+	case slog.TimeKey:
+		if t, ok := a.Value.Any().(time.Time); ok {
+			a.Value = slog.StringValue(t.Format(time.RFC3339Nano))
+		}
+	}
+	return a
+}
+
+// replaceLogstashAttr additionally renames the built-in attributes to the
+// field names expected in the logstash JSON format.
+func replaceLogstashAttr(groups []string, a slog.Attr) slog.Attr {
+	if len(groups) > 0 {
+		return a
+	}
+	a = replaceLogAttr(groups, a)
+	switch a.Key {
+	case slog.TimeKey:
+		a.Key = "@timestamp"
+	case slog.MessageKey:
+		a.Key = "message"
+	}
+	return a
+}
+
+func logLevel(level configuration.Loglevel) slog.Level {
+	l, err := dcontext.ParseLevel(string(level))
 	if err != nil {
-		l = logrus.InfoLevel
-		logrus.Warnf("error parsing level %q: %v, using %q	", level, err, l)
+		l = slog.LevelInfo
+		slog.Warn("error parsing level, defaulting to info", "level", level, "error", err)
 	}
 
 	return l
 }
 
 // panicHandler add an HTTP handler to web app. The handler recover the happening
-// panic. logrus.Panic transmits panic message to pre-config log hooks, which is
+// panic. Logger.Panic transmits panic message to pre-config log hooks, which is
 // defined in config.yml.
 func panicHandler(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
-				logrus.Panic(fmt.Sprintf("%v", err))
+				dcontext.GetLogger(r.Context()).Panic(fmt.Sprintf("%v", err))
 			}
 		}()
 		handler.ServeHTTP(w, r)

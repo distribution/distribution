@@ -1,13 +1,13 @@
 package proxy
 
 import (
+	"log/slog"
 	"net/url"
 	"sync"
 	"time"
 
 	"github.com/docker/docker-credential-helpers/client"
 	credspkg "github.com/docker/docker-credential-helpers/credentials"
-	"github.com/sirupsen/logrus"
 
 	"github.com/distribution/distribution/v3/configuration"
 	"github.com/distribution/distribution/v3/internal/client/auth"
@@ -32,7 +32,7 @@ func (c *execCredentials) Basic(url *url.URL) (string, string) {
 
 	creds, err := client.Get(c.helper, url.Host)
 	if err != nil {
-		logrus.Errorf("failed to run command: %v", err)
+		slog.Error("failed to run command", "error", err)
 		return "", ""
 	}
 	c.creds = creds

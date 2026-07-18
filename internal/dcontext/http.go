@@ -106,7 +106,7 @@ func GetRequestLogger(ctx context.Context) Logger {
 // this function on the context will lead to missing or invalid data. Only
 // call this at the end of a request, after the response has been written.
 func GetResponseLogger(ctx context.Context) Logger {
-	l := getLogrusLogger(ctx,
+	l := getSlogLogger(ctx,
 		"http.response.written",
 		"http.response.status",
 		"http.response.contenttype")
@@ -114,7 +114,7 @@ func GetResponseLogger(ctx context.Context) Logger {
 	duration := Since(ctx, "http.request.startedat")
 
 	if duration > 0 {
-		l = l.WithField("http.response.duration", duration.String())
+		l = l.with("http.response.duration", duration.String())
 	}
 
 	return l
