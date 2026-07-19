@@ -10,6 +10,7 @@ import (
 	"github.com/distribution/distribution/v3/manifest/ocischema"
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
+	"golang.org/x/sync/errgroup"
 )
 
 // ocischemaManifestHandler is a ManifestHandler that covers ocischema manifests.
@@ -80,59 +81,80 @@ func (ms *ocischemaManifestHandler) verifyManifest(ctx context.Context, mnfst oc
 
 	blobsService := ms.repository.Blobs(ctx)
 
-	for _, descriptor := range mnfst.References() {
-		err := descriptor.Digest.Validate()
-		if err != nil {
-			errs = append(errs, err, distribution.ErrManifestBlobUnknown{Digest: descriptor.Digest})
-			continue
-		}
+	references := mnfst.References()
+	g, gCtx := errgroup.WithContext(ctx)
+	g.SetLimit(DefaultManifestVerificationConcurrencyLimit)
+	results := make([][]error, len(references))
 
-		switch descriptor.MediaType {
-		case v1.MediaTypeImageLayer, v1.MediaTypeImageLayerGzip, v1.MediaTypeImageLayerNonDistributable, v1.MediaTypeImageLayerNonDistributableGzip: //nolint:staticcheck // ignore A1019: v1.MediaTypeImageLayerNonDistributable is deprecated: Non-distributable layers are deprecated, and not recommended for future use.
-			allow := ms.manifestURLs.allow
-			deny := ms.manifestURLs.deny
-			for _, u := range descriptor.URLs {
-				var pu *url.URL
-				pu, err = url.Parse(u)
-				if err != nil || (pu.Scheme != "http" && pu.Scheme != "https") || pu.Fragment != "" || (allow != nil && !allow.MatchString(u)) || (deny != nil && deny.MatchString(u)) {
-					err = errInvalidURL
-					break
-				}
-			}
-			if err == nil {
-				// check the presence if it is normal layer or
-				// there is no urls for non-distributable
-				if len(descriptor.URLs) == 0 ||
-					(descriptor.MediaType == v1.MediaTypeImageLayer || descriptor.MediaType == v1.MediaTypeImageLayerGzip) {
-
-					_, err = blobsService.Stat(ctx, descriptor.Digest)
-				}
+	for i, descriptor := range references {
+		i, descriptor := i, descriptor
+		g.Go(func() error {
+			var localErrs []error
+			err := descriptor.Digest.Validate()
+			if err != nil {
+				localErrs = append(localErrs, err, distribution.ErrManifestBlobUnknown{Digest: descriptor.Digest})
+				results[i] = localErrs
+				return nil
 			}
 
-		case v1.MediaTypeImageManifest:
-			var exists bool
-			exists, err = manifestService.Exists(ctx, descriptor.Digest)
-			if err != nil || !exists {
-				err = distribution.ErrBlobUnknown // just coerce to unknown.
+			switch descriptor.MediaType {
+			case v1.MediaTypeImageLayer, v1.MediaTypeImageLayerGzip, v1.MediaTypeImageLayerNonDistributable, v1.MediaTypeImageLayerNonDistributableGzip: //nolint:staticcheck // ignore A1019: v1.MediaTypeImageLayerNonDistributable is deprecated: Non-distributable layers are deprecated, and not recommended for future use.
+				allow := ms.manifestURLs.allow
+				deny := ms.manifestURLs.deny
+				for _, u := range descriptor.URLs {
+					var pu *url.URL
+					pu, err = url.Parse(u)
+					if err != nil || (pu.Scheme != "http" && pu.Scheme != "https") || pu.Fragment != "" || (allow != nil && !allow.MatchString(u)) || (deny != nil && deny.MatchString(u)) {
+						err = errInvalidURL
+						break
+					}
+				}
+				if err == nil {
+					// check the presence if it is normal layer or
+					// there is no urls for non-distributable
+					if len(descriptor.URLs) == 0 ||
+						(descriptor.MediaType == v1.MediaTypeImageLayer || descriptor.MediaType == v1.MediaTypeImageLayerGzip) {
+
+						_, err = blobsService.Stat(gCtx, descriptor.Digest)
+					}
+				}
+
+			case v1.MediaTypeImageManifest:
+				var exists bool
+				exists, err = manifestService.Exists(gCtx, descriptor.Digest)
+				if err != nil || !exists {
+					err = distribution.ErrBlobUnknown // just coerce to unknown.
+				}
+
+				if err != nil {
+					dcontext.GetLogger(ms.ctx).WithError(err).Debugf("failed to ensure exists of %v in manifest service", descriptor.Digest)
+				}
+				fallthrough // double check the blob store.
+			default:
+				// check the presence
+				_, err = blobsService.Stat(gCtx, descriptor.Digest)
 			}
 
 			if err != nil {
-				dcontext.GetLogger(ms.ctx).WithError(err).Debugf("failed to ensure exists of %v in manifest service", descriptor.Digest)
-			}
-			fallthrough // double check the blob store.
-		default:
-			// check the presence
-			_, err = blobsService.Stat(ctx, descriptor.Digest)
-		}
+				if err != distribution.ErrBlobUnknown {
+					localErrs = append(localErrs, err)
+				}
 
-		if err != nil {
-			if err != distribution.ErrBlobUnknown {
-				errs = append(errs, err)
+				// On error here, we always append unknown blob errors.
+				localErrs = append(localErrs, distribution.ErrManifestBlobUnknown{Digest: descriptor.Digest})
 			}
 
-			// On error here, we always append unknown blob errors.
-			errs = append(errs, distribution.ErrManifestBlobUnknown{Digest: descriptor.Digest})
-		}
+			results[i] = localErrs
+			return nil
+		})
+	}
+
+	if err := g.Wait(); err != nil {
+		return err
+	}
+
+	for _, localErrs := range results {
+		errs = append(errs, localErrs...)
 	}
 
 	if len(errs) != 0 {
