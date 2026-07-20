@@ -124,7 +124,7 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 			if _, ok := err.(distribution.ErrTagUnknown); ok {
 				imh.Errors = append(imh.Errors, errcode.ErrorCodeManifestUnknown.WithDetail(err))
 			} else {
-				imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
+				imh.Errors = append(imh.Errors, errcodeErrorsFor(err)...)
 			}
 			return
 		}
@@ -145,7 +145,7 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 		if _, ok := err.(distribution.ErrManifestUnknownRevision); ok {
 			imh.Errors = append(imh.Errors, errcode.ErrorCodeManifestUnknown.WithDetail(err))
 		} else {
-			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
+			imh.Errors = append(imh.Errors, errcodeErrorsFor(err)...)
 		}
 		return
 	}

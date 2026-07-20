@@ -60,14 +60,14 @@ func (bh *blobHandler) GetBlob(w http.ResponseWriter, r *http.Request) {
 		if err == distribution.ErrBlobUnknown {
 			bh.Errors = append(bh.Errors, errcode.ErrorCodeBlobUnknown.WithDetail(bh.Digest))
 		} else {
-			bh.Errors = append(bh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
+			bh.Errors = append(bh.Errors, errcodeErrorsFor(err)...)
 		}
 		return
 	}
 
 	if err := blobs.ServeBlob(bh, w, r, desc.Digest); err != nil {
 		dcontext.GetLogger(bh).Debugf("unexpected error getting blob HTTP handler: %v", err)
-		bh.Errors = append(bh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
+		bh.Errors = append(bh.Errors, errcodeErrorsFor(err)...)
 		return
 	}
 }
