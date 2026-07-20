@@ -85,12 +85,12 @@ func parseContentRange(cr string) (start int64, end int64, err error) {
 	return start, end, nil
 }
 
-// errcodeErrorsFor converts err into the errcode.Errors reported to the client.
+// toErrcodeErrors converts err into the errcode.Errors reported to the client.
 // When err already carries one or more registry error codes (for eg 401/403),
 // those codes are preserved so the client receives the correct status instead
 // of a generic internal server error. Errors that do not carry a code are reported
 // as ErrorCodeUnknown, preserving the previous behaviour.
-func errcodeErrorsFor(err error) errcode.Errors {
+func toErrcodeErrors(err error) errcode.Errors {
 	switch err := err.(type) {
 	case errcode.Errors:
 		return err

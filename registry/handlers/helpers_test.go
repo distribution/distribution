@@ -35,7 +35,7 @@ func TestErrcodeErrorsFor(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			got := errcodeErrorsFor(tc.err)
+			got := toErrcodeErrors(tc.err)
 			if len(got) == 0 {
 				t.Fatalf("errcodeErrorsFor(%v) returned no errors", tc.err)
 			}
