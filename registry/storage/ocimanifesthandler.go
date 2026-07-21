@@ -18,6 +18,7 @@ type ocischemaManifestHandler struct {
 	blobStore    distribution.BlobStore
 	ctx          context.Context
 	manifestURLs manifestURLs
+	references   ReferenceService
 }
 
 var _ ManifestHandler = &ocischemaManifestHandler{}
@@ -45,9 +46,17 @@ func (ms *ocischemaManifestHandler) Put(ctx context.Context, manifest distributi
 		return "", err
 	}
 
-	mt, payload, err := m.Payload()
+	mt, payload, err := manifest.Payload()
 	if err != nil {
 		return "", err
+	}
+
+	if referrer, ok := manifest.(distribution.Referrer); ok {
+		if subject := referrer.Subject(); subject != nil {
+			if err := ms.references.Link(ctx, referrer.Type(), digest.FromBytes(payload), subject.Digest); err != nil {
+				return "", err
+			}
+		}
 	}
 
 	revision, err := ms.blobStore.Put(ctx, mt, payload)
@@ -88,7 +97,7 @@ func (ms *ocischemaManifestHandler) verifyManifest(ctx context.Context, mnfst oc
 		}
 
 		switch descriptor.MediaType {
-		case v1.MediaTypeImageLayer, v1.MediaTypeImageLayerGzip, v1.MediaTypeImageLayerNonDistributable, v1.MediaTypeImageLayerNonDistributableGzip: //nolint:staticcheck // ignore A1019: v1.MediaTypeImageLayerNonDistributable is deprecated: Non-distributable layers are deprecated, and not recommended for future use.
+		case v1.MediaTypeImageLayer, v1.MediaTypeImageLayerGzip, v1.MediaTypeImageLayerNonDistributable, v1.MediaTypeImageLayerNonDistributableGzip: //nolint:staticcheck // Ignore SA1019 v1.MediaTypeImageLayerNonDistributable is deprecated, it is used for backwards compatibility
 			allow := ms.manifestURLs.allow
 			deny := ms.manifestURLs.deny
 			for _, u := range descriptor.URLs {
