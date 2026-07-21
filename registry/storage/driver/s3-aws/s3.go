@@ -21,6 +21,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
 	"slices"
 	"sort"
@@ -119,6 +120,7 @@ type DriverParameters struct {
 	UseFIPSEndpoint             bool
 	LogLevel                    aws.LogLevelType
 	RedirectEndpoint            string
+	SpoolDir                    string
 }
 
 func init() {
@@ -168,6 +170,7 @@ type driver struct {
 	StorageClass                string
 	ObjectACL                   string
 	RedirectEndpoint            *url.URL
+	SpoolDir                    string
 	pool                        *sync.Pool
 }
 
@@ -343,6 +346,11 @@ func FromParameters(ctx context.Context, parameters map[string]any) (*Driver, er
 		redirectEndpoint = ""
 	}
 
+	spoolDir := parameters["spooldir"]
+	if spoolDir == nil {
+		spoolDir = ""
+	}
+
 	params := DriverParameters{
 		AccessKey:                   fmt.Sprint(accessKey),
 		SecretKey:                   fmt.Sprint(secretKey),
@@ -369,6 +377,7 @@ func FromParameters(ctx context.Context, parameters map[string]any) (*Driver, er
 		UseFIPSEndpoint:             useFIPSEndpointBool,
 		LogLevel:                    getS3LogLevelFromParam(parameters["loglevel"]),
 		RedirectEndpoint:            fmt.Sprint(redirectEndpoint),
+		SpoolDir:                    fmt.Sprint(spoolDir),
 	}
 
 	return New(ctx, params)
@@ -547,6 +556,7 @@ func New(ctx context.Context, params DriverParameters) (*Driver, error) {
 		RootDirectory:               params.RootDirectory,
 		StorageClass:                params.StorageClass,
 		ObjectACL:                   params.ObjectACL,
+		SpoolDir:                    params.SpoolDir,
 		pool:                        newBufferPool(),
 	}
 
@@ -637,6 +647,23 @@ func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.Read
 // It returns storagedriver.Error when appending to paths
 // with non-zero committed content.
 func (d *driver) Writer(ctx context.Context, path string, appendMode bool) (storagedriver.FileWriter, error) {
+	var spool *os.File
+	if d.SpoolDir != "" {
+		f, err := os.CreateTemp(d.SpoolDir, "s3-upload-*")
+		if err != nil {
+			return nil, fmt.Errorf("creating upload spool file: %w", err)
+		}
+		spool = f
+	}
+	fw, err := d.writer(ctx, path, appendMode, spool)
+	if err != nil && spool != nil {
+		_ = spool.Close()
+		_ = os.Remove(spool.Name())
+	}
+	return fw, err
+}
+
+func (d *driver) writer(ctx context.Context, path string, appendMode bool, spool *os.File) (storagedriver.FileWriter, error) {
 	key := d.s3Path(path)
 	if !appendMode {
 		// TODO (brianbland): cancel other uploads at this path
@@ -652,7 +679,7 @@ func (d *driver) Writer(ctx context.Context, path string, appendMode bool) (stor
 		if err != nil {
 			return nil, err
 		}
-		return d.newWriter(ctx, key, *resp.UploadId, nil), nil
+		return d.newWriter(ctx, key, *resp.UploadId, nil, spool), nil
 	}
 
 	listMultipartUploadsInput := &s3.ListMultipartUploadsInput{
@@ -687,7 +714,7 @@ func (d *driver) Writer(ctx context.Context, path string, appendMode bool) (stor
 				if err != nil {
 					return nil, err
 				}
-				return d.newWriter(ctx, key, *resp.UploadId, nil), nil
+				return d.newWriter(ctx, key, *resp.UploadId, nil, spool), nil
 			}
 			return nil, storagedriver.Error{
 				DriverName: driverName,
@@ -722,7 +749,7 @@ func (d *driver) Writer(ctx context.Context, path string, appendMode bool) (stor
 				}
 				allParts = append(allParts, partsList.Parts...)
 			}
-			return d.newWriter(ctx, key, *multi.UploadId, allParts), nil
+			return d.newWriter(ctx, key, *multi.UploadId, allParts, spool), nil
 		}
 
 		// resp.NextUploadIdMarker must have at least one element or we would have returned not found
@@ -1336,22 +1363,35 @@ type writer struct {
 	closed    bool
 	committed bool
 	cancelled bool
+
+	// spool replaces buf when the spooldir parameter is set, keeping
+	// per-upload memory independent of ChunkSize.
+	spool    *os.File
+	spoolLen int64
 }
 
-func (d *driver) newWriter(ctx context.Context, key, uploadID string, parts []*s3.Part) storagedriver.FileWriter {
+func (d *driver) newWriter(ctx context.Context, key, uploadID string, parts []*s3.Part, spool *os.File) storagedriver.FileWriter {
 	var size int64
 	for _, part := range parts {
 		size += *part.Size
 	}
-	return &writer{
+	w := &writer{
 		ctx:      ctx,
 		driver:   d,
 		key:      key,
 		uploadID: uploadID,
 		parts:    parts,
 		size:     size,
-		buf:      d.pool.Get().(*bytes.Buffer),
+		spool:    spool,
 	}
+	if spool != nil {
+		// spool mode rarely touches buf (small-object rewrite path only), so
+		// don't claim a pooled buffer it won't use
+		w.buf = &bytes.Buffer{}
+	} else {
+		w.buf = d.pool.Get().(*bytes.Buffer)
+	}
+	return w
 }
 
 type completedParts []*s3.CompletedPart
@@ -1427,6 +1467,14 @@ func (w *writer) Write(p []byte) (int, error) {
 			if _, err := io.Copy(writerBuffer{w}, resp.Body); err != nil {
 				return 0, err
 			}
+			if w.spool != nil {
+				// keep all pending data in one place: move it to the spool file
+				if _, err := w.spool.WriteAt(w.buf.Bytes(), 0); err != nil {
+					return 0, err
+				}
+				w.spoolLen = int64(w.buf.Len())
+				w.buf.Reset()
+			}
 		} else {
 			// Otherwise we can use the old file as the new first part
 			copyPartResp, err := w.driver.S3.UploadPartCopyWithContext(w.ctx, &s3.UploadPartCopyInput{
@@ -1445,6 +1493,10 @@ func (w *writer) Write(p []byte) (int, error) {
 				Size:       aws.Int64(w.size),
 			}}
 		}
+	}
+
+	if w.spool != nil {
+		return w.writeSpool(p)
 	}
 
 	var n int
@@ -1515,6 +1567,32 @@ func (w *writer) writeBuffer(p []byte) (int, error) {
 	return w.buf.Write(p)
 }
 
+// writeSpool appends p to the spool file without letting it grow past
+// [w.driver.ChunkSize], flushing each full chunk as one part. On error it
+// reports how much of p was accepted; accepted bytes stay pending in the spool.
+func (w *writer) writeSpool(p []byte) (int, error) {
+	chunkSize := int64(w.driver.ChunkSize)
+	var n int
+	for {
+		if w.spoolLen >= chunkSize {
+			if err := w.flush(); err != nil {
+				return n, fmt.Errorf("flush: %w", err)
+			}
+		}
+		if len(p) == 0 {
+			return n, nil
+		}
+		k := min(int64(len(p)), chunkSize-w.spoolLen)
+		nn, err := w.spool.WriteAt(p[:k], w.spoolLen)
+		n += nn
+		w.spoolLen += int64(nn)
+		if err != nil {
+			return n, err
+		}
+		p = p[nn:]
+	}
+}
+
 func (w *writer) Size() int64 {
 	return w.size
 }
@@ -1530,6 +1608,9 @@ func (w *writer) Close() error {
 
 	defer w.releaseBuffer()
 
+	if w.cancelled {
+		return nil
+	}
 	return w.flush()
 }
 
@@ -1537,12 +1618,31 @@ func (w *writer) reset() {
 	w.buf.Reset()
 	w.parts = nil
 	w.size = 0
+	if w.spool != nil {
+		_ = w.spool.Truncate(0)
+		w.spoolLen = 0
+	}
 }
 
-// releaseBuffer resets the buffer and returns it to the pool.
+// releaseBuffer resets the buffer and returns it to the pool, or removes the
+// spool file when spooling is enabled.
 func (w *writer) releaseBuffer() {
+	if w.driver.SpoolDir != "" {
+		w.removeSpool()
+		return // buf was never taken from the pool in spool mode
+	}
 	w.buf.Reset()
 	w.driver.pool.Put(w.buf)
+}
+
+func (w *writer) removeSpool() {
+	if w.spool == nil {
+		return
+	}
+	name := w.spool.Name()
+	_ = w.spool.Close()
+	_ = os.Remove(name)
+	w.spool = nil
 }
 
 // Cancel aborts the multipart upload and closes the writer.
@@ -1552,6 +1652,7 @@ func (w *writer) Cancel(ctx context.Context) error {
 	}
 
 	w.cancelled = true
+	w.removeSpool()
 	_, err := w.driver.S3.AbortMultipartUploadWithContext(ctx, &s3.AbortMultipartUploadInput{
 		Bucket:   aws.String(w.driver.Bucket),
 		Key:      aws.String(w.key),
@@ -1632,6 +1733,10 @@ func (w *writer) Commit(ctx context.Context) error {
 // called by [writer.Write] if the buffer is full, and always by [writer.Close]
 // and [writer.Commit].
 func (w *writer) flush() error {
+	if w.spool != nil {
+		return w.flushSpool()
+	}
+
 	if w.buf.Len() == 0 {
 		return nil
 	}
@@ -1659,6 +1764,41 @@ func (w *writer) flush() error {
 	})
 
 	w.size += int64(partSize)
+
+	return nil
+}
+
+// flushSpool uploads the spool file as one part. The SDK reads the part from
+// disk twice (sigv4 payload hash, then send); that is the deliberate
+// disk-reads-for-heap trade-off of spool mode.
+func (w *writer) flushSpool() error {
+	if w.spoolLen == 0 {
+		return nil
+	}
+
+	partLen := w.spoolLen
+	partNumber := aws.Int64(int64(len(w.parts)) + 1)
+
+	resp, err := w.driver.S3.UploadPartWithContext(w.ctx, &s3.UploadPartInput{
+		Bucket:     aws.String(w.driver.Bucket),
+		Key:        aws.String(w.key),
+		PartNumber: partNumber,
+		UploadId:   aws.String(w.uploadID),
+		Body:       io.NewSectionReader(w.spool, 0, partLen),
+	})
+	if err != nil {
+		return fmt.Errorf("upload part: %w", err)
+	}
+
+	w.parts = append(w.parts, &s3.Part{
+		ETag:       resp.ETag,
+		PartNumber: partNumber,
+		Size:       aws.Int64(partLen),
+	})
+	w.size += partLen
+	// The next part overwrites the file from offset 0, and reads are bounded by
+	// spoolLen, so there is no need to truncate.
+	w.spoolLen = 0
 
 	return nil
 }
