@@ -159,6 +159,73 @@ func TestBlobFetch(t *testing.T) {
 	// TODO(dmcgowan): Test for unknown blob case
 }
 
+// TestBlobFetchByDigestVerifies ensures that a blob requested by digest via Get
+// is rejected when the registry returns content that does not hash to the
+// requested digest. Regression test for GHSA-685w-q87j-wqw3 (blob path).
+//
+// Get is the integrity-providing API: it buffers and verifies the whole blob.
+// Open streams and is intentionally not verified (a content digest cannot be
+// checked without reading the entire content, which Open does not require).
+func TestBlobFetchByDigestVerifies(t *testing.T) {
+	pinnedDgst, _ := newRandomBlob(1024)
+	_, evilBlob := newRandomBlob(1024)
+
+	var m testutil.RequestResponseMap
+	for _, method := range []string{"GET", "HEAD"} {
+		resp := testutil.Response{
+			StatusCode: http.StatusOK,
+			Headers: http.Header(map[string][]string{
+				"Content-Length": {fmt.Sprint(len(evilBlob))},
+				"Content-Type":   {"application/octet-stream"},
+				"Last-Modified":  {time.Now().Add(-1 * time.Second).Format(time.ANSIC)},
+			}),
+		}
+		if method == "GET" {
+			resp.Body = evilBlob
+		}
+		m = append(m, testutil.RequestResponseMapping{
+			Request: testutil.Request{
+				Method: method,
+				Route:  "/v2/test.example.com/repo1/blobs/" + pinnedDgst.String(),
+			},
+			Response: resp,
+		})
+	}
+
+	e, c := testServer(m)
+	defer c()
+
+	ctx := context.Background()
+	repo, _ := reference.WithName("test.example.com/repo1")
+	r, err := NewRepository(repo, e, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	l := r.Blobs(ctx)
+
+	if _, err := l.Get(ctx, pinnedDgst); err == nil {
+		t.Fatal("Get accepted blob content that does not match the requested digest")
+	}
+}
+
+// TestBlobGetUnsupportedDigestAlgorithm ensures a syntactically valid digest
+// with an unavailable algorithm is rejected by Get rather than panicking
+// dgst.Verifier().
+func TestBlobGetUnsupportedDigestAlgorithm(t *testing.T) {
+	ctx := context.Background()
+	repo, _ := reference.WithName("test.example.com/repo1")
+	r, err := NewRepository(repo, "http://localhost:5000", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	l := r.Blobs(ctx)
+
+	bad := digest.Digest("md5:0123456789abcdef0123456789abcdef")
+	if _, err := l.Get(ctx, bad); err == nil {
+		t.Fatal("Get accepted a digest with an unsupported algorithm")
+	}
+}
+
 func TestBlobExistsNoContentLength(t *testing.T) {
 	var m testutil.RequestResponseMap
 
