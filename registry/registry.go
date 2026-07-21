@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -277,10 +278,35 @@ func (registry *Registry) ListenAndServe() error {
 			tlsConf.GetCertificate = m.GetCertificate
 			tlsConf.NextProtos = append(tlsConf.NextProtos, acme.ALPNProto)
 		} else {
-			tlsConf.Certificates = make([]tls.Certificate, 1)
-			tlsConf.Certificates[0], err = tls.LoadX509KeyPair(config.HTTP.TLS.Certificate, config.HTTP.TLS.Key)
+			tlsCert, err := tls.LoadX509KeyPair(config.HTTP.TLS.Certificate, config.HTTP.TLS.Key)
 			if err != nil {
 				return err
+			}
+			if config.HTTP.TLS.CertificateReloadInterval > 0 {
+				var mu sync.RWMutex
+				go func() {
+					ticker := time.NewTicker(config.HTTP.TLS.CertificateReloadInterval)
+					defer ticker.Stop()
+					for range ticker.C {
+						newCert, err := tls.LoadX509KeyPair(config.HTTP.TLS.Certificate, config.HTTP.TLS.Key)
+						if err != nil {
+							dcontext.GetLogger(registry.app).Errorf("failed to reload TLS certificate: %v", err)
+							continue
+						}
+						mu.Lock()
+						tlsCert = newCert
+						mu.Unlock()
+					}
+				}()
+				tlsConf.GetConfigForClient = func(*tls.ClientHelloInfo) (*tls.Config, error) {
+					mu.RLock()
+					defer mu.RUnlock()
+					c := tlsConf.Clone()
+					c.Certificates = []tls.Certificate{tlsCert}
+					return c, nil
+				}
+			} else {
+				tlsConf.Certificates = []tls.Certificate{tlsCert}
 			}
 		}
 
