@@ -16,6 +16,7 @@ import (
 
 	"github.com/distribution/reference"
 	"github.com/docker/distribution"
+	"github.com/docker/distribution/manifest/schema1"
 	v2 "github.com/docker/distribution/registry/api/v2"
 	"github.com/docker/distribution/registry/client/transport"
 	"github.com/docker/distribution/registry/storage/cache"
@@ -445,6 +446,10 @@ func (ms *manifests) Get(ctx context.Context, dgst digest.Digest, options ...dis
 		}
 	}
 
+	// byDigest records whether the caller pinned the manifest by digest (as
+	// opposed to fetching by tag). When true, the returned content must hash to
+	// the requested digest.
+	byDigest := digestOrTag == ""
 	if digestOrTag == "" {
 		digestOrTag = dgst.String()
 		ref, err = reference.WithDigest(ms.name, dgst)
@@ -499,6 +504,36 @@ func (ms *manifests) Get(ctx context.Context, dgst digest.Digest, options ...dis
 		if err != nil {
 			return nil, err
 		}
+
+		// When the manifest was requested by digest, verify that the content the
+		// registry returned actually hashes to that digest. The server-supplied
+		// Docker-Content-Digest header is not trustworthy: a malicious registry or
+		// a MITM can forge it while serving arbitrary bytes. Without this check,
+		// digest pinning provides no integrity guarantee.
+		if byDigest {
+			// Reject a digest whose algorithm is unsupported/unavailable rather
+			// than letting dgst.Verifier() panic; such a digest cannot be
+			// verified, so fail closed.
+			if err := dgst.Validate(); err != nil {
+				return nil, err
+			}
+			// A schema1 signed manifest is content-addressed by its canonical
+			// (signature-stripped) representation, not by the raw signed bytes
+			// on the wire; hash that form for the comparison. All other manifest
+			// types are addressed by their exact payload bytes.
+			verifyBytes := body
+			if sm, ok := m.(*schema1.SignedManifest); ok {
+				verifyBytes = sm.Canonical
+			}
+			verifier := dgst.Verifier()
+			if _, err := verifier.Write(verifyBytes); err != nil {
+				return nil, err
+			}
+			if !verifier.Verified() {
+				return nil, fmt.Errorf("manifest digest mismatch: requested %s but received content does not match", dgst)
+			}
+		}
+
 		return m, nil
 	}
 	return nil, HandleErrorResponse(resp)

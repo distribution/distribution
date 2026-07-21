@@ -787,6 +787,69 @@ func TestV1ManifestFetch(t *testing.T) {
 	}
 }
 
+// TestManifestFetchByDigestVerifies ensures that a manifest requested by digest
+// is rejected when the registry returns content that does not hash to the
+// requested digest, even if it forges the Docker-Content-Digest header.
+// Regression test for GHSA-685w-q87j-wqw3.
+func TestManifestFetchByDigestVerifies(t *testing.T) {
+	ctx := context.Background()
+	repo, _ := reference.WithName("test.example.com/repo")
+
+	// The manifest the caller pinned by digest.
+	m1, pinnedDgst, _ := newRandomSchemaV1Manifest(repo, "latest", 6)
+	_, pinnedPayload, err := m1.Payload()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A different, attacker-chosen manifest the malicious server returns instead.
+	m2, _, _ := newRandomSchemaV1Manifest(repo, "latest", 6)
+	_, evilPayload, err := m2.Payload()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Sanity check: the two payloads really do differ.
+	if digest.FromBytes(evilPayload) == digest.FromBytes(pinnedPayload) {
+		t.Fatal("test setup error: evil payload matches pinned payload")
+	}
+
+	var m testutil.RequestResponseMap
+	// Serve the evil payload at the pinned digest's URL, but lie in the
+	// Docker-Content-Digest header, claiming it matches what was requested.
+	m = append(m, testutil.RequestResponseMapping{
+		Request: testutil.Request{
+			Method: "GET",
+			Route:  "/v2/" + repo.Name() + "/manifests/" + pinnedDgst.String(),
+		},
+		Response: testutil.Response{
+			StatusCode: http.StatusOK,
+			Body:       evilPayload,
+			Headers: http.Header(map[string][]string{
+				"Content-Length":        {fmt.Sprint(len(evilPayload))},
+				"Last-Modified":         {time.Now().Add(-1 * time.Second).Format(time.ANSIC)},
+				"Content-Type":          {schema1.MediaTypeSignedManifest},
+				"Docker-Content-Digest": {pinnedDgst.String()}, // forged
+			}),
+		},
+	})
+
+	e, c := testServer(m)
+	defer c()
+
+	r, err := NewRepository(repo, e, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ms, err := r.Manifests(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := ms.Get(ctx, pinnedDgst); err == nil {
+		t.Fatal("expected digest mismatch error, but Get accepted substituted content")
+	}
+}
+
 func TestManifestFetchWithEtag(t *testing.T) {
 	repo, _ := reference.WithName("test.example.com/repo/by/tag")
 	_, d1, p1 := newRandomSchemaV1Manifest(repo, "latest", 6)
