@@ -379,6 +379,173 @@ func TestWriterWriteExcludesFailedPartFromCount(t *testing.T) {
 	}
 }
 
+// newSpoolTestDriver returns a spooling driver backed by handler and its
+// spool directory.
+func newSpoolTestDriver(t *testing.T, chunkSize int, handler http.HandlerFunc) (*driver, string) {
+	t.Helper()
+	server := httptest.NewServer(handler)
+	t.Cleanup(server.Close)
+
+	sess := session.Must(session.NewSession(&aws.Config{
+		Credentials:      credentials.NewStaticCredentials("access-key", "secret-key", ""),
+		DisableSSL:       aws.Bool(true),
+		Endpoint:         aws.String(server.URL),
+		Region:           aws.String("us-east-1"),
+		S3ForcePathStyle: aws.Bool(true),
+		MaxRetries:       aws.Int(0),
+	}))
+
+	spoolDir := t.TempDir()
+	return &driver{
+		S3:        s3.New(sess),
+		Bucket:    "bucket",
+		ChunkSize: chunkSize,
+		SpoolDir:  spoolDir,
+		pool:      newBufferPool(),
+	}, spoolDir
+}
+
+func spoolFiles(t *testing.T, dir string) []string {
+	t.Helper()
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("reading spool dir: %v", err)
+	}
+	names := make([]string, 0, len(entries))
+	for _, e := range entries {
+		names = append(names, e.Name())
+	}
+	return names
+}
+
+func TestWriterSpoolUploadsChunkedParts(t *testing.T) {
+	var parts [][]byte
+	const chunkSize = 8
+	d, spoolDir := newSpoolTestDriver(t, chunkSize, func(w http.ResponseWriter, r *http.Request) {
+		part, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Errorf("reading uploaded part: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		parts = append(parts, part)
+		w.Header().Set("ETag", fmt.Sprintf(`"part-%d"`, len(parts)))
+		w.WriteHeader(http.StatusOK)
+	})
+	w := d.newWriter(t.Context(), "key", "upload-id", nil).(*writer)
+
+	payload := make([]byte, 2*chunkSize+5)
+	for i := range payload {
+		payload[i] = byte(i)
+	}
+	// Several writes fill the first part; the last one spans two part
+	// boundaries. A Write after a part was flushed would take the
+	// below-minChunkSize rewrite path, which this fake S3 does not serve.
+	for _, p := range [][]byte{payload[:3], payload[3:5], payload[5:]} {
+		if n, err := w.Write(p); err != nil || n != len(p) {
+			t.Fatalf("Write() = %d, %v; want %d, nil", n, err, len(p))
+		}
+	}
+	if w.buf.Cap() != 0 {
+		t.Errorf("buffer capacity = %d, want 0 in spool mode", w.buf.Cap())
+	}
+	if got := spoolFiles(t, spoolDir); len(got) != 1 {
+		t.Errorf("spool files before Close = %v, want exactly one", got)
+	}
+
+	if err := w.Close(); err != nil {
+		t.Fatalf("Close() error: %v", err)
+	}
+
+	if got := bytes.Join(parts, nil); !bytes.Equal(got, payload) {
+		t.Errorf("uploaded content = %v, want %v", got, payload)
+	}
+	wantSizes := []int{chunkSize, chunkSize, 5}
+	gotSizes := make([]int, 0, len(parts))
+	for _, p := range parts {
+		gotSizes = append(gotSizes, len(p))
+	}
+	if !slices.Equal(gotSizes, wantSizes) {
+		t.Errorf("uploaded part sizes = %v, want %v", gotSizes, wantSizes)
+	}
+	if w.Size() != int64(len(payload)) {
+		t.Errorf("Size() = %d, want %d", w.Size(), len(payload))
+	}
+	if got := spoolFiles(t, spoolDir); len(got) != 0 {
+		t.Errorf("spool files after Close = %v, want none", got)
+	}
+}
+
+func TestWriterSpoolCreatedOnFirstWrite(t *testing.T) {
+	d, spoolDir := newSpoolTestDriver(t, 8, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	// Handlers may drop a writer without closing it, e.g. when a resume is
+	// rejected for a stale offset, so opening one must not create a file.
+	_ = d.newWriter(t.Context(), "key", "upload-id", nil)
+	if got := spoolFiles(t, spoolDir); len(got) != 0 {
+		t.Fatalf("spool files after newWriter = %v, want none", got)
+	}
+
+	w := d.newWriter(t.Context(), "key", "upload-id", nil)
+	if err := w.Close(); err != nil {
+		t.Fatalf("Close() error: %v", err)
+	}
+	if got := spoolFiles(t, spoolDir); len(got) != 0 {
+		t.Errorf("spool files after empty Close = %v, want none", got)
+	}
+}
+
+func TestWriterSpoolRemovedOnCancel(t *testing.T) {
+	var aborted bool
+	d, spoolDir := newSpoolTestDriver(t, 8, func(w http.ResponseWriter, r *http.Request) {
+		aborted = aborted || r.Method == http.MethodDelete
+		w.WriteHeader(http.StatusOK)
+	})
+	w := d.newWriter(t.Context(), "key", "upload-id", nil)
+
+	if _, err := w.Write([]byte("pending")); err != nil {
+		t.Fatalf("Write() error: %v", err)
+	}
+	if err := w.Cancel(t.Context()); err != nil {
+		t.Fatalf("Cancel() error: %v", err)
+	}
+	if !aborted {
+		t.Error("Cancel() did not abort the multipart upload")
+	}
+	if got := spoolFiles(t, spoolDir); len(got) != 0 {
+		t.Errorf("spool files after Cancel = %v, want none", got)
+	}
+}
+
+func TestWriterSpoolUploadError(t *testing.T) {
+	const chunkSize = 8
+	d, spoolDir := newSpoolTestDriver(t, chunkSize, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	})
+	w := d.newWriter(t.Context(), "key", "upload-id", nil)
+
+	n, err := w.Write(bytes.Repeat([]byte{0xab}, chunkSize+3))
+	if err == nil {
+		t.Fatal("Write() error = nil, want upload failure")
+	}
+	// the first full chunk is accepted into the spool before its upload fails
+	if n != chunkSize {
+		t.Errorf("Write() accepted %d bytes, want %d", n, chunkSize)
+	}
+	if w.Size() != 0 {
+		t.Errorf("Size() = %d, want 0 after failed upload", w.Size())
+	}
+
+	if err := w.Close(); err == nil {
+		t.Error("Close() error = nil, want upload failure for pending data")
+	}
+	if got := spoolFiles(t, spoolDir); len(got) != 0 {
+		t.Errorf("spool files after failed Close = %v, want none", got)
+	}
+}
+
 func BenchmarkWriterBufferGrowth(b *testing.B) {
 	const (
 		chunkSize = 10 * 1024 * 1024
