@@ -34,7 +34,7 @@ This repository contains the following components:
 Clients implement against the OCI specification and communicate with the
 registry using HTTP. This project contains a client implementation which
 is currently in use by Docker, however, it is deprecated for the
-[implementation in containerd](https://github.com/containerd/containerd/tree/master/remotes/docker)
+[implementation in containerd](https://github.com/containerd/containerd/tree/main/core/remotes/docker)
 and will not support new features.
 
 ### What are the long term goals of the Distribution project?
