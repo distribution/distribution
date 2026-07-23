@@ -36,6 +36,10 @@ func init() {
 }
 
 func unmarshalManifestList(b []byte) (distribution.Manifest, v1.Descriptor, error) {
+	if err := validateManifestList(b); err != nil {
+		return nil, v1.Descriptor{}, err
+	}
+
 	m := &DeserializedManifestList{}
 	if err := m.UnmarshalJSON(b); err != nil {
 		return nil, v1.Descriptor{}, err
