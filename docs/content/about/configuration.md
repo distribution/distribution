@@ -1269,6 +1269,15 @@ is unsupported.
 | `remoteurl`| yes     | The URL for the repository on Docker Hub.             |
 | `ttl`      | no      | Expire proxy cache configured in "storage" after this time. Cache 168h(7 days) by default, set to 0 to disable cache expiration, The suffix is one of `ns`, `us`, `ms`, `s`, `m`, or `h`. If you specify a value but omit the suffix, the value is interpreted as a number of nanoseconds. |
 
+The cache TTL counts from the most recent access: every successful cache hit
+refreshes the timer, so frequently-pulled blobs do not expire while traffic
+continues. When a TTL elapses the per-repository cache entry is dropped, but
+the underlying blob file is only vacuumed once no other repository (in the
+scheduler state or in the on-disk link tree) still references the digest.
+Orphan link files discovered on the storage tree at startup — for example
+state inherited from an older binary or an unclean shutdown — are picked up
+and rescheduled with the configured TTL.
+
 To enable pulling private repositories (e.g. `batman/robin`), specify one of the
 following authentication methods for the pull-through cache to authenticate with
 the upstream registry via the [v2 Distribution registry authentication
