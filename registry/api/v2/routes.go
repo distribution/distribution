@@ -12,6 +12,7 @@ const (
 	RouteNameBase            = "base"
 	RouteNameManifest        = "manifest"
 	RouteNameTags            = "tags"
+	RouteNameReferrers       = "referrers"
 	RouteNameBlob            = "blob"
 	RouteNameBlobUpload      = "blob-upload"
 	RouteNameBlobUploadChunk = "blob-upload-chunk"

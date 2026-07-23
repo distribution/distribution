@@ -1126,6 +1126,7 @@ A list of methods and URIs are covered in the table below:
 | PATCH | `/v2/<name>/blobs/uploads/<uuid>` | Blob Upload | Upload a chunk of data for the specified upload. |
 | PUT | `/v2/<name>/blobs/uploads/<uuid>` | Blob Upload | Complete the upload specified by `uuid`, optionally appending the body as the final chunk. |
 | DELETE | `/v2/<name>/blobs/uploads/<uuid>` | Blob Upload | Cancel outstanding upload processes, releasing associated resources. If this is not called, the unfinished uploads will eventually timeout. |
+| GET | `/v2/<name>/referrers/<digest>` | Referrers | Return an index of manifests that have the specified subject digest. |
 | GET | `/v2/_catalog` | Catalog | Retrieve a sorted, json list of repositories available in the registry. |
 
 The detail for each endpoint is covered in the following sections.
@@ -1140,8 +1141,9 @@ The error codes encountered via the API are enumerated in the following table:
  `BLOB_UPLOAD_INVALID` | blob upload invalid | The blob upload encountered an error and can no longer proceed.
  `BLOB_UPLOAD_UNKNOWN` | blob upload unknown to registry | If a blob upload has been cancelled or was never started, this error code may be returned.
  `DIGEST_INVALID` | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client. The error may include a detail structure with the key "digest", including the invalid digest string. This error may also be returned when a manifest includes an invalid layer digest.
- `MANIFEST_BLOB_UNKNOWN` | blob unknown to registry | This error may be returned when a manifest blob is  unknown to the registry.
+ `MANIFEST_BLOB_UNKNOWN` | blob unknown to registry | This error may be returned when a manifest blob is unknown to the registry.
  `MANIFEST_INVALID` | manifest invalid | During upload, manifests undergo several checks ensuring validity. If those checks fail, this error may be returned, unless a more specific error is included. The detail will contain information the failed validation.
+ `MANIFEST_NOT_ACCEPTABLE` | manifest does not match Accept header | This is returned if the manifest known to the registry has a different mediaType then the client's Accept header.
  `MANIFEST_UNKNOWN` | manifest unknown | This error is returned when the manifest, identified by name and tag is unknown to the repository.
  `MANIFEST_UNVERIFIED` | manifest failed signature verification | During manifest upload, if the manifest fails signature verification, this error will be returned.
  `NAME_INVALID` | invalid repository name | Invalid repository name encountered either during manifest validation or any API operation.
@@ -4950,6 +4952,14 @@ The error codes that may be included in the response body are enumerated below:
 
 
 
+
+### Referrers
+
+List referrers for a given manifest digest, per OCI Distribution Spec v1.1.
+
+#### GET Referrers
+
+Return an index of manifests that have the specified subject digest.
 
 ### Catalog
 
