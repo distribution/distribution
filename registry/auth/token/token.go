@@ -59,6 +59,7 @@ var defaultSigningAlgorithms = []jose.SignatureAlgorithm{
 var (
 	ErrMalformedToken = errors.New("malformed token")
 	ErrInvalidToken   = errors.New("invalid token")
+	ErrUnknownKeyID   = errors.New("unknown key ID")
 )
 
 // ResourceActions stores allowed actions on a named and typed resource.
@@ -120,6 +121,9 @@ func (t *Token) Verify(verifyOpts VerifyOptions) (*ClaimSet, error) {
 	signingKey, err := t.VerifySigningKey(verifyOpts)
 	if err != nil {
 		log.Infof("failed to verify token: %v", err)
+		if errors.Is(err, ErrUnknownKeyID) {
+			return nil, ErrUnknownKeyID
+		}
 		return nil, ErrInvalidToken
 	}
 
@@ -184,7 +188,7 @@ func (t *Token) VerifySigningKey(verifyOpts VerifyOptions) (crypto.PublicKey, er
 				if signingKey, ok := verifyOpts.TrustedKeys[header.KeyID]; ok {
 					return signingKey, nil
 				}
-				return nil, fmt.Errorf("token signed by untrusted key with ID: %q", header.KeyID)
+				return nil, fmt.Errorf("%w: %q", ErrUnknownKeyID, header.KeyID)
 			default:
 				return nil, ErrInvalidToken
 			}

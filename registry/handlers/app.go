@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"expvar"
 	"fmt"
+	"io"
 	"math"
 	"math/big"
 	"net"
@@ -453,6 +454,11 @@ func (app *App) RegisterHealthChecks(healthRegistries ...*health.Registry) {
 
 // Shutdown close the underlying registry
 func (app *App) Shutdown() error {
+	if c, ok := app.accessController.(io.Closer); ok {
+		if err := c.Close(); err != nil {
+			return err
+		}
+	}
 	if r, ok := app.registry.(proxy.Closer); ok {
 		return r.Close()
 	}
