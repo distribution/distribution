@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/distribution/distribution/v3/internal/dcontext"
+	"github.com/distribution/distribution/v3/registry/api/errcode"
 )
 
 // closeResources closes all the provided resources after running the target
@@ -82,4 +83,20 @@ func parseContentRange(cr string) (start int64, end int64, err error) {
 		return -1, -1, err
 	}
 	return start, end, nil
+}
+
+// toErrcodeErrors converts err into the errcode.Errors reported to the client.
+// When err already carries one or more registry error codes (for eg 401/403),
+// those codes are preserved so the client receives the correct status instead
+// of a generic internal server error. Errors that do not carry a code are reported
+// as ErrorCodeUnknown, preserving the previous behaviour.
+func toErrcodeErrors(err error) errcode.Errors {
+	switch err := err.(type) {
+	case errcode.Errors:
+		return err
+	case errcode.Error:
+		return errcode.Errors{err}
+	default:
+		return errcode.Errors{errcode.ErrorCodeUnknown.WithDetail(err)}
+	}
 }
