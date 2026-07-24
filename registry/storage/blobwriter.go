@@ -99,9 +99,12 @@ func (bw *blobWriter) Cancel(ctx context.Context) error {
 		return err
 	}
 
-	if err := bw.Close(); err != nil {
-		dcontext.GetLogger(ctx).Errorf("error closing blobwriter: %s", err)
-	}
+	// fileWriter.Cancel already closed the underlying writer; invoking
+	// Close again is redundant and structurally errors on the closed FD
+	// (logging a misleading "error closing blobwriter" line on every
+	// successful cancel). storeHashState — the only side effect of
+	// bw.Close beyond fileWriter.Close — is irrelevant on the cancel
+	// path: a cancelled upload cannot be resumed.
 
 	return bw.removeResources(ctx)
 }
