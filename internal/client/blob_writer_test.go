@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/distribution/distribution/v3"
@@ -498,5 +500,65 @@ func TestUploadWrite(t *testing.T) {
 		t.Fatalf("Wrong error type %T: %s", err, err)
 	} else if expected := "500 " + http.StatusText(http.StatusInternalServerError); uploadErr.Status != expected {
 		t.Fatalf("Unexpected response status: %s, expected %s", uploadErr.Status, expected)
+	}
+}
+
+// TestUploadHandleErrorResponseNotFound covers
+// https://github.com/distribution/distribution/issues/2512: a 404 response
+// can mean the upload session is gone (BLOB_UPLOAD_UNKNOWN), but it can also
+// carry a more specific error such as BLOB_UPLOAD_INVALID. Only the former
+// should collapse to the generic distribution.ErrBlobUploadUnknown sentinel;
+// the latter must be passed through so the registry's actual error message
+// reaches the caller.
+func TestUploadHandleErrorResponseNotFound(t *testing.T) {
+	hbu := &httpBlobUpload{}
+
+	newResponse := func(body string) *http.Response {
+		header := http.Header{}
+		if body != "" {
+			header.Set("Content-Type", "application/json")
+		}
+		return &http.Response{
+			StatusCode: http.StatusNotFound,
+			Header:     header,
+			Body:       io.NopCloser(strings.NewReader(body)),
+		}
+	}
+
+	// No body at all: fall back to the generic sentinel.
+	if err := hbu.handleErrorResponse(newResponse("")); err != distribution.ErrBlobUploadUnknown {
+		t.Fatalf("expected ErrBlobUploadUnknown, got %v", err)
+	}
+
+	// Explicit BLOB_UPLOAD_UNKNOWN: still the generic sentinel.
+	err := hbu.handleErrorResponse(newResponse(`{"errors":[{"code":"BLOB_UPLOAD_UNKNOWN","message":"blob upload unknown to registry"}]}`))
+	if err != distribution.ErrBlobUploadUnknown {
+		t.Fatalf("expected ErrBlobUploadUnknown, got %v", err)
+	}
+
+	// BLOB_UPLOAD_INVALID must not be masked by the generic sentinel.
+	err = hbu.handleErrorResponse(newResponse(`{"errors":[{"code":"BLOB_UPLOAD_INVALID","message":"blob upload invalid","detail":"digest mismatch"}]}`))
+	errs, ok := err.(errcode.Errors)
+	if !ok || len(errs) != 1 {
+		t.Fatalf("expected errcode.Errors with one entry, got %T: %v", err, err)
+	}
+	e, ok := errs[0].(errcode.Error)
+	if !ok || e.Code != errcode.ErrorCodeBlobUploadInvalid {
+		t.Fatalf("expected BLOB_UPLOAD_INVALID error, got %#v", errs[0])
+	}
+	if expected := "blob upload invalid"; e.Message != expected {
+		t.Fatalf("unexpected error message: %q, expected %q", e.Message, expected)
+	}
+
+	// BLOB_UPLOAD_INVALID with no detail and the default message unmarshals
+	// to a bare errcode.ErrorCode rather than errcode.Error (see
+	// errcode.Errors.UnmarshalJSON), so it must be recognized too.
+	err = hbu.handleErrorResponse(newResponse(`{"errors":[{"code":"BLOB_UPLOAD_INVALID","message":"blob upload invalid"}]}`))
+	errs, ok = err.(errcode.Errors)
+	if !ok || len(errs) != 1 {
+		t.Fatalf("expected errcode.Errors with one entry, got %T: %v", err, err)
+	}
+	if ec, ok := errs[0].(errcode.ErrorCode); !ok || ec != errcode.ErrorCodeBlobUploadInvalid {
+		t.Fatalf("expected BLOB_UPLOAD_INVALID error code, got %#v", errs[0])
 	}
 }
