@@ -526,18 +526,25 @@ func TestUploadHandleErrorResponseNotFound(t *testing.T) {
 	}
 
 	// No body at all: fall back to the generic sentinel.
-	if err := hbu.handleErrorResponse(newResponse("")); err != distribution.ErrBlobUploadUnknown {
+	resp := newResponse("")
+	err := hbu.handleErrorResponse(resp)
+	resp.Body.Close()
+	if err != distribution.ErrBlobUploadUnknown {
 		t.Fatalf("expected ErrBlobUploadUnknown, got %v", err)
 	}
 
 	// Explicit BLOB_UPLOAD_UNKNOWN: still the generic sentinel.
-	err := hbu.handleErrorResponse(newResponse(`{"errors":[{"code":"BLOB_UPLOAD_UNKNOWN","message":"blob upload unknown to registry"}]}`))
+	resp = newResponse(`{"errors":[{"code":"BLOB_UPLOAD_UNKNOWN","message":"blob upload unknown to registry"}]}`)
+	err = hbu.handleErrorResponse(resp)
+	resp.Body.Close()
 	if err != distribution.ErrBlobUploadUnknown {
 		t.Fatalf("expected ErrBlobUploadUnknown, got %v", err)
 	}
 
 	// BLOB_UPLOAD_INVALID must not be masked by the generic sentinel.
-	err = hbu.handleErrorResponse(newResponse(`{"errors":[{"code":"BLOB_UPLOAD_INVALID","message":"blob upload invalid","detail":"digest mismatch"}]}`))
+	resp = newResponse(`{"errors":[{"code":"BLOB_UPLOAD_INVALID","message":"blob upload invalid","detail":"digest mismatch"}]}`)
+	err = hbu.handleErrorResponse(resp)
+	resp.Body.Close()
 	errs, ok := err.(errcode.Errors)
 	if !ok || len(errs) != 1 {
 		t.Fatalf("expected errcode.Errors with one entry, got %T: %v", err, err)
@@ -553,7 +560,9 @@ func TestUploadHandleErrorResponseNotFound(t *testing.T) {
 	// BLOB_UPLOAD_INVALID with no detail and the default message unmarshals
 	// to a bare errcode.ErrorCode rather than errcode.Error (see
 	// errcode.Errors.UnmarshalJSON), so it must be recognized too.
-	err = hbu.handleErrorResponse(newResponse(`{"errors":[{"code":"BLOB_UPLOAD_INVALID","message":"blob upload invalid"}]}`))
+	resp = newResponse(`{"errors":[{"code":"BLOB_UPLOAD_INVALID","message":"blob upload invalid"}]}`)
+	err = hbu.handleErrorResponse(resp)
+	resp.Body.Close()
 	errs, ok = err.(errcode.Errors)
 	if !ok || len(errs) != 1 {
 		t.Fatalf("expected errcode.Errors with one entry, got %T: %v", err, err)
