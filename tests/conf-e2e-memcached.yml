@@ -1,0 +1,32 @@
+version: 0.1
+http:
+    addr: :5000
+    debug:
+      addr: :5001
+      prometheus:
+        enabled: true
+        path: /metrics
+    draintimeout: 5s
+    secret: hmacsecret
+log:
+    accesslog:
+      disabled: false
+    fields:
+      environment: local
+      service: registry
+    formatter: text
+    level: debug
+memcached:
+   addrs: [memcached:11211]
+   timeout: 100ms
+   maxidleconns: 16
+storage:
+  redirect:
+    disable: true
+  cache:
+    blobdescriptor: memcached
+  maintenance:
+    uploadpurging:
+      enabled: false
+  filesystem:
+    rootdirectory: /var/lib/registry

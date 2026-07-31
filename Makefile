@@ -161,6 +161,14 @@ start-e2e-s3-env: ## starts E2E S3 storage test environment (S3, Redis, registry
 stop-e2e-s3-env: ## stops E2E S3 storage test environment (S3, Redis, registry)
 	$(COMPOSE) -f tests/docker-compose-e2e-cloud-storage.yml down
 
+.PHONY: start-e2e-memcached-env
+start-e2e-memcached-env: ## starts E2E memcached cache test environment (memcached, registry)
+	$(COMPOSE) -f tests/docker-compose-e2e-memcached.yml up -d
+
+.PHONY: stop-e2e-memcached-env
+stop-e2e-memcached-env: ## stops E2E memcached cache test environment (memcached, registry)
+	$(COMPOSE) -f tests/docker-compose-e2e-memcached.yml down
+
 .PHONY: test-azure-storage
 test-azure-storage: start-azure-storage run-azure-tests stop-azure-storage ## run Azure storage driver tests
 

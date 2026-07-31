@@ -1,0 +1,31 @@
+services:
+  memcached:
+    image: memcached:1.6-alpine
+    healthcheck:
+      test: ["CMD", "sh", "-c", "printf 'version\r\n' | nc -w 1 localhost 11211 | grep -q VERSION"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "11211:11211"
+
+  registry:
+    build:
+      context: ../.
+      dockerfile: ./Dockerfile
+    command:
+      - "serve"
+      - "/etc/distribution/config-test.yml"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/debug/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    depends_on:
+      memcached:
+        condition: service_healthy
+    ports:
+      - "5000:5000"
+      - "5001:5001"
+    volumes:
+      - ./conf-e2e-memcached.yml:/etc/distribution/config-test.yml
