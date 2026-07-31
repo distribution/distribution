@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bradfitz/gomemcache/memcache"
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/configuration"
 	"github.com/distribution/distribution/v3/health"
@@ -33,6 +34,7 @@ import (
 	repositorymiddleware "github.com/distribution/distribution/v3/registry/middleware/repository"
 	"github.com/distribution/distribution/v3/registry/proxy"
 	"github.com/distribution/distribution/v3/registry/storage"
+	memcachecache "github.com/distribution/distribution/v3/registry/storage/cache/memcached"
 	memorycache "github.com/distribution/distribution/v3/registry/storage/cache/memory"
 	rediscache "github.com/distribution/distribution/v3/registry/storage/cache/redis"
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
@@ -80,6 +82,8 @@ type App struct {
 	}
 
 	redis redis.UniversalClient
+
+	memcached *memcache.Client
 
 	// isCache is true if this registry is configured as a pull through cache
 	isCache bool
@@ -167,6 +171,7 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 	}
 	app.configureEvents(config)
 	app.configureRedis(config)
+	app.configureMemcached(config)
 	app.configureLogHook(config)
 
 	options := registrymiddleware.GetRegistryOptions()
@@ -301,6 +306,20 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 				panic("could not create registry: " + err.Error())
 			}
 			dcontext.GetLogger(app).Infof("using redis blob descriptor cache")
+		case "memcached":
+			if app.memcached == nil {
+				panic("memcached configuration required to use for layerinfo cache")
+			}
+			if _, ok := cc["blobdescriptorsize"]; ok {
+				dcontext.GetLogger(app).Warnf("blobdescriptorsize parameter is not supported with memcached cache")
+			}
+			cacheProvider := memcachecache.NewMemcachedBlobDescriptorCacheProvider(app.memcached)
+			localOptions := append(options, storage.BlobDescriptorCacheProvider(cacheProvider))
+			app.registry, err = storage.NewRegistry(app, app.driver, localOptions...)
+			if err != nil {
+				panic("could not create registry: " + err.Error())
+			}
+			dcontext.GetLogger(app).Infof("using memcached blob descriptor cache")
 		case "inmemory":
 			blobDescriptorSize := memorycache.DefaultSize
 			configuredSize, ok := cc["blobdescriptorsize"]
@@ -636,6 +655,62 @@ func (app *App) createPool(cfg redis.UniversalOptions) redis.UniversalClient {
 		return res.Err()
 	}
 	return redis.NewUniversalClient(&cfg)
+}
+
+func (app *App) configureMemcached(cfg *configuration.Configuration) {
+	if len(cfg.Memcached.Addrs) == 0 {
+		dcontext.GetLogger(app).Infof("memcached not configured")
+		return
+	}
+
+	client := memcache.New(cfg.Memcached.Addrs...)
+	if cfg.Memcached.Timeout != 0 {
+		client.Timeout = cfg.Memcached.Timeout
+	}
+	if cfg.Memcached.MaxIdleConns != 0 {
+		client.MaxIdleConns = cfg.Memcached.MaxIdleConns
+	}
+
+	// memcached TLS config
+	if cfg.Memcached.TLS.Certificate != "" || cfg.Memcached.TLS.Key != "" || len(cfg.Memcached.TLS.RootCAs) != 0 {
+		if (cfg.Memcached.TLS.Certificate == "") != (cfg.Memcached.TLS.Key == "") {
+			dcontext.GetLogger(app).Warn("memcached TLS client certificate configuration is incomplete; both memcached.tls.certificate and memcached.tls.key must be set to enable mTLS, continuing without client certificates")
+		}
+
+		var err error
+		tlsConf := &tls.Config{}
+		if cfg.Memcached.TLS.Certificate != "" && cfg.Memcached.TLS.Key != "" {
+			tlsConf.Certificates = make([]tls.Certificate, 1)
+			tlsConf.Certificates[0], err = tls.LoadX509KeyPair(cfg.Memcached.TLS.Certificate, cfg.Memcached.TLS.Key)
+			if err != nil {
+				panic(err)
+			}
+		}
+		if len(cfg.Memcached.TLS.RootCAs) != 0 {
+			pool := x509.NewCertPool()
+			for _, ca := range cfg.Memcached.TLS.RootCAs {
+				caPem, err := os.ReadFile(ca)
+				if err != nil {
+					dcontext.GetLogger(app).Errorf("failed reading memcached client CA: %v", err)
+					return
+				}
+
+				if ok := pool.AppendCertsFromPEM(caPem); !ok {
+					dcontext.GetLogger(app).Error("could not add CA to pool")
+					return
+				}
+			}
+			tlsConf.RootCAs = pool
+		}
+		client.DialContext = func(ctx context.Context, network, address string) (net.Conn, error) {
+			dialer := tls.Dialer{
+				NetDialer: &net.Dialer{},
+				Config:    tlsConf,
+			}
+			return dialer.DialContext(ctx, network, address)
+		}
+	}
+	app.memcached = client
 }
 
 // configureLogHook prepares logging hook parameters.
