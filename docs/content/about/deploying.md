@@ -353,7 +353,7 @@ the following must be the same:
 
 - Storage Driver
 - HTTP Secret
-- Redis Cache (if configured)
+- Redis/Memcached Cache (if configured)
 
 Differences in any of the above cause problems serving requests.
 As an example, if you're using the filesystem driver, all registry instances
@@ -361,7 +361,7 @@ must have access to the same filesystem root, on
 the same machine. For other drivers, such as S3 or Azure, they should be
 accessing the same resource and share an identical configuration.
 The _HTTP Secret_ coordinates uploads, so also must be the same across
-instances. Configuring different redis instances works (at the time
+instances. Configuring different redis/memcached instances works (at the time
 of writing), but is not optimal if the instances are not shared, because
 more requests are directed to the backend.
 
