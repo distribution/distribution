@@ -79,7 +79,9 @@ func (th *tagsHandler) GetTags(w http.ResponseWriter, r *http.Request) {
 			// err is either io.EOF
 			moreEntries = false
 		}
-		filled = returnedTags
+		if returnedTags != nil {
+			filled = returnedTags
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")

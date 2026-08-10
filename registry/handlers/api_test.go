@@ -547,6 +547,12 @@ func TestTagsAPI(t *testing.T) {
 			}},
 		},
 		{
+			name:               "page after last tag",
+			queryParams:        url.Values{"last": []string{"sb71y"}, "n": []string{"1"}},
+			expectedStatusCode: http.StatusOK,
+			expectedBody:       tagsAPIResponse{Name: imageName.Name(), Tags: []string{}},
+		},
+		{
 			name:               "page size bigger than full list",
 			queryParams:        url.Values{"n": []string{"100"}},
 			expectedStatusCode: http.StatusOK,
@@ -601,7 +607,7 @@ func TestTagsAPI(t *testing.T) {
 					t.Fatalf("unexpected error decoding response body: %v", err)
 				}
 				if !reflect.DeepEqual(body, test.expectedBody) {
-					t.Fatalf("expected response body to be:\n%+v\ngot:\n%+v", test.expectedBody, body)
+					t.Fatalf("expected response body to be:\n%#v\ngot:\n%#v", test.expectedBody, body)
 				}
 			}
 
