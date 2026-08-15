@@ -143,29 +143,24 @@ func (d *driver) PutContent(ctx context.Context, subPath string, contents []byte
 	if err != nil {
 		return err
 	}
-	// Defensive backstop to release the file handle on any early return.
-	// Close is idempotent, so this is a no-op after the explicit Close below
-	// (or after Cancel on an error path).
 	defer writer.Close()
 
 	if _, err := io.Copy(writer, bytes.NewReader(contents)); err != nil {
-		// Cancel removes the temporary file.
-		return errors.Join(err, writer.Cancel(ctx))
+		if cErr := writer.Cancel(ctx); cErr != nil {
+			return errors.Join(err, cErr)
+		}
+		// Attempt to clean up the temporary file on error.
+		dErr := d.Delete(ctx, tempPath)
+		return errors.Join(err, dErr)
 	}
 
 	if err := writer.Commit(ctx); err != nil {
 		return errors.Join(err, writer.Cancel(ctx))
 	}
 
-	// Close before Move: Windows cannot rename a file while a handle to it is
-	// still open.
-	if err := writer.Close(); err != nil {
-		return errors.Join(err, d.Delete(ctx, tempPath))
-	}
-
 	// Atomically replace the target file with the temporary file.
-	if err := d.Move(ctx, tempPath, subPath); err != nil {
-		// Clean up the temporary file if rename fails.
+	if err := replace(ctx, d, writer, tempPath, subPath); err != nil {
+		// Clean up the temporary file if the move fails.
 		return errors.Join(err, d.Delete(ctx, tempPath))
 	}
 	return syncDir(filepath.Dir(d.fullPath(subPath)))
@@ -393,7 +388,7 @@ func (fw *fileWriter) Size() int64 {
 
 func (fw *fileWriter) Close() (retErr error) {
 	if fw.closed {
-		return nil
+		return fmt.Errorf("already closed")
 	}
 	fw.closed = true
 	defer func() {
@@ -416,7 +411,7 @@ func (fw *fileWriter) Close() (retErr error) {
 
 func (fw *fileWriter) Cancel(ctx context.Context) error {
 	if fw.closed {
-		return nil
+		return fmt.Errorf("already closed")
 	}
 
 	fw.cancelled = true
