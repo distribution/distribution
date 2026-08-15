@@ -2,7 +2,12 @@
 
 package filesystem
 
-import "os"
+import (
+	"context"
+	"os"
+
+	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
+)
 
 // syncDir is a no-op on Windows. Syncing a directory handle (the POSIX
 // durability barrier after a rename) is not a supported operation on Windows;
@@ -26,4 +31,14 @@ func rename(source, dest string) error {
 		}
 	}
 	return err
+}
+
+// replace closes writer, then moves tempPath to subPath to make its content
+// available at its final location. Windows cannot rename a file while a
+// handle to it is still open.
+func replace(ctx context.Context, d *driver, writer storagedriver.FileWriter, tempPath, subPath string) error {
+	if err := writer.Close(); err != nil {
+		return err
+	}
+	return d.Move(ctx, tempPath, subPath)
 }

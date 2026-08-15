@@ -3,9 +3,12 @@
 package filesystem
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
+
+	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 )
 
 // syncDir fsyncs the given directory so that a preceding rename is durably
@@ -34,4 +37,11 @@ func syncDir(dir string) (retErr error) {
 // an existing destination.
 func rename(source, dest string) error {
 	return os.Rename(source, dest)
+}
+
+// replace moves tempPath to subPath to make writer's content available at its
+// final location. On POSIX systems a rename works even while writer is still
+// open, so it is left open for its deferred Close in PutContent.
+func replace(ctx context.Context, d *driver, writer storagedriver.FileWriter, tempPath, subPath string) error {
+	return d.Move(ctx, tempPath, subPath)
 }
