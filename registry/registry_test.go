@@ -115,10 +115,23 @@ type registryTLSConfig struct {
 	certificate     *tls.Certificate
 }
 
+// freeTCPAddr reserves an ephemeral local TCP address for tests so we do not
+// collide with a developer registry already bound to :5000/:5001.
+func freeTCPAddr(t *testing.T) string {
+	t.Helper()
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	addr := ln.Addr().String()
+	if err := ln.Close(); err != nil {
+		t.Fatalf("close: %v", err)
+	}
+	return addr
+}
+
 func setupRegistry(tlsCfg *registryTLSConfig, addr string) (*Registry, error) {
 	config := &configuration.Configuration{}
-	// TODO: this needs to change to something ephemeral as the test will fail if there is any server
-	// already listening on port 5000
 	config.HTTP.Addr = addr
 	config.HTTP.DrainTimeout = time.Duration(10) * time.Second
 	if tlsCfg != nil {
@@ -131,7 +144,8 @@ func setupRegistry(tlsCfg *registryTLSConfig, addr string) (*Registry, error) {
 }
 
 func TestGracefulShutdown(t *testing.T) {
-	registry, err := setupRegistry(nil, ":5000")
+	addr := freeTCPAddr(t)
+	registry, err := setupRegistry(nil, addr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -150,13 +164,13 @@ func TestGracefulShutdown(t *testing.T) {
 	time.Sleep(3 * time.Second)
 
 	//Establish connection
-	conn, err := net.Dial("tcp", "localhost:5000")
+	conn, err := net.Dial("tcp", addr)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Send a complete, valid HTTP/1.1 request
-	_, err = fmt.Fprintf(conn, "GET /v2/ HTTP/1.1\r\nHost: localhost:5000\r\n\r\n")
+	_, err = fmt.Fprintf(conn, "GET /v2/ HTTP/1.1\r\nHost: %s\r\n\r\n", addr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -168,7 +182,7 @@ func TestGracefulShutdown(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// try connecting again - it should be rejected during graceful shutdown
-	conn2, err := net.Dial("tcp", "localhost:5000")
+	conn2, err := net.Dial("tcp", addr)
 	if err == nil {
 		conn2.Close()
 		t.Fatal("Managed to connect after stopping.")
@@ -336,13 +350,14 @@ func TestRegistrySupportedCipherSuite(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	registry, err := setupRegistry(serverTLS, ":5001")
+	addr := freeTCPAddr(t)
+	registry, err := setupRegistry(serverTLS, addr)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// run registry server
-	var errchan chan error
+	errchan := make(chan error, 1)
 	go func() {
 		errchan <- registry.ListenAndServe()
 	}()
@@ -367,7 +382,7 @@ func TestRegistrySupportedCipherSuite(t *testing.T) {
 	dialer := net.Dialer{
 		Timeout: time.Second * 5,
 	}
-	conn, err := tls.DialWithDialer(&dialer, "tcp", "127.0.0.1:5001", &clientTLS)
+	conn, err := tls.DialWithDialer(&dialer, "tcp", addr, &clientTLS)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -397,13 +412,14 @@ func TestRegistryUnsupportedCipherSuite(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	registry, err := setupRegistry(serverTLS, ":5002")
+	addr := freeTCPAddr(t)
+	registry, err := setupRegistry(serverTLS, addr)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// run registry server
-	var errchan chan error
+	errchan := make(chan error, 1)
 	go func() {
 		errchan <- registry.ListenAndServe()
 	}()
@@ -424,7 +440,7 @@ func TestRegistryUnsupportedCipherSuite(t *testing.T) {
 	dialer := net.Dialer{
 		Timeout: time.Second * 5,
 	}
-	_, err = tls.DialWithDialer(&dialer, "tcp", "127.0.0.1:5002", &clientTLS)
+	_, err = tls.DialWithDialer(&dialer, "tcp", addr, &clientTLS)
 	if err == nil {
 		t.Error("expected TLS connection to timeout")
 	}
