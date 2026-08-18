@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/distribution/distribution/v3"
+	"github.com/distribution/distribution/v3/registry/api/errcode"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
@@ -32,6 +33,18 @@ func (hbu *httpBlobUpload) Reader() (io.ReadCloser, error) {
 
 func (hbu *httpBlobUpload) handleErrorResponse(resp *http.Response) error {
 	if resp.StatusCode == http.StatusNotFound {
+		err := HandleHTTPResponseError(resp)
+		// BLOB_UPLOAD_UNKNOWN, along with other blob upload error codes such
+		// as BLOB_UPLOAD_INVALID, are all reported over HTTP 404. Only
+		// collapse to the generic sentinel when the registry didn't tell us
+		// anything more specific, so we don't hide the real error message.
+		if errs, ok := err.(errcode.Errors); ok {
+			for _, e := range errs {
+				if ec, ok := e.(errcode.ErrorCoder); ok && ec.ErrorCode() != errcode.ErrorCodeBlobUploadUnknown {
+					return err
+				}
+			}
+		}
 		return distribution.ErrBlobUploadUnknown
 	}
 	return HandleHTTPResponseError(resp)
