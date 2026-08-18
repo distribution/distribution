@@ -6,8 +6,9 @@ import (
 )
 
 func TestFileChecker(t *testing.T) {
-	if err := FileChecker("/tmp").Check(context.Background()); err == nil {
-		t.Errorf("/tmp was expected as exists")
+	dir := t.TempDir()
+	if err := FileChecker(dir).Check(context.Background()); err == nil {
+		t.Errorf("%s was expected as exists", dir)
 	}
 
 	if err := FileChecker("NoSuchFileFromMoon").Check(context.Background()); err != nil {
