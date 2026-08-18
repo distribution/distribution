@@ -204,3 +204,20 @@ func TestValidateManifestList(t *testing.T) {
 		}
 	})
 }
+
+func TestUnmarshalManifestListRejectsManifest(t *testing.T) {
+	// A document carrying the manifest-list media type but also image-manifest
+	// fields (config/layers) is ambiguous and must be rejected by the
+	// registered unmarshal path, not just by validateManifestList in isolation.
+	b := []byte(`{
+		"schemaVersion": 2,
+		"mediaType": "` + MediaTypeManifestList + `",
+		"config": {"size": 1},
+		"layers": [{"size": 2}],
+		"manifests": [{"size": 3}]
+	}`)
+
+	if _, _, err := distribution.UnmarshalManifest(MediaTypeManifestList, b); err == nil {
+		t.Fatal("ambiguous manifest/list document should not unmarshal as a manifest list")
+	}
+}
