@@ -386,51 +386,36 @@ func TestEmptyRootList(t *testing.T) {
 }
 
 func TestClientTransport(t *testing.T) {
-	skipCheck(t)
-
-	testCases := []struct {
-		skipverify bool
-	}{
-		{true},
-		{false},
-	}
-
-	for _, tc := range testCases {
-		// NOTE(milosgajdos): we cannot simply reuse s3DriverConstructor
-		// because s3DriverConstructor is initialized in init() using the process
-		// env vars: we can not override S3_SKIP_VERIFY env var with t.Setenv
+	for _, skipVerify := range []bool{true, false} {
 		params := map[string]any{
-			"region":     os.Getenv("AWS_REGION"),
-			"bucket":     os.Getenv("S3_BUCKET"),
-			"skipverify": tc.skipverify,
+			"region":     "us-east-1",
+			"bucket":     "test",
+			"skipverify": skipVerify,
 		}
-		t.Run(fmt.Sprintf("SkipVerify %v", tc.skipverify), func(t *testing.T) {
+		t.Run(fmt.Sprintf("SkipVerify %v", skipVerify), func(t *testing.T) {
 			drv, err := FromParameters(context.TODO(), params)
 			if err != nil {
 				t.Fatalf("failed to create driver: %v", err)
 			}
 
 			s3drv := drv.baseEmbed.Base.StorageDriver.(*driver)
-			if tc.skipverify {
-				tr, ok := s3drv.S3.Client.Config.HTTPClient.Transport.(*http.Transport)
-				if !ok {
-					t.Fatal("unexpected driver transport")
-				}
-				if !tr.TLSClientConfig.InsecureSkipVerify {
-					t.Errorf("unexpected TLS Config. Expected InsecureSkipVerify: %v, got %v",
-						tc.skipverify,
-						tr.TLSClientConfig.InsecureSkipVerify)
-				}
-				// make sure the proxy is always set
-				if tr.Proxy == nil {
-					t.Fatal("missing HTTP transport proxy config")
-				}
-				return
+			tr, ok := s3drv.S3.Client.Config.HTTPClient.Transport.(*http.Transport)
+			if !ok {
+				t.Fatal("unexpected driver transport")
 			}
-			// if tc.skipverify is false we do not override the driver
-			// HTTP client transport and leave it to the AWS SDK.
-			if s3drv.S3.Client.Config.HTTPClient.Transport != nil {
-				t.Errorf("unexpected S3 driver client transport")
+
+			insecureSkipVerify := tr.TLSClientConfig != nil && tr.TLSClientConfig.InsecureSkipVerify
+			if insecureSkipVerify != skipVerify {
+				t.Errorf("unexpected TLS config: InsecureSkipVerify = %v, want %v", insecureSkipVerify, skipVerify)
+			}
+
+			if tr.MaxIdleConnsPerHost != defaultMaxIdleConnsPerHost {
+				t.Errorf("unexpected MaxIdleConnsPerHost: %v", tr.MaxIdleConnsPerHost)
+			}
+
+			// make sure the proxy is always set
+			if tr.Proxy == nil {
+				t.Fatal("missing HTTP transport proxy config")
 			}
 		})
 	}

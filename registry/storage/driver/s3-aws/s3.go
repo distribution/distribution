@@ -51,6 +51,8 @@ const minChunkSize = 5 * 1024 * 1024
 
 const defaultChunkSize = 2 * minChunkSize
 
+const defaultMaxIdleConnsPerHost = 50
+
 const (
 	// defaultMultipartCopyChunkSize defines the default chunk size for all
 	// but the last Upload Part - Copy operation of a multipart copy.
@@ -490,13 +492,12 @@ func New(ctx context.Context, params DriverParameters) (*Driver, error) {
 		awsConfig.UseFIPSEndpoint = endpoints.FIPSEndpointStateEnabled
 	}
 
+	httpTransport := http.DefaultTransport.(*http.Transport).Clone()
+	httpTransport.MaxIdleConnsPerHost = defaultMaxIdleConnsPerHost
 	if params.SkipVerify {
-		httpTransport := http.DefaultTransport.(*http.Transport).Clone()
 		httpTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-		awsConfig.WithHTTPClient(&http.Client{
-			Transport: httpTransport,
-		})
 	}
+	awsConfig.WithHTTPClient(&http.Client{Transport: httpTransport})
 
 	sess, err := session.NewSession(awsConfig)
 	if err != nil {
