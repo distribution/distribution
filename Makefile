@@ -37,7 +37,13 @@ WHALE = "+"
 TESTFLAGS_RACE=
 GOFILES=$(shell find . -type f -name '*.go')
 GO_TAGS=$(if $(BUILDTAGS),-tags "$(BUILDTAGS)",)
-GO_LDFLAGS=-ldflags '-extldflags "-Wl,-z,now" -s -w -X $(PKG)/version.version=$(VERSION) -X $(PKG)/version.revision=$(REVISION) -X $(PKG)/version.mainpkg=$(PKG) $(EXTRA_LDFLAGS)'
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Linux)
+  EXTLDFLAGS := -extldflags "-Wl,-z,now"
+else
+  EXTLDFLAGS :=
+endif
+GO_LDFLAGS=-ldflags '$(EXTLDFLAGS) -s -w -X $(PKG)/version.version=$(VERSION) -X $(PKG)/version.revision=$(REVISION) -X $(PKG)/version.mainpkg=$(PKG) $(EXTRA_LDFLAGS)'
 
 BINARIES=$(addprefix bin/,$(COMMANDS))
 
@@ -60,14 +66,14 @@ version/version.go:
 
 bin/%: cmd/% FORCE ## build individual binary
 	@echo "$(WHALE) $@${BINARY_SUFFIX}"
-	@go build -buildmode=pie ${GO_GCFLAGS} ${GO_BUILD_FLAGS} -o $@${BINARY_SUFFIX} ${GO_LDFLAGS} --ldflags '-extldflags "-Wl,-z,now" -s' ${GO_TAGS}  ./$<
+	@go build -buildmode=pie ${GO_GCFLAGS} ${GO_BUILD_FLAGS} -o $@${BINARY_SUFFIX} ${GO_LDFLAGS} ${GO_TAGS}  ./$<
 
 binaries: $(BINARIES) ## build binaries
 	@echo "$(WHALE) $@"
 
 build: ## build go packages
 	@echo "$(WHALE) $@"
-	@go build -buildmode=pie ${GO_GCFLAGS} ${GO_BUILD_FLAGS} ${GO_LDFLAGS} --ldflags '-extldflags "-Wl,-z,now" -s' ${GO_TAGS} $(PACKAGES)
+	@go build -buildmode=pie ${GO_GCFLAGS} ${GO_BUILD_FLAGS} ${GO_LDFLAGS} ${GO_TAGS} $(PACKAGES)
 
 image: ## build docker image IMAGE_NAME=<name>
 	docker buildx bake --set "*.tags=${IMAGE_NAME}" image-local
