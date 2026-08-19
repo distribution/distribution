@@ -59,8 +59,15 @@ type ImageIndex struct {
 	// MediaType is the media type of this schema.
 	MediaType string `json:"mediaType,omitempty"`
 
+	// ArtifactType is the type of an artifact when the manifest is used for an
+	// artifact.
+	ArtifactType string `json:"artifactType,omitempty"`
+
 	// Manifests references a list of manifests
 	Manifests []v1.Descriptor `json:"manifests"`
+
+	// Subject is the descriptor of a manifest referred to by this manifest.
+	Subject *v1.Descriptor `json:"subject,omitempty"`
 
 	// Annotations is an optional field that contains arbitrary metadata for the
 	// image index
@@ -87,15 +94,20 @@ type DeserializedImageIndex struct {
 // and its JSON representation. If annotations is nil or empty then the
 // annotations property will be omitted from the JSON representation.
 func FromDescriptors(descriptors []v1.Descriptor, annotations map[string]string) (*DeserializedImageIndex, error) {
-	return fromDescriptorsWithMediaType(descriptors, annotations, v1.MediaTypeImageIndex)
+	return fromDescriptorsWithMediaType(descriptors, nil, annotations, v1.MediaTypeImageIndex)
 }
 
 // fromDescriptorsWithMediaType is for testing purposes, it's useful to be able to specify the media type explicitly
-func fromDescriptorsWithMediaType(descriptors []v1.Descriptor, annotations map[string]string, mediaType string) (_ *DeserializedImageIndex, err error) {
+func fromDescriptorsWithMediaType(descriptors []v1.Descriptor, subject *v1.Descriptor, annotations map[string]string, mediaType string) (_ *DeserializedImageIndex, err error) {
 	m := ImageIndex{
 		Versioned:   specs.Versioned{SchemaVersion: 2},
 		MediaType:   mediaType,
+		Subject:     subject,
 		Annotations: annotations,
+	}
+
+	if subject != nil {
+		m.ArtifactType = "application/text"
 	}
 
 	m.Manifests = make([]v1.Descriptor, len(descriptors))
@@ -161,4 +173,18 @@ func validateIndex(b []byte) error {
 		return errors.New("index: expected index but found manifest")
 	}
 	return nil
+}
+
+// Subject returns a pointer to the subject of this manifest or nil if there is
+// none
+func (m *DeserializedImageIndex) Subject() *distribution.Descriptor {
+	return m.ImageIndex.Subject
+}
+
+// Type returns the artifactType of the manifest
+func (m *DeserializedImageIndex) Type() string {
+	if m.ArtifactType == "" {
+		return m.ImageIndex.MediaType
+	}
+	return m.ArtifactType
 }
