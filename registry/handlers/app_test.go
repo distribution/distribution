@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -273,5 +274,88 @@ func TestAppendAccessRecords(t *testing.T) {
 	expectedResult = []auth.Access{expectedDeleteRecord}
 	if ok := reflect.DeepEqual(result, expectedResult); !ok {
 		t.Fatal("Actual access record differs from expected")
+	}
+}
+
+// TestDispatcherErrorEnvelopeAfterResponseStarted ensures that the automated
+// error response handling does not append an error envelope to a response body
+// that a handler already started writing, and that it still serves the
+// envelope when nothing has been written yet.
+func TestDispatcherErrorEnvelopeAfterResponseStarted(t *testing.T) {
+	for _, testcase := range []struct {
+		name         string
+		partialWrite string
+		expectedBody string
+		expectedCode int
+	}{
+		{
+			name:         "response already started",
+			partialWrite: "partial blob",
+			expectedBody: "partial blob",
+			expectedCode: http.StatusOK,
+		},
+		{
+			name:         "nothing written yet",
+			expectedCode: http.StatusInternalServerError,
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			driver := inmemory.New()
+			ctx := dcontext.Background()
+			registry, err := storage.NewRegistry(ctx, driver, storage.BlobDescriptorCacheProvider(memorycache.NewInMemoryBlobDescriptorCacheProvider(0)), storage.EnableDelete, storage.EnableRedirect)
+			if err != nil {
+				t.Fatalf("error creating registry: %v", err)
+			}
+			app := &App{
+				Config:   &configuration.Configuration{},
+				Context:  ctx,
+				router:   v2.RouterWithPrefix(""),
+				driver:   driver,
+				registry: registry,
+			}
+
+			app.register(v2.RouteNameTags, func(ctx *Context, r *http.Request) http.Handler {
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					if testcase.partialWrite != "" {
+						if _, err := w.Write([]byte(testcase.partialWrite)); err != nil {
+							t.Fatalf("error writing partial response: %v", err)
+						}
+					}
+					ctx.Errors = append(ctx.Errors, errcode.ErrorCodeUnknown.WithDetail("upstream read failed"))
+				})
+			})
+
+			server := httptest.NewServer(app)
+			defer server.Close()
+
+			resp, err := http.Get(server.URL + "/v2/foo/bar/tags/list")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer resp.Body.Close()
+
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				t.Fatalf("error reading body: %v", err)
+			}
+			if resp.StatusCode != testcase.expectedCode {
+				t.Fatalf("unexpected status code: %v != %v (body %q)", resp.StatusCode, testcase.expectedCode, string(body))
+			}
+
+			if testcase.expectedBody != "" {
+				if string(body) != testcase.expectedBody {
+					t.Fatalf("error envelope leaked into a started response: %q != %q", string(body), testcase.expectedBody)
+				}
+				return
+			}
+
+			var errs errcode.Errors
+			if err := json.Unmarshal(body, &errs); err != nil {
+				t.Fatalf("error unmarshaling error envelope %q: %v", string(body), err)
+			}
+			if len(errs) != 1 {
+				t.Fatalf("unexpected number of errors: %d != 1", len(errs))
+			}
+		})
 	}
 }

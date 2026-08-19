@@ -721,7 +721,17 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 			// own errors if they need different behavior (such as range errors
 			// for layer upload).
 			if context.Errors.Len() > 0 {
-				_ = errcode.ServeJSON(w, context.Errors)
+				if responseStarted(context) {
+					// The handler already began streaming the response body,
+					// which happens when a read fails part way through, so the
+					// error envelope cannot be delivered: net/http discards the
+					// second WriteHeader and the JSON would be appended to the
+					// partial payload the client is still reading. Record the
+					// error instead of corrupting the response.
+					dcontext.GetLogger(context).Errorf("error after response body started, not serving error envelope: %v", context.Errors)
+				} else {
+					_ = errcode.ServeJSON(w, context.Errors)
+				}
 				app.logError(context, context.Errors)
 			} else if status, ok := context.Value("http.response.status").(int); ok && status >= 200 && status <= 399 {
 				dcontext.GetResponseLogger(context).Infof("response completed")
@@ -791,6 +801,15 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 
 		dispatch(context, r).ServeHTTP(w, r)
 	})
+}
+
+// responseStarted reports whether any response body bytes have already been
+// written for this request. Header-only writes do not count: a handler that
+// sets its own status but no body can still have an error envelope appended,
+// which is the existing behaviour for layer upload range errors.
+func responseStarted(ctx context.Context) bool {
+	written, ok := ctx.Value("http.response.written").(int64)
+	return ok && written > 0
 }
 
 type errCodeKey struct{}
