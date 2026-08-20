@@ -8,6 +8,8 @@ import (
 	"net/url"
 	"strconv"
 
+	"github.com/distribution/distribution/v3"
+	"github.com/distribution/distribution/v3/configuration"
 	"github.com/distribution/distribution/v3/registry/api/errcode"
 	"github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/gorilla/handlers"
@@ -15,9 +17,11 @@ import (
 
 const defaultReturnedEntries = 100
 
-func catalogDispatcher(ctx *Context, r *http.Request) http.Handler {
+func catalogDispatcher(ctx *Context, app *App, r *http.Request) http.Handler {
 	catalogHandler := &catalogHandler{
-		Context: ctx,
+		Context:  ctx,
+		Config:   app.Config,
+		registry: app.registry,
 	}
 
 	return handlers.MethodHandler{
@@ -27,6 +31,8 @@ func catalogDispatcher(ctx *Context, r *http.Request) http.Handler {
 
 type catalogHandler struct {
 	*Context
+	Config   *configuration.Configuration
+	registry distribution.Namespace
 }
 
 type catalogAPIResponse struct {
@@ -40,7 +46,7 @@ func (ch *catalogHandler) GetCatalog(w http.ResponseWriter, r *http.Request) {
 	lastEntry := q.Get("last")
 
 	entries := defaultReturnedEntries
-	maximumConfiguredEntries := ch.App.Config.Catalog.MaxEntries
+	maximumConfiguredEntries := ch.Config.Catalog.MaxEntries
 
 	// parse n, if n is negative abort with an error
 	if n := q.Get("n"); n != "" {
@@ -71,7 +77,7 @@ func (ch *catalogHandler) GetCatalog(w http.ResponseWriter, r *http.Request) {
 	if entries == 0 {
 		moreEntries = false
 	} else {
-		returnedRepositories, err := ch.App.registry.Repositories(ch.Context, repos, lastEntry)
+		returnedRepositories, err := ch.registry.Repositories(ch.Context, repos, lastEntry)
 		if err != nil {
 			_, pathNotFound := err.(driver.PathNotFoundError)
 			if err != io.EOF && !pathNotFound {
