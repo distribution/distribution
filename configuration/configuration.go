@@ -713,6 +713,9 @@ type Proxy struct {
 	// If set to zero, will never expire cache
 	TTL *time.Duration `yaml:"ttl,omitempty"`
 
+	// TLS configures client TLS for proxying to the remote registry
+	TLS *ProxyTLS `yaml:"tls,omitempty"`
+
 	// CacheWriteTimeout is the maximum duration allowed for cache write operations
 	// to complete when pulling blobs from the remote registry. This timeout ensures
 	// that cache writes don't hang indefinitely if the storage backend is slow.
@@ -735,6 +738,30 @@ type ExecConfig struct {
 	// If set to zero, the command will be executed for every request.
 	// If not set, the command will only be executed once.
 	Lifetime *time.Duration `yaml:"lifetime,omitempty"`
+}
+
+// ProxyTLS configures TLS for registries requiring client certificates.
+type ProxyTLS struct {
+	// Certificate specifies the path to the certificate file for TLS authentication.
+	// This certificate is used to establish a secure connection with the registry.
+	Certificate string `yaml:"certificate,omitempty"`
+
+	// Key specifies the path to the private key file associated with the certificate.
+	// This key is used to authenticate the client during the TLS handshake.
+	Key string `yaml:"key,omitempty"`
+
+	// ClientCAs specifies a list of certificates to be used when the registry acts
+	// as a server to verify client certificates during the TLS handshake. This can
+	// be used for mutual TLS authentication.
+	ClientCAs []string `yaml:"clientcas,omitempty"`
+
+	// RootCAs specifies a list of certificates to be used to verify the server's
+	// certificate during the TLS handshake.
+	RootCAs []string `yaml:"rootcas,omitempty"`
+
+	// InsecureSkipVerify controls whether a client verifies the server's
+	// certificate chain and host name.
+	InsecureSkipVerify bool `yaml:"insecure-skip-verify,omitempty"`
 }
 
 // Validation configures validation options for the registry.

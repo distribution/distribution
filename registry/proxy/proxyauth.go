@@ -46,10 +46,10 @@ func (c credentials) SetRefreshToken(u *url.URL, service, token string) {
 }
 
 // configureAuth stores credentials for challenge responses
-func configureAuth(username, password, remoteURL string) (auth.CredentialStore, auth.CredentialStore, error) {
+func configureAuth(username, password, remoteURL string, transport http.RoundTripper) (auth.CredentialStore, auth.CredentialStore, error) {
 	creds := map[string]userpass{}
 
-	authURLs, err := getAuthURLs(remoteURL)
+	authURLs, err := getAuthURLs(remoteURL, transport)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -65,7 +65,7 @@ func configureAuth(username, password, remoteURL string) (auth.CredentialStore, 
 	return credentials{creds: creds}, userpass{username: username, password: password}, nil
 }
 
-func getAuthURLs(remoteURL string) ([]string, error) {
+func getAuthURLs(remoteURL string, transport http.RoundTripper) ([]string, error) {
 	authURLs := []string{}
 
 	remote, err := url.Parse(remoteURL)
@@ -73,7 +73,8 @@ func getAuthURLs(remoteURL string) ([]string, error) {
 		return nil, err
 	}
 
-	resp, err := http.Get(remoteURL + "/v2/")
+	client := &http.Client{Transport: transport}
+	resp, err := client.Get(remoteURL + "/v2/")
 	if err != nil {
 		return nil, err
 	}
@@ -131,8 +132,9 @@ func registrableDomain(host string) string {
 	return domain
 }
 
-func ping(manager challenge.Manager, endpoint, versionHeader string) error {
-	resp, err := http.Get(endpoint)
+func ping(manager challenge.Manager, endpoint, versionHeader string, transport http.RoundTripper) error {
+	client := &http.Client{Transport: transport}
+	resp, err := client.Get(endpoint)
 	if err != nil {
 		return err
 	}
