@@ -97,6 +97,16 @@ var configStruct = Configuration{
 			RootCAs:     []string{"/path/to/ca.pem"},
 		},
 	},
+	Memcached: Memcached{
+		Addrs:        []string{"localhost:11211"},
+		Timeout:      time.Millisecond * 10,
+		MaxIdleConns: 16,
+		TLS: MemcachedTLSOptions{
+			Certificate: "/foo/cert.crt",
+			Key:         "/foo/key.pem",
+			RootCAs:     []string{"/path/to/ca.pem"},
+		},
+	},
 	Validation: Validation{
 		Manifests: ValidationManifests{
 			Indexes: ValidationIndexes{
@@ -167,6 +177,15 @@ redis:
   dialtimeout: 10ms
   readtimeout: 10ms
   writetimeout: 10ms
+memcached:
+  tls:
+    certificate: /foo/cert.crt
+    key: /foo/key.pem
+    rootcas:
+      - /path/to/ca.pem
+  addrs: [localhost:11211]
+  timeout: 10ms
+  maxidleconns: 16
 validation:
   manifests:
     indexes:
@@ -248,6 +267,7 @@ func (suite *ConfigSuite) TestParseInmemory() {
 	suite.expectedConfig.HTTP.TLS.ClientCAs = nil
 	suite.expectedConfig.HTTP.TLS.ClientAuth = ""
 	suite.expectedConfig.Redis = Redis{}
+	suite.expectedConfig.Memcached = Memcached{}
 
 	config, err := Parse(bytes.NewReader([]byte(inmemoryConfigYamlV0_1)))
 	suite.Require().NoError(err)
@@ -270,6 +290,7 @@ func (suite *ConfigSuite) TestParseIncomplete() {
 	suite.expectedConfig.HTTP.TLS.ClientCAs = nil
 	suite.expectedConfig.HTTP.TLS.ClientAuth = ""
 	suite.expectedConfig.Redis = Redis{}
+	suite.expectedConfig.Memcached = Memcached{}
 	suite.expectedConfig.Validation.Manifests.Indexes.Platforms = ""
 
 	// Note: this also tests that REGISTRY_STORAGE and
@@ -559,6 +580,12 @@ func copyConfig(config Configuration) *Configuration {
 	configCopy.Redis.TLS.Key = config.Redis.TLS.Key
 	configCopy.Redis.TLS.RootCAs = make([]string, 0, len(config.Redis.TLS.RootCAs))
 	configCopy.Redis.TLS.RootCAs = append(configCopy.Redis.TLS.RootCAs, config.Redis.TLS.RootCAs...)
+
+	configCopy.Memcached = config.Memcached
+	configCopy.Memcached.TLS.Certificate = config.Memcached.TLS.Certificate
+	configCopy.Memcached.TLS.Key = config.Memcached.TLS.Key
+	configCopy.Memcached.TLS.RootCAs = make([]string, 0, len(config.Memcached.TLS.RootCAs))
+	configCopy.Memcached.TLS.RootCAs = append(configCopy.Memcached.TLS.RootCAs, config.Memcached.TLS.RootCAs...)
 
 	configCopy.Validation = Validation{
 		Enabled:   config.Validation.Enabled,

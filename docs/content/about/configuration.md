@@ -557,9 +557,10 @@ Use the `cache` structure to enable caching of data accessed in the storage
 backend. Currently, the only available cache provides fast access to layer
 metadata, which uses the `blobdescriptor` field if configured.
 
-You can set `blobdescriptor` field to `redis` or `inmemory`. If set to `redis`,a
-Redis pool caches layer metadata. If set to `inmemory`, an in-memory map caches
-layer metadata.
+You can set `blobdescriptor` field to `redis`, `memcached` or `inmemory`. If
+set to `redis`, a Redis pool caches layer metadata. If set to `memcached`, a
+memcached pool caches layer metadata. If set to `inmemory`, an in-memory map
+caches layer metadata.
 
 > **NOTE**: Formerly, `blobdescriptor` was known as `layerinfo`. While these
 > are equivalent, `layerinfo` has been deprecated.
@@ -1162,6 +1163,52 @@ redis:
   poolsize: 64
   connmaxidletime: 300s
 ```
+
+## `memcached`
+
+Declare parameters for constructing the `memcached` client. Registry instances
+may use the memcached pool for several applications.
+
+The registry does not set an expiration value on keys, so the memcached servers
+should be configured with a suitable eviction policy.
+
+Under the hood distribution uses the
+[`gomemcache`](https://github.com/bradfitz/gomemcache) Go module for memcached
+connectivity. Since memcached keys are limited to 250 bytes, keys derived from
+long repository names are replaced with a fixed length hash.
+
+You can optionally specify TLS configuration on top of the connection
+settings. This requires the memcached servers to be running with TLS enabled
+(e.g. memcached's `--enable-ssl`).
+
+Use these settings to configure memcached TLS:
+
+| Parameter     | Required | Description                                                           |
+| ------------- | -------- | --------------------------------------------------------------------- |
+| `certificate` | no       | Absolute path to the x509 client certificate file. Required for mTLS. |
+| `key`         | no       | Absolute path to the x509 client private key file. Required for mTLS. |
+| `rootcas`     | no       | An array of absolute paths to x509 CA files.                          |
+
+```yaml
+storage:
+  cache:
+    blobdescriptor: memcached
+memcached:
+  addrs:
+    - localhost:11211
+  timeout: 100ms
+  maxidleconns: 16
+  tls:
+    rootcas:
+      - /path/to/ca-bundle.crt
+```
+
+| Parameter      | Required | Description                                                                                                                                |
+| -------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `addrs`        | yes      | List of memcached server addresses in the form `host:port`. When multiple addresses are provided, the client distributes keys across them. |
+| `timeout`      | no       | Socket read/write timeout for memcached connections. Defaults to `500ms`.                                                                  |
+| `maxidleconns` | no       | Maximum number of idle connections maintained per server. Defaults to `2`.                                                                 |
+| `tls`          | no       | TLS settings for secure communication with the memcached servers.                                                                          |
 
 ## `health`
 

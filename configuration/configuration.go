@@ -57,6 +57,10 @@ type Configuration struct {
 	// Redis configures the redis pool available to the registry webapp.
 	Redis Redis `yaml:"redis,omitempty"`
 
+	// Memcached configures the memcached servers available to the registry
+	// webapp.
+	Memcached Memcached `yaml:"memcached,omitempty"`
+
 	// Health provides the configuration section for health checks.
 	// It allows defining various checks to monitor the health of different subsystems.
 	Health Health `yaml:"health,omitempty"`
@@ -991,6 +995,45 @@ type Redis struct {
 	// TLS contains the TLS settings for secure communication with the Redis server.
 	// If specified, these settings will enable encryption and authentication via TLS.
 	TLS RedisTLSOptions `yaml:"tls,omitempty"`
+}
+
+// Memcached contains the configuration for connecting to memcached servers.
+type Memcached struct {
+	// Addrs is the list of memcached server addresses in the form
+	// "host:port". When multiple addresses are provided, keys are
+	// distributed across them by hashing. Note that this is not
+	// consistent hashing: adding or removing a server remaps all keys.
+	Addrs []string `yaml:"addrs,omitempty"`
+
+	// Timeout is the socket read/write timeout for memcached connections.
+	// If unset, the gomemcache default of 500ms is used.
+	Timeout time.Duration `yaml:"timeout,omitempty"`
+
+	// MaxIdleConns is the maximum number of idle connections that will be
+	// maintained per server. If unset, the gomemcache default of 2 is used.
+	MaxIdleConns int `yaml:"maxidleconns,omitempty"`
+
+	// TLS contains the TLS settings for secure communication with the
+	// memcached servers. If specified, these settings will enable encryption
+	// and authentication via TLS. This requires the memcached servers to be
+	// running with TLS enabled.
+	TLS MemcachedTLSOptions `yaml:"tls,omitempty"`
+}
+
+// MemcachedTLSOptions configures the TLS (Transport Layer Security) settings
+// for Memcached connections, allowing secure communication over the network.
+type MemcachedTLSOptions struct {
+	// Certificate specifies the path to the certificate file for TLS
+	// authentication.
+	Certificate string `yaml:"certificate,omitempty"`
+
+	// Key specifies the path to the private key file associated with the
+	// certificate.
+	Key string `yaml:"key,omitempty"`
+
+	// RootCAs specifies a list of root certificate authorities that clients
+	// use when verifying server certificates.
+	RootCAs []string `yaml:"rootcas,omitempty"`
 }
 
 const (
