@@ -2,6 +2,7 @@ package distribution
 
 import (
 	"context"
+	"time"
 
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -30,6 +31,20 @@ type TagService interface {
 
 	// List returns the set of tags after last managed by this tag service
 	List(ctx context.Context, limit int, last string) ([]string, error)
+}
+
+// TagDescriptor holds a tag name and its last modification time.
+type TagDescriptor struct {
+	Name         string
+	ModifiedTime time.Time
+}
+
+// TagServiceWithTimestamp is an optional interface that TagService implementations
+// may implement to support listing tags with modification times.
+type TagServiceWithTimestamp interface {
+	// AllWithModifiedTime returns all tags with their last modification time,
+	// sorted by modification time in descending order (newest first).
+	AllWithModifiedTime(ctx context.Context) ([]TagDescriptor, error)
 }
 
 // TagManifestsProvider provides method to retrieve the digests of manifests that a tag historically
