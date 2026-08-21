@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"expvar"
 	"fmt"
+	"log/slog"
 	"math"
 	"math/big"
 	"net"
@@ -45,7 +46,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/redis/go-redis/extra/redisotel/v9"
 	"github.com/redis/go-redis/v9"
-	"github.com/sirupsen/logrus"
 )
 
 // randomSecretSize is the number of random bytes to generate if no secret
@@ -640,21 +640,12 @@ func (app *App) createPool(cfg redis.UniversalOptions) redis.UniversalClient {
 
 // configureLogHook prepares logging hook parameters.
 func (app *App) configureLogHook(configuration *configuration.Configuration) {
-	entry, ok := dcontext.GetLogger(app).(*logrus.Entry)
-	if !ok {
-		// somehow, we are not using logrus
-		return
-	}
-
-	logger := entry.Logger
-
+	hooks := make([]slog.Handler, 0, len(configuration.Log.Hooks))
 	for _, configHook := range configuration.Log.Hooks {
 		if !configHook.Disabled {
 			switch configHook.Type {
 			case "mail":
-				hook := &logHook{}
-				hook.LevelsParam = configHook.Levels
-				hook.Mail = &mailer{
+				mail := &mailer{
 					Addr:     configHook.MailOptions.SMTP.Addr,
 					Username: configHook.MailOptions.SMTP.Username,
 					Password: configHook.MailOptions.SMTP.Password,
@@ -662,11 +653,21 @@ func (app *App) configureLogHook(configuration *configuration.Configuration) {
 					From:     configHook.MailOptions.From,
 					To:       configHook.MailOptions.To,
 				}
-				logger.Hooks.Add(hook)
+				hooks = append(hooks, newMailHandler(mail, configHook.Levels))
 			default:
 			}
 		}
 	}
+	if len(hooks) == 0 {
+		return
+	}
+
+	// Fan the app logger out to the hook handlers in addition to its
+	// original handler, and make the combined logger the new default.
+	handler := dcontext.GetLogger(app).Handler()
+	logger := dcontext.NewLogger(slog.New(newMultiHandler(append([]slog.Handler{handler}, hooks...)...)))
+	app.Context = dcontext.WithLogger(app.Context, logger)
+	dcontext.SetDefaultLogger(logger)
 }
 
 // configureSecret creates a random secret if a secret wasn't included in the

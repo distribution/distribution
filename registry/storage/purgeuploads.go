@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"log/slog"
 	"path"
 	"slices"
 	"strings"
@@ -9,7 +10,6 @@ import (
 
 	storageDriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
 )
 
 // uploadData stored the location of temporary files created during a layer upload
@@ -31,14 +31,14 @@ func newUploadData() uploadData {
 // created before olderThan.  The list of files deleted and errors
 // encountered are returned
 func PurgeUploads(ctx context.Context, driver storageDriver.StorageDriver, olderThan time.Time, actuallyDelete bool) ([]string, []error) {
-	logrus.Infof("PurgeUploads starting: olderThan=%s, actuallyDelete=%t", olderThan, actuallyDelete)
+	slog.Info("PurgeUploads starting", "olderThan", olderThan, "actuallyDelete", actuallyDelete)
 	uploadData, errors := getOutstandingUploads(ctx, driver)
 	var deleted []string
 	for _, uploadData := range uploadData {
 		if uploadData.startedAt.Before(olderThan) {
 			var err error
-			logrus.Infof("Upload files in %s have older date (%s) than purge date (%s).  Removing upload directory.",
-				uploadData.containingDir, uploadData.startedAt, olderThan)
+			slog.Info("Upload files have older date than purge date, removing upload directory",
+				"dir", uploadData.containingDir, "startedAt", uploadData.startedAt, "olderThan", olderThan)
 			if actuallyDelete {
 				err = driver.Delete(ctx, uploadData.containingDir)
 			}
@@ -50,7 +50,7 @@ func PurgeUploads(ctx context.Context, driver storageDriver.StorageDriver, older
 		}
 	}
 
-	logrus.Infof("Purge uploads finished.  Num deleted=%d, num errors=%d", len(deleted), len(errors))
+	slog.Info("Purge uploads finished", "numDeleted", len(deleted), "numErrors", len(errors))
 	return deleted, errors
 }
 

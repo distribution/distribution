@@ -3,18 +3,18 @@ package middleware
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"path"
 
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	storagemiddleware "github.com/distribution/distribution/v3/registry/storage/driver/middleware"
-	"github.com/sirupsen/logrus"
 )
 
 func init() {
 	if err := storagemiddleware.Register("redirect", newRedirectStorageMiddleware); err != nil {
-		logrus.Errorf("failed to register redirect storage middleware: %v", err)
+		slog.Error("failed to register redirect storage middleware", "error", err)
 	}
 }
 

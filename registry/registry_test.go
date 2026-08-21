@@ -11,9 +11,11 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"io"
+	"log/slog"
 	"math/big"
 	"net"
 	"net/http"
@@ -27,7 +29,6 @@ import (
 	"github.com/distribution/distribution/v3/configuration"
 	"github.com/distribution/distribution/v3/internal/dcontext"
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
-	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
 
@@ -438,6 +439,7 @@ func TestConfigureLogging(t *testing.T) {
 	yamlConfig := `---
 log:
   level: warn
+  formatter: json
   fields:
     foo: bar
     baz: xyzzy
@@ -449,43 +451,61 @@ log:
 		t.Fatal("failed to parse config: ", err)
 	}
 
+	// Capture stderr, which the configured handler writes to.
+	oldStderr := os.Stderr
+	pr, pw, err := os.Pipe()
+	if err != nil {
+		t.Fatal("failed to create pipe: ", err)
+	}
+	os.Stderr = pw
+	defer func() { os.Stderr = oldStderr }()
+
 	ctx, err := configureLogging(context.Background(), &config)
 	if err != nil {
+		os.Stderr = oldStderr
 		t.Fatal("failed to configure logging: ", err)
 	}
 
 	// Check that the log level was set to Warn.
-	if logrus.IsLevelEnabled(logrus.InfoLevel) {
+	logger := dcontext.GetLogger(ctx)
+	if logger.Enabled(context.Background(), slog.LevelInfo) {
 		t.Error("expected Info to be disabled, is enabled")
 	}
-
-	// Check that the returned context's logger includes the right fields.
-	logger := dcontext.GetLogger(ctx)
-	entry, ok := logger.(*logrus.Entry)
-	if !ok {
-		t.Fatalf("expected logger to be a *logrus.Entry, is: %T", entry)
-	}
-	val, ok := entry.Data["foo"].(string)
-	if !ok || val != "bar" {
-		t.Error("field foo not configured correctly; expected 'bar' got: ", val)
-	}
-	val, ok = entry.Data["baz"].(string)
-	if !ok || val != "xyzzy" {
-		t.Error("field baz not configured correctly; expected 'xyzzy' got: ", val)
+	if !logger.Enabled(context.Background(), slog.LevelWarn) {
+		t.Error("expected Warn to be enabled, is disabled")
 	}
 
-	// Get a logger for a new, empty context and make sure it also has the right fields.
-	logger = dcontext.GetLogger(context.Background())
-	entry, ok = logger.(*logrus.Entry)
-	if !ok {
-		t.Fatalf("expected logger to be a *logrus.Entry, is: %T", entry)
+	// Log through the returned context's logger and through a logger derived
+	// from a new, empty context, which should be based on the default logger.
+	logger.Warn("from the configured context")
+	dcontext.GetLogger(context.Background()).Warn("from an empty context")
+
+	pw.Close()
+	os.Stderr = oldStderr
+	out, err := io.ReadAll(pr)
+	if err != nil {
+		t.Fatal("failed to read log output: ", err)
 	}
-	val, ok = entry.Data["foo"].(string)
-	if !ok || val != "bar" {
-		t.Error("field foo not configured correctly; expected 'bar' got: ", val)
+
+	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("expected 2 log lines, got %d: %q", len(lines), string(out))
 	}
-	val, ok = entry.Data["baz"].(string)
-	if !ok || val != "xyzzy" {
-		t.Error("field baz not configured correctly; expected 'xyzzy' got: ", val)
+
+	// Check that both loggers include the right fields.
+	for _, line := range lines {
+		var record map[string]any
+		if err := json.Unmarshal([]byte(line), &record); err != nil {
+			t.Fatalf("failed to parse log line %q: %v", line, err)
+		}
+		if val, ok := record["foo"].(string); !ok || val != "bar" {
+			t.Error("field foo not configured correctly; expected 'bar' got: ", val)
+		}
+		if val, ok := record["baz"].(string); !ok || val != "xyzzy" {
+			t.Error("field baz not configured correctly; expected 'xyzzy' got: ", val)
+		}
+		if val, ok := record["level"].(string); !ok || val != "warn" {
+			t.Error("level not rendered correctly; expected 'warn' got: ", val)
+		}
 	}
 }
