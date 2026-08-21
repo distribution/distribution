@@ -10,6 +10,7 @@ import (
 	"github.com/distribution/reference"
 
 	"github.com/distribution/distribution/v3/internal/dcontext"
+	"github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
 )
 
@@ -53,6 +54,25 @@ func testRefsN(t *testing.T, n int) []reference.Canonical {
 	return refs
 }
 
+func testScheduler(t *testing.T, driver driver.StorageDriver, path string, options map[string]interface{}) *TTLExpirationScheduler {
+	ec, err := new(dcontext.Background(), driver, path, options)
+	if err != nil {
+		t.Fatalf("Could not create a valid EvictionController, %v", err)
+	}
+	s, ok := ec.(*TTLExpirationScheduler)
+	if !ok {
+		t.Fatalf("Could not create a valid TTLExpirationScheduler")
+	}
+	return s
+}
+
+func TestNewScheduler(t *testing.T) {
+	options := map[string]interface{}{
+		"ttl": "168h",
+	}
+	testScheduler(t, inmemory.New(), "/ttl", options)
+}
+
 func TestSchedule(t *testing.T) {
 	refs := testRefsN(t, 20)
 	timeUnit := time.Millisecond
@@ -63,7 +83,7 @@ func TestSchedule(t *testing.T) {
 	}
 
 	var mu sync.Mutex
-	s := New(dcontext.Background(), inmemory.New(), "/ttl")
+	s := testScheduler(t, inmemory.New(), "/ttl", map[string]interface{}{"ttl": "1ms"})
 	deleteFunc := func(repoName reference.Reference) error {
 		if len(remainingRepos) == 0 {
 			t.Fatal("Incorrect expiry count")
@@ -85,8 +105,8 @@ func TestSchedule(t *testing.T) {
 		t.Fatalf("Error starting ttlExpirationScheduler: %s", err)
 	}
 
-	for i, ref := range refs {
-		_ = s.AddBlob(ref, time.Duration(i)*timeUnit)
+	for _, ref := range refs {
+		_ = s.AddBlob(ref)
 	}
 
 	// Ensure all repos are deleted
@@ -148,8 +168,8 @@ func TestRestoreOld(t *testing.T) {
 	if err != nil {
 		t.Fatal("Unable to write serialized data to fs")
 	}
-	s := New(dcontext.Background(), fs, "/ttl")
-	s.OnBlobExpire(deleteFunc)
+	s := testScheduler(t, fs, "/ttl", map[string]interface{}{"ttl": "1ms"})
+	s.OnBlobEvict(deleteFunc)
 	err = s.Start()
 	if err != nil {
 		t.Fatalf("Error starting ttlExpirationScheduler: %s", err)
@@ -188,7 +208,7 @@ func TestStopRestore(t *testing.T) {
 
 	fs := inmemory.New()
 	pathToStateFile := "/ttl"
-	s := New(dcontext.Background(), fs, pathToStateFile)
+	s := testScheduler(t, fs, pathToStateFile, map[string]interface{}{"ttl": "1ms"})
 	s.onBlobExpire = deleteFunc
 
 	err := s.Start()
@@ -207,7 +227,7 @@ func TestStopRestore(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 
 	// v2 will restore state from fs
-	s2 := New(dcontext.Background(), fs, pathToStateFile)
+	s2 := testScheduler(t, fs, pathToStateFile, map[string]interface{}{"ttl": "1ms"})
 	s2.onBlobExpire = deleteFunc
 	err = s2.Start()
 	if err != nil {
@@ -223,7 +243,7 @@ func TestStopRestore(t *testing.T) {
 }
 
 func TestDoubleStart(t *testing.T) {
-	s := New(dcontext.Background(), inmemory.New(), "/ttl")
+	s := testScheduler(t, inmemory.New(), "/ttl", map[string]interface{}{"ttl": "1ms"})
 	err := s.Start()
 	if err != nil {
 		t.Fatal("Unable to start scheduler")
