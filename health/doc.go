@@ -81,8 +81,8 @@
 // endpoint always return an error:
 //
 //	health.RegisterFunc("my_check", func() error {
-//	 return Errors.new("This is an error!")
-//	}))
+//	 return errors.New("This is an error!")
+//	})
 //
 // # Examples
 //
@@ -95,7 +95,7 @@
 //	updater = health.NewStatusUpdater()
 //	 health.RegisterFunc("database_check", func() error {
 //	  return updater.Check()
-//	}))
+//	})
 //
 //	conn, err := Connect(...) // database call here
 //	if err != nil {
@@ -105,7 +105,7 @@
 // You can also use the predefined Checkers that come included with the health
 // package. First, import the checks:
 //
-//	import "github.com/distribution/distribution/v3/health/checks
+//	import "github.com/distribution/distribution/v3/health/checks"
 //
 // After that you can make use of any of the provided checks. An example of
 // using a `FileChecker` to take the application out of rotation if a certain
