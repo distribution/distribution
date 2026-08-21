@@ -542,7 +542,10 @@ func New(ctx context.Context, params DriverParameters) (*Driver, error) {
 		StorageClass:                params.StorageClass,
 		ObjectACL:                   params.ObjectACL,
 		pool: &sync.Pool{
-			New: func() any { return &bytes.Buffer{} },
+			// Sized to ChunkSize plus one Write's worth of overflow: an empty
+			// buffer would grow geometrically while filling and settle at ~2x
+			// ChunkSize, doubling per-upload memory under concurrent pushes.
+			New: func() any { return bytes.NewBuffer(make([]byte, 0, params.ChunkSize+64*1024)) },
 		},
 	}
 
