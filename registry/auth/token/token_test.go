@@ -10,10 +10,12 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"math/big"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
@@ -214,6 +216,51 @@ func generateCACert(signer *ecdsa.PrivateKey, trustedKey *ecdsa.PrivateKey) (*x5
 	}
 
 	return generateCert(signer, trustedKey.Public(), subjectInfo, issuerInfo)
+}
+
+// makeTestTokenKIDOnly creates a signed JWT that includes only the key ID in
+// the header (no embedded JWK, no certificate chain). This is the standard
+// OIDC pattern where the verifier must resolve the key from a JWKS by kid.
+func makeTestTokenKIDOnly(privKey *ecdsa.PrivateKey, keyID, issuer, audience string, access []*ResourceActions, now, exp time.Time) (*Token, error) {
+	jwk := &jose.JSONWebKey{
+		Key:       privKey,
+		KeyID:     keyID,
+		Algorithm: string(jose.ES256),
+	}
+	signingKey := jose.SigningKey{
+		Algorithm: jose.ES256,
+		Key:       jwk,
+	}
+	signerOpts := jose.SignerOptions{}
+	signerOpts.WithType("JWT")
+
+	signer, err := jose.NewSigner(signingKey, &signerOpts)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create signer: %s", err)
+	}
+
+	randomBytes := make([]byte, 15)
+	if _, err = rand.Read(randomBytes); err != nil {
+		return nil, fmt.Errorf("unable to read random bytes for jwt id: %s", err)
+	}
+
+	claimSet := &ClaimSet{
+		Issuer:     issuer,
+		Subject:    "foo",
+		Audience:   []string{audience},
+		Expiration: exp.Unix(),
+		NotBefore:  now.Unix(),
+		IssuedAt:   now.Unix(),
+		JWTID:      base64.URLEncoding.EncodeToString(randomBytes),
+		Access:     access,
+	}
+
+	tokenString, err := jwt.Signed(signer).Claims(claimSet).Serialize()
+	if err != nil {
+		return nil, fmt.Errorf("unable to build token string: %v", err)
+	}
+
+	return NewToken(tokenString, []jose.SignatureAlgorithm{jose.ES256})
 }
 
 // This test makes 4 tokens with a varying number of intermediate
@@ -698,5 +745,113 @@ func TestVerifyJWKWithTrustedKey(t *testing.T) {
 	}
 	if err.Error() != "untrusted JWK with no certificate chain" {
 		t.Errorf("Expected 'untrusted JWK with no certificate chain' error, got: %v", err)
+	}
+}
+
+func TestVerifyReturnsErrUnknownKeyID(t *testing.T) {
+	keys, err := makeRootKeys(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	jwk, err := makeSigningKeyWithChain(keys[0], 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	token, err := makeTestTokenKIDOnly(keys[0], jwk.KeyID, "issuer", "audience", nil, time.Now(), time.Now().Add(5*time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Empty trusted keys — kid will not be found.
+	verifyOpts := VerifyOptions{
+		TrustedIssuers:    []string{"issuer"},
+		AcceptedAudiences: []string{"audience"},
+		TrustedKeys:       map[string]crypto.PublicKey{},
+	}
+
+	_, err = token.Verify(verifyOpts)
+	if !errors.Is(err, ErrUnknownKeyID) {
+		t.Fatalf("expected ErrUnknownKeyID, got: %v", err)
+	}
+}
+
+func TestAuthorizedOnDemandJWKSRefresh(t *testing.T) {
+	const (
+		issuer  = "test-issuer.example.com"
+		service = "test-service.example.com"
+	)
+
+	keys, err := makeRootKeys(2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	keyAID := keys[0].X.String()
+	keyBID := keys[1].X.String()
+
+	// JWKS server: first call (init) returns only key A.
+	// Second call (on-demand re-fetch) returns key A + key B.
+	var callCount int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		callCount++
+		jwkKeys := []jose.JSONWebKey{
+			{Key: &keys[0].PublicKey, KeyID: keyAID, Algorithm: string(jose.ES256)},
+		}
+		if callCount > 1 {
+			jwkKeys = append(jwkKeys, jose.JSONWebKey{
+				Key: &keys[1].PublicKey, KeyID: keyBID, Algorithm: string(jose.ES256),
+			})
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(jose.JSONWebKeySet{Keys: jwkKeys})
+	}))
+	defer srv.Close()
+
+	options := map[string]any{
+		"realm":               "https://auth.example.com/token/",
+		"issuer":              issuer,
+		"service":             service,
+		"jwks":                srv.URL,
+		"jwksrefreshinterval": "0s", // disable periodic refresh; only on-demand
+	}
+
+	ac, err := newAccessController(options)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ac.(*accessController).Close()
+
+	testAccess := auth.Access{
+		Resource: auth.Resource{Type: "repository", Name: "foo/bar"},
+		Action:   "pull",
+	}
+
+	// Token signed with key B — not yet in trustedKeys (only key A is loaded).
+	tokenB, err := makeTestTokenKIDOnly(
+		keys[1], keyBID, issuer, service,
+		[]*ResourceActions{{Type: "repository", Name: "foo/bar", Actions: []string{"pull"}}},
+		time.Now(), time.Now().Add(5*time.Minute),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req, err := http.NewRequest(http.MethodGet, "http://example.com/v2/foo/bar/manifests/latest", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", tokenB.Raw))
+
+	// Authorized should trigger an on-demand re-fetch and succeed.
+	grant, err := ac.Authorized(req, testAccess)
+	if err != nil {
+		t.Fatalf("expected authorization to succeed after on-demand refresh, got: %v", err)
+	}
+	if grant.User.Name != "foo" {
+		t.Fatalf("expected user name %q, got %q", "foo", grant.User.Name)
+	}
+	if callCount != 2 {
+		t.Fatalf("expected 2 JWKS fetches (init + on-demand), got %d", callCount)
 	}
 }
