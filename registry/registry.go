@@ -2,6 +2,8 @@ package registry
 
 import (
 	"context"
+	_ "crypto/sha256" // ensure sha256 (canonical) is registered as an available digest algorithm
+	_ "crypto/sha512" // ensure sha512 is registered as an available digest algorithm
 	"crypto/tls"
 	"crypto/x509"
 	"errors"

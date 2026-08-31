@@ -170,6 +170,12 @@ type CreateOptions struct {
 		// Blob access check will be skipped if set.
 		Stat *v1.Descriptor
 	}
+
+	// DigestAlgorithm, if set, is the algorithm the client declared (e.g. via
+	// the distribution-spec's digest-algorithm upload parameter) it will use
+	// for the blob being pushed, letting the BlobIngester stream-hash with it
+	// instead of only discovering it once the final digest arrives.
+	DigestAlgorithm digest.Algorithm
 }
 
 // BlobWriter provides a handle for inserting data into a blob store.

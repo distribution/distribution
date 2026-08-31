@@ -77,6 +77,15 @@ func (buh *blobUploadHandler) StartBlobUpload(w http.ResponseWriter, r *http.Req
 		}
 	}
 
+	if algStr := r.FormValue("digest-algorithm"); algStr != "" {
+		alg := digest.Algorithm(algStr)
+		if !alg.Available() {
+			buh.Errors = append(buh.Errors, errcode.ErrorCodeDigestInvalid.WithDetail("unsupported digest-algorithm"))
+			return
+		}
+		options = append(options, storage.WithDigestAlgorithm(alg))
+	}
+
 	blobs := buh.Repository.Blobs(buh)
 	upload, err := blobs.Create(buh, options...)
 	if err != nil {
