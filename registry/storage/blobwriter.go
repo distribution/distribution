@@ -247,7 +247,7 @@ func (bw *blobWriter) validateBlob(ctx context.Context, desc v1.Descriptor) (v1.
 		// the same, we don't need to read the data from the backend. This is
 		// because we've written the entire file in the lifecycle of the
 		// current instance.
-		if bw.written == size && digest.Canonical == desc.Digest.Algorithm() {
+		if bw.written == size && bw.digester.Digest().Algorithm() == desc.Digest.Algorithm() {
 			canonical = bw.digester.Digest()
 			verified = desc.Digest == canonical
 		}
@@ -263,26 +263,15 @@ func (bw *blobWriter) validateBlob(ctx context.Context, desc v1.Descriptor) (v1.
 			}
 			defer fr.Close()
 
-			if desc.Digest.Algorithm() == digest.Canonical {
-				digester := digest.Canonical.Digester()
-				if _, err := io.Copy(digester.Hash(), fr); err != nil {
-					return v1.Descriptor{}, err
-				}
-
-				canonical = digester.Digest()
-				verified = desc.Digest == canonical
-			} else {
-				digester := digest.Canonical.Digester()
-				verifier := desc.Digest.Verifier()
-				tr := io.TeeReader(fr, digester.Hash())
-
-				if _, err := io.Copy(verifier, tr); err != nil {
-					return v1.Descriptor{}, err
-				}
-
-				canonical = digester.Digest()
-				verified = verifier.Verified()
+			// desc.Digest was validated by digest.Parse, so its algorithm is
+			// available.
+			digester := desc.Digest.Algorithm().Digester()
+			if _, err := io.Copy(digester.Hash(), fr); err != nil {
+				return v1.Descriptor{}, err
 			}
+
+			canonical = digester.Digest()
+			verified = desc.Digest == canonical
 		}
 	}
 
@@ -348,7 +337,7 @@ func (bw *blobWriter) moveBlob(ctx context.Context, desc v1.Descriptor) error {
 			// a zero-length blob into a nonzero-length blob location. To
 			// prevent this horrid thing, we employ the hack of only allowing
 			// to this happen for the digest of an empty blob.
-			if desc.Digest == digestSha256Empty {
+			if desc.Digest == desc.Digest.Algorithm().FromBytes(nil) {
 				return bw.blobStore.driver.PutContent(ctx, blobPath, []byte{})
 			}
 

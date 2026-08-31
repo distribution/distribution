@@ -14,6 +14,7 @@ import (
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/distribution/distribution/v3/registry/proxy/scheduler"
+	"github.com/distribution/distribution/v3/registry/storage"
 	"github.com/distribution/reference"
 )
 
@@ -121,7 +122,9 @@ func (pbs *proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter,
 	writerCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), pbs.cacheWriteTimeout)
 	defer cancel()
 
-	bw, err := pbs.localStore.Create(writerCtx)
+	// Declare the algorithm up front so the upload stream-hashes with it
+	// instead of re-reading the blob at commit.
+	bw, err := pbs.localStore.Create(writerCtx, storage.WithDigestAlgorithm(dgst.Algorithm()))
 	if err != nil {
 		return err
 	}
