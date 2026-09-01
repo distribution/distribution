@@ -2,24 +2,21 @@ package proxy
 
 import (
 	"context"
-	"time"
 
 	"github.com/opencontainers/go-digest"
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/internal/dcontext"
-	"github.com/distribution/distribution/v3/registry/proxy/scheduler"
 	"github.com/distribution/reference"
 )
 
 type proxyManifestStore struct {
-	ctx             context.Context
-	localManifests  distribution.ManifestService
-	remoteManifests distribution.ManifestService
-	repositoryName  reference.Named
-	scheduler       *scheduler.TTLExpirationScheduler
-	ttl             *time.Duration
-	authChallenger  authChallenger
+	ctx                context.Context
+	localManifests     distribution.ManifestService
+	remoteManifests    distribution.ManifestService
+	repositoryName     reference.Named
+	evictionController EvictionController
+	authChallenger     authChallenger
 }
 
 var _ distribution.ManifestService = &proxyManifestStore{}
@@ -76,8 +73,8 @@ func (pms proxyManifestStore) Get(ctx context.Context, dgst digest.Digest, optio
 			return nil, err
 		}
 
-		if pms.scheduler != nil && pms.ttl != nil {
-			if err := pms.scheduler.AddManifest(repoBlob, *pms.ttl); err != nil {
+		if pms.evictionController != nil {
+			if err := pms.evictionController.AddManifest(repoBlob); err != nil {
 				dcontext.GetLogger(ctx).Errorf("Error adding manifest: %s", err)
 				return nil, err
 			}
@@ -86,6 +83,20 @@ func (pms proxyManifestStore) Get(ctx context.Context, dgst digest.Digest, optio
 		// Ensure the manifest blob is cleaned up
 		// pms.scheduler.AddBlob(blobRef, repositoryTTL)
 
+	} else {
+		// Touch the eviction entry
+		repoBlob, err := reference.WithDigest(pms.repositoryName, dgst)
+		if err != nil {
+			dcontext.GetLogger(ctx).Errorf("Error creating reference: %s", err)
+			return nil, err
+		}
+
+		if pms.evictionController != nil {
+			if err := pms.evictionController.TouchManifest(repoBlob); err != nil {
+				dcontext.GetLogger(ctx).Errorf("Error adding manifest: %s", err)
+				return nil, err
+			}
+		}
 	}
 
 	return manifest, err

@@ -6,7 +6,7 @@ import (
 
 func TestProxyingRegistryCloseWithoutScheduler(t *testing.T) {
 	pr := &proxyingRegistry{
-		scheduler: nil,
+		evictionController: nil,
 	}
 
 	// verify that `Close()` does not panic when the scheduler is nil

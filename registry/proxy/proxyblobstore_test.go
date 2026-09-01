@@ -11,11 +11,9 @@ import (
 	"time"
 
 	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/registry/proxy/scheduler"
 	"github.com/distribution/distribution/v3/registry/storage"
 	"github.com/distribution/distribution/v3/registry/storage/cache/memory"
 	"github.com/distribution/distribution/v3/registry/storage/driver/filesystem"
-	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
 	"github.com/distribution/reference"
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -177,14 +175,13 @@ func makeTestEnv(t *testing.T, name string) *testEnv {
 		blobs: localRepo.Blobs(ctx),
 	}
 
-	s := scheduler.New(ctx, inmemory.New(), "/scheduler-state.json")
-
 	proxyBlobStore := proxyBlobStore{
 		repositoryName: nameRef,
 		remoteStore:    truthBlobs,
 		localStore:     localBlobs,
-		scheduler:      s,
-		authChallenger: &mockChallenger{},
+		// evictionController is nil here for now since importing any eviction controller introduces a cyclic dependency
+		evictionController: nil,
+		authChallenger:     &mockChallenger{},
 	}
 
 	te := &testEnv{
@@ -255,9 +252,9 @@ func TestProxyStoreGet(t *testing.T) {
 	}
 }
 
-func TestProxyStoreGetWithoutScheduler(t *testing.T) {
+func TestProxyStoreGetWithoutEviction(t *testing.T) {
 	te := makeTestEnv(t, "foo/bar")
-	te.store.scheduler = nil
+	te.store.evictionController = nil
 
 	populate(t, te, 1, 10, 1)
 
