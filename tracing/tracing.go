@@ -7,7 +7,6 @@ import (
 	"github.com/distribution/distribution/v3/version"
 	"go.opentelemetry.io/contrib/exporters/autoexport"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -50,12 +49,7 @@ func InitOpenTelemetry(ctx context.Context) error {
 		logger: dcontext.GetLogger(ctx),
 	}
 
-	loggerExp, err := stdouttrace.New(stdouttrace.WithWriter(lw))
-	if err != nil {
-		return err
-	}
-
-	compositeExp := newCompositeExporter(autoExp, loggerExp)
+	compositeExp := newCompositeExporter(autoExp)
 
 	sp := sdktrace.NewBatchSpanProcessor(compositeExp)
 	provider := sdktrace.NewTracerProvider(
