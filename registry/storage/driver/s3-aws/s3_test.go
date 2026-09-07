@@ -16,15 +16,17 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/distribution/distribution/v3/internal/dcontext"
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/distribution/v3/registry/storage/driver/testsuites"
 )
 
 var (
-	s3DriverConstructor func(rootDirectory, storageClass string) (*Driver, error)
+	s3DriverConstructor func(rootDirectory, storageClass string, options ...func(*DriverParameters)) (*Driver, error)
 	skipCheck           func(tb testing.TB)
 )
 
@@ -37,7 +39,6 @@ func init() {
 		keyID           = os.Getenv("S3_KEY_ID")
 		secure          = os.Getenv("S3_SECURE")
 		skipVerify      = os.Getenv("S3_SKIP_VERIFY")
-		v4Auth          = os.Getenv("S3_V4_AUTH")
 		region          = os.Getenv("AWS_REGION")
 		objectACL       = os.Getenv("S3_OBJECT_ACL")
 		regionEndpoint  = os.Getenv("REGION_ENDPOINT")
@@ -50,7 +51,7 @@ func init() {
 	)
 
 	var err error
-	s3DriverConstructor = func(rootDirectory, storageClass string) (*Driver, error) {
+	s3DriverConstructor = func(rootDirectory, storageClass string, options ...func(*DriverParameters)) (*Driver, error) {
 		encryptBool := false
 		if encrypt != "" {
 			encryptBool, err = strconv.ParseBool(encrypt)
@@ -75,13 +76,6 @@ func init() {
 			}
 		}
 
-		v4Bool := true
-		if v4Auth != "" {
-			v4Bool, err = strconv.ParseBool(v4Auth)
-			if err != nil {
-				return nil, err
-			}
-		}
 		forcePathStyleBool := false
 		if forcePathStyle != "" {
 			forcePathStyleBool, err = strconv.ParseBool(forcePathStyle)
@@ -112,7 +106,7 @@ func init() {
 		}
 
 		if objectACL == "" {
-			objectACL = s3.ObjectCannedACLPrivate
+			objectACL = string(types.ObjectCannedACLPrivate)
 		}
 
 		parameters := DriverParameters{
@@ -126,7 +120,6 @@ func init() {
 			KeyID:                       keyID,
 			Secure:                      secureBool,
 			SkipVerify:                  skipVerifyBool,
-			V4Auth:                      v4Bool,
 			ChunkSize:                   minChunkSize,
 			MultipartCopyChunkSize:      defaultMultipartCopyChunkSize,
 			MultipartCopyMaxConcurrency: defaultMultipartCopyMaxConcurrency,
@@ -142,6 +135,9 @@ func init() {
 			LogLevel:                    getS3LogLevelFromParam(logLevel),
 		}
 
+		for _, option := range options {
+			option(&parameters)
+		}
 		return New(context.Background(), parameters)
 	}
 
@@ -159,7 +155,7 @@ func newDriverConstructor(tb testing.TB) testsuites.DriverConstructor {
 	root := tb.TempDir()
 
 	return func() (storagedriver.StorageDriver, error) {
-		return s3DriverConstructor(root, s3.StorageClassStandard)
+		return s3DriverConstructor(root, string(types.StorageClassStandard))
 	}
 }
 
@@ -181,104 +177,104 @@ func TestGetS3LogLevelFromParam(t *testing.T) {
 	tests := []struct {
 		name     string
 		param    any
-		expected aws.LogLevelType
+		expected aws.ClientLogMode
 	}{
 		// Nil case
 		{
 			name:     "nil parameter",
 			param:    nil,
-			expected: aws.LogOff,
+			expected: 0,
 		},
 
 		// Boolean cases - YAML converts "off" to false
 		{
 			name:     "boolean false (from YAML off)",
 			param:    false,
-			expected: aws.LogOff,
+			expected: 0,
 		},
 		{
 			name:     "boolean true",
 			param:    true,
-			expected: aws.LogOff,
+			expected: 0,
 		},
 
 		// String cases - valid values
 		{
 			name:     "string off",
 			param:    "off",
-			expected: aws.LogOff,
+			expected: 0,
 		},
 		{
 			name:     "string OFF uppercase",
 			param:    "OFF",
-			expected: aws.LogOff,
+			expected: 0,
 		},
 		{
 			name:     "string debug",
 			param:    "debug",
-			expected: aws.LogDebug,
+			expected: (aws.LogRequest | aws.LogResponse),
 		},
 		{
 			name:     "string DEBUG uppercase",
 			param:    "DEBUG",
-			expected: aws.LogDebug,
+			expected: (aws.LogRequest | aws.LogResponse),
 		},
 		{
 			name:     "string debugwithsigning",
 			param:    "debugwithsigning",
-			expected: aws.LogDebugWithSigning,
+			expected: (aws.LogRequest | aws.LogResponse | aws.LogSigning),
 		},
 		{
 			name:     "string debugwithhttpbody",
 			param:    "debugwithhttpbody",
-			expected: aws.LogDebugWithHTTPBody,
+			expected: (aws.LogRequestWithBody | aws.LogResponseWithBody),
 		},
 		{
 			name:     "string debugwithrequestretries",
 			param:    "debugwithrequestretries",
-			expected: aws.LogDebugWithRequestRetries,
+			expected: (aws.LogRequest | aws.LogResponse | aws.LogRetries),
 		},
 		{
 			name:     "string debugwithrequesterrors",
 			param:    "debugwithrequesterrors",
-			expected: aws.LogDebugWithRequestErrors,
+			expected: (aws.LogRequest | aws.LogResponse | aws.LogRetries),
 		},
 		{
 			name:     "string debugwitheventstreambody",
 			param:    "debugwitheventstreambody",
-			expected: aws.LogDebugWithEventStreamBody,
+			expected: (aws.LogRequest | aws.LogResponse | aws.LogRequestEventMessage | aws.LogResponseEventMessage),
 		},
 
 		// Invalid cases
 		{
 			name:     "invalid string value",
 			param:    "invalid",
-			expected: aws.LogOff,
+			expected: 0,
 		},
 		{
 			name:     "empty string",
 			param:    "",
-			expected: aws.LogOff,
+			expected: 0,
 		},
 		{
 			name:     "integer value",
 			param:    42,
-			expected: aws.LogOff,
+			expected: 0,
 		},
 		{
 			name:     "float value",
 			param:    42.0,
-			expected: aws.LogOff,
+			expected: 0,
 		},
 		{
 			name:     "slice value",
 			param:    []string{"off"},
-			expected: aws.LogOff,
+			expected: 0,
 		},
 		{
 			name:     "map value",
 			param:    map[string]string{"level": "off"},
-			expected: aws.LogOff,
+			expected: 0,
 		},
 	}
 
@@ -345,17 +341,17 @@ func TestEmptyRootList(t *testing.T) {
 	skipCheck(t)
 
 	validRoot := t.TempDir()
-	rootedDriver, err := s3DriverConstructor(validRoot, s3.StorageClassStandard)
+	rootedDriver, err := s3DriverConstructor(validRoot, string(types.StorageClassStandard))
 	if err != nil {
 		t.Fatalf("unexpected error creating rooted driver: %v", err)
 	}
 
-	emptyRootDriver, err := s3DriverConstructor("", s3.StorageClassStandard)
+	emptyRootDriver, err := s3DriverConstructor("", string(types.StorageClassStandard))
 	if err != nil {
 		t.Fatalf("unexpected error creating empty root driver: %v", err)
 	}
 
-	slashRootDriver, err := s3DriverConstructor("/", s3.StorageClassStandard)
+	slashRootDriver, err := s3DriverConstructor("/", string(types.StorageClassStandard))
 	if err != nil {
 		t.Fatalf("unexpected error creating slash root driver: %v", err)
 	}
@@ -386,8 +382,7 @@ func TestEmptyRootList(t *testing.T) {
 }
 
 func TestClientTransport(t *testing.T) {
-	skipCheck(t)
-
+	isolateAWSConfig(t)
 	testCases := []struct {
 		skipverify bool
 	}{
@@ -400,8 +395,8 @@ func TestClientTransport(t *testing.T) {
 		// because s3DriverConstructor is initialized in init() using the process
 		// env vars: we can not override S3_SKIP_VERIFY env var with t.Setenv
 		params := map[string]any{
-			"region":     os.Getenv("AWS_REGION"),
-			"bucket":     os.Getenv("S3_BUCKET"),
+			"region":     "us-east-1",
+			"bucket":     "test-bucket",
 			"skipverify": tc.skipverify,
 		}
 		t.Run(fmt.Sprintf("SkipVerify %v", tc.skipverify), func(t *testing.T) {
@@ -412,7 +407,7 @@ func TestClientTransport(t *testing.T) {
 
 			s3drv := drv.baseEmbed.Base.StorageDriver.(*driver)
 			if tc.skipverify {
-				tr, ok := s3drv.S3.Client.Config.HTTPClient.Transport.(*http.Transport)
+				tr, ok := s3drv.S3.Options().HTTPClient.(*http.Client).Transport.(*http.Transport)
 				if !ok {
 					t.Fatal("unexpected driver transport")
 				}
@@ -429,7 +424,7 @@ func TestClientTransport(t *testing.T) {
 			}
 			// if tc.skipverify is false we do not override the driver
 			// HTTP client transport and leave it to the AWS SDK.
-			if s3drv.S3.Client.Config.HTTPClient.Transport != nil {
+			if _, ok := s3drv.S3.Options().HTTPClient.(*awshttp.BuildableClient); !ok {
 				t.Errorf("unexpected S3 driver client transport")
 			}
 		})
@@ -453,7 +448,7 @@ func TestStorageClass(t *testing.T) {
 		}
 
 		// Can only test outposts if using s3 outposts
-		if storageClass == s3.StorageClassOutposts {
+		if storageClass == string(types.StorageClassOutposts) {
 			continue
 		}
 
@@ -465,7 +460,7 @@ func TestStorageClass(t *testing.T) {
 		defer s3Driver.Delete(ctx, filename)
 
 		driverUnwrapped := s3Driver.Base.StorageDriver.(*driver)
-		resp, err := driverUnwrapped.S3.GetObject(&s3.GetObjectInput{
+		resp, err := driverUnwrapped.S3.GetObject(ctx, &s3.GetObjectInput{
 			Bucket: aws.String(driverUnwrapped.Bucket),
 			Key:    aws.String(driverUnwrapped.s3Path(filename)),
 		})
@@ -476,23 +471,23 @@ func TestStorageClass(t *testing.T) {
 		// Amazon only populates this header value for non-standard storage classes
 		if storageClass == noStorageClass {
 			// We haven't specified a storage class so we can't confirm what it is
-		} else if storageClass == s3.StorageClassStandard && resp.StorageClass != nil {
+		} else if storageClass == string(types.StorageClassStandard) && resp.StorageClass != "" {
 			t.Fatalf(
 				"unexpected response storage class for file with storage class %v: %v",
 				storageClass,
-				*resp.StorageClass,
+				string(resp.StorageClass),
 			)
-		} else if storageClass != s3.StorageClassStandard && resp.StorageClass == nil {
+		} else if storageClass != string(types.StorageClassStandard) && resp.StorageClass == "" {
 			t.Fatalf(
 				"unexpected response storage class for file with storage class %v: %v",
 				storageClass,
-				s3.StorageClassStandard,
+				string(types.StorageClassStandard),
 			)
-		} else if storageClass != s3.StorageClassStandard && storageClass != *resp.StorageClass {
+		} else if storageClass != string(types.StorageClassStandard) && storageClass != string(resp.StorageClass) {
 			t.Fatalf(
 				"unexpected response storage class for file with storage class %v: %v",
 				storageClass,
-				*resp.StorageClass,
+				string(resp.StorageClass),
 			)
 		}
 	}
@@ -503,7 +498,7 @@ func TestDelete(t *testing.T) {
 
 	rootDir := t.TempDir()
 
-	drvr, err := s3DriverConstructor(rootDir, s3.StorageClassStandard)
+	drvr, err := s3DriverConstructor(rootDir, string(types.StorageClassStandard))
 	if err != nil {
 		t.Fatalf("unexpected error creating driver with standard storage: %v", err)
 	}
@@ -697,7 +692,7 @@ func TestWalkEmptyUploadsDir(t *testing.T) {
 
 	ctx := dcontext.Background()
 
-	drvr, err := s3DriverConstructor("s3walktest", s3.StorageClassStandard)
+	drvr, err := s3DriverConstructor("s3walktest", string(types.StorageClassStandard))
 	if err != nil {
 		t.Fatalf("unexpected error creating driver with standard storage: %v", err)
 	}
@@ -718,7 +713,7 @@ func TestWalkEmptyUploadsDir(t *testing.T) {
 	created := make([]string, 0, len(fileset))
 	d := drvr.baseEmbed.Base.StorageDriver.(*driver)
 	for _, p := range fileset {
-		_, err := d.S3.PutObjectWithContext(ctx, &s3.PutObjectInput{
+		_, err := d.S3.PutObject(ctx, &s3.PutObjectInput{
 			Bucket:               aws.String(d.Bucket),
 			Key:                  aws.String(d.s3Path(p)),
 			ContentType:          d.getContentType(),
@@ -738,15 +733,15 @@ func TestWalkEmptyUploadsDir(t *testing.T) {
 	// use a custom cleanup here because we create an empty dir during this test's
 	// setup, and the regular driver.Delete will error when trying to delete it.
 	defer func() {
-		s3Objects := make([]*s3.ObjectIdentifier, 0, len(fileset))
+		s3Objects := make([]types.ObjectIdentifier, 0, len(fileset))
 		for _, p := range created {
-			s3Objects = append(s3Objects, &s3.ObjectIdentifier{
+			s3Objects = append(s3Objects, types.ObjectIdentifier{
 				Key: aws.String(d.s3Path(p)),
 			})
 		}
-		resp, err := d.S3.DeleteObjectsWithContext(ctx, &s3.DeleteObjectsInput{
+		resp, err := d.S3.DeleteObjects(ctx, &s3.DeleteObjectsInput{
 			Bucket: aws.String(d.Bucket),
-			Delete: &s3.Delete{
+			Delete: &types.Delete{
 				Objects: s3Objects,
 				Quiet:   aws.Bool(false),
 			},
@@ -777,7 +772,7 @@ func TestWalk(t *testing.T) {
 
 	rootDir := t.TempDir()
 
-	drvr, err := s3DriverConstructor(rootDir, s3.StorageClassStandard)
+	drvr, err := s3DriverConstructor(rootDir, string(types.StorageClassStandard))
 	if err != nil {
 		t.Fatalf("unexpected error creating driver with standard storage: %v", err)
 	}
@@ -1015,7 +1010,7 @@ func TestOverThousandBlobs(t *testing.T) {
 	skipCheck(t)
 
 	rootDir := t.TempDir()
-	standardDriver, err := s3DriverConstructor(rootDir, s3.StorageClassStandard)
+	standardDriver, err := s3DriverConstructor(rootDir, string(types.StorageClassStandard))
 	if err != nil {
 		t.Fatalf("unexpected error creating driver with standard storage: %v", err)
 	}
@@ -1041,7 +1036,7 @@ func TestMoveWithMultipartCopy(t *testing.T) {
 	skipCheck(t)
 
 	rootDir := t.TempDir()
-	d, err := s3DriverConstructor(rootDir, s3.StorageClassStandard)
+	d, err := s3DriverConstructor(rootDir, string(types.StorageClassStandard))
 	if err != nil {
 		t.Fatalf("unexpected error creating driver: %v", err)
 	}
@@ -1092,7 +1087,7 @@ func TestListObjectsV2(t *testing.T) {
 	skipCheck(t)
 
 	rootDir := t.TempDir()
-	d, err := s3DriverConstructor(rootDir, s3.StorageClassStandard)
+	d, err := s3DriverConstructor(rootDir, string(types.StorageClassStandard))
 	if err != nil {
 		t.Fatalf("unexpected error creating driver: %v", err)
 	}
