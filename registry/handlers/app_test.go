@@ -7,7 +7,9 @@ import (
 	"net/url"
 	"reflect"
 	"testing"
+	"time"
 
+	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/configuration"
 	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/distribution/distribution/v3/registry/api/errcode"
@@ -208,6 +210,93 @@ func TestNewApp(t *testing.T) {
 	}
 	if err2.ErrorCode() != errcode.ErrorCodeUnauthorized {
 		t.Fatalf("unexpected error code: %v != %v", err2.ErrorCode(), errcode.ErrorCodeUnauthorized)
+	}
+}
+
+type testProxyCloser struct {
+	distribution.Namespace
+	closeCalled         bool
+	ctxCancelledOnClose bool
+	app                 *App
+}
+
+func (m *testProxyCloser) Close() error {
+	m.closeCalled = true
+	select {
+	case <-m.app.Context.Done():
+		m.ctxCancelledOnClose = true
+	default:
+		m.ctxCancelledOnClose = false
+	}
+	return nil
+}
+
+func TestAppShutdownStopsUploadPurger(t *testing.T) {
+	ctx := dcontext.Background()
+	config := configuration.Configuration{
+		Storage: configuration.Storage{
+			"inmemory": configuration.Parameters{},
+			"maintenance": configuration.Parameters{
+				"uploadpurging": map[any]any{
+					"enabled":  true,
+					"age":      "168h",
+					"interval": "24h",
+					"dryrun":   false,
+				},
+			},
+		},
+	}
+	app := NewApp(ctx, &config)
+	if app.purgerDone == nil {
+		t.Fatal("expected purgerDone channel to be initialized")
+	}
+
+	if err := app.Shutdown(); err != nil {
+		t.Fatalf("unexpected error on Shutdown: %v", err)
+	}
+
+	select {
+	case <-app.purgerDone:
+		// upload purger goroutine exited
+	case <-time.After(5 * time.Second):
+		t.Fatal("upload purger goroutine did not exit within timeout after Shutdown")
+	}
+
+	select {
+	case <-app.Context.Done():
+	default:
+		t.Fatal("expected app context to be cancelled after Shutdown")
+	}
+}
+
+func TestAppShutdownDefersCancelAfterRegistryClose(t *testing.T) {
+	ctx := dcontext.Background()
+	config := configuration.Configuration{
+		Storage: configuration.Storage{
+			"inmemory": configuration.Parameters{},
+		},
+	}
+	app := NewApp(ctx, &config)
+	closer := &testProxyCloser{
+		Namespace: app.registry,
+		app:       app,
+	}
+	app.registry = closer
+
+	if err := app.Shutdown(); err != nil {
+		t.Fatalf("unexpected error on Shutdown: %v", err)
+	}
+
+	if !closer.closeCalled {
+		t.Fatal("expected registry Close to be called")
+	}
+	if closer.ctxCancelledOnClose {
+		t.Fatal("expected context NOT to be cancelled when registry Close is called")
+	}
+	select {
+	case <-app.Context.Done():
+	default:
+		t.Fatal("expected app context to be cancelled after Shutdown completes")
 	}
 }
 
