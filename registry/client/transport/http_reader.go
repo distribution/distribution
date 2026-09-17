@@ -160,7 +160,7 @@ func (hrs *HTTPReadSeeker) reset() {
 	}
 }
 
-func (hrs *HTTPReadSeeker) reader() (io.Reader, error) {
+func (hrs *HTTPReadSeeker) reader() (_ io.Reader, retErr error) {
 	if hrs.err != nil {
 		return nil, hrs.err
 	}
@@ -185,6 +185,11 @@ func (hrs *HTTPReadSeeker) reader() (io.Reader, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		if retErr != nil {
+			resp.Body.Close()
+		}
+	}()
 
 	// Normally would use client.SuccessStatus, but that would be a cyclic
 	// import
@@ -239,7 +244,6 @@ func (hrs *HTTPReadSeeker) reader() (io.Reader, error) {
 		}
 		hrs.rc = resp.Body
 	} else {
-		defer resp.Body.Close()
 		if hrs.errorHandler != nil {
 			return nil, hrs.errorHandler(resp)
 		}

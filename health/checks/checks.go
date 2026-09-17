@@ -53,6 +53,7 @@ func HTTPChecker(r string, statusCode int, timeout time.Duration, headers http.H
 		if err != nil {
 			return errors.New("error while checking: " + r)
 		}
+		defer response.Body.Close()
 		if response.StatusCode != statusCode {
 			return errors.New("downstream service returned unexpected status: " + strconv.Itoa(response.StatusCode))
 		}

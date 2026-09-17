@@ -377,6 +377,7 @@ func (ms *manifests) Exists(ctx context.Context, dgst digest.Digest) (bool, erro
 	if err != nil {
 		return false, err
 	}
+	defer resp.Body.Close()
 
 	if SuccessStatus(resp.StatusCode) {
 		return true, nil
