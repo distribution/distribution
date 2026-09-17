@@ -180,7 +180,10 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 	}
 
 	if app.isCache {
-		options = append(options, storage.DisableDigestResumption)
+		// The proxy TTL reclaims cached content through the storage driver, so a
+		// cache always needs deletes there. Client-initiated deletes are still
+		// rejected by the proxy blob and manifest stores.
+		options = append(options, storage.DisableDigestResumption, storage.EnableDelete)
 	}
 
 	// configure deletion
