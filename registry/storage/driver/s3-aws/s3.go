@@ -21,7 +21,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
-	"path/filepath"
+	"path"
 	"slices"
 	"sort"
 	"strconv"
@@ -1230,6 +1230,11 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, from, sta
 //
 //	directoryDiff("/", "/path/to/folder/folder/file")
 //	// => [ "/path", "/path/to", "/path/to/folder", "/path/to/folder/folder" ]
+//
+// prev and current are S3 object keys, which always use "/" as a separator
+// regardless of host OS, so this must use path.Dir rather than filepath.Dir:
+// on Windows, filepath.Dir converges to "\" instead of "/", so the loop's
+// "/" exit condition never fires and it never terminates.
 func directoryDiff(prev, current string) []string {
 	var paths []string
 
@@ -1239,7 +1244,7 @@ func directoryDiff(prev, current string) []string {
 
 	parent := current
 	for {
-		parent = filepath.Dir(parent)
+		parent = path.Dir(parent)
 		if parent == "/" || parent == prev || strings.HasPrefix(prev+"/", parent+"/") {
 			break
 		}

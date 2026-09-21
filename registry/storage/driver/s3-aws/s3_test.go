@@ -341,6 +341,55 @@ func TestIsSubpath(t *testing.T) {
 	}
 }
 
+func TestDirectoryDiff(t *testing.T) {
+	tests := []struct {
+		name     string
+		prev     string
+		current  string
+		expected []string
+	}{
+		{
+			name:     "immediate child",
+			prev:     "/path/to/folder",
+			current:  "/path/to/folder/folder/file",
+			expected: []string{"/path/to/folder/folder"},
+		},
+		{
+			name:     "sibling folder",
+			prev:     "/path/to/folder/folder1",
+			current:  "/path/to/folder/folder2/file",
+			expected: []string{"/path/to/folder/folder2"},
+		},
+		{
+			name:     "sibling folder, prev is a file",
+			prev:     "/path/to/folder/folder1/file",
+			current:  "/path/to/folder/folder2/file",
+			expected: []string{"/path/to/folder/folder2"},
+		},
+		{
+			name:     "multiple missing directories",
+			prev:     "/path/to/folder/folder1/file",
+			current:  "/path/to/folder/folder2/folder1/file",
+			expected: []string{"/path/to/folder/folder2", "/path/to/folder/folder2/folder1"},
+		},
+		{
+			name:     "from root, deeply nested",
+			prev:     "/",
+			current:  "/path/to/folder/folder/file",
+			expected: []string{"/path", "/path/to", "/path/to/folder", "/path/to/folder/folder"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := directoryDiff(tt.prev, tt.current)
+			if !slices.Equal(actual, tt.expected) {
+				t.Fatalf("directoryDiff(%q, %q) = %v, want %v", tt.prev, tt.current, actual, tt.expected)
+			}
+		})
+	}
+}
+
 func TestEmptyRootList(t *testing.T) {
 	skipCheck(t)
 
