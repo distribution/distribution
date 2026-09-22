@@ -33,12 +33,6 @@ func syncDir(dir string) (retErr error) {
 	return nil
 }
 
-// rename moves source to dest. On POSIX systems os.Rename atomically replaces
-// an existing destination.
-func rename(source, dest string) error {
-	return os.Rename(source, dest)
-}
-
 // replace moves tempPath to subPath to make writer's content available at its
 // final location. On POSIX systems a rename works even while writer is still
 // open, so it is left open for its deferred Close in PutContent.

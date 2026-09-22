@@ -284,7 +284,7 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 		return err
 	}
 
-	return rename(source, dest)
+	return os.Rename(source, dest)
 }
 
 // Delete recursively deletes all objects stored at "path" and its subpaths.
