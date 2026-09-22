@@ -7,7 +7,7 @@ ARG GO_VERSION=1.26.8
 # ALPINE_VERSION sets the version of the alpine base image to use, including for the golang image.
 # It must be a supported tag in the docker.io/library/alpine image repository
 # that's also available as alpine image variant for the Golang version used.
-ARG ALPINE_VERSION=3.23
+ARG ALPINE_VERSION=3.24
 
 # XX_VERSION sets the version of the tonistiigi/xx utility to use.
 # It must be a valid tag in the docker.io/tonistiigi/xx image repository.
