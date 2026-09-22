@@ -534,13 +534,53 @@ func TestConfigureLoggingFormatterLogStash(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, ok := got["function"]; !ok {
-		t.Error(`expected "function" field`)
+	for _, field := range []string{"@timestamp", "message", "@version", "type", "function", "file"} {
+		if _, ok := got[field]; !ok {
+			t.Errorf("expected %q field", field)
+		}
 	}
-	if _, ok := got["file"]; !ok {
-		t.Error(`expected "file" field`)
+
+	if got["message"] != "test" {
+		t.Errorf(`message = %q, want "test"`, got["message"])
 	}
-	if _, ok := got["func"]; ok {
-		t.Error(`unexpected "func" field`)
+	if got["@version"] != "1" {
+		t.Errorf(`@version = %q, want "1"`, got["@version"])
+	}
+	if got["type"] != "log" {
+		t.Errorf(`type = %q, want "log"`, got["type"])
+	}
+
+	for _, field := range []string{"time", "msg", "func"} {
+		if _, ok := got[field]; ok {
+			t.Errorf("unexpected %q field", field)
+		}
+	}
+}
+
+func TestConfigureLoggingFormatterLogStashFields(t *testing.T) {
+	ctx, err := configureLogging(t.Context(), &configuration.Configuration{
+		Log: configuration.Log{
+			Level:     "info",
+			Formatter: "logstash",
+			Fields: map[string]any{
+				"@version": "2",
+				"type":     "registry",
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal("failed to configure logging: ", err)
+	}
+
+	entry, ok := dcontext.GetLogger(ctx).(*logrus.Entry)
+	if !ok {
+		t.Fatalf("expected logger to be a *logrus.Entry, got %T", entry)
+	}
+
+	if got := entry.Data["@version"]; got != "2" {
+		t.Errorf(`@version = %q, want "2"`, got)
+	}
+	if got := entry.Data["type"]; got != "registry" {
+		t.Errorf(`type = %q, want "registry"`, got)
 	}
 }
