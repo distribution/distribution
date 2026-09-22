@@ -155,7 +155,6 @@ storage:
     encrypt: true
     keyid: mykeyid
     secure: true
-    v4auth: true
     chunksize: 5242880
     multipartcopychunksize: 33554432
     multipartcopymaxconcurrency: 100
@@ -454,7 +453,6 @@ storage:
     encrypt: true
     keyid: mykeyid
     secure: true
-    v4auth: true
     chunksize: 5242880
     multipartcopychunksize: 33554432
     multipartcopymaxconcurrency: 100
