@@ -2,7 +2,7 @@
 <img style="align: center; padding-left: 10px; padding-right: 10px; padding-bottom: 10px;" width="238px" height="238px" src="./distribution-logo.svg" />
 </p>
 
-[![Build Status](https://github.com/distribution/distribution/workflows/build/badge.svg?branch=main&event=push)](https://github.com/distribution/distribution/actions/workflows/build.yml?query=workflow%3Abuild)
+[![Build Status](https://github.com/distribution/distribution/actions/workflows/build.yml/badge.svg?branch=main&event=push)](https://github.com/distribution/distribution/actions/workflows/build.yml?query=branch%3Amain+event%3Apush)
 [![GoDoc](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/github.com/distribution/distribution)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 [![codecov](https://codecov.io/gh/distribution/distribution/branch/main/graph/badge.svg)](https://codecov.io/gh/distribution/distribution)
