@@ -2,6 +2,7 @@ package registry
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"crypto"
 	"crypto/ecdsa"
@@ -11,6 +12,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"io"
@@ -503,5 +505,42 @@ log:
 	val, ok = entry.Data["baz"].(string)
 	if !ok || val != "xyzzy" {
 		t.Error("field baz not configured correctly; expected 'xyzzy' got: ", val)
+	}
+}
+
+func TestConfigureLoggingFormatterLogStash(t *testing.T) {
+	_, err := configureLogging(t.Context(), &configuration.Configuration{
+		Log: configuration.Log{
+			Level:        "info",
+			Formatter:    "logstash",
+			ReportCaller: true,
+		},
+	})
+	if err != nil {
+		t.Fatal("failed to configure logging: ", err)
+	}
+
+	var buf bytes.Buffer
+	logrus.SetOutput(&buf)
+	t.Cleanup(func() {
+		logrus.SetOutput(os.Stderr)
+	})
+
+	logger := dcontext.GetLogger(t.Context())
+	logger.Info("test")
+
+	var got map[string]any
+	if err := json.Unmarshal(buf.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, ok := got["function"]; !ok {
+		t.Error(`expected "function" field`)
+	}
+	if _, ok := got["file"]; !ok {
+		t.Error(`expected "file" field`)
+	}
+	if _, ok := got["func"]; ok {
+		t.Error(`unexpected "func" field`)
 	}
 }
