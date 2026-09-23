@@ -1,0 +1,18 @@
+project: distribution-fuzz
+configVersion: 1
+---
+# builder/golang-debian-1.25 from the base-image map used by prompp-module.
+# A glibc image is required by the shared AWS CLI distribution.
+image: distribution-artifact
+from: registry.deckhouse.io/container-factory@sha256:d962c4d7060e33b696928c3f30fee4a2b017e782975c4e701d8c51c2c17ddecd
+final: false
+git:
+  - add: /
+    to: /src
+    stageDependencies:
+      install:
+        - '**/*'
+---
+{{- $_ := set . "ImageName" "distribution" }}
+{{- $_ := set . "FuzzEngine" "go" }}
+{{- include "fuzz image" . }}

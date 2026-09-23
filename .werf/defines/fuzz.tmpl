@@ -1,0 +1,159 @@
+# Go fuzz image, following the "fuzz image" include used by neighbouring repos.
+# Sources come from FuzzSrcImage (default: {ModuleNamePrefix}{ImageName}-artifact).
+# FuzzSrcAdd is both the source import path and working directory (default: /src).
+# The source image must provide Go and apt-get; application dependencies use vendor/.
+# Put the YAML document separator before the include in the calling werf config.
+{{- define "fuzz image" }}
+{{- if ne (.FuzzEngine | default "") "go" }}
+  {{- fail "fuzz image: set FuzzEngine to go" }}
+{{- end }}
+{{- $imageName := required "fuzz image: ImageName is required" .ImageName }}
+{{- $prefix := .ModuleNamePrefix | default "" }}
+{{- $fuzzImage := .FuzzImageName | default $imageName | trimSuffix "-fuzz" }}
+{{- $fuzzSrcImage := .FuzzSrcImage | default (printf "%s%s-artifact" $prefix $imageName) }}
+{{- $fuzzSrcAdd := .FuzzSrcAdd | default "/src" }}
+{{- $moduleDir := .ModuleDir | default "" }}
+image: {{ printf "%s%s-fuzz" $prefix $fuzzImage }}
+fromImage: {{ $fuzzSrcImage }}
+final: false
+imageSpec:
+  config:
+    workingDir: {{ $fuzzSrcAdd | quote }}
+    labels:
+      io.deckhouse.fuzz.engine: go
+    env:
+      CGO_ENABLED: "0"
+      GOTOOLCHAIN: local
+      GOMODCACHE: /fuzz/gomod
+git:
+  - add: {{ $moduleDir }}/Taskfile.fuzz.yml
+    to: {{ $fuzzSrcAdd }}/Taskfile.yml
+    stageDependencies:
+      install:
+        - '**/*'
+import:
+  - image: {{ $fuzzSrcImage }}
+    add: {{ $fuzzSrcAdd }}
+    to: {{ $fuzzSrcAdd }}
+    before: install
+secrets:
+  - id: FUZZ_S3_ENDPOINT
+    env: FUZZ_S3_ENDPOINT
+  - id: FUZZ_S3_ACCESS_KEY
+    env: FUZZ_S3_ACCESS_KEY
+  - id: FUZZ_S3_SECRET_KEY
+    env: FUZZ_S3_SECRET_KEY
+  - id: FUZZ_S3_REPOSITORY
+    env: FUZZ_S3_REPOSITORY
+  - id: FUZZ_S3_BRANCH_SLUG
+    env: FUZZ_S3_BRANCH_SLUG
+shell:
+  beforeInstall:
+    - |
+      set -eu
+      apt-get update
+      apt-get install -y --no-install-recommends bash ca-certificates curl git jq python3 unzip
+      rm -rf /var/lib/apt/lists/*
+
+      # Install tooling outside the application's module graph.
+      GOBIN=/usr/local/bin go install github.com/go-task/task/v3/cmd/task@v3.50.0
+      aws_dir="$(mktemp -d)"
+      curl -fsSL -o "${aws_dir}/aws.zip" https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip
+      unzip -q "${aws_dir}/aws.zip" -d "${aws_dir}"
+      "${aws_dir}/aws/install" --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli
+      rm -rf "${aws_dir}"
+      task --version
+      aws --version
+  install:
+    - |
+      set -eu
+      cd {{ $fuzzSrcAdd | quote }}
+      export CGO_ENABLED=0 GOTOOLCHAIN=local GOMODCACHE=/fuzz/gomod
+      mkdir -p "${GOMODCACHE}"
+      # Dependencies are committed in vendor/. Keep discovery, replay and runtime
+      # on that exact graph instead of downloading another copy of the modules.
+      export GOPROXY=off
+
+      export AWS_ACCESS_KEY_ID="$(cat /run/secrets/FUZZ_S3_ACCESS_KEY)"
+      export AWS_SECRET_ACCESS_KEY="$(cat /run/secrets/FUZZ_S3_SECRET_KEY)"
+      endpoint="$(cat /run/secrets/FUZZ_S3_ENDPOINT)"
+      repository="$(cat /run/secrets/FUZZ_S3_REPOSITORY)"
+      branch="$(cat /run/secrets/FUZZ_S3_BRANCH_SLUG)"
+      : "${endpoint:?}" "${repository:?}" "${branch:?}"
+      corpus_uri="s3://anomaloys-materials/${repository}/${branch}/"
+      corpus_dir="$(mktemp -d)"
+      restored_files="$(mktemp)"
+      targets_file="$(mktemp)"
+      list_log="$(mktemp)"
+      cleanup() {
+        while IFS= read -r restored_file; do
+          rm -f "${restored_file}"
+        done < "${restored_files}"
+        rm -rf "${corpus_dir}"
+        rm -f "${restored_files}" "${targets_file}" "${list_log}"
+      }
+      trap cleanup EXIT
+
+      # An empty prefix is a valid first run. Authentication/network failures
+      # must fail the build rather than silently omit regression inputs.
+      echo "Restore fuzz corpus from ${corpus_uri}"
+      aws --endpoint-url "${endpoint}" --region us-east-1 \
+        s3 sync "${corpus_uri}" "${corpus_dir}/" --only-show-errors
+      unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
+
+      module_path="$(GOWORK=off go list -mod=vendor -m)"
+      find "${corpus_dir}" -type d \
+        -path "*/corpus/gocache-fuzz/${module_path}/*" > "${targets_file}"
+      while IFS= read -r target_dir; do
+        target="$(basename "${target_dir}")"
+        case "${target}" in
+          Fuzz*) ;;
+          *) continue ;;
+        esac
+        prefix="/corpus/gocache-fuzz/${module_path}/"
+        relative="${target_dir##*${prefix}}"
+        package_dir="${relative%"${target}"}"
+        seed_dir="${package_dir}testdata/fuzz/${target}"
+        mkdir -p "${seed_dir}"
+        for corpus_file in "${target_dir}"/*; do
+          [ -f "${corpus_file}" ] || continue
+          destination="${seed_dir}/$(basename "${corpus_file}")"
+          [ ! -e "${destination}" ] || continue
+          cp "${corpus_file}" "${destination}"
+          printf '%s\n' "${destination}" >> "${restored_files}"
+        done
+      done < "${targets_file}"
+
+      # Preserve the same list/replay ABI as the platform and neighbouring repos.
+      list_status=0
+      task fuzz:list > "${list_log}" 2>&1 || list_status=$?
+      cat "${list_log}"
+      [ "${list_status}" -eq 0 ] || exit "${list_status}"
+      awk '
+        /^Fuzz[[:alnum:]_]*$/ { targets[++count] = $0; next }
+        /^(ok|FAIL|\?)[[:space:]]+/ {
+          package = $2
+          for (i = 1; i <= count; i++) print package "|" targets[i]
+          delete targets
+          count = 0
+        }
+        END { if (count != 0) exit 2 }
+      ' "${list_log}" > "${targets_file}"
+      if [ ! -s "${targets_file}" ]; then
+        echo "fuzz:list returned no Go fuzz targets" >&2
+        exit 1
+      fi
+
+      replay_status=0
+      while IFS='|' read -r fuzz_pkg fuzz_target; do
+        echo "Replay fuzz corpus: package=${fuzz_pkg} target=${fuzz_target}"
+        FUZZ_PKG="${fuzz_pkg}" FUZZ_TARGET="${fuzz_target}" task fuzz:replay || replay_status=1
+      done < "${targets_file}"
+      [ "${replay_status}" -eq 0 ] || exit "${replay_status}"
+
+      cleanup
+      trap - EXIT
+      go clean -cache -testcache -fuzzcache
+      # The platform runs as a non-root user and writes crash seeds here.
+      chmod -R a+rwX {{ $fuzzSrcAdd | quote }} /fuzz/gomod
+{{- end }}

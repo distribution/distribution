@@ -1,0 +1,69 @@
+include:
+  - project: deckhouse/3p/deckhouse/modules-gitlab-ci
+    ref: v16.0.0
+    file: /templates/Build_Fuzz_Images.gitlab-ci.yml
+
+stages:
+  - build
+
+variables:
+  WERF_VERSION: "2 stable"
+  MODULES_REGISTRY: ${DEV_MODULES_REGISTRY}
+  MODULES_REGISTRY_LOGIN: ${DEV_MODULES_REGISTRY_LOGIN}
+  MODULES_REGISTRY_PASSWORD: ${DEV_MODULES_REGISTRY_PASSWORD}
+  MODULES_MODULE_SOURCE: ${MODULES_REGISTRY}/sys/deckhouse-oss/modules
+  MODULES_MODULE_NAME: ${CI_PROJECT_NAME}
+  VAULT_AUTH_ROLE: ${CI_PROJECT_NAME}
+
+.prepare_fuzz:
+  tags:
+    - deckhouse
+  before_script:
+    - |
+      set -euo pipefail
+      export DOCKER_CONFIG="$(mktemp -d)"
+      trap 'rm -rf "$DOCKER_CONFIG"' EXIT
+      source "$(trdl use werf ${WERF_VERSION})"
+      source "$(werf ci-env gitlab --as-file)"
+      werf cr login "${MODULES_REGISTRY}" \
+        -u "${MODULES_REGISTRY_LOGIN}" -p "${MODULES_REGISTRY_PASSWORD}"
+  artifacts:
+    when: always
+    expire_in: 7 days
+    paths:
+      - images_fuzz_tags_werf.json
+
+build_fuzz_dev:
+  extends:
+    - .prepare_fuzz
+    - .build_fuzz
+  # The shared .build_fuzz_dev hardcodes the corpus branch to main. This fork's
+  # default branch is deckhouse; use its slug while keeping the same build flow.
+  script:
+    - |
+      set -euo pipefail
+      : "${FUZZ_S3_ENDPOINT:?}" "${FUZZ_S3_ACCESS_KEY:?}" "${FUZZ_S3_SECRET_KEY:?}"
+      unset WERF_REPO WERF_FINAL_REPO WERF_FINAL_IMAGES_ONLY
+      export WERF_SECONDARY_REPO_1="${MODULES_MODULE_SOURCE}/${MODULES_MODULE_NAME}"
+      export FUZZ_S3_REPOSITORY="${CI_PROJECT_NAME}"
+      export FUZZ_S3_BRANCH_SLUG="$(printf '%s' "${CI_DEFAULT_BRANCH}" | \
+        LC_ALL=C tr '[:upper:]' '[:lower:]' | \
+        LC_ALL=C sed 's/[^a-z0-9]/-/g; s/^[-]*//; s/[-]*$//' | cut -c1-63 | sed 's/[-]*$//')"
+      werf build distribution-fuzz \
+        --final-images-only=false \
+        --save-build-report=true \
+        --build-report-path images_fuzz_tags_werf.json
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+build_fuzz_main:
+  extends:
+    - .prepare_fuzz
+    - .build_fuzz_main
+  resource_group: distribution-fuzz-publish
+  # The shared script rewrites SOURCE_REPO for module builds. Distribution uses
+  # this checkout and vendor/; no source clone is needed, but nounset needs a value.
+  variables:
+    SOURCE_REPO: "fox.flant.com"
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH

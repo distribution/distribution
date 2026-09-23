@@ -1,0 +1,36 @@
+version: '3'
+
+tasks:
+  fuzz:list:
+    cmds:
+      - go test -mod=vendor . ./registry ./registry/handlers ./registry/proxy -list '^Fuzz'
+
+  fuzz:run:
+    cmds:
+      - |
+        go test -mod=vendor "${FUZZ_PKG:?FUZZ_PKG is required}" \
+          -run '^$' \
+          -fuzz "^${FUZZ_TARGET:?FUZZ_TARGET is required}$" \
+          -parallel="${FUZZ_WORKERS:-4}" \
+          -fuzztime="${FUZZ_TIME:-0}" \
+          -timeout=0 \
+          -count=1 \
+          -v
+
+  fuzz:coverage:
+    cmds:
+      - |
+        go test -mod=vendor "${FUZZ_PKG:?FUZZ_PKG is required}" \
+          -run "^${FUZZ_TARGET:?FUZZ_TARGET is required}$" \
+          -count=1 \
+          -covermode=atomic \
+          -coverpkg=./... \
+          -coverprofile="${FUZZ_COVERAGE_FILE:?FUZZ_COVERAGE_FILE is required}"
+
+  fuzz:replay:
+    cmds:
+      - |
+        go test -mod=vendor "${FUZZ_PKG:?FUZZ_PKG is required}" \
+          -run "^${FUZZ_TARGET:?FUZZ_TARGET is required}$" \
+          -count=1 \
+          -v
