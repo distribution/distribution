@@ -244,7 +244,11 @@ func (bw *blobWriter) validateBlob(ctx context.Context, desc v1.Descriptor) (v1.
 		// paths. We may be able to make the size-based check a stronger
 		// guarantee, so this may be defensive.
 		if !verified {
-			digester := digest.Canonical.Digester()
+			// desc.Digest has already passed digest.Parse (and thus
+			// Algorithm().Available()) by the time it reaches here, so this
+			// preserves whatever algorithm the client pushed with instead of
+			// silently coercing the stored identity to sha256.
+			digester := desc.Digest.Algorithm().Digester()
 			verifier := desc.Digest.Verifier()
 
 			// Read the file from the backend driver and validate it.

@@ -267,6 +267,14 @@ func (imh *manifestHandler) PutManifest(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if imh.Digest != "" {
+		// UnmarshalManifest always computes desc.Digest using the canonical
+		// (sha256) algorithm. If the client referenced this manifest by a
+		// digest using a different (but registered) algorithm, recompute
+		// the digest using that algorithm before comparing, rather than
+		// rejecting an otherwise-valid push as a digest mismatch.
+		if desc.Digest.Algorithm() != imh.Digest.Algorithm() {
+			desc.Digest = imh.Digest.Algorithm().FromBytes(jsonBuf.Bytes())
+		}
 		if desc.Digest != imh.Digest {
 			dcontext.GetLogger(imh).Errorf("payload digest does not match: %q != %q", desc.Digest, imh.Digest)
 			imh.Errors = append(imh.Errors, errcode.ErrorCodeDigestInvalid)
@@ -290,6 +298,9 @@ func (imh *manifestHandler) PutManifest(w http.ResponseWriter, r *http.Request) 
 	var options []distribution.ManifestServiceOption
 	if imh.Tag != "" {
 		options = append(options, distribution.WithTag(imh.Tag))
+	}
+	if imh.Digest != "" {
+		options = append(options, distribution.WithDigest(imh.Digest))
 	}
 
 	if err := imh.applyResourcePolicy(manifest); err != nil {

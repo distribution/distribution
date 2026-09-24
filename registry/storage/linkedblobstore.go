@@ -83,7 +83,7 @@ func (lbs *linkedBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter
 }
 
 func (lbs *linkedBlobStore) Put(ctx context.Context, mediaType string, p []byte) (v1.Descriptor, error) {
-	dgst := digest.FromBytes(p)
+	dgst := putDigestAlgorithm(ctx).FromBytes(p)
 	// Place the data in the blob store first.
 	desc, err := lbs.blobStore.Put(ctx, mediaType, p)
 	if err != nil {
@@ -119,6 +119,24 @@ func WithMountFrom(ref reference.Canonical) distribution.BlobCreateOption {
 
 		opts.Mount.ShouldMount = true
 		opts.Mount.From = ref
+
+		return nil
+	})
+}
+
+// WithDigestAlgorithm returns a BlobCreateOption which declares the digest
+// algorithm the client will push the blob with (e.g. from the
+// distribution-spec's digest-algorithm upload parameter), letting the
+// upload stream-hash with it instead of only discovering it once the final
+// digest arrives.
+func WithDigestAlgorithm(alg digest.Algorithm) distribution.BlobCreateOption {
+	return optionFunc(func(v any) error {
+		opts, ok := v.(*distribution.CreateOptions)
+		if !ok {
+			return fmt.Errorf("unexpected options type: %T", v)
+		}
+
+		opts.DigestAlgorithm = alg
 
 		return nil
 	})
@@ -169,7 +187,22 @@ func (lbs *linkedBlobStore) Create(ctx context.Context, options ...distribution.
 		return nil, err
 	}
 
-	return lbs.newBlobUpload(ctx, uuid, path, startedAt, false)
+	if opts.DigestAlgorithm != "" && opts.DigestAlgorithm != digest.Canonical {
+		algPath, err := pathFor(uploadDigestAlgorithmPathSpec{
+			name: lbs.repository.Named().Name(),
+			id:   uuid,
+		})
+		if err != nil {
+			return nil, err
+		}
+		// Persisted so a later Resume (each PATCH/PUT is a separate request)
+		// can rebuild the digester with the same algorithm.
+		if err := lbs.blobStore.driver.PutContent(ctx, algPath, []byte(opts.DigestAlgorithm)); err != nil {
+			return nil, err
+		}
+	}
+
+	return lbs.newBlobUpload(ctx, uuid, path, startedAt, opts.DigestAlgorithm, false)
 }
 
 func (lbs *linkedBlobStore) Resume(ctx context.Context, id string) (distribution.BlobWriter, error) {
@@ -206,7 +239,25 @@ func (lbs *linkedBlobStore) Resume(ctx context.Context, id string) (distribution
 		return nil, err
 	}
 
-	return lbs.newBlobUpload(ctx, id, path, startedAt, true)
+	var alg digest.Algorithm
+	algPath, err := pathFor(uploadDigestAlgorithmPathSpec{
+		name: lbs.repository.Named().Name(),
+		id:   id,
+	})
+	if err != nil {
+		return nil, err
+	}
+	algBytes, err := lbs.blobStore.driver.GetContent(ctx, algPath)
+	switch err.(type) {
+	case nil:
+		alg = digest.Algorithm(algBytes)
+	case driver.PathNotFoundError:
+		// no digest-algorithm was declared for this upload; default to canonical.
+	default:
+		return nil, err
+	}
+
+	return lbs.newBlobUpload(ctx, id, path, startedAt, alg, true)
 }
 
 func (lbs *linkedBlobStore) Delete(ctx context.Context, dgst digest.Digest) error {
@@ -301,10 +352,14 @@ func (lbs *linkedBlobStore) mount(ctx context.Context, sourceRepo reference.Name
 }
 
 // newBlobUpload allocates a new upload controller with the given state.
-func (lbs *linkedBlobStore) newBlobUpload(ctx context.Context, uuid, path string, startedAt time.Time, append bool) (distribution.BlobWriter, error) {
+func (lbs *linkedBlobStore) newBlobUpload(ctx context.Context, uuid, path string, startedAt time.Time, alg digest.Algorithm, append bool) (distribution.BlobWriter, error) {
 	fw, err := lbs.driver.Writer(ctx, path, append)
 	if err != nil {
 		return nil, err
+	}
+
+	if alg == "" || !alg.Available() {
+		alg = digest.Canonical
 	}
 
 	bw := &blobWriter{
@@ -312,7 +367,7 @@ func (lbs *linkedBlobStore) newBlobUpload(ctx context.Context, uuid, path string
 		blobStore:              lbs,
 		id:                     uuid,
 		startedAt:              startedAt,
-		digester:               digest.Canonical.Digester(),
+		digester:               alg.Digester(),
 		fileWriter:             fw,
 		driver:                 lbs.driver,
 		path:                   path,
