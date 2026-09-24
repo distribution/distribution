@@ -142,9 +142,10 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 		cacheWriteTimeout: cacheWriteTimeout,
 		remoteURL:         *remoteURL,
 		authChallenger: &remoteAuthChallenger{
-			remoteURL: *remoteURL,
-			cm:        challenge.NewSimpleManager(),
-			cs:        cs,
+			remoteURL:     *remoteURL,
+			cm:            challenge.NewSimpleManager(),
+			cs:            cs,
+			trustedRealmHosts: config.TrustedRealmHosts,
 		},
 		basicAuth: b,
 	}, nil
@@ -257,6 +258,7 @@ type remoteAuthChallenger struct {
 	sync.Mutex
 	cm challenge.Manager
 	cs auth.CredentialStore
+	trustedRealmHosts []string
 }
 
 func (r *remoteAuthChallenger) credentialStore() auth.CredentialStore {
@@ -265,7 +267,8 @@ func (r *remoteAuthChallenger) credentialStore() auth.CredentialStore {
 
 func (r *remoteAuthChallenger) challengeManager() challenge.Manager {
 	return challenge.NewFilteringManager(r.cm, func(c challenge.Challenge) bool {
-		return !strings.EqualFold(c.Scheme, "bearer") || realmAllowed(&r.remoteURL, c.Parameters["realm"])
+		return !strings.EqualFold(c.Scheme, "bearer") || realmAllowed(&r.remoteURL, c.Parameters["realm"],
+									      r.trustedRealmHosts)
 	})
 }
 
