@@ -17,7 +17,7 @@ jobs:
     steps:
       -
         name: Build image
-        uses: docker/bake-action@6614cfa25eff9a0b2b2697efb0b6159e7680d584 # v7.2.0
+        uses: docker/bake-action@018cb6412ab401ebaa809aa5f85966b74628600f # v7.4.0
         with:
           targets: image-local
       -
