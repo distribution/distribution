@@ -247,13 +247,17 @@ func (lbs *linkedBlobStore) Enumerate(ctx context.Context, ingestor func(digest.
 		}
 
 		// read the digest found in link
-		digest, err := lbs.blobStore.readlink(ctx, filePath)
+		dgst, err := lbs.blobStore.readlink(ctx, filePath)
 		if err != nil {
+			if err == digest.ErrDigestInvalidFormat {
+				dcontext.GetLogger(ctx).Warnf("invalid link file %s", filePath)
+				return nil
+			}
 			return err
 		}
 
 		// ensure this conforms to the linkPathFns
-		_, err = lbs.Stat(ctx, digest)
+		_, err = lbs.Stat(ctx, dgst)
 		if err != nil {
 			// we expect this error to occur so we move on
 			if err == distribution.ErrBlobUnknown {
@@ -262,7 +266,7 @@ func (lbs *linkedBlobStore) Enumerate(ctx context.Context, ingestor func(digest.
 			return err
 		}
 
-		err = ingestor(digest)
+		err = ingestor(dgst)
 		if err != nil {
 			return err
 		}
