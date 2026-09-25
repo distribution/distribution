@@ -79,9 +79,37 @@ type Parser struct {
 	env     envVars
 }
 
+// ParseOption defines a functional option for configuring a Parser and configuration parsing.
+type ParseOption func(*Parser)
+
+// WithEnvironment sets the explicit environment used by the parser for configuration overrides.
+// When specified, only variables from env will be evaluated for overrides.
+// Supplying an empty slice explicitly disables all environment overrides.
+// The provided slice is defensively copied.
+func WithEnvironment(env []string) ParseOption {
+	envCopy := make([]string, len(env))
+	copy(envCopy, env)
+
+	return func(p *Parser) {
+		p.env = make(envVars, 0, len(envCopy))
+		for _, e := range envCopy {
+			k, v, _ := strings.Cut(e, "=")
+			p.env = append(p.env, envVar{k, v})
+		}
+		sort.Sort(p.env)
+	}
+}
+
 // NewParser returns a *Parser with the given environment prefix which handles
-// versioned configurations which match the given parseInfos
+// versioned configurations which match the given parseInfos. It inherits the
+// process environment via os.Environ().
 func NewParser(prefix string, parseInfos []VersionedParseInfo) *Parser {
+	return NewParserWithOptions(prefix, parseInfos)
+}
+
+// NewParserWithOptions returns a *Parser with the given environment prefix, versioned parseInfos,
+// and optional configuration options.
+func NewParserWithOptions(prefix string, parseInfos []VersionedParseInfo, opts ...ParseOption) *Parser {
 	p := Parser{prefix: prefix, mapping: make(map[Version]VersionedParseInfo)}
 
 	for _, parseInfo := range parseInfos {
@@ -92,14 +120,13 @@ func NewParser(prefix string, parseInfos []VersionedParseInfo) *Parser {
 		k, v, _ := strings.Cut(env, "=")
 		p.env = append(p.env, envVar{k, v})
 	}
-
-	// We must sort the environment variables lexically by name so that
-	// more specific variables are applied before less specific ones
-	// (i.e. REGISTRY_STORAGE before
-	// REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY). This sucks, but it's a
-	// lot simpler and easier to get right than unmarshalling map entries
-	// into temporaries and merging with the existing entry.
 	sort.Sort(p.env)
+
+	for _, opt := range opts {
+		if opt != nil {
+			opt(&p)
+		}
+	}
 
 	return &p
 }

@@ -133,3 +133,58 @@ func TestParseInlinedStruct(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, expected, config)
 }
+
+func TestNewParserWithOptionsWithEnvironment(t *testing.T) {
+	config := localConfiguration{}
+
+	// Set process environment variable that should NOT be picked up when explicit env is provided
+	t.Setenv("REGISTRY_LOG_FORMATTER", "json")
+
+	env := []string{"REGISTRY_FIRSTVALUE=custom1", "REGISTRY_INLINED_SECONDVALUE=custom2"}
+	p := NewParserWithOptions("registry", []VersionedParseInfo{
+		{
+			Version: "0.1",
+			ParseAs: reflect.TypeFor[localConfiguration](),
+			ConversionFunc: func(c any) (any, error) {
+				return c, nil
+			},
+		},
+	}, WithEnvironment(env))
+
+	// Mutate slice after passing to verify defensive copy
+	env[0] = "REGISTRY_FIRSTVALUE=mutated"
+
+	err := p.Parse([]byte(testConfig3), &config)
+	require.NoError(t, err)
+
+	// REGISTRY_LOG_FORMATTER from os.Environ() should be ignored
+	require.Equal(t, "text", config.Log.Formatter)
+	// Values from explicit env should be applied
+	require.Equal(t, "custom1", config.Inlined.FirstValue)
+	require.Equal(t, "custom2", config.Inlined.SecondValue)
+}
+
+func TestNewParserWithOptionsDisabledEnvironment(t *testing.T) {
+	config := localConfiguration{}
+
+	// Set process environment variables
+	t.Setenv("REGISTRY_LOG_FORMATTER", "json")
+	t.Setenv("REGISTRY_FIRSTVALUE", "from_process")
+
+	p := NewParserWithOptions("registry", []VersionedParseInfo{
+		{
+			Version: "0.1",
+			ParseAs: reflect.TypeFor[localConfiguration](),
+			ConversionFunc: func(c any) (any, error) {
+				return c, nil
+			},
+		},
+	}, WithEnvironment([]string{}))
+
+	err := p.Parse([]byte(testConfig3), &config)
+	require.NoError(t, err)
+
+	// Neither process env var should be applied when environment is explicitly empty
+	require.Equal(t, "text", config.Log.Formatter)
+	require.Equal(t, "", config.Inlined.FirstValue)
+}

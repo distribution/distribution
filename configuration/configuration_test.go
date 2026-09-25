@@ -479,6 +479,28 @@ func (suite *ConfigSuite) TestParseEnvInlinedStruct() {
 	suite.Require().Equal(suite.expectedConfig, config)
 }
 
+func (suite *ConfigSuite) TestParseWithOptionsWithEnvironment() {
+	suite.T().Setenv("REGISTRY_REDIS_USERNAME", "from_process")
+
+	customEnv := []string{
+		"REGISTRY_REDIS_USERNAME=from_custom",
+		"REGISTRY_REDIS_OPTIONS_PASSWORD=custom_pass",
+	}
+
+	config, err := ParseWithOptions(bytes.NewReader([]byte(configYamlV0_1)), WithEnvironment(customEnv))
+	suite.Require().NoError(err)
+	suite.Require().Equal("from_custom", config.Redis.Options.Username)
+	suite.Require().Equal("custom_pass", config.Redis.Options.Password)
+}
+
+func (suite *ConfigSuite) TestParseWithOptionsDisabledEnvironment() {
+	suite.T().Setenv("REGISTRY_REDIS_USERNAME", "from_process")
+
+	config, err := ParseWithOptions(bytes.NewReader([]byte(configYamlV0_1)), WithEnvironment([]string{}))
+	suite.Require().NoError(err)
+	suite.Require().Equal("alice", config.Redis.Options.Username)
+}
+
 func checkStructs(tt *testing.T, t reflect.Type, structsChecked map[string]struct{}) {
 	tt.Helper()
 

@@ -811,13 +811,20 @@ func (platforms *Platforms) UnmarshalYAML(unmarshal func(any) error) error {
 // following the scheme below:
 // Configuration.Abc may be replaced by the value of REGISTRY_ABC,
 // Configuration.Abc.Xyz may be replaced by the value of REGISTRY_ABC_XYZ, and so forth
+// Parse parses an input configuration from the provided reader using default options,
+// inheriting environment variable overrides from the process environment (os.Environ()).
 func Parse(rd io.Reader) (*Configuration, error) {
+	return ParseWithOptions(rd)
+}
+
+// ParseWithOptions parses an input configuration from the provided reader with optional ParseOption configuration.
+func ParseWithOptions(rd io.Reader, opts ...ParseOption) (*Configuration, error) {
 	in, err := io.ReadAll(rd)
 	if err != nil {
 		return nil, err
 	}
 
-	p := NewParser("registry", []VersionedParseInfo{
+	p := NewParserWithOptions("registry", []VersionedParseInfo{
 		{
 			Version: MajorMinorVersion(0, 1),
 			ParseAs: reflect.TypeFor[v0_1Configuration](),
@@ -853,7 +860,7 @@ func Parse(rd io.Reader) (*Configuration, error) {
 				return nil, fmt.Errorf("expected *v0_1Configuration, received %#v", c)
 			},
 		},
-	})
+	}, opts...)
 
 	config := new(Configuration)
 	err = p.Parse(in, config)
