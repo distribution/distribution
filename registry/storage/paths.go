@@ -256,6 +256,28 @@ func pathFor(spec pathSpec) (string, error) {
 	}
 }
 
+// BlobLinkPath returns the storage path of the per-repository link
+// file for a blob: <root>/v2/repositories/<repo>/_layers/<algorithm>/<hex>/link.
+func BlobLinkPath(repo string, dgst digest.Digest) (string, error) {
+	return pathFor(layerLinkPathSpec{name: repo, digest: dgst})
+}
+
+// ManifestRevisionLinkPath returns the storage path of the per-repository
+// revision link file for a manifest:
+// <root>/v2/repositories/<repo>/_manifests/revisions/<algorithm>/<hex>/link.
+func ManifestRevisionLinkPath(repo string, dgst digest.Digest) (string, error) {
+	return pathFor(manifestRevisionLinkPathSpec{name: repo, revision: dgst})
+}
+
+// RepositoriesRootPath returns the storage path that contains all
+// repository subtrees: <root>/v2/repositories.
+func RepositoriesRootPath() string {
+	// Errors from pathFor for repositoriesRootPathSpec are not possible
+	// (no digest parsing), so the discard is safe.
+	p, _ := pathFor(repositoriesRootPathSpec{})
+	return p
+}
+
 // pathSpec is a type to mark structs as path specs. There is no
 // implementation because we'd like to keep the specs and the mappers
 // decoupled.
