@@ -1147,6 +1147,7 @@ The error codes encountered via the API are enumerated in the following table:
  `NAME_INVALID` | invalid repository name | Invalid repository name encountered either during manifest validation or any API operation.
  `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry.
  `PAGINATION_NUMBER_INVALID` | invalid number of results requested | Returned when the "n" parameter (number of results to return) is not an integer, "n" is negative or "n" is bigger than the maximum allowed.
+ `QUERY_PARAMETER_INVALID` | invalid query parameter value | Returned when a query parameter contains an unrecognised or unsupported value.
  `RANGE_INVALID` | invalid content range | When a layer is uploaded, the provided range is checked against the uploaded chunk. This error is returned if the range is out of order.
  `SIZE_INVALID` | provided length did not match content length | When a layer is uploaded, the provided size will be checked against the uploaded content. If they do not match, this error will be returned.
  `TAG_INVALID` | manifest tag did not match URI | During a manifest upload, if the tag in the manifest does not match the uri tag, this error will be returned.

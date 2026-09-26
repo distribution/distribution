@@ -106,17 +106,18 @@ func (ch *catalogHandler) GetCatalog(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Use the original URL from the request to create a new URL for
-// the link header
+// createLinkEntry builds a Link header value for the next page of results.
+// It preserves all existing query parameters from origURL, overwriting n and
+// last with the provided values.
 func createLinkEntry(origURL string, maxEntries int, lastEntry string) (string, error) {
 	calledURL, err := url.Parse(origURL)
 	if err != nil {
 		return "", err
 	}
 
-	v := url.Values{}
-	v.Add("n", strconv.Itoa(maxEntries))
-	v.Add("last", lastEntry)
+	v := calledURL.Query()
+	v.Set("n", strconv.Itoa(maxEntries))
+	v.Set("last", lastEntry)
 
 	calledURL.RawQuery = v.Encode()
 
