@@ -312,7 +312,14 @@ func handleTag(fileInfo storagedriver.FileInfo, root, last string, fn func(tagPa
 		return storagedriver.ErrSkipDir
 	}
 
-	if lessPath(last, tag) {
+	// The driver already positions the walk after `last` via the
+	// start-after hint, so this only needs to de-duplicate the boundary
+	// tag itself - matching how handleRepository does it in catalog.go
+	// (see commit 77e03519646). A lessPath check here would re-introduce
+	// the same S3-catalog bug for GCS: driver list order is raw byte
+	// order, not lessPath's component-wise order, and the two can
+	// disagree for a tag name that's a byte-prefix of a sibling's.
+	if tag != last {
 		if err := fn(tag); err != nil {
 			return err
 		}
