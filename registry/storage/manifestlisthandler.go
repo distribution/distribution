@@ -113,6 +113,13 @@ func (ms *manifestListHandler) platformMustExist(descriptor v1.Descriptor) bool 
 
 	imagePlatform := descriptor.Platform
 
+	// Platform can be nil per the OCI image spec (e.g., attestation manifests, SBOMs).
+	// A platform-less descriptor cannot match any configured platform, so skip existence
+	// validation for it.
+	if imagePlatform == nil {
+		return false
+	}
+
 	// If the platform matches a platform that is configured to validate, we must check the existence.
 	for _, platform := range ms.validateImageIndexes.imagePlatforms {
 		if imagePlatform.Architecture == platform.architecture &&
