@@ -80,15 +80,25 @@ type Parser struct {
 }
 
 // NewParser returns a *Parser with the given environment prefix which handles
-// versioned configurations which match the given parseInfos
+// versioned configurations which match the given parseInfos. It uses the
+// process environment returned by os.Environ for configuration overrides.
 func NewParser(prefix string, parseInfos []VersionedParseInfo) *Parser {
+	return NewParserWithEnvironment(prefix, parseInfos, os.Environ())
+}
+
+// NewParserWithEnvironment returns a *Parser with the given environment prefix
+// and complete environment used for configuration overrides. The environment
+// must contain KEY=value entries. A nil or empty environment disables
+// configuration overrides. The environment is copied into the parser's
+// internal representation before this function returns.
+func NewParserWithEnvironment(prefix string, parseInfos []VersionedParseInfo, environment []string) *Parser {
 	p := Parser{prefix: prefix, mapping: make(map[Version]VersionedParseInfo)}
 
 	for _, parseInfo := range parseInfos {
 		p.mapping[parseInfo.Version] = parseInfo
 	}
 
-	for _, env := range os.Environ() {
+	for _, env := range environment {
 		k, v, _ := strings.Cut(env, "=")
 		p.env = append(p.env, envVar{k, v})
 	}
