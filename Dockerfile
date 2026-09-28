@@ -59,10 +59,14 @@ RUN --mount=from=binary,target=/build \
 FROM scratch AS artifact
 COPY --from=releaser /out /
 
+FROM upx/upx:latest AS packer
+COPY --from=binary /registry /registry
+RUN upx --best /registry
+
 FROM alpine:${ALPINE_VERSION}
 RUN apk add --no-cache ca-certificates
 COPY cmd/registry/config-dev.yml /etc/distribution/config.yml
-COPY --from=binary /registry /bin/registry
+COPY --from=packer /registry /bin/registry
 VOLUME ["/var/lib/registry"]
 ENV OTEL_TRACES_EXPORTER=none
 EXPOSE 5000
