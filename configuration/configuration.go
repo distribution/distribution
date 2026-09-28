@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"reflect"
-	"slices"
 	"strings"
 	"time"
 )
@@ -828,8 +827,6 @@ func Parse(rd io.Reader) (*Configuration, error) {
 // environment must contain KEY=value entries. A nil or empty environment
 // disables configuration overrides.
 func ParseWithEnvironment(rd io.Reader, environment []string) (*Configuration, error) {
-	environment = slices.Clone(environment)
-
 	in, err := io.ReadAll(rd)
 	if err != nil {
 		return nil, err

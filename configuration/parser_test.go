@@ -143,3 +143,33 @@ func TestNewParserWithEnvironmentNilEnvironmentDisablesOverrides(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "text", config.Log.Formatter)
 }
+
+func TestNewParserWithEnvironmentHandlesMalformedAndEmptyValues(t *testing.T) {
+	tests := []struct {
+		name        string
+		environment []string
+		wantFormat  string
+	}{
+		{
+			name:        "malformed entry is ignored",
+			environment: []string{"REGISTRY_LOG_FORMATTER"},
+			wantFormat:  "text",
+		},
+		{
+			name:        "valid empty value is applied",
+			environment: []string{"REGISTRY_LOG_FORMATTER="},
+			wantFormat:  "",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			p := NewParserWithEnvironment("registry", localParseInfos(), test.environment)
+
+			config := localConfiguration{}
+			err := p.Parse([]byte(testConfig), &config)
+			require.NoError(t, err)
+			require.Equal(t, test.wantFormat, config.Log.Formatter)
+		})
+	}
+}

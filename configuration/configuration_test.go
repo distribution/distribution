@@ -268,6 +268,25 @@ func TestParseWithEnvironment(t *testing.T) {
 	}
 }
 
+func TestParseWithEnvironmentIgnoresMalformedEntries(t *testing.T) {
+	config, err := ParseWithEnvironment(bytes.NewReader([]byte(configYamlV0_1)), []string{
+		"REGISTRY_REDIS_OPTIONS_USERNAME",
+		"REGISTRY_LOG_FIELDS",
+	})
+	require.NoError(t, err)
+	require.Equal(t, "alice", config.Redis.Options.Username)
+	require.Equal(t, map[string]any{"environment": "test"}, config.Log.Fields)
+}
+
+func TestParseWithEnvironmentAppliesValidEmptyValue(t *testing.T) {
+	config, err := ParseWithEnvironment(
+		bytes.NewReader([]byte(configYamlV0_1)),
+		[]string{"REGISTRY_REDIS_OPTIONS_USERNAME="},
+	)
+	require.NoError(t, err)
+	require.Empty(t, config.Redis.Options.Username)
+}
+
 func (suite *ConfigSuite) SetupTest() {
 	suite.expectedConfig = copyConfig(configStruct)
 }

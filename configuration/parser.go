@@ -99,7 +99,11 @@ func NewParserWithEnvironment(prefix string, parseInfos []VersionedParseInfo, en
 	}
 
 	for _, env := range environment {
-		k, v, _ := strings.Cut(env, "=")
+		k, v, found := strings.Cut(env, "=")
+		if !found {
+			// Ignore malformed entries while preserving valid empty values (KEY=).
+			continue
+		}
 		p.env = append(p.env, envVar{k, v})
 	}
 
