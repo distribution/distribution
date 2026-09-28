@@ -71,6 +71,30 @@ func (a envVars) Len() int           { return len(a) }
 func (a envVars) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a envVars) Less(i, j int) bool { return a[i].name < a[j].name }
 
+type parserOptions struct {
+	environment    envVars
+	environmentSet bool
+}
+
+// ParserOption configures a Parser created by NewParserWithOptions or used by
+// ParseWithOptions. Options are applied in order, so the last option for a
+// setting takes precedence.
+type ParserOption func(*parserOptions)
+
+// WithEnvironment returns a ParserOption that uses environment as the complete
+// environment for configuration overrides. It snapshots environment when
+// called. A nil or empty environment disables overrides. Entries must use
+// KEY=value form; malformed entries without '=' are ignored, while KEY= is a
+// valid override with an empty value.
+func WithEnvironment(environment []string) ParserOption {
+	environmentSnapshot := parseEnvironment(environment)
+
+	return func(options *parserOptions) {
+		options.environment = environmentSnapshot
+		options.environmentSet = true
+	}
+}
+
 // Parser can be used to parse a configuration file and environment of a defined
 // version into a unified output structure
 type Parser struct {
@@ -83,28 +107,40 @@ type Parser struct {
 // versioned configurations which match the given parseInfos. It uses the
 // process environment returned by os.Environ for configuration overrides.
 func NewParser(prefix string, parseInfos []VersionedParseInfo) *Parser {
-	return NewParserWithEnvironment(prefix, parseInfos, os.Environ())
+	return NewParserWithOptions(prefix, parseInfos)
 }
 
-// NewParserWithEnvironment returns a *Parser with the given environment prefix
-// and complete environment used for configuration overrides. The environment
-// must contain KEY=value entries. A nil or empty environment disables
-// configuration overrides. The environment is copied into the parser's
-// internal representation before this function returns.
-func NewParserWithEnvironment(prefix string, parseInfos []VersionedParseInfo, environment []string) *Parser {
+// NewParserWithOptions returns a *Parser with the given environment prefix and
+// applies options in order. With no options, it uses the process environment
+// returned by os.Environ for configuration overrides.
+func NewParserWithOptions(prefix string, parseInfos []VersionedParseInfo, options ...ParserOption) *Parser {
 	p := Parser{prefix: prefix, mapping: make(map[Version]VersionedParseInfo)}
 
 	for _, parseInfo := range parseInfos {
 		p.mapping[parseInfo.Version] = parseInfo
 	}
 
+	opts := parserOptions{}
+	for _, option := range options {
+		option(&opts)
+	}
+	if !opts.environmentSet {
+		opts.environment = parseEnvironment(os.Environ())
+	}
+	p.env = opts.environment
+
+	return &p
+}
+
+func parseEnvironment(environment []string) envVars {
+	var parsed envVars
 	for _, env := range environment {
 		k, v, found := strings.Cut(env, "=")
 		if !found {
 			// Ignore malformed entries while preserving valid empty values (KEY=).
 			continue
 		}
-		p.env = append(p.env, envVar{k, v})
+		parsed = append(parsed, envVar{k, v})
 	}
 
 	// We must sort the environment variables lexically by name so that
@@ -113,9 +149,9 @@ func NewParserWithEnvironment(prefix string, parseInfos []VersionedParseInfo, en
 	// REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY). This sucks, but it's a
 	// lot simpler and easier to get right than unmarshalling map entries
 	// into temporaries and merging with the existing entry.
-	sort.Sort(p.env)
+	sort.Sort(parsed)
 
-	return &p
+	return parsed
 }
 
 // Parse reads in the given []byte and environment and writes the resulting

@@ -226,7 +226,15 @@ func TestParseUsesProcessEnvironmentByDefault(t *testing.T) {
 	require.Equal(t, Loglevel("debug"), config.Log.Level)
 }
 
-func TestParseWithEnvironment(t *testing.T) {
+func TestParseWithOptionsUsesProcessEnvironmentByDefault(t *testing.T) {
+	t.Setenv("REGISTRY_LOG_LEVEL", "debug")
+
+	config, err := ParseWithOptions(bytes.NewReader([]byte(configYamlV0_1)))
+	require.NoError(t, err)
+	require.Equal(t, Loglevel("debug"), config.Log.Level)
+}
+
+func TestParseWithOptions(t *testing.T) {
 	tests := []struct {
 		name        string
 		environment []string
@@ -260,7 +268,10 @@ func TestParseWithEnvironment(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Setenv("REGISTRY_LOG_LEVEL", "debug")
 
-			config, err := ParseWithEnvironment(bytes.NewReader([]byte(configYamlV0_1)), test.environment)
+			config, err := ParseWithOptions(
+				bytes.NewReader([]byte(configYamlV0_1)),
+				WithEnvironment(test.environment),
+			)
 			require.NoError(t, err)
 			require.Equal(t, test.wantLevel, config.Log.Level)
 			require.Equal(t, test.wantFormat, config.Log.Formatter)
@@ -268,20 +279,33 @@ func TestParseWithEnvironment(t *testing.T) {
 	}
 }
 
-func TestParseWithEnvironmentIgnoresMalformedEntries(t *testing.T) {
-	config, err := ParseWithEnvironment(bytes.NewReader([]byte(configYamlV0_1)), []string{
-		"REGISTRY_REDIS_OPTIONS_USERNAME",
-		"REGISTRY_LOG_FIELDS",
-	})
+func TestParseWithOptionsAppliesOptionsInOrder(t *testing.T) {
+	config, err := ParseWithOptions(
+		bytes.NewReader([]byte(configYamlV0_1)),
+		WithEnvironment([]string{"REGISTRY_LOG_LEVEL=debug"}),
+		WithEnvironment([]string{"REGISTRY_LOG_LEVEL=error"}),
+	)
+	require.NoError(t, err)
+	require.Equal(t, Loglevel("error"), config.Log.Level)
+}
+
+func TestParseWithOptionsIgnoresMalformedEntries(t *testing.T) {
+	config, err := ParseWithOptions(
+		bytes.NewReader([]byte(configYamlV0_1)),
+		WithEnvironment([]string{
+			"REGISTRY_REDIS_OPTIONS_USERNAME",
+			"REGISTRY_LOG_FIELDS",
+		}),
+	)
 	require.NoError(t, err)
 	require.Equal(t, "alice", config.Redis.Options.Username)
 	require.Equal(t, map[string]any{"environment": "test"}, config.Log.Fields)
 }
 
-func TestParseWithEnvironmentAppliesValidEmptyValue(t *testing.T) {
-	config, err := ParseWithEnvironment(
+func TestParseWithOptionsAppliesValidEmptyValue(t *testing.T) {
+	config, err := ParseWithOptions(
 		bytes.NewReader([]byte(configYamlV0_1)),
-		[]string{"REGISTRY_REDIS_OPTIONS_USERNAME="},
+		WithEnvironment([]string{"REGISTRY_REDIS_OPTIONS_USERNAME="}),
 	)
 	require.NoError(t, err)
 	require.Empty(t, config.Redis.Options.Username)

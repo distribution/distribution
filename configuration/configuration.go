@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"reflect"
 	"strings"
 	"time"
@@ -814,29 +813,23 @@ func (platforms *Platforms) UnmarshalYAML(unmarshal func(any) error) error {
 // Configuration.Abc.Xyz may be replaced by the value of REGISTRY_ABC_XYZ, and so forth.
 // Parse uses the process environment returned by os.Environ for these overrides.
 func Parse(rd io.Reader) (*Configuration, error) {
+	return ParseWithOptions(rd)
+}
+
+// ParseWithOptions parses an input configuration YAML document into a
+// Configuration and applies options in order. With no options, it uses the
+// process environment returned by os.Environ for configuration overrides.
+func ParseWithOptions(rd io.Reader, options ...ParserOption) (*Configuration, error) {
 	in, err := io.ReadAll(rd)
 	if err != nil {
 		return nil, err
 	}
 
-	return parseConfiguration(in, os.Environ())
+	return parseConfiguration(in, options...)
 }
 
-// ParseWithEnvironment parses an input configuration YAML document into a
-// Configuration using the supplied complete environment for overrides. The
-// environment must contain KEY=value entries. A nil or empty environment
-// disables configuration overrides.
-func ParseWithEnvironment(rd io.Reader, environment []string) (*Configuration, error) {
-	in, err := io.ReadAll(rd)
-	if err != nil {
-		return nil, err
-	}
-
-	return parseConfiguration(in, environment)
-}
-
-func parseConfiguration(in []byte, environment []string) (*Configuration, error) {
-	p := NewParserWithEnvironment("registry", []VersionedParseInfo{
+func parseConfiguration(in []byte, options ...ParserOption) (*Configuration, error) {
+	p := NewParserWithOptions("registry", []VersionedParseInfo{
 		{
 			Version: MajorMinorVersion(0, 1),
 			ParseAs: reflect.TypeFor[v0_1Configuration](),
@@ -872,7 +865,7 @@ func parseConfiguration(in []byte, environment []string) (*Configuration, error)
 				return nil, fmt.Errorf("expected *v0_1Configuration, received %#v", c)
 			},
 		},
-	}, environment)
+	}, options...)
 
 	config := new(Configuration)
 	if err := p.Parse(in, config); err != nil {

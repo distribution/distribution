@@ -122,11 +122,9 @@ func TestParseInlinedStruct(t *testing.T) {
 	require.Equal(t, expected, config)
 }
 
-func TestNewParserWithEnvironmentCopiesEnvironment(t *testing.T) {
-	environment := []string{"REGISTRY_LOG_FORMATTER=json"}
-	p := NewParserWithEnvironment("registry", localParseInfos(), environment)
-
-	environment[0] = "REGISTRY_LOG_FORMATTER=text"
+func TestNewParserWithOptionsUsesProcessEnvironmentByDefault(t *testing.T) {
+	t.Setenv("REGISTRY_LOG_FORMATTER", "json")
+	p := NewParserWithOptions("registry", localParseInfos())
 
 	config := localConfiguration{}
 	err := p.Parse([]byte(testConfig), &config)
@@ -134,9 +132,22 @@ func TestNewParserWithEnvironmentCopiesEnvironment(t *testing.T) {
 	require.Equal(t, "json", config.Log.Formatter)
 }
 
-func TestNewParserWithEnvironmentNilEnvironmentDisablesOverrides(t *testing.T) {
+func TestWithEnvironmentSnapshotsBeforeApplication(t *testing.T) {
+	environment := []string{"REGISTRY_LOG_FORMATTER=json"}
+	option := WithEnvironment(environment)
+
+	environment[0] = "REGISTRY_LOG_FORMATTER=text"
+	p := NewParserWithOptions("registry", localParseInfos(), option)
+
+	config := localConfiguration{}
+	err := p.Parse([]byte(testConfig), &config)
+	require.NoError(t, err)
+	require.Equal(t, "json", config.Log.Formatter)
+}
+
+func TestNewParserWithOptionsNilEnvironmentDisablesOverrides(t *testing.T) {
 	t.Setenv("REGISTRY_LOG_FORMATTER", "json")
-	p := NewParserWithEnvironment("registry", localParseInfos(), nil)
+	p := NewParserWithOptions("registry", localParseInfos(), WithEnvironment(nil))
 
 	config := localConfiguration{}
 	err := p.Parse([]byte(testConfig), &config)
@@ -144,7 +155,7 @@ func TestNewParserWithEnvironmentNilEnvironmentDisablesOverrides(t *testing.T) {
 	require.Equal(t, "text", config.Log.Formatter)
 }
 
-func TestNewParserWithEnvironmentHandlesMalformedAndEmptyValues(t *testing.T) {
+func TestNewParserWithOptionsHandlesMalformedAndEmptyValues(t *testing.T) {
 	tests := []struct {
 		name        string
 		environment []string
@@ -164,7 +175,11 @@ func TestNewParserWithEnvironmentHandlesMalformedAndEmptyValues(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			p := NewParserWithEnvironment("registry", localParseInfos(), test.environment)
+			p := NewParserWithOptions(
+				"registry",
+				localParseInfos(),
+				WithEnvironment(test.environment),
+			)
 
 			config := localConfiguration{}
 			err := p.Parse([]byte(testConfig), &config)
