@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"slices"
@@ -808,10 +809,159 @@ func (d *driver) RedirectURL(r *http.Request, path string) (string, error) {
 	return d.bucket.SignedURL(d.pathToKey(path), opts)
 }
 
-// Walk traverses a filesystem defined within driver, starting
-// from the given path, calling f on each file
-func (d *driver) Walk(ctx context.Context, path string, f storagedriver.WalkFn, options ...func(*storagedriver.WalkOptions)) error {
-	return storagedriver.WalkFallback(ctx, d, path, f, options...)
+// Walk traverses a filesystem defined within driver, starting from the
+// given path, calling f on each file.
+func (d *driver) Walk(ctx context.Context, from string, f storagedriver.WalkFn, options ...func(*storagedriver.WalkOptions)) error {
+	walkOptions := &storagedriver.WalkOptions{}
+	for _, o := range options {
+		o(walkOptions)
+	}
+	return d.doWalk(ctx, from, walkOptions.StartAfterHint, f)
+}
+
+func (d *driver) doWalk(ctx context.Context, from, startAfter string, f storagedriver.WalkFn) error {
+	var (
+		prevDir     = from
+		prevSkipDir string
+		found       bool
+	)
+
+	// pathToDirKey (not pathToKey) is required here: pathToKey trims the
+	// trailing slash, and an unanchored prefix like ".../folder1" would
+	// also match ".../folder1-suffix" - GCS prefix matching is a plain
+	// string prefix, not path-segment-aware.
+	query := &storage.Query{Prefix: d.pathToDirKey(from)}
+	if startAfter != "" {
+		// GCS lists keys in raw byte order, where '/' (0x2F) sorts after
+		// several other printable characters, e.g. '-' (0x2D) or '.'
+		// (0x2E). So a sibling like "tags/a-b/..." sorts BEFORE
+		// "tags/a/...", and using the bare boundary path "tags/a" as
+		// StartOffset doesn't skip past it: "tags/a" is a byte-prefix of
+		// "tags/a-b/...", so GCS's inclusive StartOffset re-returns "a-b"
+		// on every later page, bouncing between the two forever instead
+		// of terminating. Using the byte-successor of the whole
+		// "tags/a/" subtree instead - the smallest key that sorts after
+		// everything nested under it - skips exactly what's already been
+		// walked and nothing else, regardless of what any sibling name
+		// looks like.
+		query.StartOffset = byteSuccessor(d.pathToDirKey(startAfter))
+	}
+
+	it := d.bucket.Objects(ctx, query)
+	for {
+		object, err := it.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		// GCS does not guarantee strong consistency between DELETE and
+		// LIST operations. Skip deleted objects and upload-session
+		// markers, as List does.
+		if !object.Deleted.IsZero() || object.ContentType == uploadSessionContentType || object.Name == "" {
+			continue
+		}
+
+		filePath := d.keyToPath(object.Name)
+		found = true
+
+		walkInfos := make([]storagedriver.FileInfoInternal, 0, 2)
+		for _, dir := range directoryDiff(prevDir, filePath) {
+			walkInfos = append(walkInfos, storagedriver.FileInfoInternal{
+				FileInfoFields: storagedriver.FileInfoFields{IsDir: true, Path: dir},
+			})
+		}
+		walkInfos = append(walkInfos, storagedriver.FileInfoInternal{
+			FileInfoFields: storagedriver.FileInfoFields{
+				IsDir:   false,
+				Size:    object.Size,
+				ModTime: object.Updated,
+				Path:    filePath,
+			},
+		})
+		prevDir = filePath
+
+		for _, wi := range walkInfos {
+			if isSubpath(wi.Path(), prevSkipDir) {
+				continue
+			}
+			err := f(wi)
+			switch err {
+			case nil:
+				// continue
+			case storagedriver.ErrSkipDir:
+				prevSkipDir = wi.Path()
+			case storagedriver.ErrFilledBuffer:
+				return nil
+			default:
+				return err
+			}
+		}
+	}
+
+	if !found && startAfter == "" {
+		return storagedriver.PathNotFoundError{Path: from}
+	}
+	return nil
+}
+
+// directoryDiff finds all directories that are not in common between the
+// previous and current paths, in sorted order. Copied from the S3 driver's
+// helper of the same name (registry/storage/driver/s3-aws/s3.go), which
+// this Walk implementation otherwise mirrors.
+func directoryDiff(prev, current string) []string {
+	var paths []string
+
+	if prev == "" || current == "" {
+		return paths
+	}
+
+	parent := current
+	for {
+		parent = filepath.Dir(parent)
+		if parent == "/" || parent == prev || strings.HasPrefix(prev+"/", parent+"/") {
+			break
+		}
+		paths = append(paths, parent)
+	}
+	slices.Reverse(paths)
+	return paths
+}
+
+// isSubpath reports whether path is parent itself or one of its descendants,
+// delimited on a "/" boundary. A bare strings.HasPrefix(path, parent) would
+// also match a lexical sibling like "/tags/1.20" against parent "/tags/1.2",
+// silently dropping it from the walk. Copied from the S3 driver's helper of
+// the same name (registry/storage/driver/s3-aws/s3.go); see commit d1dbbb19
+// there for the tags/list bug this guards against.
+// byteSuccessor returns the lexicographically smallest string that sorts
+// strictly after every string having s as a prefix. Used to build a
+// StartOffset that skips a whole GCS key subtree by byte order, since GCS
+// list order is raw byte order rather than path-component order - see the
+// StartOffset comment in doWalk for the pagination bug this fixes.
+func byteSuccessor(s string) string {
+	b := []byte(s)
+	for i := len(b) - 1; i >= 0; i-- {
+		if b[i] < 0xff {
+			b[i]++
+			return string(b[:i+1])
+		}
+	}
+	return s + "\xff"
+}
+
+func isSubpath(path, parent string) bool {
+	if parent == "" {
+		return false
+	}
+	if path == parent {
+		return true
+	}
+	if parent == "/" {
+		return strings.HasPrefix(path, "/")
+	}
+	return strings.HasPrefix(path, parent+"/")
 }
 
 func (w *writer) newSession() (uri string, err error) {
