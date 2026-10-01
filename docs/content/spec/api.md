@@ -276,7 +276,7 @@ error codes as `UNKNOWN`, allowing future error codes to be added without
 breaking API compatibility. For the purposes of the specification error codes
 will only be added and never removed.
 
-For a complete account of all error codes, please see the [_Errors_](#errors-1)
+For a complete account of all error codes, please see the [_Errors_](#errors-2)
 section.
 
 ### API Version Check
