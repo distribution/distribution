@@ -810,14 +810,26 @@ func (platforms *Platforms) UnmarshalYAML(unmarshal func(any) error) error {
 // Environment variables may be used to override configuration parameters other than version,
 // following the scheme below:
 // Configuration.Abc may be replaced by the value of REGISTRY_ABC,
-// Configuration.Abc.Xyz may be replaced by the value of REGISTRY_ABC_XYZ, and so forth
+// Configuration.Abc.Xyz may be replaced by the value of REGISTRY_ABC_XYZ, and so forth.
+// Parse uses the process environment returned by os.Environ for these overrides.
 func Parse(rd io.Reader) (*Configuration, error) {
+	return ParseWithOptions(rd)
+}
+
+// ParseWithOptions parses an input configuration YAML document into a
+// Configuration and applies options in order. With no options, it uses the
+// process environment returned by os.Environ for configuration overrides.
+func ParseWithOptions(rd io.Reader, options ...ParserOption) (*Configuration, error) {
 	in, err := io.ReadAll(rd)
 	if err != nil {
 		return nil, err
 	}
 
-	p := NewParser("registry", []VersionedParseInfo{
+	return parseConfiguration(in, options...)
+}
+
+func parseConfiguration(in []byte, options ...ParserOption) (*Configuration, error) {
+	p := NewParserWithOptions("registry", []VersionedParseInfo{
 		{
 			Version: MajorMinorVersion(0, 1),
 			ParseAs: reflect.TypeFor[v0_1Configuration](),
@@ -853,11 +865,10 @@ func Parse(rd io.Reader) (*Configuration, error) {
 				return nil, fmt.Errorf("expected *v0_1Configuration, received %#v", c)
 			},
 		},
-	})
+	}, options...)
 
 	config := new(Configuration)
-	err = p.Parse(in, config)
-	if err != nil {
+	if err := p.Parse(in, config); err != nil {
 		return nil, err
 	}
 
