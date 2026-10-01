@@ -322,6 +322,65 @@ func TestTagIndexes(t *testing.T) {
 	}
 }
 
+func TestTagStoreAllWithModifiedTime(t *testing.T) {
+	env := testTagStore(t)
+	ctx := env.ctx
+
+	ts, ok := env.ts.(distribution.TagServiceWithTimestamp)
+	if !ok {
+		t.Fatal("tagStore does not implement TagServiceWithTimestamp")
+	}
+
+	// empty store
+	_, err := ts.AllWithModifiedTime(ctx)
+	if err == nil {
+		t.Fatal("expected error on empty repository")
+	}
+
+	desc := v1.Descriptor{Digest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+	tagNames := []string{"v1.0", "v2.0", "latest"}
+	for _, name := range tagNames {
+		if err := env.ts.Tag(ctx, name, desc); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	descs, err := ts.AllWithModifiedTime(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(descs) != len(tagNames) {
+		t.Fatalf("expected %d tags, got %d", len(tagNames), len(descs))
+	}
+
+	// verify all tag names are present
+	got := make(map[string]bool, len(descs))
+	for _, d := range descs {
+		got[d.Name] = true
+	}
+	for _, name := range tagNames {
+		if !got[name] {
+			t.Errorf("tag %q missing from result", name)
+		}
+	}
+
+	// verify sorted descending by ModifiedTime (each entry >= next)
+	for i := 1; i < len(descs); i++ {
+		if descs[i].ModifiedTime.After(descs[i-1].ModifiedTime) {
+			t.Errorf("result not sorted descending: descs[%d].ModifiedTime %v > descs[%d].ModifiedTime %v",
+				i, descs[i].ModifiedTime, i-1, descs[i-1].ModifiedTime)
+		}
+	}
+
+	// zero ModifiedTime should not appear (Stat should have succeeded)
+	for _, d := range descs {
+		if d.ModifiedTime.IsZero() {
+			t.Errorf("tag %q has zero ModifiedTime", d.Name)
+		}
+	}
+}
+
 func digestMap(dgsts []digest.Digest) map[digest.Digest]struct{} {
 	set := make(map[digest.Digest]struct{})
 	for _, dgst := range dgsts {
