@@ -106,7 +106,6 @@ const (
 //
 //	uploadDataPathSpec:             <root>/v2/repositories/<name>/_uploads/<id>/data
 //	uploadStartedAtPathSpec:        <root>/v2/repositories/<name>/_uploads/<id>/startedat
-//	uploadDigestAlgorithmPathSpec:  <root>/v2/repositories/<name>/_uploads/<id>/digestalgorithm
 //	uploadHashStatePathSpec:        <root>/v2/repositories/<name>/_uploads/<id>/hashstates/<algorithm>/<offset>
 //
 //	Blob Store:
@@ -243,8 +242,6 @@ func pathFor(spec pathSpec) (string, error) {
 		return path.Join(append(repoPrefix, v.name, "_uploads", v.id, "data")...), nil
 	case uploadStartedAtPathSpec:
 		return path.Join(append(repoPrefix, v.name, "_uploads", v.id, "startedat")...), nil
-	case uploadDigestAlgorithmPathSpec:
-		return path.Join(append(repoPrefix, v.name, "_uploads", v.id, "digestalgorithm")...), nil
 	case uploadHashStatePathSpec:
 		offset := fmt.Sprintf("%d", v.offset)
 		if v.list {
@@ -433,17 +430,6 @@ type uploadStartedAtPathSpec struct {
 }
 
 func (uploadStartedAtPathSpec) pathSpec() {}
-
-// uploadDigestAlgorithmPathSpec defines the path parameters for the file
-// that stores the digest algorithm the client declared it will push the
-// upload with (e.g. via the digest-algorithm upload parameter). If missing,
-// the upload is assumed to use the canonical algorithm.
-type uploadDigestAlgorithmPathSpec struct {
-	name string
-	id   string
-}
-
-func (uploadDigestAlgorithmPathSpec) pathSpec() {}
 
 // uploadHashStatePathSpec defines the path parameters for the file that stores
 // the hash function state of an upload at a specific byte offset. If `list` is

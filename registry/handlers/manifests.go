@@ -267,11 +267,13 @@ func (imh *manifestHandler) PutManifest(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if imh.Digest != "" {
-		// UnmarshalManifest always computes desc.Digest using the canonical
-		// (sha256) algorithm. If the client referenced this manifest by a
-		// digest using a different (but registered) algorithm, recompute
-		// the digest using that algorithm before comparing, rather than
-		// rejecting an otherwise-valid push as a digest mismatch.
+		if !supportedDigestAlgorithm(imh.Digest.Algorithm()) {
+			imh.Errors = append(imh.Errors, errcode.ErrorCodeDigestInvalid.WithDetail("unsupported digest algorithm"))
+			return
+		}
+		// UnmarshalManifest computes desc.Digest with the canonical algorithm;
+		// if the client referenced the manifest by another algorithm,
+		// recompute with that one before comparing.
 		if desc.Digest.Algorithm() != imh.Digest.Algorithm() {
 			desc.Digest = imh.Digest.Algorithm().FromBytes(jsonBuf.Bytes())
 		}

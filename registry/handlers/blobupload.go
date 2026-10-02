@@ -62,6 +62,14 @@ type blobUploadHandler struct {
 	State blobUploadState
 }
 
+// supportedDigestAlgorithm reports whether alg may be used for newly pushed
+// content. The distribution-spec only defines sha256 and sha512, even though
+// the process may have other algorithms registered (crypto/sha512 also
+// registers sha384, for example).
+func supportedDigestAlgorithm(alg digest.Algorithm) bool {
+	return alg == digest.SHA256 || alg == digest.SHA512
+}
+
 // StartBlobUpload begins the blob upload process and allocates a server-side
 // blob writer session, optionally mounting the blob from a separate repository.
 func (buh *blobUploadHandler) StartBlobUpload(w http.ResponseWriter, r *http.Request) {
@@ -79,11 +87,14 @@ func (buh *blobUploadHandler) StartBlobUpload(w http.ResponseWriter, r *http.Req
 
 	if algStr := r.FormValue("digest-algorithm"); algStr != "" {
 		alg := digest.Algorithm(algStr)
-		if !alg.Available() {
+		if !supportedDigestAlgorithm(alg) {
 			buh.Errors = append(buh.Errors, errcode.ErrorCodeDigestInvalid.WithDetail("unsupported digest-algorithm"))
 			return
 		}
 		options = append(options, storage.WithDigestAlgorithm(alg))
+		if alg != digest.Canonical {
+			buh.State.DigestAlgorithm = alg
+		}
 	}
 
 	blobs := buh.Repository.Blobs(buh)
@@ -239,6 +250,11 @@ func (buh *blobUploadHandler) PutBlobUploadComplete(w http.ResponseWriter, r *ht
 		return
 	}
 
+	if !supportedDigestAlgorithm(dgst.Algorithm()) {
+		buh.Errors = append(buh.Errors, errcode.ErrorCodeDigestInvalid.WithDetail("unsupported digest algorithm"))
+		return
+	}
+
 	if err := copyFullPayload(buh, w, r, buh.Upload, -1, "blob PUT"); err != nil {
 		buh.Errors = append(buh.Errors, errcode.ErrorCodeUnknown.WithDetail(err.Error()))
 		return
@@ -328,7 +344,7 @@ func (buh *blobUploadHandler) ResumeBlobUpload(ctx *Context, r *http.Request) ht
 	}
 
 	blobs := ctx.Repository.Blobs(buh)
-	upload, err := blobs.Resume(buh, buh.UUID)
+	upload, err := blobs.Resume(storage.WithResumeDigestAlgorithm(buh, state.DigestAlgorithm), buh.UUID)
 	if err != nil {
 		dcontext.GetLogger(ctx).Errorf("error resolving upload: %v", err)
 		if err == distribution.ErrBlobUploadUnknown {

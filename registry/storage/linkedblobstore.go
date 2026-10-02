@@ -124,11 +124,8 @@ func WithMountFrom(ref reference.Canonical) distribution.BlobCreateOption {
 	})
 }
 
-// WithDigestAlgorithm returns a BlobCreateOption which declares the digest
-// algorithm the client will push the blob with (e.g. from the
-// distribution-spec's digest-algorithm upload parameter), letting the
-// upload stream-hash with it instead of only discovering it once the final
-// digest arrives.
+// WithDigestAlgorithm returns a BlobCreateOption which declares the algorithm
+// the blob will be pushed with; see CreateOptions.DigestAlgorithm.
 func WithDigestAlgorithm(alg digest.Algorithm) distribution.BlobCreateOption {
 	return optionFunc(func(v any) error {
 		opts, ok := v.(*distribution.CreateOptions)
@@ -140,6 +137,26 @@ func WithDigestAlgorithm(alg digest.Algorithm) distribution.BlobCreateOption {
 
 		return nil
 	})
+}
+
+// resumeDigestAlgorithmKey is the context key for WithResumeDigestAlgorithm.
+type resumeDigestAlgorithmKey struct{}
+
+// WithResumeDigestAlgorithm returns a context telling Resume to rebuild the
+// upload's digester with alg, the algorithm the upload was created with via
+// WithDigestAlgorithm. Callers must carry it across requests themselves;
+// without it Resume uses the canonical algorithm, which is correct but means
+// a full re-read at commit.
+func WithResumeDigestAlgorithm(ctx context.Context, alg digest.Algorithm) context.Context {
+	if alg == "" || alg == digest.Canonical {
+		return ctx
+	}
+	return context.WithValue(ctx, resumeDigestAlgorithmKey{}, alg)
+}
+
+func resumeDigestAlgorithm(ctx context.Context) digest.Algorithm {
+	alg, _ := ctx.Value(resumeDigestAlgorithmKey{}).(digest.Algorithm)
+	return alg
 }
 
 // Create begins a blob write session, returning a handle.
@@ -187,21 +204,6 @@ func (lbs *linkedBlobStore) Create(ctx context.Context, options ...distribution.
 		return nil, err
 	}
 
-	if opts.DigestAlgorithm != "" && opts.DigestAlgorithm != digest.Canonical {
-		algPath, err := pathFor(uploadDigestAlgorithmPathSpec{
-			name: lbs.repository.Named().Name(),
-			id:   uuid,
-		})
-		if err != nil {
-			return nil, err
-		}
-		// Persisted so a later Resume (each PATCH/PUT is a separate request)
-		// can rebuild the digester with the same algorithm.
-		if err := lbs.blobStore.driver.PutContent(ctx, algPath, []byte(opts.DigestAlgorithm)); err != nil {
-			return nil, err
-		}
-	}
-
 	return lbs.newBlobUpload(ctx, uuid, path, startedAt, opts.DigestAlgorithm, false)
 }
 
@@ -239,25 +241,7 @@ func (lbs *linkedBlobStore) Resume(ctx context.Context, id string) (distribution
 		return nil, err
 	}
 
-	var alg digest.Algorithm
-	algPath, err := pathFor(uploadDigestAlgorithmPathSpec{
-		name: lbs.repository.Named().Name(),
-		id:   id,
-	})
-	if err != nil {
-		return nil, err
-	}
-	algBytes, err := lbs.blobStore.driver.GetContent(ctx, algPath)
-	switch err.(type) {
-	case nil:
-		alg = digest.Algorithm(algBytes)
-	case driver.PathNotFoundError:
-		// no digest-algorithm was declared for this upload; default to canonical.
-	default:
-		return nil, err
-	}
-
-	return lbs.newBlobUpload(ctx, id, path, startedAt, alg, true)
+	return lbs.newBlobUpload(ctx, id, path, startedAt, resumeDigestAlgorithm(ctx), true)
 }
 
 func (lbs *linkedBlobStore) Delete(ctx context.Context, dgst digest.Digest) error {
