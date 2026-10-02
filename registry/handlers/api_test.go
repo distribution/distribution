@@ -1037,6 +1037,66 @@ func testBlobAPI(t *testing.T, env *testEnv, args blobArgs) *testEnv {
 	finishUpload(t, env.builder, imageName, uploadURLBase, dgst)
 
 	// -----------------------------------------
+	// Push the layer in chunks as sha512, declaring the algorithm up front,
+	// and fetch it back by its sha512 digest
+	if _, err := layerFile.Seek(0, io.SeekStart); err != nil {
+		t.Fatalf("unexpected error seeking layer: %v", err)
+	}
+	sha512Digest, err := digest.SHA512.FromReader(layerFile)
+	if err != nil {
+		t.Fatalf("error copying to digest: %v", err)
+	}
+	if _, err := layerFile.Seek(0, io.SeekStart); err != nil {
+		t.Fatalf("unexpected error seeking layer: %v", err)
+	}
+
+	uploadURLBase, _ = startPushLayerWithAlgorithm(t, env, imageName, digest.SHA512)
+	uploadURLBase, _ = pushChunk(t, env.builder, imageName, uploadURLBase, layerFile, layerLength)
+	sha512LayerURL := finishUpload(t, env.builder, imageName, uploadURLBase, sha512Digest)
+
+	resp, err = http.Get(sha512LayerURL)
+	if err != nil {
+		t.Fatalf("unexpected error fetching layer by sha512 digest: %v", err)
+	}
+	defer resp.Body.Close()
+	checkResponse(t, "fetching layer by sha512 digest", resp, http.StatusOK)
+	checkHeaders(t, resp, http.Header{
+		"Content-Length":        []string{fmt.Sprint(layerLength)},
+		"Docker-Content-Digest": []string{sha512Digest.String()},
+	})
+	sha512Verifier := sha512Digest.Verifier()
+	if _, err := io.Copy(sha512Verifier, resp.Body); err != nil {
+		t.Fatalf("unexpected error reading response body: %v", err)
+	}
+	if !sha512Verifier.Verified() {
+		t.Fatal("response body did not pass sha512 verification")
+	}
+
+	// Only sha256 and sha512 are supported, whether declared up front or
+	// when completing the upload (sha384 is registered, but not defined by
+	// the spec).
+	for _, alg := range []digest.Algorithm{"sha257", digest.SHA384} {
+		resp, err = http.Post(layerUploadStartURL(t, env, imageName, alg), "", nil)
+		if err != nil {
+			t.Fatalf("unexpected error starting layer push: %v", err)
+		}
+		defer resp.Body.Close()
+		checkResponse(t, "starting layer push with unsupported digest-algorithm "+string(alg), resp, http.StatusBadRequest)
+		// nolint:errcheck
+		checkBodyHasErrorCodes(t, "starting layer push with unsupported digest-algorithm "+string(alg), resp, errcode.ErrorCodeDigestInvalid)
+	}
+
+	uploadURLBase, _ = startPushLayer(t, env, imageName)
+	resp, err = doPushLayer(t, env.builder, imageName, digest.SHA384.FromBytes(emptyTar), uploadURLBase, bytes.NewReader(emptyTar))
+	if err != nil {
+		t.Fatalf("unexpected error doing sha384 layer push: %v", err)
+	}
+	defer resp.Body.Close()
+	checkResponse(t, "sha384 layer push", resp, http.StatusBadRequest)
+	// nolint:errcheck
+	checkBodyHasErrorCodes(t, "sha384 layer push", resp, errcode.ErrorCodeDigestInvalid)
+
+	// -----------------------------------------
 	// Do layer push with invalid content range
 	if _, err := layerFile.Seek(0, io.SeekStart); err != nil {
 		t.Fatalf("unexpected error seeking layer: %v", err)
@@ -1800,6 +1860,49 @@ func testManifestAPISchema2(t *testing.T, env *testEnv, imageName reference.Name
 		"Docker-Content-Digest": []string{dgst.String()},
 	})
 
+	// --------------------
+	// Push by sha512 digest, and fetch it back that way
+	sha512Dgst := digest.SHA512.FromBytes(canonical)
+	sha512Ref, _ := reference.WithDigest(imageName, sha512Dgst)
+	manifestSha512URL, err := env.builder.BuildManifestURL(sha512Ref)
+	checkErr(t, err, "building sha512 manifest url")
+
+	resp = putManifest(t, "putting manifest by sha512 digest", manifestSha512URL, schema2.MediaTypeManifest, manifest)
+	defer resp.Body.Close()
+	checkResponse(t, "putting manifest by sha512 digest", resp, http.StatusCreated)
+	checkHeaders(t, resp, http.Header{
+		"Location":              []string{manifestSha512URL},
+		"Docker-Content-Digest": []string{sha512Dgst.String()},
+	})
+
+	sha512Req, err := http.NewRequest(http.MethodGet, manifestSha512URL, nil)
+	if err != nil {
+		t.Fatalf("Error constructing request: %s", err)
+	}
+	sha512Req.Header.Set("Accept", schema2.MediaTypeManifest)
+	resp, err = http.DefaultClient.Do(sha512Req)
+	checkErr(t, err, "fetching manifest by sha512 digest")
+	defer resp.Body.Close()
+	checkResponse(t, "fetching manifest by sha512 digest", resp, http.StatusOK)
+	checkHeaders(t, resp, http.Header{
+		"Docker-Content-Digest": []string{sha512Dgst.String()},
+	})
+	fetchedBySha512, err := io.ReadAll(resp.Body)
+	checkErr(t, err, "reading manifest fetched by sha512 digest")
+	if !bytes.Equal(fetchedBySha512, canonical) {
+		t.Fatal("manifest fetched by sha512 digest does not match")
+	}
+
+	// sha384 is registered, but not defined by the spec
+	sha384Ref, _ := reference.WithDigest(imageName, digest.SHA384.FromBytes(canonical))
+	manifestSha384URL, err := env.builder.BuildManifestURL(sha384Ref)
+	checkErr(t, err, "building sha384 manifest url")
+	resp = putManifest(t, "putting manifest by sha384 digest", manifestSha384URL, schema2.MediaTypeManifest, manifest)
+	defer resp.Body.Close()
+	checkResponse(t, "putting manifest by sha384 digest", resp, http.StatusBadRequest)
+	// nolint:errcheck
+	checkBodyHasErrorCodes(t, "putting manifest by sha384 digest", resp, errcode.ErrorCodeDigestInvalid)
+
 	// ------------------
 	// Fetch by tag name
 
@@ -2421,6 +2524,12 @@ func putManifest(t *testing.T, msg, url, contentType string, v any) *http.Respon
 }
 
 func startPushLayer(t *testing.T, env *testEnv, name reference.Named) (location string, uuid string) {
+	return startPushLayerWithAlgorithm(t, env, name, "")
+}
+
+// layerUploadStartURL returns the URL to POST to in order to start a layer
+// upload, optionally declaring the digest algorithm it will be pushed with.
+func layerUploadStartURL(t *testing.T, env *testEnv, name reference.Named, alg digest.Algorithm) string {
 	layerUploadURL, err := env.builder.BuildBlobUploadURL(name)
 	if err != nil {
 		t.Fatalf("unexpected error building layer upload url: %v", err)
@@ -2430,13 +2539,22 @@ func startPushLayer(t *testing.T, env *testEnv, name reference.Named) (location 
 	if err != nil {
 		t.Fatalf("error parsing layer upload URL: %v", err)
 	}
+	if alg != "" {
+		u.RawQuery = url.Values{"digest-algorithm": []string{string(alg)}}.Encode()
+	}
 
 	base, err := url.Parse(env.server.URL)
 	if err != nil {
 		t.Fatalf("error parsing server URL: %v", err)
 	}
 
-	layerUploadURL = base.ResolveReference(u).String()
+	return base.ResolveReference(u).String()
+}
+
+// startPushLayerWithAlgorithm is startPushLayer, declaring the digest
+// algorithm the layer will be pushed with if alg is not empty.
+func startPushLayerWithAlgorithm(t *testing.T, env *testEnv, name reference.Named, alg digest.Algorithm) (location string, uuid string) {
+	layerUploadURL := layerUploadStartURL(t, env, name, alg)
 	resp, err := http.Post(layerUploadURL, "", nil)
 	if err != nil {
 		t.Fatalf("unexpected error starting layer push: %v", err)
@@ -2446,7 +2564,7 @@ func startPushLayer(t *testing.T, env *testEnv, name reference.Named) (location 
 
 	checkResponse(t, fmt.Sprintf("pushing starting layer push %v", name.String()), resp, http.StatusAccepted)
 
-	u, err = url.Parse(resp.Header.Get("Location"))
+	u, err := url.Parse(resp.Header.Get("Location"))
 	if err != nil {
 		t.Fatalf("error parsing location header: %v", err)
 	}

@@ -267,6 +267,16 @@ func (imh *manifestHandler) PutManifest(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if imh.Digest != "" {
+		if !supportedDigestAlgorithm(imh.Digest.Algorithm()) {
+			imh.Errors = append(imh.Errors, errcode.ErrorCodeDigestInvalid.WithDetail("unsupported digest algorithm"))
+			return
+		}
+		// UnmarshalManifest computes desc.Digest with the canonical algorithm;
+		// if the client referenced the manifest by another algorithm,
+		// recompute with that one before comparing.
+		if desc.Digest.Algorithm() != imh.Digest.Algorithm() {
+			desc.Digest = imh.Digest.Algorithm().FromBytes(jsonBuf.Bytes())
+		}
 		if desc.Digest != imh.Digest {
 			dcontext.GetLogger(imh).Errorf("payload digest does not match: %q != %q", desc.Digest, imh.Digest)
 			imh.Errors = append(imh.Errors, errcode.ErrorCodeDigestInvalid)
@@ -290,6 +300,9 @@ func (imh *manifestHandler) PutManifest(w http.ResponseWriter, r *http.Request) 
 	var options []distribution.ManifestServiceOption
 	if imh.Tag != "" {
 		options = append(options, distribution.WithTag(imh.Tag))
+	}
+	if imh.Digest != "" {
+		options = append(options, distribution.WithDigest(imh.Digest))
 	}
 
 	if err := imh.applyResourcePolicy(manifest); err != nil {

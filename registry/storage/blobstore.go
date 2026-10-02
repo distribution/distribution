@@ -61,7 +61,7 @@ func (bs *blobStore) Open(ctx context.Context, dgst digest.Digest) (io.ReadSeekC
 // content is already present, only the digest will be returned. This should
 // only be used for small objects, such as manifests.
 func (bs *blobStore) Put(ctx context.Context, mediaType string, p []byte) (v1.Descriptor, error) {
-	dgst := digest.FromBytes(p)
+	dgst := putDigestAlgorithm(ctx).FromBytes(p)
 
 	bp, err := bs.path(dgst)
 	if err != nil {
