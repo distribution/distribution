@@ -63,7 +63,7 @@ func init() {
 			ts = jwtConfig.TokenSource(dcontext.Background())
 		}
 
-		gcs, err := storage.NewClient(dcontext.Background(), option.WithCredentialsJSON(jsonKey))
+		gcs, err := storage.NewClient(dcontext.Background(), option.WithTokenSource(ts))
 		if err != nil {
 			panic(fmt.Sprintf("Error initializing gcs client : %v", err))
 		}

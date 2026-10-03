@@ -1,9 +1,11 @@
 services:
   minio:
-    image: docker.io/minio/minio:RELEASE.2023-10-16T04-13-43Z
+    image: docker.io/chainguard/minio:latest@sha256:22bf0ad174612a0106dfbbb95818f307525dd32c5a6ec119ecd7273815abe456
+    # Compose creates the bind-mounted data directory as root on CI runners.
+    user: "0:0"
     command: server /data --console-address ":9001"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: ["CMD-SHELL", "MC_HOST_local=http://$${MINIO_ROOT_USER}:$${MINIO_ROOT_PASSWORD}@localhost:9000 /usr/bin/mc ready local"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -17,13 +19,13 @@ services:
       - ./miniodata/distribution:/data:Z
 
   minio-init:
-    image: docker.io/minio/mc:RELEASE.2023-10-14T01-57-03Z
+    image: docker.io/chainguard/minio-client:latest@sha256:ff313058c290a4519b86db9362386d18214583b86ea35f6891038e1061dc3e12
     depends_on:
       minio:
         condition: service_healthy
     entrypoint: >
       /bin/bash -c "
-        /usr/bin/mc config host add minio http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD} && (
+        /usr/bin/mc alias set minio http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD} && (
           /usr/bin/mc stat minio/images-local || /usr/bin/mc mb minio/images-local
         ) && /usr/bin/mc anonymous set public minio/images-local"
     environment:

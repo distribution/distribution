@@ -29,6 +29,7 @@ Alexander Morozov <lk4d4math@gmail.com>
 Alexey Gladkov <gladkov.alexey@gmail.com>
 Alexsandr <78373713+Alexsandr-Random@users.noreply.github.com>
 Alfonso Acosta <fons@syntacticsugar.consulting>
+alhudz <al.hudz.k@gmail.com>
 allencloud <allen.sun@daocloud.io>
 Alvin Feng <alvin4feng@yahoo.com>
 amitshukla <ashukla73@hotmail.com>
@@ -77,6 +78,7 @@ Aviral Takkar <aviral26@users.noreply.github.com>
 Ayose Cazorla <ayosec@gmail.com>
 BadZen <dave.trombley@gmail.com>
 baojiangnan <baojiangnan@meituan.com>
+Baptiste Girard-Carrabin <baptiste.girardcarrabin@datadoghq.com>
 Ben Bodenmiller <bbodenmiller@hotmail.com>
 Ben De St Paer-Gotch <bende@outlook.com>
 Ben Emamian <ben@ictace.com>
@@ -140,6 +142,8 @@ Daniel Nephin <dnephin@gmail.com>
 Daniel, Dao Quang Minh <dqminh89@gmail.com>
 Danila Fominykh <dancheg97@fmnx.su>
 Darren Shepherd <darren@rancher.com>
+darsh <darshanravichandran07@gmail.com>
+darshanime <darshan@argonaut.dev>
 Dave <david.warshaw@gmail.com>
 Dave Pedu <dave@davepedu.com>
 Dave Trombley <dave.trombley@gmail.com>
@@ -150,12 +154,14 @@ David Karlsson <david.karlsson@docker.com>
 David Lawrence <david.lawrence@docker.com>
 David Luu <david@davidluu.info>
 David Mackey <tdmackey@booleanhaiku.com>
+David Marby <david@dmarby.se>
 David van der Spek <vanderspek.david@gmail.com>
 David Verhasselt <david@crowdway.com>
 David Wu <dwu7401@gmail.com>
 David Xia <dxia@spotify.com>
 Dawn W Docker <dawn.wood@users.noreply.github.com>
 ddelange <14880945+ddelange@users.noreply.github.com>
+Dean Chen <862469039@qq.com>
 Dejan Golja <dejan@golja.org>
 Denis Andrejew <da.colonel@gmail.com>
 dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
@@ -174,6 +180,7 @@ Doug Davis <dug@us.ibm.com>
 drornir <drornir@users.noreply.github.com>
 duanhongyi <duanhongyi@doopai.com>
 ducksecops <daniel@ducksecops.uk>
+Dustin Kaiser <8209087+mrnicegyu11@users.noreply.github.com>
 E. M. Bray <erik.m.bray@gmail.com>
 Edgar Lee <edgar.lee@docker.com>
 efcking <efcking@outlook.com>
@@ -318,6 +325,7 @@ Kevin Lin <kevin@kelda.io>
 Kevin Robatel <kevinrob2@gmail.com>
 Kira <me@imkira.com>
 Kirat Singh <kirat.singh@gmail.com>
+Kris Kennaway <kris.kennaway@datadoghq.com>
 krynju <krystian.gulinski@juliahub.com>
 kub3let <95883234+kub3let@users.noreply.github.com>
 Kyle Squizzato <ksquizz@gmail.com>
@@ -349,6 +357,7 @@ Lucas Melchior <lucasmelchior@flywheel.io>
 Lucas Santos <lhs.santoss@gmail.com>
 Luis Lobo Borobia <luislobo@gmail.com>
 Luke Carpenter <x@rubynerd.net>
+luochenhui1 <luochenhui1@kingsoft.com>
 Ma Shimiao <mashimiao.fnst@cn.fujitsu.com>
 Mahmoud Kandil <47168819+MahmoudKKandil@users.noreply.github.com>
 Makoto Oda <truth_jp_4133@yahoo.co.jp>
@@ -396,6 +405,7 @@ Monika Katiyar <monika@jeavio.com>
 Morgan Bauer <mbauer@us.ibm.com>
 moxiegirl <mary@docker.com>
 mqliang <mqliang.zju@gmail.com>
+mrchatam <mrchatam@users.noreply.github.com>
 Muesli <solom.emmanuel@gmail.com>
 Nan Monnand Deng <monnand@gmail.com>
 Nat Zimmermann <ntzm@users.noreply.github.com>
@@ -448,6 +458,7 @@ Philip Misiowiec <philip@atlashealth.com>
 Pierre-Yves Ritschard <pyr@spootnik.org>
 Pieter Scheffers <pieter.scheffers@gmail.com>
 Pratik <pratikgparikh@gmail.com>
+Pujitha Paladugu <10557236+pujitha24@users.noreply.github.com>
 Qiang Huang <h.huangqiang@huawei.com>
 Qiao Anran <qiaoanran@gmail.com>
 Radon Rosborough <radon.neon@gmail.com>
@@ -545,6 +556,7 @@ tifayuki <tifayuki@gmail.com>
 Tiger Kaovilai <tkaovila@redhat.com>
 Tobias Fuhrimann <mastertinner@users.noreply.github.com>
 Tobias Schwab <tobias.schwab@dynport.de>
+Tokuhiro Matsuno <tokuhirom@gmail.com>
 Tom Hayward <thayward@infoblox.com>
 Tom Hu <tomhu1096@gmail.com>
 tomoya-kawaguchi <yamo7yamoto@gmail.com>
@@ -556,11 +568,13 @@ Trapier Marshall <trapier@users.noreply.github.com>
 Trevor Pounds <trevor.pounds@gmail.com>
 Trevor Wood <Trevor.G.Wood@gmail.com>
 Troels Thomsen <troels@thomsen.io>
+Tyagiquamar <mohdquamartyagi@gmail.com>
 uhayate <uhayate.gong@daocloud.io>
 Usha Mandya <47779042+usha-mandya@users.noreply.github.com>
 Usha Mandya <usha.mandya@docker.com>
 Vadim Bauer <vb@container-registry.com>
 Vaidas Jablonskis <jablonskis@gmail.com>
+Vedant Madane <vedantnm@gmail.com>
 Vega Chou <VegeChou@users.noreply.github.com>
 Veres Lajos <vlajos@gmail.com>
 Victor Barbu <git.zqk3n@vicb.cc>
@@ -590,6 +604,7 @@ xg.song <xg.song@venusource.com>
 Xiaolei.Liang <xiaolei.liang@qq.com>
 xiaoxiangxianzi <zhaoyizheng@outlook.com>
 xiekeyang <xiekeyang@huawei.com>
+xinjun.jiang <xinjun.jiang@daocloud.io>
 Xueshan Feng <xueshan.feng@gmail.com>
 Yann ROBERT <yann.robert@anantaplex.fr>
 Yannick Fricke <YannickFricke@users.noreply.github.com>

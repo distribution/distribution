@@ -168,7 +168,7 @@ func FromParameters(ctx context.Context, parameters map[string]any) (storagedriv
 			return nil, err
 		}
 		ts = jwtConf.TokenSource(ctx)
-		options = append(options, option.WithCredentialsFile(fmt.Sprint(keyfile)))
+		options = append(options, option.WithAuthCredentialsJSON(option.ServiceAccount, jsonKey))
 	} else if credentials, ok := parameters["credentials"]; ok {
 		credentialMap, ok := credentials.(map[any]any)
 		if !ok {
@@ -194,7 +194,7 @@ func FromParameters(ctx context.Context, parameters map[string]any) (storagedriv
 			return nil, err
 		}
 		ts = jwtConf.TokenSource(ctx)
-		options = append(options, option.WithCredentialsJSON(data))
+		options = append(options, option.WithAuthCredentialsJSON(option.ServiceAccount, data))
 	} else {
 		var err error
 		// DefaultTokenSource is a convenience method. It first calls FindDefaultCredentials,

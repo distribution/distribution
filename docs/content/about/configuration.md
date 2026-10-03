@@ -1125,6 +1125,24 @@ Under the hood distribution uses [`go-redis`](https://github.com/redis/go-redis)
 Redis connectivity and its [`UniversalOptions`](https://pkg.go.dev/github.com/redis/go-redis/v9#UniversalOptions)
 struct.
 
+To use Redis Sentinel, set `mastername` to the name of the monitored Redis master
+and `addrs` to the Sentinel endpoints. Setting `mastername` selects the
+Sentinel-backed failover client; without it, multiple addresses select a Redis
+Cluster client instead.
+
+```yaml
+redis:
+  addrs:
+    - sentinel1.example.com:26379
+    - sentinel2.example.com:26379
+    - sentinel3.example.com:26379
+  mastername: mymaster
+```
+
+The equivalent environment variable for the master name is
+`REGISTRY_REDIS_MASTERNAME`. If authentication is required, use `username` and
+`password` for Redis, and `sentinelusername` and `sentinelpassword` for Sentinel.
+
 You can optionally specify TLS configuration on top of the `UniversalOptions` settings.
 
 Use these settings to configure Redis TLS:
