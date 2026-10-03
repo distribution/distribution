@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"slices"
 	"strings"
-	"sync"
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/internal/dcontext"
@@ -473,22 +472,16 @@ func (imh *manifestHandler) DeleteManifest(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	err = manifests.Delete(imh, imh.Digest)
+	// Validate the revision before removing any tags, but keep it available
+	// until tag cleanup succeeds so a storage failure can be retried.
+	exists, err := manifests.Exists(imh, imh.Digest)
 	if err != nil {
-		switch err {
-		case digest.ErrDigestUnsupported, digest.ErrDigestInvalidFormat:
-			imh.Errors = append(imh.Errors, errcode.ErrorCodeDigestInvalid)
-			return
-		case distribution.ErrBlobUnknown:
-			imh.Errors = append(imh.Errors, errcode.ErrorCodeManifestUnknown)
-			return
-		case distribution.ErrUnsupported:
-			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnsupported)
-			return
-		default:
-			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown)
-			return
-		}
+		imh.Errors = append(imh.Errors, manifestDeleteError(err))
+		return
+	}
+	if !exists {
+		imh.Errors = append(imh.Errors, errcode.ErrorCodeManifestUnknown)
+		return
 	}
 
 	tagService := imh.Repository.Tags(imh)
@@ -498,25 +491,66 @@ func (imh *manifestHandler) DeleteManifest(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	var (
-		errs []error
-		mu   sync.Mutex
-	)
+	// Lookup may return an incomplete snapshot without an error when cancelled.
+	if err := imh.Err(); err != nil {
+		imh.Errors = append(imh.Errors, err)
+		return
+	}
+
 	g := errgroup.Group{}
 	g.SetLimit(storage.DefaultConcurrencyLimit)
 	for _, tag := range referencedTags {
-
 		g.Go(func() error {
-			if err := tagService.Untag(imh, tag); err != nil {
-				mu.Lock()
-				errs = append(errs, err)
-				mu.Unlock()
+			// Lookup is a snapshot. Preserve tags already moved to another
+			// manifest. Get and Untag are not atomic with concurrent pushes.
+			desc, err := tagService.Get(imh, tag)
+			if err == nil {
+				if desc.Digest != imh.Digest {
+					return nil
+				}
+				err = tagService.Untag(imh, tag)
 			}
-			return nil
+			switch err.(type) {
+			case distribution.ErrTagUnknown, driver.PathNotFoundError:
+				// A concurrent delete already removed this tag.
+				return nil
+			}
+			return err
 		})
 	}
-	_ = g.Wait() // imh will record all errors, so ignore the error of Wait()
-	imh.Errors = errs
+	if err := g.Wait(); err != nil {
+		if errors.Is(err, distribution.ErrUnsupported) {
+			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnsupported.WithDetail(err))
+		} else {
+			imh.Errors = append(imh.Errors, err)
+		}
+		return
+	}
+
+	// A driver may complete tag cleanup despite cancellation. Keep the revision
+	// available for a fresh request rather than committing a cancelled cleanup.
+	if err := imh.Err(); err != nil {
+		imh.Errors = append(imh.Errors, err)
+		return
+	}
+
+	if err := manifests.Delete(imh, imh.Digest); err != nil {
+		imh.Errors = append(imh.Errors, manifestDeleteError(err))
+		return
+	}
 
 	w.WriteHeader(http.StatusAccepted)
+}
+
+func manifestDeleteError(err error) errcode.ErrorCode {
+	switch err {
+	case digest.ErrDigestUnsupported, digest.ErrDigestInvalidFormat:
+		return errcode.ErrorCodeDigestInvalid
+	case distribution.ErrBlobUnknown:
+		return errcode.ErrorCodeManifestUnknown
+	case distribution.ErrUnsupported:
+		return errcode.ErrorCodeUnsupported
+	default:
+		return errcode.ErrorCodeUnknown
+	}
 }
