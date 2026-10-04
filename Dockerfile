@@ -31,7 +31,7 @@ RUN --mount=target=. \
 FROM base AS build
 ARG TARGETPLATFORM
 ARG LDFLAGS="-s -w"
-ARG BUILDTAGS=""
+ARG BUILDTAGS="grpcnotrace"
 RUN --mount=type=bind,target=/src \
     --mount=type=cache,target=/root/.cache/go-build \
     --mount=target=/go/pkg/mod,type=cache \
