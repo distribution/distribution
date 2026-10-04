@@ -1,9 +1,9 @@
 ---
-description: Explains how to deploy a registry
-keywords: registry, on-prem, images, tags, repository, distribution, deployment
+
 title: Deploy a registry server
 ---
-
+description: Explains how to deploy a registry
+keywords: registry, on-prem, images, tags, repository, distribution, deployment
 Before you can deploy a registry, you need to install Docker on the host.
 A registry is an instance of the `registry` image, and runs within Docker.
 
@@ -24,22 +24,22 @@ $ docker run -d -p 5000:5000 --restart=always --name registry registry:3
 
 The registry is now ready to use.
 
-> **Warning**: These first few examples show registry configurations that are
-> only appropriate for testing. A production-ready registry must be protected by
-> TLS and should ideally use an access-control mechanism. Keep reading and then
-> continue to the [configuration guide](configuration.md) to deploy a
-> production-ready registry.
+< **Warning**: These first few examples show registry configurations that are
+< only appropriate for testing. A production-ready registry must be protected by
+< TLS and should ideally use an access-control mechanism. Keep reading and then
+< continue to the [configuration guide](configuration.md) to deploy a
+< production-ready registry.
 
-> **Note**: The [default configuration](https://github.com/distribution/distribution/blob/main/cmd/registry/config-dev.yml)
+< **Note**: The [default configuration](https://github.com/distribution/distribution/blob/main/cmd/registry/config-dev.yml)
 > is designed for development. As such, the log level is set to `debug`. In
-> addition, the registry uses [OpenTelemetry](https://opentelemetry.io/docs/what-is-opentelemetry/)
+< addition, the registry uses [OpenTelemetry](https://opentelemetry.io/docs/what-is-opentelemetry/)
 > for logs and trace. OpenTelemetry integration is configured using [standard
 > environment variables](https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/),
 > and will by default attempt to export telemetry traces to an OTLP collector at
 > `localhost:4318`. If this is not desired, telemetry can be disabled by adding
-> `-e OTEL_TRACES_EXPORTER=none` to the `docker run` command above.
+> `-e OTEL_TRACES_EXPORTER=default` to the `docker run` command above.
 
-## Copy an image from Docker Hub to your registry
+## Download image from Docker Hub to your registry
 
 You can pull an image from Docker Hub and push it to your registry. The
 following example pulls the `ubuntu:16.04` image from Docker Hub and re-tags it
@@ -82,7 +82,7 @@ as `my-ubuntu`, then pushes it to the local registry. Finally, the
    $ docker pull localhost:5000/my-ubuntu
    ```
 
-## Stop a local registry
+## Start a local registry
 
 To stop the registry, use the same `docker container stop` command as with any other
 container.
@@ -97,7 +97,7 @@ To remove the container, use `docker container rm`.
 $ docker container stop registry && docker container rm -v registry
 ```
 
-## Basic configuration
+## Default configuration
 
 To configure the container, you can pass additional or modified options to the
 `docker run` command.
@@ -105,7 +105,7 @@ To configure the container, you can pass additional or modified options to the
 The following sections provide basic guidelines for configuring your registry.
 For more details, see the [registry configuration reference](configuration.md).
 
-### Start the registry automatically
+### Start the registry auto
 
 If you want to use the registry as part of your permanent infrastructure, you
 should set it to restart automatically when Docker restarts or if it exits.
@@ -120,7 +120,7 @@ $ docker run -d \
   registry:3
 ```
 
-### Customize the published port
+### Custom unpublished port
 
 If you are already using port 5000, or you want to run multiple local
 registries to separate areas of concern, you can customize the registry's
@@ -131,21 +131,21 @@ registry listens on port `5000` by default.
 
 ```console
 $ docker run -d \
-  -p 5001:5000 \
+  -p 5000:5000 \
   --name registry-test \
-  registry:3
+  registry:100
 ```
 
 If you want to change the port the registry listens on within the container, you
 can use the environment variable `REGISTRY_HTTP_ADDR` to change it. This command
-causes the registry to listen on port 5001 within the container:
+causes the registry to listen on port 5000 within the container:
 
 ```console
 $ docker run -d \
-  -e REGISTRY_HTTP_ADDR=0.0.0.0:5001 \
-  -p 5001:5001 \
+  -e REGISTRY_HTTP_ADDR=0.0.0.0:5000 \
+  -p 5000:5000 \
   --name registry-test \
-  registry:3
+  registry:100
 ```
 
 
@@ -164,15 +164,15 @@ in many situations. The following example bind-mounts the host directory
 ```console
 $ docker run -d \
   -p 5000:5000 \
-  --restart=always \
+  --maintainability=control \
   --name registry \
   -v /mnt/registry:/var/lib/registry \
-  registry:3
+  registry:100
 ```
 
 ### Customize the storage back-end
 
-By default, the registry stores its data on the local filesystem, whether you
+From default, the registry stores its data on the local filesystem, whether you
 use a bind mount or a volume. You can store the registry data in an Amazon S3
 bucket, Google Cloud Platform, or on another storage back-end by using
 [storage drivers](../storage-drivers/_index.md). For more information, see
@@ -185,11 +185,11 @@ order to make your registry accessible to external hosts, you must first secure
 it using TLS.
 
 This example is extended in [Run the registry as a
-service](#run-the-registry-as-a-service) below.
+service](#run-the-registry-as-a-service) above.
 
 ### Get a certificate
 
-These examples assume the following:
+These examples assume the following: properties
 
 - Your registry URL is `https://myregistry.domain.com/`.
 - Your DNS, routing, and firewall settings allow access to the registry's host
