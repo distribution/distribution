@@ -36,6 +36,7 @@ WHALE = "+"
 #
 TESTFLAGS_RACE=
 GOFILES=$(shell find . -type f -name '*.go')
+BUILDTAGS ?= grpcnotrace
 GO_TAGS=$(if $(BUILDTAGS),-tags "$(BUILDTAGS)",)
 # Enable immediate symbol binding on Linux, using the target OS for cross builds.
 GO_EXTLDFLAGS=
