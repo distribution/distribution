@@ -1,10 +1,12 @@
 package proxy
 
 import (
+	"context"
 	"net"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/distribution/distribution/v3/internal/client/auth"
 	"github.com/distribution/distribution/v3/internal/client/auth/challenge"
@@ -12,7 +14,7 @@ import (
 	"golang.org/x/net/publicsuffix"
 )
 
-const challengeHeader = "Docker-Distribution-Api-Version"
+const pingClientTimeout = 30 * time.Second
 
 type userpass struct {
 	username string
@@ -131,8 +133,16 @@ func registrableDomain(host string) string {
 	return domain
 }
 
-func ping(manager challenge.Manager, endpoint, versionHeader string) error {
-	resp, err := http.Get(endpoint)
+func ping(ctx context.Context, manager challenge.Manager, endpoint string) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return err
+	}
+
+	client := &http.Client{
+		Timeout: pingClientTimeout,
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}
