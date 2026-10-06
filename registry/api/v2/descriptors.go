@@ -1545,6 +1545,81 @@ var routeDescriptors = []RouteDescriptor{
 			{
 				Method:      http.MethodGet,
 				Description: "Return an index of manifests that have the specified subject digest.",
+				Requests: []RequestDescriptor{
+					{
+						Description: "Return the OCI image index of manifests that reference the specified subject. Results can be filtered by artifact type.",
+						Headers: []ParameterDescriptor{
+							hostHeader,
+							authHeader,
+						},
+						PathParameters: []ParameterDescriptor{
+							nameParameterDescriptor,
+							{
+								Name:        "digest",
+								Type:        "digest",
+								Required:    true,
+								Format:      digest.DigestRegexp.String(),
+								Description: "Digest of the subject manifest.",
+							},
+						},
+						QueryParameters: []ParameterDescriptor{
+							{
+								Name:        "artifactType",
+								Type:        "string",
+								Required:    false,
+								Format:      "<artifact type>",
+								Description: "Return only referrers with this artifact type.",
+							},
+						},
+						Successes: []ResponseDescriptor{
+							{
+								StatusCode:  http.StatusOK,
+								Description: "An OCI image index containing the matching referrer descriptors. When `artifactType` is specified, the `OCI-Filters-Applied` header is returned.",
+								Headers: []ParameterDescriptor{
+									{
+										Name:        "OCI-Filters-Applied",
+										Type:        "string",
+										Format:      "artifactType",
+										Description: "Present when the `artifactType` query parameter was applied.",
+									},
+								},
+								Body: BodyDescriptor{
+									ContentType: "application/vnd.oci.image.index.v1+json",
+									Format: `{
+	"schemaVersion": 2,
+	"mediaType": "application/vnd.oci.image.index.v1+json",
+	"manifests": [
+		{
+			"mediaType": "<manifest media type>",
+			"digest": "<digest>",
+			"size": <size>,
+			"artifactType": "<artifact type>"
+		}
+	]
+}`,
+								},
+							},
+						},
+						Failures: []ResponseDescriptor{
+							unauthorizedResponseDescriptor,
+							repositoryNotFoundResponseDescriptor,
+							deniedResponseDescriptor,
+							tooManyRequestsDescriptor,
+							{
+								Name:        "Internal Server Error",
+								StatusCode:  http.StatusInternalServerError,
+								Description: "The registry could not enumerate the referrers.",
+								Body: BodyDescriptor{
+									ContentType: "application/json",
+									Format:      errorsBody,
+								},
+								ErrorCodes: []errcode.ErrorCode{
+									errcode.ErrorCodeUnknown,
+								},
+							},
+						},
+					},
+				},
 			},
 		},
 	},

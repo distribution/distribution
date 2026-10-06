@@ -4961,6 +4961,219 @@ List referrers for a given manifest digest, per OCI Distribution Spec v1.1.
 
 Return an index of manifests that have the specified subject digest.
 
+```none
+GET /v2/<name>/referrers/<digest>?artifactType=<artifact type>
+Host: <registry host>
+Authorization: <scheme> <token>
+```
+Return the OCI image index of manifests that reference the specified subject. Results can be filtered by artifact type.
+The following parameters should be specified on the request:
+
+|Name|Kind|Description|
+|----|----|-----------|
+|`Host`|header|Standard HTTP Host Header. Should be set to the registry host.|
+|`Authorization`|header|An RFC7235 compliant authorization header.|
+|`name`|path|Name of the target repository.|
+|`digest`|path|Digest of the subject manifest.|
+|`artifactType`|query|Return only referrers with this artifact type.|
+
+###### On Success: OK
+
+```none
+200 OK
+OCI-Filters-Applied: artifactType
+Content-Type: application/vnd.oci.image.index.v1+json
+
+{
+	"schemaVersion": 2,
+	"mediaType": "application/vnd.oci.image.index.v1+json",
+	"manifests": [
+		{
+			"mediaType": "<manifest media type>",
+			"digest": "<digest>",
+			"size": <size>,
+			"artifactType": "<artifact type>"
+		}
+	]
+}
+```
+
+An OCI image index containing the matching referrer descriptors. When `artifactType` is specified, the `OCI-Filters-Applied` header is returned.
+
+The following headers will be returned with the response:
+
+|Name|Description|
+|----|-----------|
+|`OCI-Filters-Applied`|Present when the `artifactType` query parameter was applied.|
+
+
+###### On Failure: Authentication Required
+
+```none
+401 Unauthorized
+WWW-Authenticate: <scheme> realm="<realm>", ..."
+Content-Length: <length>
+Content-Type: application/json
+
+{
+	"errors": [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+The client is not authenticated.
+
+The following headers will be returned on the response:
+
+|Name|Description|
+|----|-----------|
+|`WWW-Authenticate`|An RFC7235 compliant authentication challenge header.|
+|`Content-Length`|Length of the JSON response body.|
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+|----|-------|-----------|
+| `UNAUTHORIZED` | authentication required | The access controller was unable to authenticate the client. Often this will be accompanied by a Www-Authenticate HTTP response header indicating how to authenticate. |
+
+
+###### On Failure: No Such Repository Error
+
+```none
+404 Not Found
+Content-Length: <length>
+Content-Type: application/json
+
+{
+	"errors": [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+The repository is not known to the registry.
+
+The following headers will be returned on the response:
+
+|Name|Description|
+|----|-----------|
+|`Content-Length`|Length of the JSON response body.|
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+|----|-------|-----------|
+| `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry. |
+
+
+###### On Failure: Access Denied
+
+```none
+403 Forbidden
+Content-Length: <length>
+Content-Type: application/json
+
+{
+	"errors": [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+The client does not have required access to the repository.
+
+The following headers will be returned on the response:
+
+|Name|Description|
+|----|-----------|
+|`Content-Length`|Length of the JSON response body.|
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+|----|-------|-----------|
+| `DENIED` | requested access to the resource is denied | The access controller denied access for the operation on a resource. |
+
+
+###### On Failure: Too Many Requests
+
+```none
+429 Too Many Requests
+Content-Length: <length>
+Content-Type: application/json
+
+{
+	"errors": [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+The client made too many requests within a time interval.
+
+The following headers will be returned on the response:
+
+|Name|Description|
+|----|-----------|
+|`Content-Length`|Length of the JSON response body.|
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+|----|-------|-----------|
+| `TOOMANYREQUESTS` | too many requests | Returned when a client attempts to contact a service too many times |
+
+
+###### On Failure: Internal Server Error
+
+```none
+500 Internal Server Error
+Content-Type: application/json
+
+{
+	"errors": [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+The registry could not enumerate the referrers.
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+|----|-------|-----------|
+| `UNKNOWN` | unknown error | Generic error returned when the error does not have an API classification. |
+
+
+
+
 ### Catalog
 
 List a set of available repositories in the local registry cluster. Does not provide any indication of what may be available upstream. Applications can only determine if a repository is available but not if it is not available.
