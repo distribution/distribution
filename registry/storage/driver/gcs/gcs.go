@@ -803,11 +803,14 @@ type objectVersion struct {
 	generation int64
 }
 
-// listAll recursively lists every object generation under "prefix".
-// Versions are included so resumable-upload session generations (left behind
-// by Writer.Close before Commit) are removed by Delete; otherwise delimiter
-// List can still report their parent prefixes after the live object is gone.
-func (d *driver) listAll(ctx context.Context, prefix string) ([]objectVersion, error) {
+// listAll lists object generations with Prefix set to prefix. Versions are
+// included so resumable-upload session generations (left behind by Writer.Close
+// before Commit) are removed by Delete; otherwise delimiter List can still
+// report their parent prefixes after the live object is gone.
+// When exactName is true, only generations whose name equals prefix are kept;
+// the Objects API is prefix-based (so "a" would also match "ab"), and results
+// are lexicographic by name, so the iteration stops once the name differs.
+func (d *driver) listAll(ctx context.Context, prefix string, exactName bool) ([]objectVersion, error) {
 	objects := d.bucket.Objects(ctx, &storage.Query{
 		Prefix:   prefix,
 		Versions: true,
@@ -825,6 +828,9 @@ func (d *driver) listAll(ctx context.Context, prefix string) ([]objectVersion, e
 		if object.Name == "" {
 			continue
 		}
+		if exactName && object.Name != prefix {
+			break
+		}
 		list = append(list, objectVersion{name: object.Name, generation: object.Generation})
 	}
 
@@ -832,28 +838,24 @@ func (d *driver) listAll(ctx context.Context, prefix string) ([]objectVersion, e
 }
 
 // Delete recursively deletes all objects stored at "path" and its subpaths.
-// Every generation of the exact key and of each descendant is removed; a
-// directory-prefix-only list would miss the object at path itself, and a
-// live-only Object.Delete would leave noncurrent generations behind.
 func (d *driver) Delete(ctx context.Context, path string) error {
-	key := d.pathToKey(path)
-	// Deleting the driver root ("/") with a non-empty rootdirectory maps to the
-	// trimmed root name (e.g. "foo" for root "foo/"). Matching that exact key
-	// would remove an object outside the configured prefix; only descendants
-	// under key+"/" are in-tree.
-	atDriverRoot := strings.Trim(path, "/") == ""
-	// Prefix match without a trailing slash over-matches (e.g. "a" matches "ab"),
-	// so keep only the exact key (when not at the driver root) and descendants.
-	candidates, err := d.listAll(ctx, key)
+	prefix := d.pathToDirKey(path)
+	keys, err := d.listAll(ctx, prefix, false)
 	if err != nil {
 		return err
 	}
-	keys := make([]objectVersion, 0, len(candidates))
-	for _, v := range candidates {
-		if key == "" || (!atDriverRoot && v.name == key) || strings.HasPrefix(v.name, key+"/") {
-			keys = append(keys, v)
+
+	// pathToDirKey is key+"/", so it misses generations of the exact object at
+	// path. List those too, except at the driver root ("/"): pathToKey("/") with
+	// a non-empty rootdirectory is the trimmed root name (outside the prefix).
+	if strings.Trim(path, "/") != "" {
+		exact, err := d.listAll(ctx, d.pathToKey(path), true)
+		if err != nil {
+			return err
 		}
+		keys = append(keys, exact...)
 	}
+
 	if len(keys) == 0 {
 		return storagedriver.PathNotFoundError{Path: path}
 	}

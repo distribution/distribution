@@ -442,3 +442,64 @@ func TestDeleteRootDoesNotRemoveOutOfRootObject(t *testing.T) {
 		t.Fatalf("out-of-root object %q should remain after Delete(/): %v", rootName, err)
 	}
 }
+
+// TestDeleteDoesNotAffectSiblingPrefix asserts Delete("/a") does not remove
+// "/ab". A naive Prefix=key list would match sibling names and either delete
+// them or retain their generations in memory; listing exact key and key+"/"
+// separately avoids that.
+func TestDeleteDoesNotAffectSiblingPrefix(t *testing.T) {
+	skipCheck(t)
+	if os.Getenv("STORAGE_EMULATOR_HOST") == "" {
+		t.Skip("requires STORAGE_EMULATOR_HOST")
+	}
+
+	ctx := context.Background()
+	bucketName := os.Getenv("REGISTRY_STORAGE_GCS_BUCKET")
+	params := map[string]any{
+		"bucket":         bucketName,
+		"rootdirectory":  "",
+		"chunksize":      defaultChunkSize,
+		"maxconcurrency": uint64(8),
+	}
+	if credentials := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS"); credentials != "" {
+		params["keyfile"] = credentials
+	}
+
+	d, err := FromParameters(ctx, params)
+	if err != nil {
+		t.Fatalf("FromParameters: %v", err)
+	}
+
+	suffix := fmt.Sprintf("%d", time.Now().UnixNano())
+	pathA := "/sib-a-" + suffix
+	pathAB := "/sib-a-" + suffix + "b" // shares prefix with pathA, not a descendant
+
+	if err := d.PutContent(ctx, pathA, []byte("a")); err != nil {
+		t.Fatalf("PutContent(%s): %v", pathA, err)
+	}
+	if err := d.PutContent(ctx, pathAB, []byte("ab")); err != nil {
+		t.Fatalf("PutContent(%s): %v", pathAB, err)
+	}
+	t.Cleanup(func() {
+		_ = d.Delete(ctx, pathA)
+		_ = d.Delete(ctx, pathAB)
+	})
+
+	if err := d.Delete(ctx, pathA); err != nil {
+		t.Fatalf("Delete(%s): %v", pathA, err)
+	}
+
+	if _, err := d.Stat(ctx, pathA); err == nil {
+		t.Fatalf("expected %s gone after Delete", pathA)
+	} else if _, ok := err.(storagedriver.PathNotFoundError); !ok {
+		t.Fatalf("Stat(%s): want PathNotFoundError, got %v", pathA, err)
+	}
+
+	got, err := d.GetContent(ctx, pathAB)
+	if err != nil {
+		t.Fatalf("sibling %s should remain: %v", pathAB, err)
+	}
+	if string(got) != "ab" {
+		t.Fatalf("sibling content: got %q, want %q", got, "ab")
+	}
+}
