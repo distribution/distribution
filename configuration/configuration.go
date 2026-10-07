@@ -250,6 +250,11 @@ type TLS struct {
 	// Specifies a list of cipher suites allowed
 	CipherSuites []string `yaml:"ciphersuites,omitempty"`
 
+	// CertificateReloadInterval is the interval at which the certificate and
+	// key files are reloaded from disk. If zero, the files are never reloaded
+	// after initial load.
+	CertificateReloadInterval time.Duration `yaml:"certificatereloadinterval,omitempty"`
+
 	// LetsEncrypt is used to configuration setting up TLS through
 	// Let's Encrypt instead of manually specifying certificate and
 	// key. If a TLS certificate is specified, the Let's Encrypt
