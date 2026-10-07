@@ -39,14 +39,14 @@ func init() {
 	}
 
 	gcsDriverConstructor = func(rootDirectory string) (storagedriver.StorageDriver, error) {
+		// Do not map GOOGLE_APPLICATION_CREDENTIALS to keyfile: that path only
+		// accepts service-account JSON. Leave keyfile unset so FromParameters
+		// uses DefaultTokenSource / ADC (and STORAGE_EMULATOR_HOST when set).
 		params := map[string]any{
 			"bucket":         bucket,
 			"rootdirectory":  rootDirectory,
 			"chunksize":      defaultChunkSize,
 			"maxconcurrency": uint64(8),
-		}
-		if credentials != "" {
-			params["keyfile"] = credentials
 		}
 
 		return FromParameters(context.Background(), params)
@@ -297,9 +297,6 @@ func TestDeletePurgesAllGenerations(t *testing.T) {
 		"chunksize":      defaultChunkSize,
 		"maxconcurrency": uint64(8),
 	}
-	if credentials := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS"); credentials != "" {
-		params["keyfile"] = credentials
-	}
 
 	d, err := FromParameters(ctx, params)
 	if err != nil {
@@ -460,9 +457,6 @@ func TestDeleteDoesNotAffectSiblingPrefix(t *testing.T) {
 		"rootdirectory":  "",
 		"chunksize":      defaultChunkSize,
 		"maxconcurrency": uint64(8),
-	}
-	if credentials := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS"); credentials != "" {
-		params["keyfile"] = credentials
 	}
 
 	d, err := FromParameters(ctx, params)
