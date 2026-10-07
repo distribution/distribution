@@ -347,7 +347,7 @@ func (d *driver) Name() string {
 func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
 	r, err := d.bucket.Object(d.pathToKey(path)).NewReader(ctx)
 	if err != nil {
-		if err == storage.ErrObjectNotExist {
+		if isObjectNotExist(err) {
 			return nil, storagedriver.PathNotFoundError{Path: path}
 		}
 		return nil, err
@@ -380,14 +380,12 @@ func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.Read
 	// See: https://pkg.go.dev/cloud.google.com/go/storage#ObjectHandle.NewRangeReader
 	r, err := obj.NewRangeReader(ctx, offset, -1)
 	if err != nil {
-		if err == storage.ErrObjectNotExist {
+		if isObjectNotExist(err) {
 			return nil, storagedriver.PathNotFoundError{Path: path}
 		}
 		var status *googleapi.Error
 		if errors.As(err, &status) {
 			switch status.Code {
-			case http.StatusNotFound:
-				return nil, storagedriver.PathNotFoundError{Path: path}
 			case http.StatusRequestedRangeNotSatisfiable:
 				attrs, err := obj.Attrs(ctx)
 				if err != nil {
@@ -447,10 +445,8 @@ func (w *writer) Cancel(ctx context.Context) error {
 	w.cancelled = true
 
 	err := w.object.Delete(ctx)
-	if err != nil {
-		if err == storage.ErrObjectNotExist {
-			err = nil
-		}
+	if isObjectNotExist(err) {
+		return nil
 	}
 	return err
 }
@@ -801,14 +797,23 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 	return nil
 }
 
-// listAll recursively lists all names of objects stored at "prefix" and its subpaths.
-func (d *driver) listAll(ctx context.Context, prefix string) ([]string, error) {
+// objectVersion is one object generation returned by listAll.
+type objectVersion struct {
+	name       string
+	generation int64
+}
+
+// listAll recursively lists every object generation under "prefix".
+// Versions are included so resumable-upload session generations (left behind
+// by Writer.Close before Commit) are removed by Delete; otherwise delimiter
+// List can still report their parent prefixes after the live object is gone.
+func (d *driver) listAll(ctx context.Context, prefix string) ([]objectVersion, error) {
 	objects := d.bucket.Objects(ctx, &storage.Query{
 		Prefix:   prefix,
-		Versions: false,
+		Versions: true,
 	})
 
-	list := make([]string, 0, 64)
+	list := make([]objectVersion, 0, 64)
 	for {
 		object, err := objects.Next()
 		if err != nil {
@@ -817,12 +822,10 @@ func (d *driver) listAll(ctx context.Context, prefix string) ([]string, error) {
 			}
 			return nil, err
 		}
-		// GCS does not guarantee strong consistency between
-		// DELETE and LIST operations. Check that the object is not deleted,
-		// and filter out any objects with a non-zero time-deleted
-		if object.Deleted.IsZero() {
-			list = append(list, object.Name)
+		if object.Name == "" {
+			continue
 		}
+		list = append(list, objectVersion{name: object.Name, generation: object.Generation})
 	}
 
 	return list, nil
@@ -842,15 +845,17 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 		// This means we don't have to reverse order the slice; we can
 		// range over the keys slice in reverse order
 		for _, v := range slices.Backward(keys) {
-			key := v
-			err := d.bucket.Object(key).Delete(ctx)
+			obj := d.bucket.Object(v.name)
+			if v.generation != 0 {
+				obj = obj.Generation(v.generation)
+			}
+			err := obj.Delete(ctx)
 			// GCS only guarantees eventual consistency, so listAll might return
 			// paths that no longer exist. If this happens, just ignore any not
-			// found error
-			if status, ok := err.(*googleapi.Error); ok {
-				if status.Code == http.StatusNotFound {
-					err = nil
-				}
+			// found error. The storage client wraps googleapi errors, so use
+			// errors.Is/As rather than a direct type assert.
+			if isObjectNotExist(err) {
+				err = nil
 			}
 			if err != nil {
 				return err
@@ -859,16 +864,35 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 		return nil
 	}
 	err = d.bucket.Object(d.pathToKey(path)).Delete(ctx)
-	if err == storage.ErrObjectNotExist {
+	if isObjectNotExist(err) {
 		return storagedriver.PathNotFoundError{Path: path}
 	}
 	return err
+}
+
+// isObjectNotExist reports whether err is a missing-object error from the
+// storage client or underlying JSON API (including emulator "Live version
+// … does not exist" 404s).
+func isObjectNotExist(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, storage.ErrObjectNotExist) {
+		return true
+	}
+	var status *googleapi.Error
+	return errors.As(err, &status) && status.Code == http.StatusNotFound
 }
 
 // RedirectURL returns a URL which may be used to retrieve the content stored at
 // the given path, possibly using the given options.
 func (d *driver) RedirectURL(r *http.Request, path string) (string, error) {
 	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		return "", nil
+	}
+
+	// Signed URLs target production hosts; the storage emulator cannot serve them.
+	if d.uploadAPIBase != nil {
 		return "", nil
 	}
 
