@@ -6,14 +6,10 @@ import (
 	"os"
 	"testing"
 
-	"cloud.google.com/go/storage"
 	"github.com/distribution/distribution/v3/internal/dcontext"
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/distribution/v3/registry/storage/driver/testsuites"
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
 	"google.golang.org/api/googleapi"
-	"google.golang.org/api/option"
 )
 
 var (
@@ -24,62 +20,33 @@ var (
 func init() {
 	bucket := os.Getenv("REGISTRY_STORAGE_GCS_BUCKET")
 	credentials := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
+	emulatorHost := os.Getenv("STORAGE_EMULATOR_HOST")
 
-	// Skip GCS storage driver tests if environment variable parameters are not provided
+	// Skip unless configured for the emulator (bucket + STORAGE_EMULATOR_HOST) or
+	// real GCS (bucket + GOOGLE_APPLICATION_CREDENTIALS).
 	skipCheck = func(tb testing.TB) {
 		tb.Helper()
 
-		if bucket == "" || credentials == "" {
-			tb.Skip("The following environment variables must be set to enable these tests: REGISTRY_STORAGE_GCS_BUCKET, GOOGLE_APPLICATION_CREDENTIALS")
+		if bucket == "" {
+			tb.Skip("REGISTRY_STORAGE_GCS_BUCKET must be set to enable these tests")
+		}
+		if emulatorHost == "" && credentials == "" {
+			tb.Skip("Set STORAGE_EMULATOR_HOST for the local emulator, or GOOGLE_APPLICATION_CREDENTIALS for real GCS")
 		}
 	}
 
 	gcsDriverConstructor = func(rootDirectory string) (storagedriver.StorageDriver, error) {
-		jsonKey, err := os.ReadFile(credentials)
-		if err != nil {
-			panic(fmt.Sprintf("Error reading JSON key : %v", err))
+		params := map[string]any{
+			"bucket":         bucket,
+			"rootdirectory":  rootDirectory,
+			"chunksize":      defaultChunkSize,
+			"maxconcurrency": uint64(8),
+		}
+		if credentials != "" {
+			params["keyfile"] = credentials
 		}
 
-		var ts oauth2.TokenSource
-		var email string
-		var privateKey []byte
-
-		ts, err = google.DefaultTokenSource(dcontext.Background(), storage.ScopeFullControl)
-		if err != nil {
-			// Assume that the file contents are within the environment variable since it exists
-			// but does not contain a valid file path
-			jwtConfig, err := google.JWTConfigFromJSON(jsonKey, storage.ScopeFullControl)
-			if err != nil {
-				panic(fmt.Sprintf("Error reading JWT config : %s", err))
-			}
-			email = jwtConfig.Email
-			privateKey = jwtConfig.PrivateKey
-			if len(privateKey) == 0 {
-				panic("Error reading JWT config : missing private_key property")
-			}
-			if email == "" {
-				panic("Error reading JWT config : missing client_email property")
-			}
-			ts = jwtConfig.TokenSource(dcontext.Background())
-		}
-
-		gcs, err := storage.NewClient(dcontext.Background(), option.WithTokenSource(ts))
-		if err != nil {
-			panic(fmt.Sprintf("Error initializing gcs client : %v", err))
-		}
-
-		parameters := driverParameters{
-			bucket:         bucket,
-			rootDirectory:  rootDirectory,
-			email:          email,
-			privateKey:     privateKey,
-			client:         oauth2.NewClient(dcontext.Background(), ts),
-			chunkSize:      defaultChunkSize,
-			gcs:            gcs,
-			maxConcurrency: 8,
-		}
-
-		return New(context.Background(), parameters)
+		return FromParameters(context.Background(), params)
 	}
 }
 
