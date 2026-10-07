@@ -832,42 +832,50 @@ func (d *driver) listAll(ctx context.Context, prefix string) ([]objectVersion, e
 }
 
 // Delete recursively deletes all objects stored at "path" and its subpaths.
+// Every generation of the exact key and of each descendant is removed; a
+// directory-prefix-only list would miss the object at path itself, and a
+// live-only Object.Delete would leave noncurrent generations behind.
 func (d *driver) Delete(ctx context.Context, path string) error {
-	prefix := d.pathToDirKey(path)
-	keys, err := d.listAll(ctx, prefix)
+	key := d.pathToKey(path)
+	// Prefix match without a trailing slash over-matches (e.g. "a" matches "ab"),
+	// so keep only the exact key and its descendants (key + "/").
+	candidates, err := d.listAll(ctx, key)
 	if err != nil {
 		return err
 	}
-	if len(keys) > 0 {
-		// NOTE(milosgajdos): d.listAll calls (BucketHandle).Objects
-		// See: https://pkg.go.dev/cloud.google.com/go/storage#BucketHandle.Objects
-		// docs: Objects will be iterated over lexicographically by name.
-		// This means we don't have to reverse order the slice; we can
-		// range over the keys slice in reverse order
-		for _, v := range slices.Backward(keys) {
-			obj := d.bucket.Object(v.name)
-			if v.generation != 0 {
-				obj = obj.Generation(v.generation)
-			}
-			err := obj.Delete(ctx)
-			// GCS only guarantees eventual consistency, so listAll might return
-			// paths that no longer exist. If this happens, just ignore any not
-			// found error. The storage client wraps googleapi errors, so use
-			// errors.Is/As rather than a direct type assert.
-			if isObjectNotExist(err) {
-				err = nil
-			}
-			if err != nil {
-				return err
-			}
+	keys := make([]objectVersion, 0, len(candidates))
+	for _, v := range candidates {
+		if key == "" || v.name == key || strings.HasPrefix(v.name, key+"/") {
+			keys = append(keys, v)
 		}
-		return nil
 	}
-	err = d.bucket.Object(d.pathToKey(path)).Delete(ctx)
-	if isObjectNotExist(err) {
+	if len(keys) == 0 {
 		return storagedriver.PathNotFoundError{Path: path}
 	}
-	return err
+
+	// NOTE(milosgajdos): d.listAll calls (BucketHandle).Objects
+	// See: https://pkg.go.dev/cloud.google.com/go/storage#BucketHandle.Objects
+	// docs: Objects will be iterated over lexicographically by name.
+	// This means we don't have to reverse order the slice; we can
+	// range over the keys slice in reverse order
+	for _, v := range slices.Backward(keys) {
+		obj := d.bucket.Object(v.name)
+		if v.generation != 0 {
+			obj = obj.Generation(v.generation)
+		}
+		err := obj.Delete(ctx)
+		// GCS only guarantees eventual consistency, so listAll might return
+		// paths that no longer exist. If this happens, just ignore any not
+		// found error. The storage client wraps googleapi errors, so use
+		// errors.Is/As rather than a direct type assert.
+		if isObjectNotExist(err) {
+			err = nil
+		}
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // isObjectNotExist reports whether err is a missing-object error from the

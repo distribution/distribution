@@ -278,8 +278,9 @@ func TestMoveDirectory(t *testing.T) {
 }
 
 // TestDeletePurgesAllGenerations asserts Delete removes every object generation
-// under a prefix, not only the live one. DriverSuite TearDownTest only Lists
-// live objects, so it would not catch a regression to live-only deletes.
+// of the exact key and under a parent prefix, not only the live one.
+// DriverSuite TearDownTest only Lists live objects, so it would not catch a
+// regression to live-only or directory-prefix-only deletes.
 // Requires the storage-testbench emulator, which retains non-live generations on
 // overwrite; production buckets without object versioning typically do not.
 func TestDeletePurgesAllGenerations(t *testing.T) {
@@ -305,26 +306,17 @@ func TestDeletePurgesAllGenerations(t *testing.T) {
 		t.Fatalf("FromParameters: %v", err)
 	}
 
-	parent := fmt.Sprintf("/delete-gens-%d", time.Now().UnixNano())
-	path := parent + "/obj"
-	for _, body := range [][]byte{[]byte("one"), []byte("two"), []byte("three")} {
-		if err := d.PutContent(ctx, path, body); err != nil {
-			t.Fatalf("PutContent: %v", err)
-		}
-	}
-
 	gcs, err := storage.NewClient(ctx)
 	if err != nil {
 		t.Fatalf("storage.NewClient: %v", err)
 	}
 	t.Cleanup(func() { _ = gcs.Close() })
 
-	prefix := parent[1:] + "/" // pathToDirKey with empty root
-	countGenerations := func() int {
+	countGenerations := func(t *testing.T, objectPrefix string) int {
 		t.Helper()
 		n := 0
 		it := gcs.Bucket(bucketName).Objects(ctx, &storage.Query{
-			Prefix:   prefix,
+			Prefix:   objectPrefix,
 			Versions: true,
 		})
 		for {
@@ -342,17 +334,53 @@ func TestDeletePurgesAllGenerations(t *testing.T) {
 		return n
 	}
 
-	before := countGenerations()
-	if before < 2 {
-		t.Fatalf("expected multiple generations before Delete, got %d", before)
+	putGenerations := func(t *testing.T, path string) {
+		t.Helper()
+		for _, body := range [][]byte{[]byte("one"), []byte("two"), []byte("three")} {
+			if err := d.PutContent(ctx, path, body); err != nil {
+				t.Fatalf("PutContent: %v", err)
+			}
+		}
 	}
 
-	if err := d.Delete(ctx, parent); err != nil {
-		t.Fatalf("Delete: %v", err)
-	}
+	t.Run("exact key", func(t *testing.T) {
+		path := fmt.Sprintf("/delete-gens-exact-%d/obj", time.Now().UnixNano())
+		putGenerations(t, path)
 
-	after := countGenerations()
-	if after != 0 {
-		t.Fatalf("expected 0 generations after Delete, got %d", after)
-	}
+		objectKey := path[1:] // pathToKey with empty root
+		before := countGenerations(t, objectKey)
+		if before < 2 {
+			t.Fatalf("expected multiple generations before Delete, got %d", before)
+		}
+
+		if err := d.Delete(ctx, path); err != nil {
+			t.Fatalf("Delete: %v", err)
+		}
+
+		after := countGenerations(t, objectKey)
+		if after != 0 {
+			t.Fatalf("expected 0 generations after Delete(%q), got %d", path, after)
+		}
+	})
+
+	t.Run("parent prefix", func(t *testing.T) {
+		parent := fmt.Sprintf("/delete-gens-parent-%d", time.Now().UnixNano())
+		path := parent + "/obj"
+		putGenerations(t, path)
+
+		prefix := parent[1:] + "/" // pathToDirKey with empty root
+		before := countGenerations(t, prefix)
+		if before < 2 {
+			t.Fatalf("expected multiple generations before Delete, got %d", before)
+		}
+
+		if err := d.Delete(ctx, parent); err != nil {
+			t.Fatalf("Delete: %v", err)
+		}
+
+		after := countGenerations(t, prefix)
+		if after != 0 {
+			t.Fatalf("expected 0 generations after Delete(%q), got %d", parent, after)
+		}
+	})
 }
