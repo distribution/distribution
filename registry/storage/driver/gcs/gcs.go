@@ -837,15 +837,20 @@ func (d *driver) listAll(ctx context.Context, prefix string) ([]objectVersion, e
 // live-only Object.Delete would leave noncurrent generations behind.
 func (d *driver) Delete(ctx context.Context, path string) error {
 	key := d.pathToKey(path)
+	// Deleting the driver root ("/") with a non-empty rootdirectory maps to the
+	// trimmed root name (e.g. "foo" for root "foo/"). Matching that exact key
+	// would remove an object outside the configured prefix; only descendants
+	// under key+"/" are in-tree.
+	atDriverRoot := strings.Trim(path, "/") == ""
 	// Prefix match without a trailing slash over-matches (e.g. "a" matches "ab"),
-	// so keep only the exact key and its descendants (key + "/").
+	// so keep only the exact key (when not at the driver root) and descendants.
 	candidates, err := d.listAll(ctx, key)
 	if err != nil {
 		return err
 	}
 	keys := make([]objectVersion, 0, len(candidates))
 	for _, v := range candidates {
-		if key == "" || v.name == key || strings.HasPrefix(v.name, key+"/") {
+		if key == "" || (!atDriverRoot && v.name == key) || strings.HasPrefix(v.name, key+"/") {
 			keys = append(keys, v)
 		}
 	}

@@ -384,3 +384,61 @@ func TestDeletePurgesAllGenerations(t *testing.T) {
 		}
 	})
 }
+
+// TestDeleteRootDoesNotRemoveOutOfRootObject asserts that with a non-empty
+// rootdirectory, Delete("/") only clears objects under the root prefix and does
+// not delete an object whose name equals the trimmed root (outside the tree).
+// Calls *driver.Delete directly: base.Base rejects path "/" via PathRegexp, but
+// the GCS method still treats "/" as the driver root (same as List/Stat).
+func TestDeleteRootDoesNotRemoveOutOfRootObject(t *testing.T) {
+	skipCheck(t)
+	if os.Getenv("STORAGE_EMULATOR_HOST") == "" {
+		t.Skip("requires STORAGE_EMULATOR_HOST")
+	}
+
+	ctx := context.Background()
+	bucketName := os.Getenv("REGISTRY_STORAGE_GCS_BUCKET")
+	rootName := fmt.Sprintf("root-del-%d", time.Now().UnixNano())
+
+	gcs, err := storage.NewClient(ctx)
+	if err != nil {
+		t.Fatalf("storage.NewClient: %v", err)
+	}
+	t.Cleanup(func() { _ = gcs.Close() })
+
+	d := &driver{
+		bucket:        gcs.Bucket(bucketName),
+		rootDirectory: rootName + "/",
+		chunkSize:     defaultChunkSize,
+	}
+
+	// Object named like the root basename, outside the configured prefix rootName+"/".
+	wc := gcs.Bucket(bucketName).Object(rootName).NewWriter(ctx)
+	if _, err := wc.Write([]byte("outside")); err != nil {
+		t.Fatalf("write out-of-root object: %v", err)
+	}
+	if err := wc.Close(); err != nil {
+		t.Fatalf("close out-of-root object: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = gcs.Bucket(bucketName).Object(rootName).Delete(ctx)
+	})
+
+	if err := d.PutContent(ctx, "/inside", []byte("in")); err != nil {
+		t.Fatalf("PutContent: %v", err)
+	}
+
+	if err := d.Delete(ctx, "/"); err != nil {
+		t.Fatalf("Delete(/): %v", err)
+	}
+
+	if _, err := d.Stat(ctx, "/inside"); err == nil {
+		t.Fatal("expected /inside to be gone after Delete(/)")
+	} else if _, ok := err.(storagedriver.PathNotFoundError); !ok {
+		t.Fatalf("Stat(/inside): want PathNotFoundError, got %v", err)
+	}
+
+	if _, err := gcs.Bucket(bucketName).Object(rootName).Attrs(ctx); err != nil {
+		t.Fatalf("out-of-root object %q should remain after Delete(/): %v", rootName, err)
+	}
+}
