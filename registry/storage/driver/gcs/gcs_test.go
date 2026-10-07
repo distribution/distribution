@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
+	"cloud.google.com/go/storage"
 	"github.com/distribution/distribution/v3/internal/dcontext"
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/distribution/v3/registry/storage/driver/testsuites"
 	"google.golang.org/api/googleapi"
+	"google.golang.org/api/iterator"
 )
 
 var (
@@ -271,5 +274,85 @@ func TestMoveDirectory(t *testing.T) {
 	err = driver.Move(ctx, "/parent/dir", "/parent/other")
 	if err == nil {
 		t.Fatal("Moving directory /parent/dir /parent/other should have return a non-nil error")
+	}
+}
+
+// TestDeletePurgesAllGenerations asserts Delete removes every object generation
+// under a prefix, not only the live one. DriverSuite TearDownTest only Lists
+// live objects, so it would not catch a regression to live-only deletes.
+// Requires the storage-testbench emulator, which retains non-live generations on
+// overwrite; production buckets without object versioning typically do not.
+func TestDeletePurgesAllGenerations(t *testing.T) {
+	skipCheck(t)
+	if os.Getenv("STORAGE_EMULATOR_HOST") == "" {
+		t.Skip("requires STORAGE_EMULATOR_HOST (storage-testbench retains non-live generations on overwrite)")
+	}
+
+	ctx := context.Background()
+	bucketName := os.Getenv("REGISTRY_STORAGE_GCS_BUCKET")
+	params := map[string]any{
+		"bucket":         bucketName,
+		"rootdirectory":  "",
+		"chunksize":      defaultChunkSize,
+		"maxconcurrency": uint64(8),
+	}
+	if credentials := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS"); credentials != "" {
+		params["keyfile"] = credentials
+	}
+
+	d, err := FromParameters(ctx, params)
+	if err != nil {
+		t.Fatalf("FromParameters: %v", err)
+	}
+
+	parent := fmt.Sprintf("/delete-gens-%d", time.Now().UnixNano())
+	path := parent + "/obj"
+	for _, body := range [][]byte{[]byte("one"), []byte("two"), []byte("three")} {
+		if err := d.PutContent(ctx, path, body); err != nil {
+			t.Fatalf("PutContent: %v", err)
+		}
+	}
+
+	gcs, err := storage.NewClient(ctx)
+	if err != nil {
+		t.Fatalf("storage.NewClient: %v", err)
+	}
+	t.Cleanup(func() { _ = gcs.Close() })
+
+	prefix := parent[1:] + "/" // pathToDirKey with empty root
+	countGenerations := func() int {
+		t.Helper()
+		n := 0
+		it := gcs.Bucket(bucketName).Objects(ctx, &storage.Query{
+			Prefix:   prefix,
+			Versions: true,
+		})
+		for {
+			attrs, err := it.Next()
+			if err == iterator.Done {
+				break
+			}
+			if err != nil {
+				t.Fatalf("Objects: %v", err)
+			}
+			if attrs.Name != "" {
+				n++
+			}
+		}
+		return n
+	}
+
+	before := countGenerations()
+	if before < 2 {
+		t.Fatalf("expected multiple generations before Delete, got %d", before)
+	}
+
+	if err := d.Delete(ctx, parent); err != nil {
+		t.Fatalf("Delete: %v", err)
+	}
+
+	after := countGenerations()
+	if after != 0 {
+		t.Fatalf("expected 0 generations after Delete, got %d", after)
 	}
 }
