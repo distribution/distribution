@@ -718,6 +718,9 @@ type Proxy struct {
 	// that cache writes don't hang indefinitely if the storage backend is slow.
 	// If not set, defaults to 5 minutes.
 	CacheWriteTimeout *time.Duration `yaml:"cachewritetimeout,omitempty"`
+
+	// TrustedRealmHosts is a list of domain names that are trusted to provide challenges
+	TrustedRealmHosts []string `yaml:"trustedrealmhosts,omitempty"`
 }
 
 // ExecConfig defines the configuration for executing a command as a credential helper.
