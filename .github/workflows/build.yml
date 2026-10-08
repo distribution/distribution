@@ -39,6 +39,7 @@ jobs:
           - test-coverage
           - test-s3-storage
           - test-azure-storage
+          - test-gcs-storage
     steps:
       -
         name: Checkout
