@@ -20,11 +20,6 @@ func (mail *mailer) sendMail(subject, message string) error {
 		return errors.New("invalid Mail Address")
 	}
 	host := addr[0]
-	msg := []byte("To:" + strings.Join(mail.To, ";") +
-		"\r\nFrom: " + mail.From +
-		"\r\nSubject: " + subject +
-		"\r\nContent-Type: text/plain\r\n\r\n" +
-		message)
 	auth := smtp.PlainAuth(
 		"",
 		mail.Username,
@@ -36,10 +31,23 @@ func (mail *mailer) sendMail(subject, message string) error {
 		auth,
 		mail.From,
 		mail.To,
-		msg,
+		mail.buildMessage(subject, message),
 	)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+// buildMessage assembles the mail. subject is placed in the header block, so a
+// CR or LF in it is folded to a space to keep it on a single line and stop a
+// newline from injecting extra SMTP headers. subject is built from the log
+// entry message and is not guaranteed to be header-safe.
+func (mail *mailer) buildMessage(subject, message string) []byte {
+	subject = strings.NewReplacer("\r", " ", "\n", " ").Replace(subject)
+	return []byte("To:" + strings.Join(mail.To, ";") +
+		"\r\nFrom: " + mail.From +
+		"\r\nSubject: " + subject +
+		"\r\nContent-Type: text/plain\r\n\r\n" +
+		message)
 }
