@@ -83,7 +83,7 @@ func (lbs *linkedBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter
 }
 
 func (lbs *linkedBlobStore) Put(ctx context.Context, mediaType string, p []byte) (v1.Descriptor, error) {
-	dgst := digest.FromBytes(p)
+	dgst := putDigestAlgorithm(ctx).FromBytes(p)
 	// Place the data in the blob store first.
 	desc, err := lbs.blobStore.Put(ctx, mediaType, p)
 	if err != nil {
@@ -122,6 +122,41 @@ func WithMountFrom(ref reference.Canonical) distribution.BlobCreateOption {
 
 		return nil
 	})
+}
+
+// WithDigestAlgorithm returns a BlobCreateOption which declares the algorithm
+// the blob will be pushed with; see CreateOptions.DigestAlgorithm.
+func WithDigestAlgorithm(alg digest.Algorithm) distribution.BlobCreateOption {
+	return optionFunc(func(v any) error {
+		opts, ok := v.(*distribution.CreateOptions)
+		if !ok {
+			return fmt.Errorf("unexpected options type: %T", v)
+		}
+
+		opts.DigestAlgorithm = alg
+
+		return nil
+	})
+}
+
+// resumeDigestAlgorithmKey is the context key for WithResumeDigestAlgorithm.
+type resumeDigestAlgorithmKey struct{}
+
+// WithResumeDigestAlgorithm returns a context telling Resume to rebuild the
+// upload's digester with alg, the algorithm the upload was created with via
+// WithDigestAlgorithm. Callers must carry it across requests themselves;
+// without it Resume uses the canonical algorithm, which is correct but means
+// a full re-read at commit.
+func WithResumeDigestAlgorithm(ctx context.Context, alg digest.Algorithm) context.Context {
+	if alg == "" || alg == digest.Canonical {
+		return ctx
+	}
+	return context.WithValue(ctx, resumeDigestAlgorithmKey{}, alg)
+}
+
+func resumeDigestAlgorithm(ctx context.Context) digest.Algorithm {
+	alg, _ := ctx.Value(resumeDigestAlgorithmKey{}).(digest.Algorithm)
+	return alg
 }
 
 // Create begins a blob write session, returning a handle.
@@ -169,7 +204,7 @@ func (lbs *linkedBlobStore) Create(ctx context.Context, options ...distribution.
 		return nil, err
 	}
 
-	return lbs.newBlobUpload(ctx, uuid, path, startedAt, false)
+	return lbs.newBlobUpload(ctx, uuid, path, startedAt, opts.DigestAlgorithm, false)
 }
 
 func (lbs *linkedBlobStore) Resume(ctx context.Context, id string) (distribution.BlobWriter, error) {
@@ -206,7 +241,7 @@ func (lbs *linkedBlobStore) Resume(ctx context.Context, id string) (distribution
 		return nil, err
 	}
 
-	return lbs.newBlobUpload(ctx, id, path, startedAt, true)
+	return lbs.newBlobUpload(ctx, id, path, startedAt, resumeDigestAlgorithm(ctx), true)
 }
 
 func (lbs *linkedBlobStore) Delete(ctx context.Context, dgst digest.Digest) error {
@@ -301,10 +336,14 @@ func (lbs *linkedBlobStore) mount(ctx context.Context, sourceRepo reference.Name
 }
 
 // newBlobUpload allocates a new upload controller with the given state.
-func (lbs *linkedBlobStore) newBlobUpload(ctx context.Context, uuid, path string, startedAt time.Time, append bool) (distribution.BlobWriter, error) {
+func (lbs *linkedBlobStore) newBlobUpload(ctx context.Context, uuid, path string, startedAt time.Time, alg digest.Algorithm, append bool) (distribution.BlobWriter, error) {
 	fw, err := lbs.driver.Writer(ctx, path, append)
 	if err != nil {
 		return nil, err
+	}
+
+	if alg == "" || !alg.Available() {
+		alg = digest.Canonical
 	}
 
 	bw := &blobWriter{
@@ -312,7 +351,7 @@ func (lbs *linkedBlobStore) newBlobUpload(ctx context.Context, uuid, path string
 		blobStore:              lbs,
 		id:                     uuid,
 		startedAt:              startedAt,
-		digester:               digest.Canonical.Digester(),
+		digester:               alg.Digester(),
 		fileWriter:             fw,
 		driver:                 lbs.driver,
 		path:                   path,

@@ -235,7 +235,7 @@ func (bw *blobWriter) validateBlob(ctx context.Context, desc v1.Descriptor) (v1.
 		// the same, we don't need to read the data from the backend. This is
 		// because we've written the entire file in the lifecycle of the
 		// current instance.
-		if bw.written == size && digest.Canonical == desc.Digest.Algorithm() {
+		if bw.written == size && bw.digester.Digest().Algorithm() == desc.Digest.Algorithm() {
 			canonical = bw.digester.Digest()
 			verified = desc.Digest == canonical
 		}
@@ -244,7 +244,9 @@ func (bw *blobWriter) validateBlob(ctx context.Context, desc v1.Descriptor) (v1.
 		// paths. We may be able to make the size-based check a stronger
 		// guarantee, so this may be defensive.
 		if !verified {
-			digester := digest.Canonical.Digester()
+			// desc.Digest was validated by digest.Parse, so its algorithm is
+			// available.
+			digester := desc.Digest.Algorithm().Digester()
 			verifier := desc.Digest.Verifier()
 
 			// Read the file from the backend driver and validate it.
