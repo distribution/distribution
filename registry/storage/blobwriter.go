@@ -244,9 +244,6 @@ func (bw *blobWriter) validateBlob(ctx context.Context, desc v1.Descriptor) (v1.
 		// paths. We may be able to make the size-based check a stronger
 		// guarantee, so this may be defensive.
 		if !verified {
-			digester := digest.Canonical.Digester()
-			verifier := desc.Digest.Verifier()
-
 			// Read the file from the backend driver and validate it.
 			fr, err := newFileReader(ctx, bw.driver, bw.path, desc.Size)
 			if err != nil {
@@ -254,14 +251,26 @@ func (bw *blobWriter) validateBlob(ctx context.Context, desc v1.Descriptor) (v1.
 			}
 			defer fr.Close()
 
-			tr := io.TeeReader(fr, digester.Hash())
+			if desc.Digest.Algorithm() == digest.Canonical {
+				digester := digest.Canonical.Digester()
+				if _, err := io.Copy(digester.Hash(), fr); err != nil {
+					return v1.Descriptor{}, err
+				}
 
-			if _, err := io.Copy(verifier, tr); err != nil {
-				return v1.Descriptor{}, err
+				canonical = digester.Digest()
+				verified = desc.Digest == canonical
+			} else {
+				digester := digest.Canonical.Digester()
+				verifier := desc.Digest.Verifier()
+				tr := io.TeeReader(fr, digester.Hash())
+
+				if _, err := io.Copy(verifier, tr); err != nil {
+					return v1.Descriptor{}, err
+				}
+
+				canonical = digester.Digest()
+				verified = verifier.Verified()
 			}
-
-			canonical = digester.Digest()
-			verified = verifier.Verified()
 		}
 	}
 
