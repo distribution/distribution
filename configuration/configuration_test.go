@@ -570,3 +570,23 @@ func copyConfig(config Configuration) *Configuration {
 
 	return configCopy
 }
+
+func TestParseIdleTimeout(t *testing.T) {
+	yamlConfig := `
+version: 0.1
+log:
+  level: info
+storage:
+  inmemory: {}
+http:
+  idletimeout: 120s
+`
+	config, err := Parse(bytes.NewReader([]byte(yamlConfig)))
+	if err != nil {
+		t.Fatalf("unexpected error parsing config with idletimeout: %v", err)
+	}
+
+	if config.HTTP.IdleTimeout != 120*time.Second {
+		t.Fatalf("expected IdleTimeout to be 120s, got %v", config.HTTP.IdleTimeout)
+	}
+}
