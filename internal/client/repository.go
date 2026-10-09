@@ -237,7 +237,12 @@ func (t *tags) All(ctx context.Context) ([]string, error) {
 				return allTags, err
 			}
 
-			listURL = listURL.ResolveReference(linkURL)
+			next := listURL.ResolveReference(linkURL)
+			if next.Scheme != listURL.Scheme || next.Host != listURL.Host {
+				return allTags, fmt.Errorf("tags/list next link points to a different host: %s", next.Redacted())
+			}
+
+			listURL = next
 		} else {
 			return allTags, nil
 		}
