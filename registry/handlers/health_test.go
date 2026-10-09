@@ -21,7 +21,6 @@ func TestFileHealthCheck(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not create temporary file: %v", err)
 	}
-	defer tmpfile.Close()
 
 	config := &configuration.Configuration{
 		Storage: configuration.Storage{
@@ -57,6 +56,7 @@ func TestFileHealthCheck(t *testing.T) {
 		t.Fatal(`did not get "file exists" result for health check`)
 	}
 
+	tmpfile.Close()
 	os.Remove(tmpfile.Name())
 
 	<-time.After(2 * interval)
