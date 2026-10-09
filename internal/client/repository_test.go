@@ -1783,6 +1783,57 @@ func TestManifestTagsPaginated(t *testing.T) {
 	}
 }
 
+// TestManifestTagsPaginatedForeignNextLink checks that All stops instead of
+// fetching a next page from a host other than the one it was pointed at.
+func TestManifestTagsPaginatedForeignNextLink(t *testing.T) {
+	foreign := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Errorf("All requested %s from a different host", r.URL.Path)
+		body := []byte(`{"name":"test.example.com/repo/tags/list","tags":["injected"]}`)
+		w.Header().Set("Content-Length", fmt.Sprint(len(body)))
+		_, _ = w.Write(body)
+	}))
+	defer foreign.Close()
+
+	repo, _ := reference.WithName("test.example.com/repo/tags/list")
+	body, err := json.Marshal(map[string]any{
+		"name": "test.example.com/repo/tags/list",
+		"tags": []string{"tag1"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var m testutil.RequestResponseMap
+	m = append(m, testutil.RequestResponseMapping{
+		Request: testutil.Request{
+			Method: http.MethodGet,
+			Route:  "/v2/" + repo.Name() + "/tags/list",
+		},
+		Response: testutil.Response{
+			StatusCode: http.StatusOK,
+			Body:       body,
+			Headers: http.Header(map[string][]string{
+				"Content-Length": {fmt.Sprint(len(body))},
+				"Last-Modified":  {time.Now().Add(-1 * time.Second).Format(time.ANSIC)},
+				"Link":           {fmt.Sprintf(`<%s/v2/%s/tags/list?n=1&last=tag1>; rel="next"`, foreign.URL, repo.Name())},
+			}),
+		},
+	})
+
+	e, c := testServer(m)
+	defer c()
+
+	r, err := NewRepository(repo, e, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := dcontext.Background()
+	if _, err := r.Tags(ctx).All(ctx); err == nil {
+		t.Error("All accepted a next link pointing at a different host")
+	}
+}
+
 func TestManifestTagsListPaginated(t *testing.T) {
 	s := httptest.NewServer(http.NotFoundHandler())
 	defer s.Close()
