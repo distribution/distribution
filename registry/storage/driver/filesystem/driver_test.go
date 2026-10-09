@@ -1,7 +1,9 @@
 package filesystem
 
 import (
+	"context"
 	"reflect"
+	"strings"
 	"testing"
 
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
@@ -20,6 +22,33 @@ func newDriverConstructor(tb testing.TB) testsuites.DriverConstructor {
 
 func TestFilesystemDriverSuite(t *testing.T) {
 	testsuites.Driver(t, newDriverConstructor(t), false)
+}
+
+func TestPathNotFoundErrorIncludesRootDirectory(t *testing.T) {
+	root := t.TempDir()
+	d := New(DriverParameters{
+		RootDirectory: root,
+		MaxThreads:    minThreads,
+	})
+
+	missingPath := "/docker/registry/v2/blobs"
+	_, err := d.Stat(context.Background(), missingPath)
+	if err == nil {
+		t.Fatal("expected error stating missing path")
+	}
+
+	pathNotFound, ok := err.(storagedriver.PathNotFoundError)
+	if !ok {
+		t.Fatalf("expected PathNotFoundError, got %T: %v", err, err)
+	}
+
+	errStr := pathNotFound.Error()
+	if !strings.Contains(errStr, root) {
+		t.Fatalf("expected error to contain rootdirectory %q, got %q", root, errStr)
+	}
+	if !strings.Contains(errStr, missingPath) {
+		t.Fatalf("expected error to contain storage path %q, got %q", missingPath, errStr)
+	}
 }
 
 func BenchmarkFilesystemDriverSuite(b *testing.B) {
