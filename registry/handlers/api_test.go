@@ -1488,6 +1488,44 @@ func TestManifestAPI_DeleteTag_DeleteDisabled(t *testing.T) {
 	checkResponse(t, msg, resp, http.StatusOK)
 }
 
+func TestManifestAPI_NameTooLong(t *testing.T) {
+	config := configuration.Configuration{
+		Storage: configuration.Storage{
+			"inmemory":    configuration.Parameters{},
+			"cache":       configuration.Parameters{"blobdescriptor": "inmemory"},
+			"maintenance": configuration.Parameters{"uploadpurging": map[any]any{"enabled": false}},
+		},
+	}
+	config.HTTP.Headers = headerConfig
+	env := newTestEnvWithConfig(t, &config)
+	defer env.Shutdown()
+
+	// "foo" is a domain to WithName but part of the path (docker.io/foo/...) to the cache.
+	for _, tc := range []struct {
+		name string
+		repo string
+	}{
+		{
+			name: "rejected by reference.WithName",
+			repo: "foo/" + strings.Repeat("a", reference.RepositoryNameTotalLengthMax+1),
+		},
+		{
+			name: "rejected by the blob descriptor cache",
+			repo: "foo/" + strings.Repeat("a", reference.RepositoryNameTotalLengthMax),
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			resp, err := http.Get(env.server.URL + "/v2/" + tc.repo + "/manifests/latest")
+			checkErr(t, err, tc.name)
+			defer resp.Body.Close()
+
+			checkResponse(t, tc.name, resp, http.StatusBadRequest)
+			// nolint:errcheck
+			checkBodyHasErrorCodes(t, tc.name, resp, errcode.ErrorCodeNameInvalid)
+		})
+	}
+}
+
 // storageManifestErrDriverFactory implements the factory.StorageDriverFactory interface.
 type storageManifestErrDriverFactory struct{}
 

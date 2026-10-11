@@ -752,13 +752,10 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 			nameRef, err := reference.WithName(getName(context))
 			if err != nil {
 				dcontext.GetLogger(context).Errorf("error parsing reference from context: %v", err)
-				context.Errors = append(context.Errors, distribution.ErrRepositoryNameInvalid{
+				context.Errors = append(context.Errors, errcode.ErrorCodeNameInvalid.WithDetail(distribution.ErrRepositoryNameInvalid{
 					Name:   getName(context),
 					Reason: err,
-				})
-				if err := errcode.ServeJSON(w, context.Errors); err != nil {
-					dcontext.GetLogger(context).Errorf("error serving error json: %v (from %v)", err, context.Errors)
-				}
+				}))
 				return
 			}
 			repository, err := app.registry.Repository(context, nameRef)
@@ -772,10 +769,8 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 					context.Errors = append(context.Errors, errcode.ErrorCodeNameInvalid.WithDetail(err))
 				case errcode.Error:
 					context.Errors = append(context.Errors, err)
-				}
-
-				if err := errcode.ServeJSON(w, context.Errors); err != nil {
-					dcontext.GetLogger(context).Errorf("error serving error json: %v (from %v)", err, context.Errors)
+				default:
+					context.Errors = append(context.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 				}
 				return
 			}
@@ -790,10 +785,6 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 			if err != nil {
 				dcontext.GetLogger(context).Errorf("error initializing repository middleware: %v", err)
 				context.Errors = append(context.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
-
-				if err := errcode.ServeJSON(w, context.Errors); err != nil {
-					dcontext.GetLogger(context).Errorf("error serving error json: %v (from %v)", err, context.Errors)
-				}
 				return
 			}
 		}
