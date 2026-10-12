@@ -984,6 +984,13 @@ func (bs *blobStatter) Stat(ctx context.Context, dgst digest.Digest) (v1.Descrip
 	}
 	defer resp.Body.Close()
 
+	switch resp.StatusCode {
+	case http.StatusUnauthorized, http.StatusForbidden, http.StatusMethodNotAllowed:
+		// Some registries (e.g. public.ecr.aws) reject HEAD on blobs while
+		// serving GET with the same credentials.
+		return bs.statWithRangedGet(ctx, u, dgst)
+	}
+
 	if resp.StatusCode == http.StatusNotFound {
 		return v1.Descriptor{}, distribution.ErrBlobUnknown
 	}
@@ -1000,6 +1007,58 @@ func (bs *blobStatter) Stat(ctx context.Context, dgst digest.Digest) (v1.Descrip
 	length, err := strconv.ParseInt(lengthHeader, 10, 64)
 	if err != nil {
 		return v1.Descriptor{}, fmt.Errorf("error parsing content-length: %v", err)
+	}
+
+	return v1.Descriptor{
+		MediaType: resp.Header.Get("Content-Type"),
+		Size:      length,
+		Digest:    dgst,
+	}, nil
+}
+
+// statWithRangedGet stats a blob with a GET of its first byte, reading the
+// total size from Content-Range (or Content-Length if the range is ignored).
+func (bs *blobStatter) statWithRangedGet(ctx context.Context, u string, dgst digest.Digest) (v1.Descriptor, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	if err != nil {
+		return v1.Descriptor{}, err
+	}
+	req.Header.Set("Range", "bytes=0-0")
+
+	resp, err := bs.client.Do(req)
+	if err != nil {
+		return v1.Descriptor{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return v1.Descriptor{}, distribution.ErrBlobUnknown
+	}
+
+	if err := HandleHTTPResponseError(resp); err != nil {
+		return v1.Descriptor{}, err
+	}
+
+	var length int64
+	if resp.StatusCode == http.StatusPartialContent {
+		contentRange := resp.Header.Get("Content-Range")
+		i := strings.LastIndex(contentRange, "/")
+		if i < 0 {
+			return v1.Descriptor{}, fmt.Errorf("invalid content-range header %q for request: %s", contentRange, u)
+		}
+		length, err = strconv.ParseInt(contentRange[i+1:], 10, 64)
+		if err != nil {
+			return v1.Descriptor{}, fmt.Errorf("error parsing content-range %q: %v", contentRange, err)
+		}
+	} else {
+		lengthHeader := resp.Header.Get("Content-Length")
+		if lengthHeader == "" {
+			return v1.Descriptor{}, fmt.Errorf("missing content-length header for request: %s", u)
+		}
+		length, err = strconv.ParseInt(lengthHeader, 10, 64)
+		if err != nil {
+			return v1.Descriptor{}, fmt.Errorf("error parsing content-length: %v", err)
+		}
 	}
 
 	return v1.Descriptor{
