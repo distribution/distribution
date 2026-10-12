@@ -578,10 +578,10 @@ func (suite *DriverSuite) TestList() {
 
 	doesnotexist := path.Join(rootDirectory, "nonexistent")
 	_, err := suite.StorageDriver.List(suite.ctx, doesnotexist)
-	suite.Require().Equal(err, storagedriver.PathNotFoundError{
-		Path:       doesnotexist,
-		DriverName: suite.StorageDriver.Name(),
-	})
+	var pathNotFoundErr storagedriver.PathNotFoundError
+	suite.Require().ErrorAs(err, &pathNotFoundErr)
+	suite.Require().Equal(doesnotexist, pathNotFoundErr.Path)
+	suite.Require().Equal(suite.StorageDriver.Name(), pathNotFoundErr.DriverName)
 
 	parentDirectory := rootDirectory + "/" + randomFilename(int64(8+rand.Intn(8)))
 	childFiles := make([]string, 50)
