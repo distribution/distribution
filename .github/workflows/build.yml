@@ -22,19 +22,50 @@ permissions:
 
 jobs:
   test:
+    runs-on: ${{ matrix.os }}
     env:
-      # Setting GOTOOLCHAIN to local tells go
-      # to to use the bundled Go version rather
-      # than fetching the toolchain according to
-      # toolchain directive found in go.mod.
       GOTOOLCHAIN: local
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+        go:
+          - 1.26.x
+          - 1.27.x
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      -
+        name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ matrix.go }}
+          cache: false
+          check-latest: true
+      -
+        name: Install Make
+        if: runner.os == 'Windows'
+        run: choco install make --no-progress -y
+      -
+        name: Test
+        shell: bash
+        run: make SHELL=bash test
+
+  test-linux:
     runs-on: ubuntu-latest
+    env:
+      GOTOOLCHAIN: local
     strategy:
       fail-fast: false
       matrix:
         go:
           - 1.26.x
-          - 1.27.1
+          - 1.27.x
         target:
           - test-coverage
           - test-s3-storage
@@ -51,6 +82,7 @@ jobs:
         with:
           go-version: ${{ matrix.go }}
           cache: false
+          check-latest: true
       -
         name: Test
         run: |
@@ -69,6 +101,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - test
+      - test-linux
     steps:
       -
         name: Checkout

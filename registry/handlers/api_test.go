@@ -28,6 +28,7 @@ import (
 	v2 "github.com/distribution/distribution/v3/registry/api/v2"
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/distribution/v3/registry/storage/driver/factory"
+	_ "github.com/distribution/distribution/v3/registry/storage/driver/filesystem"
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
 	"github.com/distribution/distribution/v3/testutil"
 	"github.com/distribution/reference"
@@ -771,6 +772,21 @@ func TestBlobAPI(t *testing.T) {
 	defer env2.Shutdown()
 	args = makeBlobArgs(t)
 	testBlobAPI(t, env2, args)
+}
+
+func TestBlobAPIFilesystem(t *testing.T) {
+	config := configuration.Configuration{
+		Storage: configuration.Storage{
+			"filesystem": configuration.Parameters{"rootdirectory": t.TempDir()},
+			"maintenance": configuration.Parameters{"uploadpurging": map[any]any{
+				"enabled": false,
+			}},
+		},
+	}
+	config.HTTP.Headers = headerConfig
+	env := newTestEnvWithConfig(t, &config)
+	defer env.Shutdown()
+	testBlobAPI(t, env, makeBlobArgs(t))
 }
 
 func TestBlobDelete(t *testing.T) {

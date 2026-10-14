@@ -2,12 +2,15 @@ package filesystem
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
 
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/distribution/v3/registry/storage/driver/testsuites"
+	"github.com/stretchr/testify/require"
 )
 
 func newDriverConstructor(tb testing.TB) testsuites.DriverConstructor {
@@ -22,6 +25,46 @@ func newDriverConstructor(tb testing.TB) testsuites.DriverConstructor {
 
 func TestFilesystemDriverSuite(t *testing.T) {
 	testsuites.Driver(t, newDriverConstructor(t), false)
+}
+
+func TestPutContent(t *testing.T) {
+	root := t.TempDir()
+	d := New(DriverParameters{RootDirectory: root, MaxThreads: minThreads})
+	ctx := context.Background()
+	const key = "/uploads/id/startedat"
+
+	for _, content := range []string{"initial content", "shorter", ""} {
+		require.NoError(t, d.PutContent(ctx, key, []byte(content)))
+		got, err := d.GetContent(ctx, key)
+		require.NoError(t, err)
+		require.Equal(t, content, string(got))
+
+		entries, err := os.ReadDir(filepath.Join(root, "uploads", "id"))
+		require.NoError(t, err)
+		require.Len(t, entries, 1, "temporary files must not be left behind")
+		require.Equal(t, "startedat", entries[0].Name())
+	}
+}
+
+func TestPutContentMoveFailure(t *testing.T) {
+	root := t.TempDir()
+	d := New(DriverParameters{RootDirectory: root, MaxThreads: minThreads})
+	ctx := context.Background()
+
+	// A nonempty directory cannot be replaced by the temporary file.
+	dest := filepath.Join(root, "target")
+	require.NoError(t, os.Mkdir(dest, 0o755))
+	marker := filepath.Join(dest, "keep")
+	require.NoError(t, os.WriteFile(marker, []byte("original"), 0o644))
+
+	require.Error(t, d.PutContent(ctx, "/target", []byte("replacement")))
+	got, err := os.ReadFile(marker)
+	require.NoError(t, err)
+	require.Equal(t, "original", string(got))
+	entries, err := os.ReadDir(root)
+	require.NoError(t, err)
+	require.Len(t, entries, 1, "failed renames must not leave temporary files")
+	require.Equal(t, "target", entries[0].Name())
 }
 
 func TestPathNotFoundErrorIncludesRootDirectory(t *testing.T) {
