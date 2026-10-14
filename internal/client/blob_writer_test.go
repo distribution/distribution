@@ -3,7 +3,9 @@ package client
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"testing"
 
@@ -499,4 +501,146 @@ func TestUploadWrite(t *testing.T) {
 	} else if expected := "500 " + http.StatusText(http.StatusInternalServerError); uploadErr.Status != expected {
 		t.Fatalf("Unexpected response status: %s, expected %s", uploadErr.Status, expected)
 	}
+}
+
+// tests the case of sending only the bytes that we're limiting on
+func TestUploadLimitRange(t *testing.T) {
+	const numberOfBlobs = 10
+	const blobSize = 5
+	const lastBlobOffset = 2
+
+	_, b := newRandomBlob(numberOfBlobs*5 + 2)
+	repo := "test/upload/write"
+	locationPath := fmt.Sprintf("/v2/%s/uploads/testid", repo)
+	requests := []testutil.RequestResponseMapping{
+		{
+			Request: testutil.Request{
+				Method: http.MethodGet,
+				Route:  "/v2/",
+			},
+			Response: testutil.Response{
+				StatusCode: http.StatusOK,
+				Headers: http.Header(map[string][]string{
+					"Docker-Distribution-API-Version": {"registry/2.0"},
+				}),
+			},
+		},
+	}
+
+	for blob := 0; blob < numberOfBlobs; blob++ {
+		start := blob * blobSize
+		end := ((blob + 1) * blobSize) - 1
+
+		requests = append(requests, testutil.RequestResponseMapping{
+			Request: testutil.Request{
+				Method: http.MethodPatch,
+				Route:  locationPath,
+				Body:   b[start : end+1],
+			},
+			Response: testutil.Response{
+				StatusCode: http.StatusAccepted,
+				Headers: http.Header(map[string][]string{
+					"Docker-Upload-UUID": {"46603072-7a1b-4b41-98f9-fd8a7da89f9b"},
+					"Location":           {locationPath},
+					"Range":              {fmt.Sprintf("%d-%d", start, end)},
+				}),
+			},
+		})
+	}
+
+	requests = append(requests, testutil.RequestResponseMapping{
+		Request: testutil.Request{
+			Method: http.MethodPatch,
+			Route:  locationPath,
+			Body:   b[numberOfBlobs*blobSize:],
+		},
+		Response: testutil.Response{
+			StatusCode: http.StatusAccepted,
+			Headers: http.Header(map[string][]string{
+				"Docker-Upload-UUID": {"46603072-7a1b-4b41-98f9-fd8a7da89f9b"},
+				"Location":           {locationPath},
+				"Range":              {fmt.Sprintf("%d-%d", numberOfBlobs*blobSize, len(b)-1)},
+			}),
+		},
+	})
+
+	t.Run("reader chunked upload", func(t *testing.T) {
+		m := testutil.RequestResponseMap(requests)
+		e, c := testServer(m)
+		defer c()
+
+		blobUpload := &httpBlobUpload{
+			ctx:      context.Background(),
+			client:   &http.Client{},
+			maxRange: int64(blobSize),
+		}
+
+		reader := bytes.NewBuffer(b)
+		for i := 0; i < numberOfBlobs; i++ {
+			blobUpload.location = e + locationPath
+			n, err := blobUpload.ReadFrom(reader)
+			if err != nil {
+				t.Fatalf("Error calling Write: %s", err)
+			}
+
+			if n != blobSize {
+				t.Fatalf("Unexpected n %v != %v blobSize", n, blobSize)
+			}
+		}
+
+		n, err := blobUpload.ReadFrom(reader)
+		if err != nil {
+			t.Fatalf("Error calling Write: %s", err)
+		}
+
+		if n != lastBlobOffset {
+			t.Fatalf("Expected last write to have written %v but wrote %v", lastBlobOffset, n)
+		}
+
+		_, err = reader.Read([]byte{0, 0, 0})
+		if !errors.Is(err, io.EOF) {
+			t.Fatalf("Expected io.EOF when reading blob as the test should've read the whole thing")
+		}
+	})
+
+	t.Run("buffer chunked upload", func(t *testing.T) {
+		buff := b
+		m := testutil.RequestResponseMap(requests)
+		e, c := testServer(m)
+		defer c()
+
+		blobUpload := &httpBlobUpload{
+			ctx:      context.Background(),
+			client:   &http.Client{},
+			maxRange: int64(blobSize),
+		}
+
+		for i := 0; i < numberOfBlobs; i++ {
+			blobUpload.location = e + locationPath
+			n, err := blobUpload.Write(buff)
+			if err != nil {
+				t.Fatalf("Error calling Write: %s", err)
+			}
+
+			if n != blobSize {
+				t.Fatalf("Unexpected n %v != %v blobSize", n, blobSize)
+			}
+
+			buff = buff[n:]
+		}
+
+		n, err := blobUpload.Write(buff)
+		if err != nil {
+			t.Fatalf("Error calling Write: %s", err)
+		}
+
+		if n != lastBlobOffset {
+			t.Fatalf("Expected last write to have written %v but wrote %v", lastBlobOffset, n)
+		}
+
+		buff = buff[n:]
+		if len(buff) != 0 {
+			t.Fatalf("Expected length 0 on the buffer body as we should've read the whole thing, but got %v", len(buff))
+		}
+	})
 }

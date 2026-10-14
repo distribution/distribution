@@ -2,7 +2,9 @@ package v2
 
 import (
 	"fmt"
+	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"unicode"
 )
@@ -158,4 +160,20 @@ Loop:
 	}
 
 	return res, parse, nil
+}
+
+// GetOCIMaxRang gets the OCI-Chunk-Max-Length from the headers. If not set it will return 0
+func GetOCIMaxRange(resp *http.Response) (int64, error) {
+	maxRangeStr := resp.Header.Get("OCI-Chunk-Max-Length")
+	maxRange := int64(0)
+	if maxRangeStr != "" {
+		maxRangeRes, err := strconv.ParseInt(maxRangeStr, 10, 64)
+		if err != nil {
+			return 0, fmt.Errorf("OCI-Chunk-Max-Length is malformed %q: %w", maxRangeStr, err)
+		}
+
+		maxRange = maxRangeRes
+	}
+
+	return maxRange, nil
 }
