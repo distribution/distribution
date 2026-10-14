@@ -458,6 +458,42 @@ func TestGCWithUnusedLayerLinkPath(t *testing.T) {
 	}
 }
 
+func TestGCWithInvalidRevisionLinkFile(t *testing.T) {
+	ctx := dcontext.Background()
+	d := inmemory.New()
+
+	registry := createRegistry(t, d)
+	repo := makeRepository(t, registry, "invalidlinkfile")
+	image := uploadRandomSchema2Image(t, repo)
+
+	err := repo.Tags(ctx).Tag(ctx, "image", distribution.Descriptor{Digest: image.manifestDigest})
+	if err != nil {
+		t.Fatalf("Failed to tag descriptor: %v", err)
+	}
+
+	// Simulate a missing _manifests/tags directory
+	revisionLinkPath, err := pathFor(manifestRevisionLinkPathSpec{
+		name:     "invalidlinkfile",
+		revision: image.manifestDigest,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = d.PutContent(ctx, revisionLinkPath, []byte("invalid digest"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = MarkAndSweep(dcontext.Background(), d, registry, GCOpts{
+		DryRun:         false,
+		RemoveUntagged: true,
+	})
+	if err != nil {
+		t.Fatalf("got error: %v, expected nil", err)
+	}
+}
+
 func TestGCWithUnknownRepository(t *testing.T) {
 	ctx := dcontext.Background()
 	d := inmemory.New()
