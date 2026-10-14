@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"time"
 
@@ -158,6 +159,11 @@ func (d *driver) PutContent(ctx context.Context, subPath string, contents []byte
 		return err
 	}
 
+	// Close the file before renaming it, which is required on Windows.
+	if err := writer.Close(); err != nil {
+		return errors.Join(err, d.Delete(ctx, tempPath))
+	}
+
 	// Atomically replace the target file with the temporary file.
 	if err := d.Move(ctx, tempPath, subPath); err != nil {
 		// Clean up the temporary file if rename fails.
@@ -165,25 +171,6 @@ func (d *driver) PutContent(ctx context.Context, subPath string, contents []byte
 		return errors.Join(err, dErr)
 	}
 	return syncDir(filepath.Dir(d.fullPath(subPath)))
-}
-
-func syncDir(dir string) (retErr error) {
-	dirF, err := os.Open(dir)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return nil
-		}
-		return fmt.Errorf("sync dir: %w", err)
-	}
-	defer func() {
-		if err := dirF.Close(); err != nil {
-			retErr = errors.Join(retErr, fmt.Errorf("failed to close dir: %w", err))
-		}
-	}()
-	if err := dirF.Sync(); err != nil {
-		return fmt.Errorf("sync dir: %w", err)
-	}
-	return nil
 }
 
 // Reader retrieves an io.ReadCloser for the content stored at "path" with a
@@ -284,7 +271,7 @@ func (d *driver) List(ctx context.Context, subPath string) ([]string, error) {
 
 	keys := make([]string, 0, len(fileNames))
 	for _, fileName := range fileNames {
-		keys = append(keys, filepath.Join(subPath, fileName))
+		keys = append(keys, path.Join(subPath, fileName))
 	}
 
 	return keys, nil

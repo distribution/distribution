@@ -1002,6 +1002,7 @@ func (suite *DriverSuite) TestConcurrentStreamReads() {
 		offset := rand.Int63n(int64(len(contents)))
 		reader, err := suite.StorageDriver.Reader(suite.ctx, filename, offset)
 		suite.Require().NoError(err)
+		defer reader.Close()
 
 		readContents, err := io.ReadAll(reader)
 		suite.Require().NoError(err)
