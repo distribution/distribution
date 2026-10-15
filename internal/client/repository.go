@@ -202,13 +202,28 @@ func (t *tags) All(ctx context.Context) ([]string, error) {
 		return nil, err
 	}
 
+	// Use a copy of the client that refuses redirects to another host, so a
+	// same-host next link can't bounce the request somewhere else.
+	client := *t.client
+	originalRedirectCheck := client.CheckRedirect
+	originScheme, originHost := listURL.Scheme, listURL.Host
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		if !sameOrigin(req.URL, originScheme, originHost) {
+			return fmt.Errorf("tags/list redirect points to a different host: %s", req.URL.Redacted())
+		}
+		if originalRedirectCheck != nil {
+			return originalRedirectCheck(req, via)
+		}
+		return nil
+	}
+
 	var allTags []string
 	for {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, listURL.String(), nil)
 		if err != nil {
 			return nil, err
 		}
-		resp, err := t.client.Do(req)
+		resp, err := client.Do(req)
 		if err != nil {
 			return allTags, err
 		}
@@ -238,7 +253,7 @@ func (t *tags) All(ctx context.Context) ([]string, error) {
 			}
 
 			next := listURL.ResolveReference(linkURL)
-			if next.Scheme != listURL.Scheme || next.Host != listURL.Host {
+			if !sameOrigin(next, originScheme, originHost) {
 				return allTags, fmt.Errorf("tags/list next link points to a different host: %s", next.Redacted())
 			}
 
@@ -247,6 +262,12 @@ func (t *tags) All(ctx context.Context) ([]string, error) {
 			return allTags, nil
 		}
 	}
+}
+
+// sameOrigin reports whether u has the given scheme and host. Both are
+// compared case-insensitively (RFC 3986 section 3.1 and 3.2.2).
+func sameOrigin(u *url.URL, scheme, host string) bool {
+	return strings.EqualFold(u.Scheme, scheme) && strings.EqualFold(u.Host, host)
 }
 
 func descriptorFromResponse(response *http.Response) (v1.Descriptor, error) {
