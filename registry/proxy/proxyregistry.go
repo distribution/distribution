@@ -2,9 +2,12 @@ package proxy
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -34,6 +37,7 @@ type proxyingRegistry struct {
 	remoteURL         url.URL
 	authChallenger    authChallenger
 	basicAuth         auth.CredentialStore
+	baseTransport     http.RoundTripper
 }
 
 // NewRegistryPullThroughCache creates a registry acting as a pull through cache
@@ -122,13 +126,18 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 		}
 	}
 
+	baseTr, err := getHTTPTransport(config.TLS, remoteURL)
+	if err != nil {
+		return nil, fmt.Errorf("get proxy http transport: %w", err)
+	}
+
 	cs, b, err := func() (auth.CredentialStore, auth.CredentialStore, error) {
 		switch {
 		case config.Exec != nil:
 			cs, err := configureExecAuth(*config.Exec)
 			return cs, cs, err
 		default:
-			return configureAuth(config.Username, config.Password, config.RemoteURL)
+			return configureAuth(config.Username, config.Password, config.RemoteURL, baseTr)
 		}
 	}()
 	if err != nil {
@@ -145,8 +154,10 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 			remoteURL: *remoteURL,
 			cm:        challenge.NewSimpleManager(),
 			cs:        cs,
+			transport: baseTr,
 		},
-		basicAuth: b,
+		basicAuth:     b,
+		baseTransport: baseTr,
 	}, nil
 }
 
@@ -162,7 +173,7 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named
 	c := pr.authChallenger
 
 	tkopts := auth.TokenHandlerOptions{
-		Transport:   http.DefaultTransport,
+		Transport:   pr.baseTransport,
 		Credentials: c.credentialStore(),
 		Scopes: []auth.Scope{
 			auth.RepositoryScope{
@@ -173,7 +184,7 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named
 		Logger: dcontext.GetLogger(ctx),
 	}
 
-	tr := transport.NewTransport(http.DefaultTransport,
+	tr := transport.NewTransport(pr.baseTransport,
 		auth.NewAuthorizer(c.challengeManager(),
 			auth.NewTokenHandlerWithOptions(tkopts),
 			auth.NewBasicHandler(pr.basicAuth)))
@@ -225,6 +236,41 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named
 	}, nil
 }
 
+// getHTTPTransport builds http.RoundTripper adding TLS configuration if provided
+func getHTTPTransport(cfg *configuration.ProxyTLS, remoteURL *url.URL) (http.RoundTripper, error) {
+	if cfg == nil || (cfg.Certificate == "" && cfg.Key == "") {
+		return http.DefaultTransport, nil
+	}
+	if remoteURL.Scheme != "https" {
+		return nil, fmt.Errorf("TLS configuration set but URL is not HTTPS: %s", remoteURL)
+	}
+
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: cfg.InsecureSkipVerify,
+	}
+	cert, err := tls.LoadX509KeyPair(cfg.Certificate, cfg.Key)
+	if err != nil {
+		return nil, fmt.Errorf("load TLS key pair from %s and %s: %w", cfg.Certificate, cfg.Key, err)
+	}
+	tlsConfig.Certificates = []tls.Certificate{cert}
+	if len(cfg.RootCAs) > 0 {
+		pool := x509.NewCertPool()
+		for _, ca := range cfg.RootCAs {
+			caPem, err := os.ReadFile(ca)
+			if err != nil {
+				return nil, fmt.Errorf("reading root CA %s: %w", ca, err)
+			}
+
+			if ok := pool.AppendCertsFromPEM(caPem); !ok {
+				return nil, fmt.Errorf("could not add CA to pool from %s", ca)
+			}
+		}
+		tlsConfig.RootCAs = pool
+	}
+
+	return &http.Transport{TLSClientConfig: tlsConfig}, nil
+}
+
 func (pr *proxyingRegistry) Blobs() distribution.BlobEnumerator {
 	return pr.embedded.Blobs()
 }
@@ -255,8 +301,9 @@ type authChallenger interface {
 type remoteAuthChallenger struct {
 	remoteURL url.URL
 	sync.Mutex
-	cm challenge.Manager
-	cs auth.CredentialStore
+	cm        challenge.Manager
+	cs        auth.CredentialStore
+	transport http.RoundTripper
 }
 
 func (r *remoteAuthChallenger) credentialStore() auth.CredentialStore {
@@ -286,7 +333,7 @@ func (r *remoteAuthChallenger) tryEstablishChallenges(ctx context.Context) error
 	}
 
 	// establish challenge type with upstream
-	if err := ping(r.cm, remoteURL.String(), challengeHeader); err != nil {
+	if err := ping(r.cm, remoteURL.String(), challengeHeader, r.transport); err != nil {
 		return err
 	}
 	dcontext.GetLogger(ctx).Infof("Challenge established with upstream: %s", remoteURL.Redacted())
