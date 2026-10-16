@@ -27,7 +27,7 @@ func TestConfigureAuthAllowsSameAuthorityRealm(t *testing.T) {
 	t.Cleanup(upstream.Close)
 	serverURL = upstream.URL
 
-	tokenCreds, _, err := configureAuth("user", "pass", upstream.URL)
+	tokenCreds, _, err := configureAuth(http.DefaultClient, "user", "pass", upstream.URL)
 	if err != nil {
 		t.Fatalf("configureAuth: %v", err)
 	}
@@ -62,7 +62,7 @@ func TestConfigureAuthRejectsLoopbackRealmOnDifferentAuthority(t *testing.T) {
 	}))
 	t.Cleanup(upstream.Close)
 
-	tokenCreds, _, err := configureAuth("user", "pass", upstream.URL)
+	tokenCreds, _, err := configureAuth(http.DefaultClient, "user", "pass", upstream.URL)
 	if err != nil {
 		t.Fatalf("configureAuth: %v", err)
 	}
