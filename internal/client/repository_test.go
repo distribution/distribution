@@ -572,6 +572,30 @@ func TestBlobStatHeadRejectedRangeIgnored(t *testing.T) {
 	}
 }
 
+func TestBlobStatHeadRejectedEmptyBlob(t *testing.T) {
+	stat, err := testBlobStatHeadRejected(t, http.StatusUnauthorized, func([]byte) testutil.Response {
+		return testutil.Response{
+			StatusCode: http.StatusRequestedRangeNotSatisfiable,
+			Headers:    http.Header{"Content-Range": {"bytes */0"}},
+		}
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stat.Size != 0 {
+		t.Fatalf("unexpected size %d, expected 0", stat.Size)
+	}
+}
+
+func TestBlobStatHeadRejectedRangeNotSatisfiableWithoutContentRange(t *testing.T) {
+	_, err := testBlobStatHeadRejected(t, http.StatusUnauthorized, func([]byte) testutil.Response {
+		return testutil.Response{StatusCode: http.StatusRequestedRangeNotSatisfiable}
+	})
+	if err == nil {
+		t.Fatal("expected an error on a 416 without Content-Range")
+	}
+}
+
 func TestBlobStatHeadAndGetRejected(t *testing.T) {
 	_, err := testBlobStatHeadRejected(t, http.StatusUnauthorized, func([]byte) testutil.Response {
 		return testutil.Response{StatusCode: http.StatusUnauthorized}

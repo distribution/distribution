@@ -1035,22 +1035,19 @@ func (bs *blobStatter) statWithRangedGet(ctx context.Context, u string, dgst dig
 		return v1.Descriptor{}, distribution.ErrBlobUnknown
 	}
 
-	if err := HandleHTTPResponseError(resp); err != nil {
-		return v1.Descriptor{}, err
-	}
-
 	var length int64
-	if resp.StatusCode == http.StatusPartialContent {
-		contentRange := resp.Header.Get("Content-Range")
-		i := strings.LastIndex(contentRange, "/")
-		if i < 0 {
-			return v1.Descriptor{}, fmt.Errorf("invalid content-range header %q for request: %s", contentRange, u)
-		}
-		length, err = strconv.ParseInt(contentRange[i+1:], 10, 64)
+	switch resp.StatusCode {
+	case http.StatusPartialContent, http.StatusRequestedRangeNotSatisfiable:
+		// An empty blob has no first byte: the range is unsatisfiable and the
+		// server answers 416 with "Content-Range: bytes */0" (RFC 9110 15.5.17).
+		length, err = parseContentRangeLength(resp.Header.Get("Content-Range"))
 		if err != nil {
-			return v1.Descriptor{}, fmt.Errorf("error parsing content-range %q: %v", contentRange, err)
+			return v1.Descriptor{}, fmt.Errorf("%v for request: %s", err, u)
 		}
-	} else {
+	default:
+		if err := HandleHTTPResponseError(resp); err != nil {
+			return v1.Descriptor{}, err
+		}
 		lengthHeader := resp.Header.Get("Content-Length")
 		if lengthHeader == "" {
 			return v1.Descriptor{}, fmt.Errorf("missing content-length header for request: %s", u)
@@ -1066,6 +1063,20 @@ func (bs *blobStatter) statWithRangedGet(ctx context.Context, u string, dgst dig
 		Size:      length,
 		Digest:    dgst,
 	}, nil
+}
+
+// parseContentRangeLength returns the complete length of a Content-Range
+// header, either "bytes <first>-<last>/<length>" or "bytes */<length>".
+func parseContentRangeLength(contentRange string) (int64, error) {
+	i := strings.LastIndex(contentRange, "/")
+	if !strings.HasPrefix(contentRange, "bytes ") || i < 0 {
+		return 0, fmt.Errorf("invalid content-range header %q", contentRange)
+	}
+	length, err := strconv.ParseInt(contentRange[i+1:], 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("error parsing content-range %q: %v", contentRange, err)
+	}
+	return length, nil
 }
 
 func buildCatalogValues(maxEntries int, last string) url.Values {
