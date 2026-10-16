@@ -1,14 +1,13 @@
 package notifications
 
 import (
+	"log/slog"
 	"reflect"
 	"sync"
 	"testing"
 	"time"
 
 	events "github.com/docker/go-events"
-
-	"github.com/sirupsen/logrus"
 )
 
 func TestEventQueue(t *testing.T) {
@@ -147,7 +146,7 @@ func (ts *testSink) Close() error {
 	defer ts.mu.Unlock()
 	ts.closed = true
 
-	logrus.Infof("closing testSink")
+	slog.Info("closing testSink")
 	return nil
 }
 
