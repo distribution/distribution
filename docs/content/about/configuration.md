@@ -1379,7 +1379,7 @@ index manifests uploaded to the registry.
 
 ##### `platforms`
 
-Set `platformexist` to `all` (the default) to validate all platform images exist.
+Set `platforms` to `all` (the default) to validate all platform images exist.
 The registry will validate that the images referenced by the index exist in the
 registry before accepting the image index.
 
