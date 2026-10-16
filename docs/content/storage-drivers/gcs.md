@@ -12,8 +12,11 @@ An implementation of the `storagedriver.StorageDriver` interface which uses Goog
 |:--------------|:---------|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `bucket`  | yes | The name of your Google Cloud Storage bucket where you wish to store objects (needs to already be created prior to driver initialization). |
 | `keyfile`  | no | A private service account key file in JSON format used for [Service Account Authentication](https://cloud.google.com/storage/docs/authentication#service_accounts). |
+| `credentials`  | no | A service account key given inline as a map, with the same fields as the JSON key file (`type`, `project_id`, `private_key_id`, `private_key`, `client_email`, and so on). Ignored when `keyfile` is set. |
 | `rootdirectory`  | no | The root directory tree in which all registry files are stored. Defaults to the empty string (bucket root). If a prefix is used, the path `bucketname/<prefix>` has to be pre-created before starting the registry. The prefix is applied to all Google Cloud Storage keys to allow you to segment data in your bucket if necessary.|
 | `chunksize`  | no (default 16777216) | This is the chunk size used for uploading large blobs, must be a multiple of 256*1024. |
+| `maxconcurrency`  | no (default 50) | The maximum number of concurrent Google Cloud Storage operations the driver runs. Values below 25 are raised to 25. |
+| `useragent`  | no | The `User-Agent` header value sent by the Google Cloud Storage client. |
 
 {{< hint type=note >}}
 Instead of a key file you can use [Google Application Default Credentials](https://developers.google.com/identity/protocols/application-default-credentials).
