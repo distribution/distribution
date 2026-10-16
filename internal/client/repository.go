@@ -984,6 +984,13 @@ func (bs *blobStatter) Stat(ctx context.Context, dgst digest.Digest) (v1.Descrip
 	}
 	defer resp.Body.Close()
 
+	switch resp.StatusCode {
+	case http.StatusUnauthorized, http.StatusForbidden, http.StatusMethodNotAllowed:
+		// Some registries (e.g. public.ecr.aws) reject HEAD on blobs while
+		// serving GET with the same credentials.
+		return bs.statWithRangedGet(ctx, u, dgst)
+	}
+
 	if resp.StatusCode == http.StatusNotFound {
 		return v1.Descriptor{}, distribution.ErrBlobUnknown
 	}
@@ -1007,6 +1014,69 @@ func (bs *blobStatter) Stat(ctx context.Context, dgst digest.Digest) (v1.Descrip
 		Size:      length,
 		Digest:    dgst,
 	}, nil
+}
+
+// statWithRangedGet stats a blob with a GET of its first byte, reading the
+// total size from Content-Range (or Content-Length if the range is ignored).
+func (bs *blobStatter) statWithRangedGet(ctx context.Context, u string, dgst digest.Digest) (v1.Descriptor, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	if err != nil {
+		return v1.Descriptor{}, err
+	}
+	req.Header.Set("Range", "bytes=0-0")
+
+	resp, err := bs.client.Do(req)
+	if err != nil {
+		return v1.Descriptor{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return v1.Descriptor{}, distribution.ErrBlobUnknown
+	}
+
+	var length int64
+	switch resp.StatusCode {
+	case http.StatusPartialContent, http.StatusRequestedRangeNotSatisfiable:
+		// An empty blob has no first byte: the range is unsatisfiable and the
+		// server answers 416 with "Content-Range: bytes */0" (RFC 9110 15.5.17).
+		length, err = parseContentRangeLength(resp.Header.Get("Content-Range"))
+		if err != nil {
+			return v1.Descriptor{}, fmt.Errorf("%v for request: %s", err, u)
+		}
+	default:
+		if err := HandleHTTPResponseError(resp); err != nil {
+			return v1.Descriptor{}, err
+		}
+		lengthHeader := resp.Header.Get("Content-Length")
+		if lengthHeader == "" {
+			return v1.Descriptor{}, fmt.Errorf("missing content-length header for request: %s", u)
+		}
+		length, err = strconv.ParseInt(lengthHeader, 10, 64)
+		if err != nil {
+			return v1.Descriptor{}, fmt.Errorf("error parsing content-length: %v", err)
+		}
+	}
+
+	return v1.Descriptor{
+		MediaType: resp.Header.Get("Content-Type"),
+		Size:      length,
+		Digest:    dgst,
+	}, nil
+}
+
+// parseContentRangeLength returns the complete length of a Content-Range
+// header, either "bytes <first>-<last>/<length>" or "bytes */<length>".
+func parseContentRangeLength(contentRange string) (int64, error) {
+	i := strings.LastIndex(contentRange, "/")
+	if !strings.HasPrefix(contentRange, "bytes ") || i < 0 {
+		return 0, fmt.Errorf("invalid content-range header %q", contentRange)
+	}
+	length, err := strconv.ParseInt(contentRange[i+1:], 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("error parsing content-range %q: %v", contentRange, err)
+	}
+	return length, nil
 }
 
 func buildCatalogValues(maxEntries int, last string) url.Values {
