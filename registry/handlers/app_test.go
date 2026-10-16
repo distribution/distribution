@@ -2,10 +2,12 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"reflect"
+	"strconv"
 	"testing"
 	"time"
 
@@ -16,9 +18,12 @@ import (
 	v2 "github.com/distribution/distribution/v3/registry/api/v2"
 	"github.com/distribution/distribution/v3/registry/auth"
 	_ "github.com/distribution/distribution/v3/registry/auth/silly"
+	"github.com/distribution/distribution/v3/registry/proxy"
 	"github.com/distribution/distribution/v3/registry/storage"
 	memorycache "github.com/distribution/distribution/v3/registry/storage/cache/memory"
 	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
+	"github.com/distribution/reference"
+	"github.com/opencontainers/go-digest"
 )
 
 // TestAppDispatcher builds an application with a test dispatcher and ensures
@@ -362,5 +367,92 @@ func TestAppendAccessRecords(t *testing.T) {
 	expectedResult = []auth.Access{expectedDeleteRecord}
 	if ok := reflect.DeepEqual(result, expectedResult); !ok {
 		t.Fatal("Actual access record differs from expected")
+	}
+}
+
+// TestPullThroughCacheBlobTTLReclaimsStorage ensures that when the registry is
+// configured as a pull through cache, an expired blob is unlinked from the
+// repository and removed from the blob store.
+func TestPullThroughCacheBlobTTLReclaimsStorage(t *testing.T) {
+	ctx := dcontext.Background()
+
+	content := []byte("cached layer content")
+	dgst := digest.FromBytes(content)
+
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v2/foo/bar/blobs/"+dgst.String() {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		w.Header().Set("Content-Type", "application/octet-stream")
+		w.Header().Set("Docker-Content-Digest", dgst.String())
+		w.Header().Set("Content-Length", strconv.Itoa(len(content)))
+		if r.Method == http.MethodHead {
+			return
+		}
+		w.Write(content)
+	}))
+	defer upstream.Close()
+
+	ttl := 10 * time.Millisecond
+	config := configuration.Configuration{
+		Storage: configuration.Storage{
+			"inmemory": nil,
+			"maintenance": configuration.Parameters{"uploadpurging": map[any]any{
+				"enabled": false,
+			}},
+		},
+	}
+	config.Proxy.RemoteURL = upstream.URL
+	config.Proxy.TTL = &ttl
+
+	app := NewApp(ctx, &config)
+	defer func() {
+		if closer, ok := app.registry.(proxy.Closer); ok {
+			closer.Close()
+		}
+	}()
+
+	name, err := reference.WithName("foo/bar")
+	if err != nil {
+		t.Fatalf("error parsing repository name: %v", err)
+	}
+
+	repo, err := app.registry.Repository(ctx, name)
+	if err != nil {
+		t.Fatalf("error getting repository: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/v2/foo/bar/blobs/"+dgst.String(), nil)
+	if err := repo.Blobs(ctx).ServeBlob(ctx, httptest.NewRecorder(), req, dgst); err != nil {
+		t.Fatalf("error serving blob: %v", err)
+	}
+
+	if err := repo.Blobs(ctx).Delete(ctx, dgst); !errors.Is(err, distribution.ErrUnsupported) {
+		t.Fatalf("expected a client-initiated blob delete on a cache to be unsupported, got: %v", err)
+	}
+
+	paths := []string{
+		"/docker/registry/v2/repositories/foo/bar/_layers/sha256/" + dgst.Encoded() + "/link",
+		"/docker/registry/v2/blobs/sha256/" + dgst.Encoded()[:2] + "/" + dgst.Encoded() + "/data",
+	}
+	for _, p := range paths {
+		if _, err := app.driver.Stat(ctx, p); err != nil {
+			t.Fatalf("expected %s to exist after caching the blob: %v", p, err)
+		}
+	}
+
+	for _, p := range paths {
+		removed := false
+		for i := 0; i < 100; i++ {
+			if _, err := app.driver.Stat(ctx, p); err != nil {
+				removed = true
+				break
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
+		if !removed {
+			t.Errorf("expected %s to be removed once the blob TTL expired", p)
+		}
 	}
 }
