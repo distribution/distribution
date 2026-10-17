@@ -468,6 +468,7 @@ storage:
   cache:
     blobdescriptor: inmemory
     blobdescriptorsize: 10000
+    blobdescriptorttl: 10m
   maintenance:
     uploadpurging:
       enabled: true
@@ -568,6 +569,15 @@ If `blobdescriptor` is set to `inmemory`, the optional `blobdescriptorsize`
 parameter sets a limit on the number of descriptors to store in the cache.
 The default value is 10000. If this parameter is set to 0, the cache is allowed
 to grow with no size limit.
+
+The optional `blobdescriptorttl` parameter sets how long a descriptor stays in
+the `inmemory` cache before it is looked up again in the storage backend, as a
+duration (for example `10m`). By default, descriptors never expire. Setting a
+TTL bounds how long the cache can report blobs that were removed from storage
+while the registry was running, for example by garbage collection or by
+deleting objects directly in the backend. This is especially useful for pull
+through caches, which otherwise keep redirecting clients to missing blobs until
+the registry is restarted.
 
 ### `tag`
 
