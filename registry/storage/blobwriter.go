@@ -40,6 +40,7 @@ type blobWriter struct {
 
 	resumableDigestEnabled bool
 	committed              bool
+	cancelled              bool
 }
 
 var _ distribution.BlobWriter = &blobWriter{}
@@ -98,6 +99,7 @@ func (bw *blobWriter) Cancel(ctx context.Context) error {
 	if err := bw.fileWriter.Cancel(ctx); err != nil {
 		return err
 	}
+	bw.cancelled = true
 
 	if err := bw.Close(); err != nil {
 		dcontext.GetLogger(ctx).Errorf("error closing blobwriter: %s", err)
@@ -150,6 +152,16 @@ func (bw *blobWriter) ReadFrom(r io.Reader) (n int64, err error) {
 func (bw *blobWriter) Close() error {
 	if bw.committed {
 		return errors.New("blobwriter close after commit")
+	}
+
+	if bw.cancelled {
+		// The upload is being discarded, so there is no hash state worth
+		// saving. Writing it would recreate the upload directory after
+		// removeResources deleted it, without a startedat file, and
+		// PurgeUploads never removes such a directory. The file writer has
+		// already been cancelled, so an error from closing it is expected.
+		_ = bw.fileWriter.Close()
+		return nil
 	}
 
 	if err := bw.storeHashState(bw.blobStore.ctx); err != nil && err != errResumableDigestNotAvailable {
