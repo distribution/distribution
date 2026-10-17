@@ -290,8 +290,6 @@ redis:
   maxidleconns: 16
   poolsize: 64
   connmaxidletime: 300s
-  tls:
-    enabled: false
 health:
   storagedriver:
     enabled: true
