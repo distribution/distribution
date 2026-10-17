@@ -456,7 +456,7 @@ var CurrentVersion = MajorMinorVersion(0, 1)
 // This can be error, warn, info, or debug
 type Loglevel string
 
-// UnmarshalYAML implements the yaml.Umarshaler interface
+// UnmarshalYAML implements the yaml.Unmarshaler interface
 // Unmarshals a string into a Loglevel, lowercasing the string and validating that it represents a
 // valid loglevel
 func (loglevel *Loglevel) UnmarshalYAML(unmarshal func(any) error) error {
@@ -783,7 +783,7 @@ type ValidationIndexes struct {
 // This can be all, none, or list
 type Platforms string
 
-// UnmarshalYAML implements the yaml.Umarshaler interface
+// UnmarshalYAML implements the yaml.Unmarshaler interface
 // Unmarshals a string into a Platforms option, lowercasing the string and validating that it represents a
 // valid option
 func (platforms *Platforms) UnmarshalYAML(unmarshal func(any) error) error {
@@ -1002,8 +1002,8 @@ const (
 
 type ClientAuth string
 
-// UnmarshalYAML implements the yaml.Umarshaler interface
-// Unmarshals a string into a ClientAuth, validating that it represents a valid ClientAuth mod
+// UnmarshalYAML implements the yaml.Unmarshaler interface
+// Unmarshals a string into a ClientAuth, validating that it represents a valid ClientAuth mode
 func (clientAuth *ClientAuth) UnmarshalYAML(unmarshal func(any) error) error {
 	var clientAuthString string
 	err := unmarshal(&clientAuthString)
