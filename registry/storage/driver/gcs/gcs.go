@@ -141,7 +141,7 @@ func FromParameters(ctx context.Context, parameters map[string]any) (storagedriv
 		case int, uint, int32, uint32, uint64, int64:
 			chunkSize = int(reflect.ValueOf(v).Convert(reflect.TypeFor[int]()).Int())
 		default:
-			return nil, fmt.Errorf("invalid valud for chunksize: %#v", chunkSizeParam)
+			return nil, fmt.Errorf("invalid value for chunksize: %#v", chunkSizeParam)
 		}
 
 		if chunkSize < minChunkSize {
