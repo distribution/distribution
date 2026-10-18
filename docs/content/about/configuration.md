@@ -1361,7 +1361,7 @@ one of the `allow` regular expressions **and** one of the following holds:
 #### `indexes`
 
 By default the registry will validate that all platform images exist when an image
-index is uploaded to the registry. Disabling this validatation is experimental
+index is uploaded to the registry. Disabling this validation is experimental
 because other tooling that uses the registry may expect the image index to be complete.
 
 ```yaml
