@@ -305,7 +305,7 @@ func (registry *Registry) ListenAndServe() error {
 				tlsClientAuthMod, ok := tlsClientAuth[string(config.HTTP.TLS.ClientAuth)]
 
 				if !ok {
-					return fmt.Errorf("unknown client auth mod '%s' specified for http.tls.clientauth", config.HTTP.TLS.ClientAuth)
+					return fmt.Errorf("unknown client auth mode '%s' specified for http.tls.clientauth", config.HTTP.TLS.ClientAuth)
 				}
 
 				tlsConf.ClientAuth = tlsClientAuthMod
