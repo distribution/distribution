@@ -1395,7 +1395,7 @@ that uses the registry may expect the image index to be complete.
 ##### `platformlist`
 
 When `platforms` is set to `list`, set `platformlist` to an array of
-platforms to validate. If a platform is included in this the array and in the images
+platforms to validate. If a platform is included in this array and in the images
 contained within an index, the registry will validate that the platform specific image
 exists in the registry before accepting the index. The registry will not validate the
 existence of platform specific images in the index that do not appear in the
