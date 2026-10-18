@@ -54,9 +54,9 @@ func TestSimpleRead(t *testing.T) {
 func TestFileReaderSeek(t *testing.T) {
 	driver := inmemory.New()
 	pattern := "01234567890ab" // prime length block
-	repititions := 1024
+	repetitions := 1024
 	path := "/patterned"
-	content := bytes.Repeat([]byte(pattern), repititions)
+	content := bytes.Repeat([]byte(pattern), repetitions)
 	ctx := dcontext.Background()
 
 	if err := driver.PutContent(ctx, path, content); err != nil {
@@ -70,8 +70,8 @@ func TestFileReaderSeek(t *testing.T) {
 
 	// Seek all over the place, in blocks of pattern size and make sure we get
 	// the right data.
-	for _, repitition := range mrand.Perm(repititions - 1) {
-		targetOffset := int64(len(pattern) * repitition)
+	for _, repetition := range mrand.Perm(repetitions - 1) {
+		targetOffset := int64(len(pattern) * repetition)
 		// Seek to a multiple of pattern size and read pattern size bytes
 		offset, err := fr.Seek(targetOffset, io.SeekStart)
 		if err != nil {
