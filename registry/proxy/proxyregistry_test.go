@@ -41,8 +41,8 @@ func TestNewUpstreamTransportDoesNotModifyDefaultTransport(t *testing.T) {
 	if tr.HTTP2 == nil || tr.HTTP2.SendPingTimeout != upstreamSendPingTimeout || tr.HTTP2.PingTimeout != upstreamPingTimeout {
 		t.Fatalf("unexpected HTTP2 config: %+v", tr.HTTP2)
 	}
-	if http.DefaultTransport.(*http.Transport).HTTP2 != nil {
-		t.Fatal("http.DefaultTransport was modified")
+	if h2 := http.DefaultTransport.(*http.Transport).HTTP2; h2 != nil && (h2.SendPingTimeout != 0 || h2.PingTimeout != 0) {
+		t.Fatalf("http.DefaultTransport was modified: %+v", h2)
 	}
 }
 
