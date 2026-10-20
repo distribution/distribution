@@ -3,11 +3,10 @@ package driver
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"path/filepath"
 	"sort"
 	"strings"
-
-	"github.com/sirupsen/logrus"
 )
 
 // ErrSkipDir is used as a return value from onFileFunc to indicate that
@@ -102,7 +101,7 @@ func doWalkFallback(ctx context.Context, driver StorageDriver, from string, star
 			switch err.(type) {
 			case PathNotFoundError:
 				// repository was removed in between listing and enumeration. Ignore it.
-				logrus.WithField("path", child).Infof("ignoring deleted path")
+				slog.Info("ignoring deleted path", "path", child)
 				continue
 			default:
 				return false, err
