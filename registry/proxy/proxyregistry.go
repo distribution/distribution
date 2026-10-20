@@ -2,14 +2,17 @@ package proxy
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
+	"path"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/distribution/reference"
+	"github.com/opencontainers/go-digest"
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/configuration"
@@ -66,31 +69,11 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 	if ttl != nil {
 		s = scheduler.New(ctx, driver, "/scheduler-state.json")
 		s.OnBlobExpire(func(ref reference.Reference) error {
-			var r reference.Canonical
-			var ok bool
-			if r, ok = ref.(reference.Canonical); !ok {
+			r, ok := ref.(reference.Canonical)
+			if !ok {
 				return fmt.Errorf("unexpected reference type : %T", ref)
 			}
-
-			repo, err := registry.Repository(ctx, r)
-			if err != nil {
-				return err
-			}
-
-			blobs := repo.Blobs(ctx)
-
-			// Clear the repository reference and descriptor caches
-			err = blobs.Delete(ctx, r.Digest())
-			if err != nil {
-				return err
-			}
-
-			err = v.RemoveBlob(r.Digest().String())
-			if err != nil {
-				return err
-			}
-
-			return nil
+			return evictBlob(ctx, registry, driver, v, s, r)
 		})
 
 		s.OnManifestExpire(func(ref reference.Reference) error {
@@ -115,6 +98,8 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 			}
 			return nil
 		})
+
+		s.OnReconcile(reconcileFromStorage(ctx, driver, *ttl))
 
 		err = s.Start()
 		if err != nil {
@@ -318,4 +303,235 @@ func (pr *proxiedRepository) Named() reference.Named {
 
 func (pr *proxiedRepository) Tags(ctx context.Context) distribution.TagService {
 	return pr.tags
+}
+
+// evictBlob handles a scheduled blob expiry for repo@digest in r. It
+// acquires the scheduler's per-digest eviction lock first so that
+// concurrent expiries for the same digest run one after the other rather
+// than racing; only then it deletes the per-repository link (clearing the
+// descriptor cache for the expiring repo). The shared blob file is
+// vacuumed only when no other scheduled entry is still live for the
+// digest — by the time the last serialised eviction runs, every prior
+// link has been deleted and every prior entry has been dropped, so that
+// callback observes "no surviving references" and reclaims the blob.
+//
+// Before bootstrap reconcile finishes, the scheduler may not yet know
+// about orphan on-disk links left over from prior unclean shutdowns, so
+// an extra on-disk walk runs as a safety net. Once s.Reconciled() flips
+// true the scheduler is authoritative and the walk is skipped — that
+// keeps the steady-state eviction cheap even on S3, where a recursive
+// LIST is expensive.
+// Split out from the OnBlobExpire closure so it can be unit-tested without
+// constructing a full HTTP-backed proxyingRegistry.
+func evictBlob(ctx context.Context, registry distribution.Namespace, drv driver.StorageDriver, v storage.Vacuum, s *scheduler.TTLExpirationScheduler, r reference.Canonical) error {
+	evictMu := s.EvictionLock(r.Digest())
+	evictMu.Lock()
+	defer evictMu.Unlock()
+
+	repo, err := registry.Repository(ctx, r)
+	if err != nil {
+		return err
+	}
+
+	if err := repo.Blobs(ctx).Delete(ctx, r.Digest()); err != nil {
+		return err
+	}
+
+	// Atomically drop our own scheduler entry and check whether any
+	// sibling entry still references this digest. Doing both under one
+	// scheduler lock acquisition prevents the mutual-skip race that
+	// otherwise appears when N timers for the same digest fire in the
+	// same instant: each callback removes itself before observing the
+	// remainder, so the callers naturally form a serial chain in which
+	// only the last one sees an empty map and proceeds to vacuum.
+	if !s.ClaimVacuum(r.String(), r.Digest()) {
+		dcontext.GetLogger(ctx).Infof(
+			"skipping blob vacuum for %s: another scheduled entry still references the digest",
+			r.Digest())
+		return nil
+	}
+
+	if !s.Reconciled() {
+		hasLink, err := anyRepoHasBlobLink(ctx, drv, r.Digest())
+		if err != nil {
+			return fmt.Errorf("checking surviving blob links for %s: %w", r.Digest(), err)
+		}
+		if hasLink {
+			dcontext.GetLogger(ctx).Infof(
+				"skipping blob vacuum for %s: a repository link still references the digest on disk (pre-reconcile)",
+				r.Digest())
+			return nil
+		}
+	}
+
+	return v.RemoveBlob(r.Digest().String())
+}
+
+// errStopWalk is a sentinel returned from the Walk callback to stop the
+// traversal on the first matching link file. Drivers may wrap the
+// returned error so the surviving result is conveyed through a separate
+// found flag captured in the closure, not via errors.Is.
+var errStopWalk = errors.New("stop walk")
+
+// anyRepoHasBlobLink reports whether any repository in storage holds a
+// layer link pointing at dgst. It walks the repositories tree directly via
+// the storage driver so it can find orphan link files that would not be
+// reported by Namespace.Repositories (which requires the per-repo
+// `_manifests` marker directory to exist). Pruning skips every subtree
+// that cannot contain a match, so the typical cost is one descent per
+// repository.
+func anyRepoHasBlobLink(ctx context.Context, drv driver.StorageDriver, dgst digest.Digest) (bool, error) {
+	root := storage.RepositoriesRootPath()
+	alg := string(dgst.Algorithm())
+	hex := dgst.Encoded()
+	matchSuffix := "/_layers/" + alg + "/" + hex + "/link"
+
+	var found bool
+	err := drv.Walk(ctx, root, func(info driver.FileInfo) error {
+		p := info.Path()
+		if info.IsDir() {
+			switch path.Base(p) {
+			case "_manifests", "_uploads":
+				return driver.ErrSkipDir
+			}
+			// Inside `_layers`, the layout is <alg>/<hex>/. Prune any
+			// algorithm or digest hex that does not match the target.
+			if idx := strings.LastIndex(p, "/_layers/"); idx >= 0 {
+				sub := p[idx+len("/_layers/"):]
+				segs := strings.Split(sub, "/")
+				switch len(segs) {
+				case 1:
+					if segs[0] != alg {
+						return driver.ErrSkipDir
+					}
+				case 2:
+					if segs[0] != alg || segs[1] != hex {
+						return driver.ErrSkipDir
+					}
+				}
+			}
+			return nil
+		}
+		if strings.HasSuffix(p, matchSuffix) {
+			found = true
+			return errStopWalk
+		}
+		return nil
+	})
+	if found {
+		return true, nil
+	}
+	if err != nil {
+		if errors.As(err, &driver.PathNotFoundError{}) {
+			return false, nil
+		}
+		return false, fmt.Errorf("walking %s: %w", root, err)
+	}
+	return false, nil
+}
+
+// reconcileFromStorage returns a scheduler.Reconciler that walks the
+// repositories tree once, discovers blob and manifest link files that have
+// no entry in the scheduler, and schedules them with ttl. Designed to
+// recover from prior unclean shutdowns and from state written by binaries
+// that did not maintain the scheduler index for all on-disk links.
+func reconcileFromStorage(ctx context.Context, drv driver.StorageDriver, ttl time.Duration) scheduler.Reconciler {
+	return func(s *scheduler.TTLExpirationScheduler) error {
+		root := storage.RepositoriesRootPath()
+		var blobCount, manifestCount int
+		walkErr := drv.Walk(ctx, root, func(info driver.FileInfo) error {
+			if info.IsDir() {
+				return nil
+			}
+			repo, kind, dgst, ok := parseRepoLinkPath(root, info.Path())
+			if !ok {
+				return nil
+			}
+			named, err := reference.WithName(repo)
+			if err != nil {
+				dcontext.GetLogger(ctx).Debugf("reconcile: invalid repository name %q: %v", repo, err)
+				return nil
+			}
+			canonical, err := reference.WithDigest(named, dgst)
+			if err != nil {
+				dcontext.GetLogger(ctx).Debugf("reconcile: cannot canonicalize %s@%s: %v", repo, dgst, err)
+				return nil
+			}
+			switch kind {
+			case linkKindBlob:
+				added, addErr := s.AddBlobIfAbsent(canonical, ttl)
+				if addErr != nil {
+					dcontext.GetLogger(ctx).Warnf("reconcile: AddBlobIfAbsent %s failed: %v", canonical, addErr)
+					return nil
+				}
+				if added {
+					blobCount++
+				}
+			case linkKindManifest:
+				added, addErr := s.AddManifestIfAbsent(canonical, ttl)
+				if addErr != nil {
+					dcontext.GetLogger(ctx).Warnf("reconcile: AddManifestIfAbsent %s failed: %v", canonical, addErr)
+					return nil
+				}
+				if added {
+					manifestCount++
+				}
+			}
+			return nil
+		})
+		if walkErr != nil {
+			if errors.As(walkErr, &driver.PathNotFoundError{}) {
+				return nil
+			}
+			return fmt.Errorf("walking %s: %w", root, walkErr)
+		}
+		dcontext.GetLogger(ctx).Infof(
+			"scheduler bootstrap reconcile: discovered %d orphan blob links, %d orphan manifest links",
+			blobCount, manifestCount)
+		return nil
+	}
+}
+
+const (
+	linkKindBlob     = "blob"
+	linkKindManifest = "manifest"
+
+	layersInfix    = "/_layers/"
+	manifestsInfix = "/_manifests/revisions/"
+	linkSuffix     = "/link"
+)
+
+// parseRepoLinkPath extracts (repository name, link kind, digest) from a
+// driver path rooted at root, returning ok=false for anything that is not
+// a recognised layer or manifest revision link file. Repository names
+// cannot contain "_layers" or "_manifests" as a path component (the
+// reference grammar forbids leading underscores), so the infix search is
+// unambiguous.
+func parseRepoLinkPath(root, p string) (repo string, kind string, dgst digest.Digest, ok bool) {
+	prefix := root + "/"
+	if !strings.HasPrefix(p, prefix) || !strings.HasSuffix(p, linkSuffix) {
+		return "", "", "", false
+	}
+	sub := p[len(prefix):]
+
+	if idx := strings.Index(sub, layersInfix); idx >= 0 {
+		return parseAlgHex(sub[:idx], sub[idx+len(layersInfix):], linkKindBlob)
+	}
+	if idx := strings.Index(sub, manifestsInfix); idx >= 0 {
+		return parseAlgHex(sub[:idx], sub[idx+len(manifestsInfix):], linkKindManifest)
+	}
+	return "", "", "", false
+}
+
+func parseAlgHex(repo, rest, kind string) (string, string, digest.Digest, bool) {
+	// rest must be exactly "<algorithm>/<encoded>/link"
+	parts := strings.Split(rest, "/")
+	if len(parts) != 3 || parts[2] != "link" {
+		return "", "", "", false
+	}
+	d := digest.NewDigestFromEncoded(digest.Algorithm(parts[0]), parts[1])
+	if err := d.Validate(); err != nil {
+		return "", "", "", false
+	}
+	return repo, kind, d, true
 }
