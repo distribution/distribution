@@ -1,5 +1,8 @@
 name: build
 
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -12,13 +15,6 @@ on:
     tags:
       - 'v*'
   pull_request:
-
-env:
-  DOCKERHUB_SLUG: distribution/distribution
-  GHCR_SLUG: ghcr.io/${{ github.repository }}
-
-permissions:
-  contents: read # to fetch code (actions/checkout)
 
 jobs:
   test:
@@ -93,88 +89,54 @@ jobs:
         with:
           directory: ./
 
-  build:
+  binaries:
+    uses: docker/github-builder/.github/workflows/bake.yml@58cb9f5b71b1836d6f690c1e95effdeb9b98cb8a # v1.17.0
     permissions:
-      contents: write # to create GitHub release (softprops/action-gh-release)
-      packages: write # so we can push the image to GHCR
+      contents: read # same as global permission
+      id-token: write # to sign provenance and cache entries
+    with:
+      runner: ubuntu-24.04
+      target: artifact-all
+      output: local
+      artifact-name: registry-build
+      artifact-upload: true
+      cache: true
+      cache-mode: max
+      cache-scope: registry
+      sign: ${{ github.event_name != 'pull_request' }}
+      set: |
+        *.args.BUILDKIT_CONTEXT_KEEP_GIT_DIR=1
 
+  binaries-finalize:
     runs-on: ubuntu-latest
     needs:
-      - test
-      - test-linux
+      - binaries
     steps:
       -
-        name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        name: Download artifacts
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          fetch-depth: 0
-          persist-credentials: false
+          name: ${{ needs.binaries.outputs.artifact-name }}
+          path: /tmp/registry-output
       -
-        name: Docker meta
-        id: meta
-        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6
-        with:
-          images: |
-            ${{ env.DOCKERHUB_SLUG }}
-            ${{ env.GHCR_SLUG }}
-          ### versioning strategy
-          ### push semver tag v3.2.1 on main (default branch)
-          # distribution/distribution:3.2.1
-          # distribution/distribution:3.2
-          # distribution/distribution:3
-          # distribution/distribution:latest
-          ### push semver prelease tag v3.0.0-beta.1 on main (default branch)
-          # distribution/distribution:3.0.0-beta.1
-          ### push on main
-          # distribution/distribution:edge
-          tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=ref,event=pr
-            type=edge
-          labels: |
-            org.opencontainers.image.title=Distribution
-            org.opencontainers.image.description=The toolkit to pack, ship, store, and distribute container content
-      -
-        name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
-      -
-        name: Login to DockerHub
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      -
-        name: Log in to GitHub Container registry
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ github.token }}
-      -
-        name: Build artifacts
-        uses: docker/bake-action@018cb6412ab401ebaa809aa5f85966b74628600f # v7.4.0
-        with:
-          source: .
-          targets: artifact-all
-      -
-        name: Rename provenance
+        name: Rename provenance and signatures
         run: |
-          for pdir in ./bin/*/; do
+          for pdir in /tmp/registry-output/*/; do
             (
               cd "$pdir"
               binname=$(find . -name '*.tar.gz')
               filename=$(basename "${binname%.tar.gz}")
               mv "provenance.json" "${filename}.provenance.json"
+              if [ -f "provenance.sigstore.json" ]; then
+                mv "provenance.sigstore.json" "${filename}.sigstore.json"
+              fi
             )
           done
       -
         name: Move and list artifacts
         run: |
-          mv ./bin/**/* ./bin/
+          mkdir -p ./bin
+          mv /tmp/registry-output/**/* ./bin/
           tree -nh ./bin
       -
         name: Upload artifacts
@@ -183,25 +145,86 @@ jobs:
           name: registry
           path: ./bin/*
           if-no-files-found: error
+
+  image:
+    uses: docker/github-builder/.github/workflows/bake.yml@58cb9f5b71b1836d6f690c1e95effdeb9b98cb8a # v1.17.0
+    needs:
+      - test
+      - test-linux
+    permissions:
+      contents: read # same as global permission
+      id-token: write # to sign attestations and cache entries
+      packages: write # to push the image to GHCR
+    with:
+      runner: ubuntu-24.04
+      setup-qemu: true
+      target: image-all
+      output: image
+      push: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/') }}
+      cache: true
+      cache-mode: max
+      cache-scope: registry
+      sbom: true
+      set: |
+        *.args.BUILDKIT_CONTEXT_KEEP_GIT_DIR=1
+      set-meta-labels: true
+      meta-images: |
+        distribution/distribution
+        ghcr.io/${{ github.repository }}
+      ### versioning strategy
+      ### push semver tag v3.2.1 on main (default branch)
+      # distribution/distribution:3.2.1
+      # distribution/distribution:3.2
+      # distribution/distribution:3
+      # distribution/distribution:latest
+      ### push semver prelease tag v3.0.0-beta.1 on main (default branch)
+      # distribution/distribution:3.0.0-beta.1
+      ### push on main
+      # distribution/distribution:edge
+      meta-tags: |
+        type=semver,pattern={{version}}
+        type=semver,pattern={{major}}.{{minor}}
+        type=semver,pattern={{major}}
+        type=ref,event=pr
+        type=edge
+      meta-labels: |
+        org.opencontainers.image.title=Distribution
+        org.opencontainers.image.description=The toolkit to pack, ship, store, and distribute container content
+    secrets:
+      registry-auths: |
+        - registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+        - registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # to create a draft GitHub release
+    needs:
+      - test
+      - test-linux
+      - binaries-finalize
+      - image
+    steps:
       -
-        name: Build image
-        uses: docker/bake-action@018cb6412ab401ebaa809aa5f85966b74628600f # v7.4.0
+        name: Download artifacts
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          source: .
-          files: |
-            ./docker-bake.hcl
-            ${{ steps.meta.outputs.bake-file }}
-          targets: image-all
-          push: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/') }}
+          name: registry
+          path: ./bin
       -
         name: GitHub Release
         uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
-        if: startsWith(github.ref, 'refs/tags/')
         with:
           draft: true
           files: |
             bin/*.tar.gz
             bin/*.provenance.json
+            bin/*.sigstore.json
             bin/*.sha256
         env:
           GITHUB_TOKEN: ${{ github.token }}
