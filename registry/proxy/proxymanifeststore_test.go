@@ -54,12 +54,12 @@ func (sm statsManifest) Exists(ctx context.Context, dgst digest.Digest) (bool, e
 
 func (sm statsManifest) Get(ctx context.Context, dgst digest.Digest, options ...distribution.ManifestServiceOption) (distribution.Manifest, error) {
 	sm.stats["get"]++
-	return sm.manifests.Get(ctx, dgst)
+	return sm.manifests.Get(ctx, dgst, options...)
 }
 
 func (sm statsManifest) Put(ctx context.Context, manifest distribution.Manifest, options ...distribution.ManifestServiceOption) (digest.Digest, error) {
 	sm.stats["put"]++
-	return sm.manifests.Put(ctx, manifest)
+	return sm.manifests.Put(ctx, manifest, options...)
 }
 
 type mockChallenger struct {
@@ -114,7 +114,7 @@ func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestE
 	}
 
 	localRegistry, err := storage.NewRegistry(ctx, inmemory.New(),
-		storage.BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), storage.EnableRedirect, storage.DisableDigestResumption)
+		storage.BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), storage.EnableRedirect, storage.EnableDelete, storage.DisableDigestResumption)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -267,6 +267,54 @@ func TestProxyManifests(t *testing.T) {
 
 	if env.manifests.authChallenger.(*mockChallenger).count != 2 {
 		t.Fatalf("Expected 2 auth challenges, got %#v", env.manifests.authChallenger)
+	}
+}
+
+// TestProxyManifestsSHA512 pulls a manifest by sha512 digest and checks it is
+// cached locally under that digest, not under sha256, so that it can be found
+// again (and expired) by the digest it was requested with.
+func TestProxyManifestsSHA512(t *testing.T) {
+	name := "foo/bar"
+	env := newManifestStoreTestEnv(t, name, "latest")
+	ctx := context.Background()
+
+	remote := env.manifests.remoteManifests.(statsManifest).manifests
+	m, err := remote.Get(ctx, env.manifestDigest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, payload, err := m.Payload()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sha512Digest := digest.SHA512.FromBytes(payload)
+	if _, err := remote.Put(ctx, m, distribution.WithDigest(sha512Digest)); err != nil {
+		t.Fatalf("unexpected error putting manifest by sha512: %v", err)
+	}
+
+	local := env.manifests.localManifests.(statsManifest).manifests
+	if _, err := env.manifests.Get(ctx, sha512Digest); err != nil {
+		t.Fatal(err)
+	}
+
+	exists, err := local.Exists(ctx, sha512Digest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !exists {
+		t.Errorf("manifest was not cached locally under %s", sha512Digest)
+	}
+	exists, err = local.Exists(ctx, env.manifestDigest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if exists {
+		t.Errorf("manifest was unexpectedly cached locally under %s", env.manifestDigest)
+	}
+
+	// what the TTL expiry callback does
+	if err := local.Delete(ctx, sha512Digest); err != nil {
+		t.Errorf("unexpected error deleting manifest by %s: %v", sha512Digest, err)
 	}
 }
 

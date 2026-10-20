@@ -64,7 +64,9 @@ func (pms proxyManifestStore) Get(ctx context.Context, dgst digest.Digest, optio
 	if fromRemote {
 		proxyMetrics.ManifestPull(uint64(len(payload)))
 
-		_, err = pms.localManifests.Put(ctx, manifest)
+		// Store under the digest it was requested by, so a manifest fetched
+		// by (for example) sha512 isn't cached under sha256 instead.
+		_, err = pms.localManifests.Put(ctx, manifest, distribution.WithDigest(dgst))
 		if err != nil {
 			return nil, err
 		}

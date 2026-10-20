@@ -54,6 +54,16 @@ func (sbs statsBlobStore) Get(ctx context.Context, dgst digest.Digest) ([]byte, 
 func (sbs statsBlobStore) Create(ctx context.Context, options ...distribution.BlobCreateOption) (distribution.BlobWriter, error) {
 	sbsMu.Lock()
 	sbs.stats["create"]++
+	var opts distribution.CreateOptions
+	for _, option := range options {
+		if err := option.Apply(&opts); err != nil {
+			sbsMu.Unlock()
+			return nil, err
+		}
+	}
+	if opts.DigestAlgorithm != "" {
+		sbs.stats["create:"+string(opts.DigestAlgorithm)]++
+	}
 	sbsMu.Unlock()
 
 	return sbs.blobs.Create(ctx, options...)
@@ -252,6 +262,46 @@ func TestProxyStoreGet(t *testing.T) {
 
 	if (*remoteStats)["get"] != 1 {
 		t.Errorf("Unexpected remote get count")
+	}
+}
+
+func TestProxyStoreServeSha512(t *testing.T) {
+	te := makeTestEnv(t, "foo/bar")
+
+	blob := makeBlob(1024)
+	dgst := digest.SHA512.FromBytes(blob)
+
+	rw, err := te.store.remoteStore.Create(te.ctx, storage.WithDigestAlgorithm(digest.SHA512))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := rw.Write(blob); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := rw.Commit(te.ctx, v1.Descriptor{Digest: dgst}); err != nil {
+		t.Fatal(err)
+	}
+
+	localStats := te.LocalStats()
+
+	w := httptest.NewRecorder()
+	r, err := http.NewRequest(http.MethodGet, "http://example.com", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := te.store.ServeBlob(te.ctx, w, r, dgst); err != nil {
+		t.Fatal(err)
+	}
+	if got := w.Body.Bytes(); string(got) != string(blob) {
+		t.Fatalf("unexpected blob content served: %d bytes", len(got))
+	}
+
+	// the cached copy is stored under (and was hashed with) the sha512 digest
+	if _, err := te.store.localStore.Stat(te.ctx, dgst); err != nil {
+		t.Fatalf("blob not cached locally under %v: %v", dgst, err)
+	}
+	if (*localStats)["create:sha512"] != 1 {
+		t.Errorf("local blob was not created with the sha512 digest algorithm declared: %v", *localStats)
 	}
 }
 
