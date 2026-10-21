@@ -908,26 +908,20 @@ and proxy connections to the registry server.
 | `key`          | yes  | Absolute path to the x509 private key file.                                                                                                                                                                                                                                                                                                                                                        |
 | `clientcas`    | no   | An array of absolute paths to x509 CA files.                                                                                                                                                                                                                                                                                                                                                       |
 | `clientauth`   | no   | Client certificate authentication mode. This setting determines how the server handles client certificates during the TLS handshake. If clientcas is not provided, TLS Client Authentication is disabled, and the mode is ignored. Allowed (request-client-cert, require-any-client-cert, verify-client-cert-if-given, require-and-verify-client-cert). Defaults to require-and-verify-client-cert |
-| `minimumtls`   | no   | Minimum TLS version allowed (tls1.0, tls1.1, tls1.2, tls1.3). Defaults to tls1.2                                                                                                                                                                                                                                                                                                                   |
+| `minimumtls`   | no   | Minimum TLS version allowed (tls1.2, tls1.3). Defaults to tls1.2                                                                                                                                                                                                                                                                                                                                   |
 | `ciphersuites` | no   | Cipher suites allowed. Please see below for allowed values and default.                                                                                                                                                                                                                                                                                                                            |
 
 Available cipher suites:
-- TLS_RSA_WITH_RC4_128_SHA
 - TLS_RSA_WITH_3DES_EDE_CBC_SHA
 - TLS_RSA_WITH_AES_128_CBC_SHA
 - TLS_RSA_WITH_AES_256_CBC_SHA
-- TLS_RSA_WITH_AES_128_CBC_SHA256
 - TLS_RSA_WITH_AES_128_GCM_SHA256
 - TLS_RSA_WITH_AES_256_GCM_SHA384
-- TLS_ECDHE_ECDSA_WITH_RC4_128_SHA
 - TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA
 - TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA
-- TLS_ECDHE_RSA_WITH_RC4_128_SHA
 - TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA
 - TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA
 - TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA
-- TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256
-- TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256
 - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
 - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
 - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
