@@ -188,6 +188,29 @@ run-azure-tests: start-azure-storage ## run Azure storage driver integration tes
 	AZURE_SERVICE_URL="https://127.0.0.1:10000/devstoreaccount1" \
 	go test ${TESTFLAGS} -count=1 ./registry/storage/driver/azure/...
 
+.PHONY: test-gcs-storage
+test-gcs-storage: start-gcs-storage run-gcs-tests stop-gcs-storage ## run GCS storage driver tests
+
+.PHONY: start-gcs-storage
+start-gcs-storage: ## start local GCS storage (googleapis storage-testbench)
+	# Wait only on the long-running emulator; gcs-init is a one-shot create-bucket.
+	$(COMPOSE) -f tests/docker-compose-gcs-storage.yml up gcs-emulator -d --wait
+	$(COMPOSE) -f tests/docker-compose-gcs-storage.yml run --rm gcs-init
+
+.PHONY: stop-gcs-storage
+stop-gcs-storage: ## stop local GCS storage (googleapis storage-testbench)
+	$(COMPOSE) -f tests/docker-compose-gcs-storage.yml down
+
+.PHONY: run-gcs-tests
+run-gcs-tests: start-gcs-storage ## run GCS storage driver integration tests
+	# Full DriverSuite (including 5GiB TestWriteReadLargeStreams). -timeout 30m is
+	# required; the default 10m limit is too low. The in-memory testbench can use
+	# multi‑GiB RAM during the large-stream test.
+	STORAGE_EMULATOR_HOST=127.0.0.1:9020 \
+	REGISTRY_STORAGE_GCS_BUCKET=images-local \
+	GOOGLE_APPLICATION_CREDENTIALS= \
+	go test ${TESTFLAGS} -count=1 -timeout 30m ./registry/storage/driver/gcs/...
+
 ##@ Validate
 
 lint: ## run all linters
