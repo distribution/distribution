@@ -271,12 +271,13 @@ func (r *remoteAuthChallenger) challengeManager() challenge.Manager {
 
 // tryEstablishChallenges will attempt to get a challenge type for the upstream if none currently exist
 func (r *remoteAuthChallenger) tryEstablishChallenges(ctx context.Context) error {
-	r.Lock()
-	defer r.Unlock()
-
 	remoteURL := r.remoteURL
 	remoteURL.Path = "/v2/"
+
+	// Check if challenges already exist without holding the lock during HTTP request
+	r.Lock()
 	challenges, err := r.cm.GetChallenges(remoteURL)
+	r.Unlock()
 	if err != nil {
 		return err
 	}
@@ -286,11 +287,14 @@ func (r *remoteAuthChallenger) tryEstablishChallenges(ctx context.Context) error
 	}
 
 	// establish challenge type with upstream
-	if err := ping(r.cm, remoteURL.String(), challengeHeader); err != nil {
+	// Don't hold r.Lock() during HTTP request to avoid blocking other goroutines.
+	// Unauthenticated registries respond 200 with no WWW-Authenticate challenges;
+	// that is success — ResponseChallenges only records challenges on 401.
+	if err := ping(ctx, r.cm, remoteURL.String()); err != nil {
 		return err
 	}
-	dcontext.GetLogger(ctx).Infof("Challenge established with upstream: %s", remoteURL.Redacted())
 
+	dcontext.GetLogger(ctx).Infof("Challenge established with upstream: %s", remoteURL.Redacted())
 	return nil
 }
 
