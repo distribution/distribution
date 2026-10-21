@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"maps"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -308,7 +310,7 @@ func TestManifestDeleteStorageFailures(t *testing.T) {
 }
 
 func TestManifestDeleteTagChanges(t *testing.T) {
-	for _, change := range []string{"retarget-before-get", "disappear-before-get", "disappear-before-untag", "missing-current-link"} {
+	for _, change := range []string{"retarget-before-get", "disappear-before-get", "current-link-lost-before-get", "disappear-before-untag", "missing-current-link"} {
 		t.Run(change, func(t *testing.T) {
 			e := newManifestDeleteEnv(t, true)
 			gets := 0
@@ -332,6 +334,11 @@ func TestManifestDeleteTagChanges(t *testing.T) {
 				case "disappear-before-get":
 					changed = true
 					return e.driver.StorageDriver.Delete(ctx, strings.TrimSuffix(path, "/current/link"))
+				case "current-link-lost-before-get":
+					// An interrupted delete can remove the current link and
+					// leave the tag's index behind.
+					changed = true
+					return e.driver.StorageDriver.Delete(ctx, path)
 				}
 				return nil
 			}
@@ -355,6 +362,14 @@ func TestManifestDeleteTagChanges(t *testing.T) {
 				remaining["b"] = e.other
 			}
 			e.checkState(t, false, remaining)
+			// Lookup cannot report a tag that had lost its current link before
+			// the request, so only tags it found must be gone from the list.
+			if change != "missing-current-link" {
+				listed, err := e.repository.Tags(context.Background()).All(context.Background())
+				if want := slices.Sorted(maps.Keys(remaining)); err != nil || !slices.Equal(listed, want) {
+					t.Fatalf("listed tags %v, %v; want %v", listed, err, want)
+				}
+			}
 			if change == "retarget-before-get" {
 				for _, path := range e.driver.deletes {
 					if strings.HasSuffix(path, "/tags/b") {

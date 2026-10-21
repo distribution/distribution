@@ -504,12 +504,18 @@ func (imh *manifestHandler) DeleteManifest(w http.ResponseWriter, r *http.Reques
 			// Lookup is a snapshot. Preserve tags already moved to another
 			// manifest. Get and Untag are not atomic with concurrent pushes.
 			desc, err := tagService.Get(imh, tag)
-			if err == nil {
+			switch err.(type) {
+			case nil:
 				if desc.Digest != imh.Digest {
 					return nil
 				}
-				err = tagService.Untag(imh, tag)
+			case distribution.ErrTagUnknown:
+				// An interrupted delete can remove the current link and leave
+				// the tag's index behind, so still remove what remains.
+			default:
+				return err
 			}
+			err = tagService.Untag(imh, tag)
 			switch err.(type) {
 			case distribution.ErrTagUnknown, driver.PathNotFoundError:
 				// A concurrent delete already removed this tag.
