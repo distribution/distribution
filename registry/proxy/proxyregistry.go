@@ -25,6 +25,29 @@ import (
 
 var repositoryTTL = 24 * 7 * time.Hour
 
+// Without HTTP/2 health checks, a request on a connection that was silently
+// dropped (e.g. by a NAT restart) blocks until the kernel TCP retransmission
+// timeout, which is about 15 minutes on Linux.
+const (
+	upstreamSendPingTimeout = 30 * time.Second
+	upstreamPingTimeout     = 15 * time.Second
+)
+
+// newUpstreamTransport returns a transport for talking to the remote registry
+// that detects dead HTTP/2 connections.
+func newUpstreamTransport(sendPingTimeout, pingTimeout time.Duration) http.RoundTripper {
+	dt, ok := http.DefaultTransport.(*http.Transport)
+	if !ok {
+		return http.DefaultTransport
+	}
+	t := dt.Clone()
+	t.HTTP2 = &http.HTTP2Config{
+		SendPingTimeout: sendPingTimeout,
+		PingTimeout:     pingTimeout,
+	}
+	return t
+}
+
 // proxyingRegistry fetches content from a remote registry and caches it locally
 type proxyingRegistry struct {
 	embedded          distribution.Namespace // provides local registry functionality
@@ -34,6 +57,7 @@ type proxyingRegistry struct {
 	remoteURL         url.URL
 	authChallenger    authChallenger
 	basicAuth         auth.CredentialStore
+	transport         http.RoundTripper
 }
 
 // NewRegistryPullThroughCache creates a registry acting as a pull through cache
@@ -122,13 +146,16 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 		}
 	}
 
+	tr := newUpstreamTransport(upstreamSendPingTimeout, upstreamPingTimeout)
+	client := &http.Client{Transport: tr}
+
 	cs, b, err := func() (auth.CredentialStore, auth.CredentialStore, error) {
 		switch {
 		case config.Exec != nil:
 			cs, err := configureExecAuth(*config.Exec)
 			return cs, cs, err
 		default:
-			return configureAuth(config.Username, config.Password, config.RemoteURL)
+			return configureAuth(client, config.Username, config.Password, config.RemoteURL)
 		}
 	}()
 	if err != nil {
@@ -145,8 +172,10 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 			remoteURL: *remoteURL,
 			cm:        challenge.NewSimpleManager(),
 			cs:        cs,
+			client:    client,
 		},
 		basicAuth: b,
+		transport: tr,
 	}, nil
 }
 
@@ -162,7 +191,7 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named
 	c := pr.authChallenger
 
 	tkopts := auth.TokenHandlerOptions{
-		Transport:   http.DefaultTransport,
+		Transport:   pr.transport,
 		Credentials: c.credentialStore(),
 		Scopes: []auth.Scope{
 			auth.RepositoryScope{
@@ -173,7 +202,7 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named
 		Logger: dcontext.GetLogger(ctx),
 	}
 
-	tr := transport.NewTransport(http.DefaultTransport,
+	tr := transport.NewTransport(pr.transport,
 		auth.NewAuthorizer(c.challengeManager(),
 			auth.NewTokenHandlerWithOptions(tkopts),
 			auth.NewBasicHandler(pr.basicAuth)))
@@ -239,6 +268,10 @@ type Closer interface {
 }
 
 func (pr *proxyingRegistry) Close() error {
+	// Do not close idle connections of the shared http.DefaultTransport.
+	if t, ok := pr.transport.(interface{ CloseIdleConnections() }); ok && pr.transport != http.DefaultTransport {
+		t.CloseIdleConnections()
+	}
 	if pr.scheduler == nil {
 		return nil
 	}
@@ -255,8 +288,9 @@ type authChallenger interface {
 type remoteAuthChallenger struct {
 	remoteURL url.URL
 	sync.Mutex
-	cm challenge.Manager
-	cs auth.CredentialStore
+	cm     challenge.Manager
+	cs     auth.CredentialStore
+	client *http.Client
 }
 
 func (r *remoteAuthChallenger) credentialStore() auth.CredentialStore {
@@ -286,7 +320,7 @@ func (r *remoteAuthChallenger) tryEstablishChallenges(ctx context.Context) error
 	}
 
 	// establish challenge type with upstream
-	if err := ping(r.cm, remoteURL.String(), challengeHeader); err != nil {
+	if err := ping(r.client, r.cm, remoteURL.String(), challengeHeader); err != nil {
 		return err
 	}
 	dcontext.GetLogger(ctx).Infof("Challenge established with upstream: %s", remoteURL.Redacted())
