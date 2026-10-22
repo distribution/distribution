@@ -803,6 +803,10 @@ func (bs *blobs) Open(ctx context.Context, dgst digest.Digest) (io.ReadSeekClose
 }
 
 func (bs *blobs) ServeBlob(ctx context.Context, w http.ResponseWriter, r *http.Request, dgst digest.Digest) error {
+	if r.Method == http.MethodGet && r.Header.Get("Range") != "" {
+		return bs.serveBlobRange(ctx, w, r, dgst)
+	}
+
 	desc, err := bs.statter.Stat(ctx, dgst)
 	if err != nil {
 		return err
@@ -825,6 +829,71 @@ func (bs *blobs) ServeBlob(ctx context.Context, w http.ResponseWriter, r *http.R
 
 	_, err = io.CopyN(w, blob, desc.Size)
 	return err
+}
+
+// serveBlobRange relays the origin representation without interpreting ranges
+// or verifying the whole blob digest. The caller must not cache this response.
+func (bs *blobs) serveBlobRange(ctx context.Context, w http.ResponseWriter, r *http.Request, dgst digest.Digest) error {
+	ref, err := reference.WithDigest(bs.name, dgst)
+	if err != nil {
+		return err
+	}
+	blobURL, err := bs.ub.BuildBlobURL(ref)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, blobURL, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Range", r.Header.Get("Range"))
+	if value := r.Header.Get("If-Range"); value != "" {
+		req.Header.Set("If-Range", value)
+	}
+	// Byte offsets refer to the encoded representation. Prevent the transport
+	// from requesting gzip and transparently decoding the origin response.
+	req.Header.Set("Accept-Encoding", "identity")
+	resp, err := bs.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	switch resp.StatusCode {
+	case http.StatusOK, http.StatusPartialContent, http.StatusRequestedRangeNotSatisfiable:
+	case http.StatusNotFound:
+		return distribution.ErrBlobUnknown
+	default:
+		if err := HandleHTTPResponseError(resp); err != nil {
+			return err
+		}
+		return &UnexpectedHTTPStatusError{Status: resp.Status}
+	}
+
+	// Forward representation metadata, excluding even allowlisted fields named
+	// by Connection. Never relay origin cookies or hop-by-hop headers.
+	headers := resp.Header.Clone()
+	for _, value := range headers.Values("Connection") {
+		for _, name := range strings.Split(value, ",") {
+			headers.Del(strings.TrimSpace(name))
+		}
+	}
+	for _, name := range []string{
+		"Content-Type", "Content-Length", "Content-Range", "Content-Encoding",
+		"Accept-Ranges", "Etag", "Last-Modified", "Cache-Control", "Expires", "Vary",
+		"Docker-Content-Digest",
+	} {
+		w.Header().Del(name)
+		for _, value := range headers.Values(name) {
+			w.Header().Add(name, value)
+		}
+	}
+	w.WriteHeader(resp.StatusCode)
+	if _, err := io.Copy(w, resp.Body); err != nil {
+		// Headers and possibly binary data have already been sent. Returning an
+		// error would let the registry append JSON to an incomplete response.
+		panic(http.ErrAbortHandler)
+	}
+	return nil
 }
 
 func (bs *blobs) Put(ctx context.Context, mediaType string, p []byte) (v1.Descriptor, error) {
