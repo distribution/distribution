@@ -99,9 +99,9 @@ func RegisterHandler(handlerFunc HandlerFunc) {
 
 // ServeCmd is a cobra command for running the registry.
 var ServeCmd = &cobra.Command{
-	Use:   "serve <config>",
+	Use:   "serve <config> [<config>...]",
 	Short: "`serve` stores and distributes Docker images",
-	Long:  "`serve` stores and distributes Docker images.",
+	Long:  "`serve` stores and distributes Docker images. Configuration files are merged in order, with later files overriding earlier files.",
 	Run: func(cmd *cobra.Command, args []string) {
 		// setup context
 		ctx := dcontext.WithVersion(dcontext.Background(), version.Version())
@@ -469,31 +469,16 @@ func alive(path string, handler http.Handler) http.Handler {
 }
 
 func resolveConfiguration(args []string) (*configuration.Configuration, error) {
-	var configurationPath string
-
-	if len(args) > 0 {
-		configurationPath = args[0]
-	} else if os.Getenv("REGISTRY_CONFIGURATION_PATH") != "" {
-		configurationPath = os.Getenv("REGISTRY_CONFIGURATION_PATH")
+	paths := args
+	if len(paths) == 0 {
+		if path := os.Getenv("REGISTRY_CONFIGURATION_PATH"); path != "" {
+			paths = []string{path}
+		}
 	}
-
-	if configurationPath == "" {
+	if len(paths) == 0 {
 		return nil, fmt.Errorf("configuration path unspecified")
 	}
-
-	fp, err := os.Open(configurationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	defer fp.Close()
-
-	config, err := configuration.Parse(fp)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing %s: %v", configurationPath, err)
-	}
-
-	return config, nil
+	return configuration.ParseFiles(paths...)
 }
 
 func nextProtos(config *configuration.Configuration) []string {
