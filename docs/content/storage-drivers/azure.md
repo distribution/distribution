@@ -49,7 +49,7 @@ properties: {
     accountname: accountname
     container: containername
     credentials: {
-      type: default
+      type: default_credentials
     }
   }
 }
