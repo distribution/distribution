@@ -2,8 +2,10 @@ package gcs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 
 	"cloud.google.com/go/storage"
@@ -304,5 +306,298 @@ func TestMoveDirectory(t *testing.T) {
 	err = driver.Move(ctx, "/parent/dir", "/parent/other")
 	if err == nil {
 		t.Fatal("Moving directory /parent/dir /parent/other should have return a non-nil error")
+	}
+}
+
+// TestWalk exercises the GCS driver's Walk implementation, ported from the
+// equivalent S3 driver conformance test (registry/storage/driver/s3-aws/s3_test.go)
+// since it wasn't previously covered here. This is the test that should have
+// existed before Walk silently fell back to a Stat-per-entry implementation
+// that's fine for a handful of files but takes minutes against a tag
+// directory with thousands of entries.
+func TestWalk(t *testing.T) {
+	skipCheck(t)
+
+	rootDir := t.TempDir()
+
+	drvr, err := gcsDriverConstructor(rootDir)
+	if err != nil {
+		t.Fatalf("unexpected error creating driver: %v", err)
+	}
+
+	ctx := dcontext.Background()
+
+	fileset := []string{
+		"/file1",
+		"/folder1-suffix/file1",
+		"/folder1/file1",
+		"/folder2/file1",
+		"/folder3/subfolder1/subfolder1/file1",
+		"/folder3/subfolder2/subfolder1/file1",
+		"/folder4/file1",
+	}
+
+	created := make([]string, 0, len(fileset))
+	for _, p := range fileset {
+		if err := drvr.PutContent(ctx, p, []byte("content "+p)); err != nil {
+			t.Fatalf("unable to create file %s: %s", p, err)
+		}
+		created = append(created, p)
+	}
+
+	defer func() {
+		var lastErr error
+		for _, p := range created {
+			if err := drvr.Delete(ctx, p); err != nil {
+				lastErr = err
+			}
+		}
+		if lastErr != nil {
+			t.Fatalf("cleanup failed: %s", lastErr)
+		}
+	}()
+
+	noopFn := func(fileInfo storagedriver.FileInfo) error { return nil }
+
+	tcs := []struct {
+		name     string
+		fn       storagedriver.WalkFn
+		from     string
+		options  []func(*storagedriver.WalkOptions)
+		expected []string
+		err      bool
+	}{
+		{
+			name: "walk all",
+			fn:   noopFn,
+			expected: []string{
+				"/file1",
+				"/folder1-suffix",
+				"/folder1-suffix/file1",
+				"/folder1",
+				"/folder1/file1",
+				"/folder2",
+				"/folder2/file1",
+				"/folder3",
+				"/folder3/subfolder1",
+				"/folder3/subfolder1/subfolder1",
+				"/folder3/subfolder1/subfolder1/file1",
+				"/folder3/subfolder2",
+				"/folder3/subfolder2/subfolder1",
+				"/folder3/subfolder2/subfolder1/file1",
+				"/folder4",
+				"/folder4/file1",
+			},
+		},
+		{
+			name: "skip directory",
+			fn: func(fileInfo storagedriver.FileInfo) error {
+				if fileInfo.Path() == "/folder3" {
+					return storagedriver.ErrSkipDir
+				}
+				if strings.Contains(fileInfo.Path(), "/folder3") {
+					t.Fatalf("skipped dir %s and should not walk %s", "/folder3", fileInfo.Path())
+				}
+				return nil
+			},
+			expected: []string{
+				"/file1",
+				"/folder1-suffix",
+				"/folder1-suffix/file1",
+				"/folder1",
+				"/folder1/file1",
+				"/folder2",
+				"/folder2/file1",
+				"/folder3",
+				// folder3 contents skipped
+				"/folder4",
+				"/folder4/file1",
+			},
+		},
+		{
+			name: "start late without from",
+			fn:   noopFn,
+			options: []func(*storagedriver.WalkOptions){
+				storagedriver.WithStartAfterHint("/folder3/subfolder1/subfolder1/file1"),
+			},
+			expected: []string{
+				"/folder3",
+				"/folder3/subfolder2",
+				"/folder3/subfolder2/subfolder1",
+				"/folder3/subfolder2/subfolder1/file1",
+				"/folder4",
+				"/folder4/file1",
+			},
+		},
+		{
+			name: "start late with from",
+			fn:   noopFn,
+			from: "/folder3",
+			options: []func(*storagedriver.WalkOptions){
+				storagedriver.WithStartAfterHint("/folder3/subfolder1/subfolder1/file1"),
+			},
+			expected: []string{
+				"/folder3/subfolder2",
+				"/folder3/subfolder2/subfolder1",
+				"/folder3/subfolder2/subfolder1/file1",
+			},
+		},
+		{
+			name: "start after from",
+			fn:   noopFn,
+			from: "/folder1",
+			options: []func(*storagedriver.WalkOptions){
+				storagedriver.WithStartAfterHint("/folder2"),
+			},
+			expected: []string{},
+		},
+		{
+			name: "start matches from",
+			fn:   noopFn,
+			from: "/folder3",
+			options: []func(*storagedriver.WalkOptions){
+				storagedriver.WithStartAfterHint("/folder3"),
+			},
+			expected: []string{
+				"/folder3/subfolder1",
+				"/folder3/subfolder1/subfolder1",
+				"/folder3/subfolder1/subfolder1/file1",
+				"/folder3/subfolder2",
+				"/folder3/subfolder2/subfolder1",
+				"/folder3/subfolder2/subfolder1/file1",
+			},
+		},
+		{
+			name: "start doesn't exist",
+			fn:   noopFn,
+			from: "/folder3",
+			options: []func(*storagedriver.WalkOptions){
+				storagedriver.WithStartAfterHint("/folder3/notafolder/notafile"),
+			},
+			expected: []string{
+				"/folder3/subfolder1",
+				"/folder3/subfolder1/subfolder1",
+				"/folder3/subfolder1/subfolder1/file1",
+				"/folder3/subfolder2",
+				"/folder3/subfolder2/subfolder1",
+				"/folder3/subfolder2/subfolder1/file1",
+			},
+		},
+		{
+			name: "stop early",
+			fn: func(fileInfo storagedriver.FileInfo) error {
+				if fileInfo.Path() == "/folder1/file1" {
+					return storagedriver.ErrFilledBuffer
+				}
+				return nil
+			},
+			expected: []string{
+				"/file1",
+				"/folder1-suffix",
+				"/folder1-suffix/file1",
+				"/folder1",
+				"/folder1/file1",
+				// stop early
+			},
+		},
+		{
+			name: "error",
+			fn: func(fileInfo storagedriver.FileInfo) error {
+				return errors.New("foo")
+			},
+			expected: []string{
+				"/file1",
+			},
+			err: true,
+		},
+		{
+			name: "from folder",
+			fn:   noopFn,
+			expected: []string{
+				"/folder1/file1",
+			},
+			from: "/folder1",
+		},
+	}
+
+	for _, tc := range tcs {
+		var walked []string
+		if tc.from == "" {
+			tc.from = "/"
+		}
+		t.Run(tc.name, func(t *testing.T) {
+			err := drvr.Walk(ctx, tc.from, func(fileInfo storagedriver.FileInfo) error {
+				walked = append(walked, fileInfo.Path())
+				return tc.fn(fileInfo)
+			}, tc.options...)
+			if tc.err && err == nil {
+				t.Fatal("expected err")
+			}
+			if !tc.err && err != nil {
+				t.Fatal(err)
+			}
+			compareWalked(t, tc.expected, walked)
+		})
+	}
+}
+
+func TestIsSubpath(t *testing.T) {
+	tests := []struct {
+		name     string
+		path     string
+		parent   string
+		expected bool
+	}{
+		{
+			name:     "empty parent",
+			path:     "/folder1/file1",
+			parent:   "",
+			expected: false,
+		},
+		{
+			name:     "same path",
+			path:     "/folder1",
+			parent:   "/folder1",
+			expected: true,
+		},
+		{
+			name:     "descendant path",
+			path:     "/folder1/file1",
+			parent:   "/folder1",
+			expected: true,
+		},
+		{
+			name:     "sibling with lexical prefix",
+			path:     "/folder1-suffix/file1",
+			parent:   "/folder1",
+			expected: false,
+		},
+		{
+			name:     "root parent",
+			path:     "/folder1/file1",
+			parent:   "/",
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := isSubpath(tt.path, tt.parent)
+			if actual != tt.expected {
+				t.Fatalf("isSubpath(%q, %q) = %t, want %t", tt.path, tt.parent, actual, tt.expected)
+			}
+		})
+	}
+}
+
+func compareWalked(t *testing.T, expected, walked []string) {
+	t.Helper()
+	if len(walked) != len(expected) {
+		t.Fatalf("mismatched number of fileInfo walked %d expected %d; walked %s; expected %s", len(walked), len(expected), walked, expected)
+	}
+	for i := range walked {
+		if walked[i] != expected[i] {
+			t.Fatalf("walked in unexpected order: expected %s; walked %s", expected, walked)
+		}
 	}
 }
