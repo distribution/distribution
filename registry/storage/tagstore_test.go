@@ -2,11 +2,13 @@ package storage
 
 import (
 	"context"
+	"io"
 	"reflect"
 	"testing"
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/manifest/schema2"
+	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
 	"github.com/distribution/reference"
 	digest "github.com/opencontainers/go-digest"
@@ -180,6 +182,76 @@ func TestTagStoreAll(t *testing.T) {
 		if tag == removed {
 			t.Errorf("unexpected tag in enumerate %s", removed)
 		}
+	}
+}
+
+// statCountingDriver walks through Stat the way the filesystem driver does.
+type statCountingDriver struct {
+	storagedriver.StorageDriver
+	stats int
+}
+
+func (d *statCountingDriver) Stat(ctx context.Context, path string) (storagedriver.FileInfo, error) {
+	d.stats++
+	return d.StorageDriver.Stat(ctx, path)
+}
+
+func (d *statCountingDriver) Walk(ctx context.Context, path string, f storagedriver.WalkFn, options ...func(*storagedriver.WalkOptions)) error {
+	return storagedriver.WalkFallback(ctx, d, path, f, options...)
+}
+
+func TestTagStoreListUnpaginatedDoesNotStatTags(t *testing.T) {
+	ctx := context.Background()
+	d := &statCountingDriver{StorageDriver: inmemory.New()}
+	reg, err := NewRegistry(ctx, d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	repoRef, _ := reference.WithName("a/b")
+	repo, err := reg.Repository(ctx, repoRef)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tagStore := repo.Tags(ctx)
+
+	desc := v1.Descriptor{Digest: "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"}
+	for _, tag := range []string{"c", "a", "d", "b"} {
+		if err := tagStore.Tag(ctx, tag, desc); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	d.stats = 0
+	tags, err := tagStore.List(ctx, -1, "")
+	if err != io.EOF {
+		t.Fatalf("List(-1, \"\") error = %v, want io.EOF", err)
+	}
+	if want := []string{"a", "b", "c", "d"}; !reflect.DeepEqual(tags, want) {
+		t.Fatalf("List(-1, \"\") = %v, want %v", tags, want)
+	}
+	if d.stats != 0 {
+		t.Fatalf("List(-1, \"\") called Stat %d times, want 0", d.stats)
+	}
+
+	tags, err = tagStore.List(ctx, -1, "b")
+	if err != io.EOF {
+		t.Fatalf("List(-1, \"b\") error = %v, want io.EOF", err)
+	}
+	if want := []string{"c", "d"}; !reflect.DeepEqual(tags, want) {
+		t.Fatalf("List(-1, \"b\") = %v, want %v", tags, want)
+	}
+
+	tags, err = tagStore.List(ctx, -1, "d")
+	if err != io.EOF || len(tags) != 0 {
+		t.Fatalf("List(-1, \"d\") = %v, %v, want no tags and io.EOF", tags, err)
+	}
+
+	tags, err = tagStore.List(ctx, 2, "")
+	if err != nil {
+		t.Fatalf("List(2, \"\") error = %v, want nil", err)
+	}
+	if want := []string{"a", "b"}; !reflect.DeepEqual(tags, want) {
+		t.Fatalf("List(2, \"\") = %v, want %v", tags, want)
 	}
 }
 
