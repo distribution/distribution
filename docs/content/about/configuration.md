@@ -157,6 +157,7 @@ storage:
     secure: true
     v4auth: true
     chunksize: 5242880
+    spooldir: /var/lib/registry/spool
     multipartcopychunksize: 33554432
     multipartcopymaxconcurrency: 100
     multipartcopythresholdsize: 33554432
@@ -456,6 +457,7 @@ storage:
     secure: true
     v4auth: true
     chunksize: 5242880
+    spooldir: /var/lib/registry/spool
     multipartcopychunksize: 33554432
     multipartcopymaxconcurrency: 100
     multipartcopythresholdsize: 33554432
