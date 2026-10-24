@@ -698,6 +698,10 @@ type Proxy struct {
 	// RemoteURL is the URL of the remote registry
 	RemoteURL string `yaml:"remoteurl"`
 
+	// RangePassthrough forwards GET Range requests to the remote registry on a
+	// cache miss without populating the blob cache. Defaults to false.
+	RangePassthrough bool `yaml:"rangepassthrough,omitempty"`
+
 	// Username of the hub user
 	Username string `yaml:"username"`
 
