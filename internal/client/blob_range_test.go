@@ -65,6 +65,7 @@ func TestServeBlobRange(t *testing.T) {
 			}))
 			defer target.Close()
 			origin := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Docker-Content-Digest", dgst.String())
 				http.Redirect(w, r, strings.Replace(target.URL, "127.0.0.1", "localhost", 1), http.StatusTemporaryRedirect)
 			}))
 			defer origin.Close()
@@ -98,6 +99,13 @@ func TestServeBlobRange(t *testing.T) {
 			expected := <-responses
 			if w.Code != tc.status || !bytes.Equal(w.Body.Bytes(), expected.Body.Bytes()) {
 				t.Fatalf("relay: status=%d body=%q, want %d %q", w.Code, w.Body.Bytes(), tc.status, expected.Body.Bytes())
+			}
+			if tc.status == http.StatusPartialContent || tc.name == "if-range fallback" {
+				resp := w.Result()
+				defer resp.Body.Close()
+				if got := resp.Header.Get("Docker-Content-Digest"); got != dgst.String() {
+					t.Errorf("Docker-Content-Digest: got %q want %q", got, dgst.String())
+				}
 			}
 			for _, key := range []string{"Content-Range", "Content-Length", "Content-Type"} {
 				if w.Header().Get(key) != expected.Header().Get(key) {

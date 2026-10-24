@@ -887,6 +887,12 @@ func (bs *blobs) serveBlobRange(ctx context.Context, w http.ResponseWriter, r *h
 			w.Header().Add(name, value)
 		}
 	}
+	// Redirect targets may omit registry metadata. Use the resolved blob digest
+	// when a successful response does not provide one.
+	if (resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusPartialContent) &&
+		w.Header().Get("Docker-Content-Digest") == "" {
+		w.Header().Set("Docker-Content-Digest", dgst.String())
+	}
 	w.WriteHeader(resp.StatusCode)
 	if _, err := io.Copy(w, resp.Body); err != nil {
 		// Headers and possibly binary data have already been sent. Returning an
