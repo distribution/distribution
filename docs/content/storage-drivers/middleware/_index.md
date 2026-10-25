@@ -10,6 +10,7 @@ This document describes the registry storage middleware.
 
 This storage driver package comes bundled with several middleware options:
 
+- [cdnhmac](cdnhmac): Appends a Cloudflare timed-HMAC token to the URL returned by the storage driver.
 - cloudfront
 - redirect
 - [rewrite](rewrite): Partially rewrites the URL returned by the storage driver.
