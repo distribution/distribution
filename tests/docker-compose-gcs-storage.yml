@@ -1,0 +1,44 @@
+services:
+  gcs-emulator:
+    # Official Google client-library testbench; pin a release tag for reproducible CI.
+    build:
+      context: https://github.com/googleapis/storage-testbench.git#v0.66.0
+    image: distribution-gcs-storage-testbench:v0.66.0
+    # Default image CMD uses 10 gunicorn threads; raise to match DriverSuite's
+    # full ConcurrentFileStreams count. Still a single sync worker (in-memory
+    # DB is not shared across workers — do not add --workers).
+    command: ["python3", "testbench_run.py", "0.0.0.0", "9000", "32"]
+    ports:
+      # Host 9020 avoids clashing with MinIO on 9000 when both run locally.
+      - "9020:9000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python3",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9000/')",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  gcs-init:
+    image: docker.io/curlimages/curl:8.12.1
+    depends_on:
+      gcs-emulator:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        code=$$(curl -sS -o /tmp/bucket.json -w '%{http_code}' \
+          -X POST 'http://gcs-emulator:9000/storage/v1/b?project=test-project' \
+          -H 'Content-Type: application/json' \
+          -d '{"name":"images-local"}')
+        if [ "$$code" != "200" ] && [ "$$code" != "409" ]; then
+          echo "failed to create bucket images-local: HTTP $$code" >&2
+          cat /tmp/bucket.json >&2 || true
+          exit 1
+        fi
