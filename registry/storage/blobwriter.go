@@ -16,7 +16,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var errResumableDigestNotAvailable = errors.New("resumable digest not available")
+var (
+	errResumableDigestNotAvailable = errors.New("resumable digest not available")
+	moveBlobRetryDelays            = []time.Duration{250 * time.Millisecond, 500 * time.Millisecond, time.Second, 2 * time.Second, 4 * time.Second, 8 * time.Second}
+)
 
 const (
 	// digestSha256Empty is the canonical sha256 digest of empty data
@@ -363,7 +366,23 @@ func (bw *blobWriter) moveBlob(ctx context.Context, desc v1.Descriptor) error {
 
 	// TODO(stevvooe): We should also write the mediatype when executing this move.
 
-	return bw.blobStore.driver.Move(ctx, bw.path, blobPath)
+	err = bw.blobStore.driver.Move(ctx, bw.path, blobPath)
+	for _, delay := range moveBlobRetryDelays {
+		if err == nil {
+			return nil
+		}
+		dcontext.GetLogger(ctx).WithError(err).Warnf("moving blob %s failed, retrying in %s", desc.Digest, delay)
+		select {
+		case <-ctx.Done():
+			return err
+		case <-time.After(delay):
+		}
+		if _, statErr := bw.blobStore.driver.Stat(ctx, blobPath); statErr == nil {
+			return nil
+		}
+		err = bw.blobStore.driver.Move(ctx, bw.path, blobPath)
+	}
+	return err
 }
 
 // removeResources should clean up all resources associated with the upload
