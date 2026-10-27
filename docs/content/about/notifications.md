@@ -69,15 +69,27 @@ Field | Type | Description
 id | string |ID provides a unique identifier for the event.
 timestamp | Time | Timestamp is the time at which the event occurred.
 action |  string |  Action indicates what action encompasses the provided event.
-target | distribution.Descriptor | Target uniquely describes the target of the event.
-length | int | Length in bytes of content. Same as Size field in Descriptor.
+target | object | Target uniquely describes the target of the event. Its fields are described below.
+request | [RequestRecord](https://pkg.go.dev/github.com/distribution/distribution/v3/notifications#RequestRecord) | Request covers the request that generated the event.
+actor | [ActorRecord](https://pkg.go.dev/github.com/distribution/distribution/v3/notifications#ActorRecord) |  Actor specifies the agent that initiated the event. For most situations, this could be from the authorization context of the request.
+source | [SourceRecord](https://pkg.go.dev/github.com/distribution/distribution/v3/notifications#SourceRecord) |  Source identifies the registry node that generated the event. Put differently, while the actor "initiates" the event, the source "generates" it.
+
+The `target` of an event extends an
+[OCI descriptor](https://github.com/opencontainers/image-spec/blob/main/descriptor.md)
+with the fields described below. Fields that do not apply to an event are
+omitted, except for `mediaType`, `digest` and `size`, which are always present.
+
+Field | Type | Description
+----- | ----- | -------------
+mediaType | string | MediaType is the media type of the content.
+digest | string | Digest uniquely identifies the content.
+size | int | Size in bytes of content.
+length | int | Length in bytes of content. Same as `size`, provided for backwards compatibility.
 repository | string | Repository identifies the named repository.
 fromRepository | string |  FromRepository identifies the named repository which a blob was mounted from if appropriate.
 url | string | URL provides a direct link to the content.
-tag | string | Tag identifies a tag name in tag events.
-request | [RequestRecord](https://pkg.go.dev/github.com/distribution/distribution/notifications#RequestRecord) | Request covers the request that generated the event.
-actor | [ActorRecord](https://pkg.go.dev/github.com/distribution/distribution/notifications#ActorRecord). |  Actor specifies the agent that initiated the event. For most situations, this could be from the authorization context of the request.
-source | [SourceRecord](https://pkg.go.dev/github.com/distribution/distribution/notifications#SourceRecord) |  Source identifies the registry node that generated the event. Put differently, while the actor "initiates" the event, the source "generates" it.
+tag | string | Tag identifies the tag name in tag delete events and in manifest events for requests made by tag.
+references | array of descriptors | References lists the descriptors referenced by a manifest. Only set in manifest events when `includereferences` is enabled in the `notifications.events` configuration.
 
 
 
@@ -120,12 +132,14 @@ manifest:
 
 The target struct of events which are sent when manifests and blobs are deleted
 contains a subset of the data contained in Get and Put events. Specifically,
-only the digest and repository are sent.
+only the digest and repository are set.
 
 ```json
 {
   "target": {
+    "mediaType": "",
     "digest": "sha256:d89e1bee20d9cb344674e213b581f14fbd8e70274ecf9d10c514bab78a307845",
+    "size": 0,
     "repository": "library/test"
   }
 }
@@ -344,5 +358,5 @@ which can be wired up to achieve interesting behavior. If this system doesn't
 provide acceptable guarantees, adding a transactional `Sink` to the registry
 is a possibility, although it may have an effect on request service time.
 See the
-[godoc](https://pkg.go.dev/github.com/distribution/distribution/notifications#Sink)
+[godoc](https://pkg.go.dev/github.com/distribution/distribution/v3/notifications#Sink)
 for more information.
