@@ -267,8 +267,12 @@ func (n HTTPServer) RecordMetrics(ctx context.Context, md ServerMetricData) {
 	o := metric.WithAttributeSet(attribute.NewSet(attributes...))
 	recordOpts := metricRecordOptionPool.Get().(*[]metric.RecordOption)
 	*recordOpts = append(*recordOpts, o)
-	n.requestBodySizeHistogram.Inst().Record(ctx, md.RequestSize, *recordOpts...)
-	n.responseBodySizeHistogram.Inst().Record(ctx, md.ResponseSize, *recordOpts...)
+	if md.RequestSize >= 0 {
+		n.requestBodySizeHistogram.Inst().Record(ctx, md.RequestSize, *recordOpts...)
+	}
+	if md.ResponseSize >= 0 {
+		n.responseBodySizeHistogram.Inst().Record(ctx, md.ResponseSize, *recordOpts...)
+	}
 	n.requestDurationHistogram.Inst().Record(ctx, durationToSeconds(md.RequestDuration), o)
 	*recordOpts = (*recordOpts)[:0]
 	metricRecordOptionPool.Put(recordOpts)
