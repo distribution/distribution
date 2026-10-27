@@ -503,7 +503,7 @@ go.opentelemetry.io/contrib/exporters/autoexport
 ## explicit; go 1.23.0
 go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc
 go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal
-# go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.72.0
+# go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.72.1-0.20261023153556-ec3c636e3541
 ## explicit; go 1.26.0
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/request
