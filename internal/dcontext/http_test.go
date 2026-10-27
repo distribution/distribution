@@ -200,7 +200,8 @@ func TestWithResponseWriterReadFrom(t *testing.T) {
 		readErr    error
 		wantStatus int
 	}{
-		// ServeContent commits 206 before copying a range.
+		// ReadFrom must preserve an explicit status, such as ServeContent's 206
+		// for a range, instead of recording an implicit 200 when bytes arrive.
 		{name: "delegate-explicit-status", delegate: true, body: "content", status: http.StatusPartialContent, wantStatus: http.StatusPartialContent},
 		{name: "delegate-partial-error", delegate: true, body: "part", readErr: copyErr, wantStatus: http.StatusOK},
 		{name: "delegate-error-without-bytes", delegate: true, readErr: copyErr},
