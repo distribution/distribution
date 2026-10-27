@@ -1,9 +1,13 @@
 package dcontext
 
 import (
+	"errors"
+	"io"
 	"net/http"
 	"reflect"
+	"strings"
 	"testing"
+	"testing/iotest"
 	"time"
 )
 
@@ -125,6 +129,16 @@ func (trw *testResponseWriter) Flush() {
 	trw.flushed = true
 }
 
+type testReaderFromResponseWriter struct {
+	testResponseWriter
+	source io.Reader
+}
+
+func (trw *testReaderFromResponseWriter) ReadFrom(r io.Reader) (int64, error) {
+	trw.source = r
+	return io.Copy(&trw.testResponseWriter, r)
+}
+
 func TestWithResponseWriter(t *testing.T) {
 	trw := testResponseWriter{}
 	ctx, rw := WithResponseWriter(Background(), &trw)
@@ -173,6 +187,62 @@ func TestWithResponseWriter(t *testing.T) {
 
 	if ctx.Value("http.response.status") != http.StatusBadRequest {
 		t.Fatalf("unexpected response status in context: %v != %v", ctx.Value("http.response.status"), http.StatusBadRequest)
+	}
+}
+
+func TestWithResponseWriterReadFrom(t *testing.T) {
+	copyErr := errors.New("copy failed")
+	for _, tc := range []struct {
+		name       string
+		delegate   bool
+		body       string
+		status     int
+		readErr    error
+		wantStatus int
+	}{
+		// ServeContent commits 206 before copying a range.
+		{name: "delegate-explicit-status", delegate: true, body: "content", status: http.StatusPartialContent, wantStatus: http.StatusPartialContent},
+		{name: "delegate-partial-error", delegate: true, body: "part", readErr: copyErr, wantStatus: http.StatusOK},
+		{name: "delegate-error-without-bytes", delegate: true, readErr: copyErr},
+		{name: "fallback", body: "content", wantStatus: http.StatusOK},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			trw := &testResponseWriter{}
+			rf := &testReaderFromResponseWriter{}
+			var destination http.ResponseWriter = trw
+			if tc.delegate {
+				destination = rf
+				trw = &rf.testResponseWriter
+			}
+			ctx, rw := WithResponseWriter(Background(), destination)
+			if tc.status != 0 {
+				rw.WriteHeader(tc.status)
+			}
+			var source io.Reader = strings.NewReader(tc.body)
+			copySize := int64(len(tc.body))
+			if tc.readErr != nil {
+				source = io.MultiReader(source, iotest.ErrReader(tc.readErr))
+				copySize++
+			}
+			// Use io.CopyN to exercise ReadFrom even when the source implements WriterTo.
+			n, err := io.CopyN(rw, source, copySize)
+			if n != int64(len(tc.body)) || !errors.Is(err, tc.readErr) {
+				t.Fatalf("CopyN = (%d, %v), want (%d, %v)", n, err, len(tc.body), tc.readErr)
+			}
+			if tc.delegate {
+				limited, ok := rf.source.(*io.LimitedReader)
+				if !ok || limited.R != source {
+					t.Fatalf("ReadFrom received %T; want the original limited source", rf.source)
+				}
+			}
+			if got := ctx.Value("http.response.status"); got != tc.wantStatus || trw.status != tc.wantStatus {
+				t.Errorf("recorded status = %v, writer status = %d, want %d", got, trw.status, tc.wantStatus)
+			}
+			wantWritten := int64(len(tc.body))
+			if got := ctx.Value("http.response.written"); got != wantWritten || trw.written != wantWritten {
+				t.Errorf("recorded bytes = %v, writer bytes = %d, want %d", got, trw.written, wantWritten)
+			}
+		})
 	}
 }
 
