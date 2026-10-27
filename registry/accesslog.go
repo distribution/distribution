@@ -43,8 +43,10 @@ func accessLogHandler(out io.Writer, h http.Handler) http.Handler {
 				return func(src io.Reader) (int64, error) {
 					n, err := next(src)
 					written += n
-					// A zero-byte copy can leave the response uncommitted.
-					// See https://github.com/felixge/httpsnoop/issues/42.
+					// Zero copied bytes do not establish an implicit 200; the handler may
+					// still send 204 or an error. This hook owns status tracking via Wrap,
+					// so the guard remains necessary after the analogous CaptureMetrics
+					// bug is fixed: https://github.com/felixge/httpsnoop/issues/42.
 					wroteHeader = wroteHeader || n > 0
 					return n, err
 				}
