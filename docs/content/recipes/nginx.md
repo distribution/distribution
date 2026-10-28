@@ -130,8 +130,14 @@ Review the [requirements](../#requirements), then follow these steps.
          }
 
          # To add basic authentication to v2 use auth_basic setting.
+         # Read access to all users in nginx.htpasswd
          auth_basic "Registry realm";
          auth_basic_user_file /etc/nginx/conf.d/nginx.htpasswd;
+
+         # Write access to users in nginx-push.htpasswd only
+         limit_except GET HEAD {
+           auth_basic_user_file /etc/nginx/conf.d/nginx-push.htpasswd;
+         }
 
          ## If $docker_distribution_api_version is empty, the header is not added.
          ## See the map directive above where this variable is defined.
@@ -148,13 +154,24 @@ Review the [requirements](../#requirements), then follow these steps.
    }
    ```
 
-3. Create a password file `auth/nginx.htpasswd` for "testuser" and "testpassword".
+3. Create a password file `auth/nginx.htpasswd` for "testuser" and "testpassword",
+   and add another user, "testuserpush" with "testpasswordpush".
 
    ```console
    $ docker run --rm --entrypoint htpasswd httpd -Bbn testuser testpassword > auth/nginx.htpasswd
+   $ docker run --rm --entrypoint htpasswd httpd -Bbn testuserpush testpasswordpush >> auth/nginx.htpasswd
    ```
 
    > **Note**: If you do not want to use `bcrypt`, you can omit the `-B` parameter.
+
+   Then create the password file `auth/nginx-push.htpasswd` for the users who are
+   allowed to push. It only contains "testuserpush".
+
+   ```console
+   $ grep '^testuserpush:' auth/nginx.htpasswd > auth/nginx-push.htpasswd
+   ```
+
+   Users who push also need to pull, so they must be listed in both files.
 
 4. Copy your certificate files to the `auth/` directory.
 
@@ -190,16 +207,29 @@ Review the [requirements](../#requirements), then follow these steps.
 
 Now, start your stack:
 
-```consonle
+```console
 $ docker compose up -d
 ```
 
-Login with a "push" authorized user (using `testuser` and `testpassword`), then
-tag and push your first image:
+Log in with a "push" authorized user (using `testuserpush` and
+`testpasswordpush`), then tag and push your first image:
 
 ```console
-$ docker login -u=testuser -p=testpassword -e=root@example.ch myregistrydomain.com:5043
+$ docker login myregistrydomain.com:5043
 $ docker tag ubuntu myregistrydomain.com:5043/test
 $ docker push myregistrydomain.com:5043/test
+```
+
+Now, log in with a "pull-only" user (using `testuser` and `testpassword`), then
+pull back the image:
+
+```console
+$ docker login myregistrydomain.com:5043
 $ docker pull myregistrydomain.com:5043/test
+```
+
+Verify that the "pull-only" user can NOT push:
+
+```console
+$ docker push myregistrydomain.com:5043/test
 ```
