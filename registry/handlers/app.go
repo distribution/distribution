@@ -140,13 +140,13 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 	purgeConfig := uploadPurgeDefaultConfig()
 	if mc, ok := config.Storage["maintenance"]; ok {
 		if v, ok := mc["uploadpurging"]; ok {
-			purgeConfig, ok = v.(map[any]any)
+			purgeConfig, ok = maintenanceConfig(v)
 			if !ok {
 				panic("uploadpurging config key must contain additional keys")
 			}
 		}
 		if v, ok := mc["readonly"]; ok {
-			readOnly, ok := v.(map[any]any)
+			readOnly, ok := maintenanceConfig(v)
 			if !ok {
 				panic("readonly config key must contain additional keys")
 			}
@@ -1052,6 +1052,25 @@ func applyStorageMiddleware(ctx context.Context, driver storagedriver.StorageDri
 		driver = smw
 	}
 	return driver, nil
+}
+
+// maintenanceConfig returns the keys of a storage maintenance section such as
+// uploadpurging or readonly. Sections decoded from the configuration file are
+// map[any]any, while sections created by environment variables are
+// map[string]any, so both are accepted.
+func maintenanceConfig(v any) (map[any]any, bool) {
+	switch config := v.(type) {
+	case map[any]any:
+		return config, true
+	case map[string]any:
+		converted := make(map[any]any, len(config))
+		for k, val := range config {
+			converted[k] = val
+		}
+		return converted, true
+	default:
+		return nil, false
+	}
 }
 
 // uploadPurgeDefaultConfig provides a default configuration for upload

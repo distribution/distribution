@@ -266,7 +266,11 @@ func (p *Parser) overwriteStruct(v reflect.Value, fullpath string, path []string
 }
 
 func (p *Parser) overwriteMap(m reflect.Value, fullpath string, path []string, payload string) error {
-	if m.Type().Key().Kind() != reflect.String {
+	// Nested maps decoded from yaml have interface{} keys, so string keys
+	// stored in an empty interface are supported as well.
+	keyType := m.Type().Key()
+	interfaceKeys := keyType.Kind() == reflect.Interface && keyType.NumMethod() == 0
+	if keyType.Kind() != reflect.String && !interfaceKeys {
 		// non-string keys unsupported
 		logrus.Warnf("Ignoring environment variable %s involving map with non-string keys", fullpath)
 		return nil
@@ -276,7 +280,11 @@ func (p *Parser) overwriteMap(m reflect.Value, fullpath string, path []string, p
 		// If a matching key exists, get its value and continue the
 		// overwriting process.
 		for _, k := range m.MapKeys() {
-			if strings.ToUpper(k.String()) == path[0] {
+			key := k
+			if key.Kind() == reflect.Interface {
+				key = key.Elem()
+			}
+			if key.Kind() == reflect.String && strings.ToUpper(key.String()) == path[0] {
 				mapValue := m.MapIndex(k)
 				// If the existing value is nil, we want to
 				// recreate it instead of using this value.
