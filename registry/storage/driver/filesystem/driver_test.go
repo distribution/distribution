@@ -1,10 +1,13 @@
 package filesystem
 
 import (
+	"bytes"
 	"context"
+	"math"
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -94,6 +97,47 @@ func TestPathNotFoundErrorIncludesRootDirectory(t *testing.T) {
 	}
 }
 
+func TestWriterBufferSize(t *testing.T) {
+	ctx := context.Background()
+
+	for _, tc := range []struct {
+		name     string
+		size     uint64
+		expected int
+	}{
+		{name: "unset", size: 0, expected: int(defaultWriteBufferSize)},
+		{name: "configured", size: 64 * 1024, expected: 64 * 1024},
+		{name: "too large", size: math.MaxUint64, expected: int(defaultWriteBufferSize)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			d := New(DriverParameters{
+				RootDirectory:   t.TempDir(),
+				MaxThreads:      minThreads,
+				WriteBufferSize: tc.size,
+			})
+
+			w, err := d.Writer(ctx, "/file", false)
+			require.NoError(t, err)
+			require.Equal(t, tc.expected, w.(*fileWriter).bw.Size())
+
+			// Write more than one buffer's worth of data in small chunks so
+			// that the buffer is both filled and flushed.
+			contents := bytes.Repeat([]byte("0123456789abcdef"), tc.expected/8+1)
+			for chunk := range slices.Chunk(contents, 1000) {
+				_, err := w.Write(chunk)
+				require.NoError(t, err)
+			}
+			require.Equal(t, int64(len(contents)), w.Size())
+			require.NoError(t, w.Commit(ctx))
+			require.NoError(t, w.Close())
+
+			got, err := d.GetContent(ctx, "/file")
+			require.NoError(t, err)
+			require.Equal(t, contents, got)
+		})
+	}
+}
+
 func BenchmarkFilesystemDriverSuite(b *testing.B) {
 	testsuites.BenchDriver(b, newDriverConstructor(b))
 }
@@ -108,8 +152,9 @@ func TestFromParametersImpl(t *testing.T) {
 		{
 			params: map[string]any{},
 			expected: DriverParameters{
-				RootDirectory: defaultRootDirectory,
-				MaxThreads:    defaultMaxThreads,
+				RootDirectory:   defaultRootDirectory,
+				MaxThreads:      defaultMaxThreads,
+				WriteBufferSize: defaultWriteBufferSize,
 			},
 			pass: true,
 		},
@@ -126,8 +171,9 @@ func TestFromParametersImpl(t *testing.T) {
 				"maxthreads": "100",
 			},
 			expected: DriverParameters{
-				RootDirectory: defaultRootDirectory,
-				MaxThreads:    uint64(100),
+				RootDirectory:   defaultRootDirectory,
+				MaxThreads:      uint64(100),
+				WriteBufferSize: defaultWriteBufferSize,
 			},
 			pass: true,
 		},
@@ -136,8 +182,9 @@ func TestFromParametersImpl(t *testing.T) {
 				"maxthreads": 100,
 			},
 			expected: DriverParameters{
-				RootDirectory: defaultRootDirectory,
-				MaxThreads:    uint64(100),
+				RootDirectory:   defaultRootDirectory,
+				MaxThreads:      uint64(100),
+				WriteBufferSize: defaultWriteBufferSize,
 			},
 			pass: true,
 		},
@@ -147,10 +194,60 @@ func TestFromParametersImpl(t *testing.T) {
 				"maxthreads": 1,
 			},
 			expected: DriverParameters{
-				RootDirectory: defaultRootDirectory,
-				MaxThreads:    minThreads,
+				RootDirectory:   defaultRootDirectory,
+				MaxThreads:      minThreads,
+				WriteBufferSize: defaultWriteBufferSize,
 			},
 			pass: true,
+		},
+		{
+			params: map[string]any{
+				"writebuffersize": "1048576",
+			},
+			expected: DriverParameters{
+				RootDirectory:   defaultRootDirectory,
+				MaxThreads:      defaultMaxThreads,
+				WriteBufferSize: uint64(1048576),
+			},
+			pass: true,
+		},
+		{
+			params: map[string]any{
+				"writebuffersize": 1048576,
+			},
+			expected: DriverParameters{
+				RootDirectory:   defaultRootDirectory,
+				MaxThreads:      defaultMaxThreads,
+				WriteBufferSize: uint64(1048576),
+			},
+			pass: true,
+		},
+		// check that we use the minimum write buffer size
+		{
+			params: map[string]any{
+				"writebuffersize": 1,
+			},
+			expected: DriverParameters{
+				RootDirectory:   defaultRootDirectory,
+				MaxThreads:      defaultMaxThreads,
+				WriteBufferSize: defaultWriteBufferSize,
+			},
+			pass: true,
+		},
+		// Testing initiation with a string writebuffersize which can't be parsed
+		{
+			params: map[string]any{
+				"writebuffersize": "fail",
+			},
+			expected: DriverParameters{},
+			pass:     false,
+		},
+		{
+			params: map[string]any{
+				"writebuffersize": "18446744073709551615",
+			},
+			expected: DriverParameters{},
+			pass:     false,
 		},
 	}
 

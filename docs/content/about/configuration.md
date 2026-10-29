@@ -116,6 +116,7 @@ storage:
   filesystem:
     rootdirectory: /var/lib/registry
     maxthreads: 100
+    writebuffersize: 4096
   azure:
     accountname: accountname
     accountkey: base64encodedaccountkey
@@ -424,6 +425,8 @@ Permitted values are `error`, `warn`, `info` and `debug`. The default is
 storage:
   filesystem:
     rootdirectory: /var/lib/registry
+    maxthreads: 100
+    writebuffersize: 4096
   azure:
     accountname: accountname
     accountkey: base64encodedaccountkey
