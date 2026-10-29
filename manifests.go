@@ -27,6 +27,18 @@ type Manifest interface {
 	Payload() (mediaType string, payload []byte, err error)
 }
 
+// Referrer represents a Manifest which can refer to a subject.
+type Referrer interface {
+	// Subject returns a pointer to a Descriptor representing the manifest which
+	// this manifest refers to or nil if this manifest does not refer to a
+	// subject.
+	Subject() *Descriptor
+
+	// Type returns the type of the referrer if there is one, otherwise it
+	// returns empty string
+	Type() string
+}
+
 // ManifestService describes operations on manifests.
 type ManifestService interface {
 	// Exists returns true if the manifest exists.
@@ -66,6 +78,12 @@ func ManifestMediaTypes() (mediaTypes []string) {
 		}
 	}
 	return
+}
+
+// ManifestMediaTypeSupported returns true if the given mediaType is supported.
+func ManifestMediaTypeSupported(mediaType string) bool {
+	_, ok := mappings[mediaType]
+	return ok
 }
 
 // UnmarshalFunc implements manifest unmarshalling a given MediaType
