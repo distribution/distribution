@@ -110,6 +110,25 @@ func TestServerProtocols(t *testing.T) {
 	}
 }
 
+func TestServerIdleTimeout(t *testing.T) {
+	config := &configuration.Configuration{
+		Storage: configuration.Storage{
+			"inmemory": configuration.Parameters{},
+		},
+	}
+	config.HTTP.IdleTimeout = 45 * time.Second
+
+	ctx := dcontext.Background()
+	reg, err := NewRegistry(ctx, config)
+	if err != nil {
+		t.Fatalf("unexpected error creating registry: %v", err)
+	}
+
+	if reg.server.IdleTimeout != 45*time.Second {
+		t.Fatalf("expected IdleTimeout to be 45s, got %v", reg.server.IdleTimeout)
+	}
+}
+
 type registryTLSConfig struct {
 	cipherSuites    []string
 	certificatePath string
