@@ -759,26 +759,42 @@ func (d *driver) statList(ctx context.Context, path string) (*storagedriver.File
 	if err != nil {
 		return nil, err
 	}
-	if len(resp.Contents) == 1 {
-		if *resp.Contents[0].Key != s3Path {
-			return &storagedriver.FileInfoFields{
-				Path:  path,
-				IsDir: true,
-			}, nil
-		}
+	if len(resp.Contents) == 0 {
+		return nil, storagedriver.PathNotFoundError{Path: path}
+	}
+	if *resp.Contents[0].Key == s3Path {
 		return &storagedriver.FileInfoFields{
 			Path:    path,
 			Size:    *resp.Contents[0].Size,
 			ModTime: *resp.Contents[0].LastModified,
 		}, nil
 	}
-	if len(resp.CommonPrefixes) == 1 {
-		return &storagedriver.FileInfoFields{
-			Path:  path,
-			IsDir: true,
-		}, nil
+
+	// The listed key only shares a prefix with the path, which makes the path
+	// a directory only if the key continues with a "/". Keys are listed in
+	// lexicographical order and characters such as "-", "." and "_" sort
+	// before "/", so a sibling like "foo-bar" is listed ahead of "foo/bar".
+	dirPath := s3Path
+	if dirPath != "" && !strings.HasSuffix(dirPath, "/") {
+		dirPath += "/"
 	}
-	return nil, storagedriver.PathNotFoundError{Path: path}
+	if !strings.HasPrefix(*resp.Contents[0].Key, dirPath) {
+		resp, err = d.S3.ListObjectsV2WithContext(ctx, &s3.ListObjectsV2Input{
+			Bucket:  aws.String(d.Bucket),
+			Prefix:  aws.String(dirPath),
+			MaxKeys: aws.Int64(1),
+		})
+		if err != nil {
+			return nil, err
+		}
+		if len(resp.Contents) == 0 {
+			return nil, storagedriver.PathNotFoundError{Path: path}
+		}
+	}
+	return &storagedriver.FileInfoFields{
+		Path:  path,
+		IsDir: true,
+	}, nil
 }
 
 // Stat retrieves the FileInfo for the given path, including the current size

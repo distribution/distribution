@@ -956,6 +956,38 @@ func (suite *DriverSuite) TestStatCall() {
 	}
 }
 
+// TestStatCallSharedPrefix checks that Stat does not report a path as a
+// directory only because sibling files share its name as a prefix.
+func (suite *DriverSuite) TestStatCallSharedPrefix() {
+	content := randomContents(64)
+	rootPath := randomPath(32)
+	dirPath := path.Join(rootPath, randomFilename(32))
+
+	defer suite.deletePath(firstPart(rootPath))
+
+	// "-", "." and "_" sort before "/", so backends listing keys in
+	// lexicographical order return these siblings ahead of dirPath's children.
+	for _, suffix := range []string{"-sibling", ".sibling", "_sibling"} {
+		err := suite.StorageDriver.PutContent(suite.ctx, dirPath+suffix, content)
+		suite.Require().NoError(err)
+	}
+
+	fi, err := suite.StorageDriver.Stat(suite.ctx, dirPath)
+	suite.Require().Error(err)
+	suite.Require().IsType(err, storagedriver.PathNotFoundError{})
+	suite.Require().Contains(err.Error(), suite.Name())
+	suite.Require().Nil(fi)
+
+	err = suite.StorageDriver.PutContent(suite.ctx, path.Join(dirPath, randomFilename(32)), content)
+	suite.Require().NoError(err)
+
+	fi, err = suite.StorageDriver.Stat(suite.ctx, dirPath)
+	suite.Require().NoError(err)
+	suite.Require().NotNil(fi)
+	suite.Require().Equal(dirPath, fi.Path())
+	suite.Require().True(fi.IsDir())
+}
+
 // TestPutContentMultipleTimes checks that if storage driver can overwrite the content
 // in the subsequent puts. Validates that PutContent does not have to work
 // with an offset like Writer does and overwrites the file entirely
