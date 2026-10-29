@@ -37,6 +37,7 @@ notifications:
       timeout: 500ms
       threshold: 5
       backoff: 1s
+      maxqueuesize: 1000
 ```
 
 The above would configure the registry with an endpoint to send events to
@@ -44,6 +45,11 @@ The above would configure the registry with an endpoint to send events to
 <your token, if needed>". The request would timeout after 500 milliseconds. If
 5 failures happen consecutively, the registry backs off for 1 second before
 trying again.
+
+`maxqueuesize` limits the number of events waiting for delivery to an endpoint.
+When the queue reaches this limit, new events are dropped while events already
+queued continue to be retried in order. The default value of `0` leaves the
+queue unlimited for backward compatibility.
 
 For details on the fields, see the [configuration documentation](configuration.md#notifications).
 

@@ -511,6 +511,7 @@ func (app *App) configureEvents(configuration *configuration.Configuration) {
 			Timeout:           endpoint.Timeout,
 			Threshold:         endpoint.Threshold,
 			Backoff:           endpoint.Backoff,
+			MaxQueueSize:      endpoint.MaxQueueSize,
 			Headers:           endpoint.Headers,
 			IgnoredMediaTypes: endpoint.IgnoredMediaTypes,
 			Ignore:            endpoint.Ignore,
