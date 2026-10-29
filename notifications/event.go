@@ -147,3 +147,7 @@ type SourceRecord struct {
 // closed. If encountered, the error should be considered terminal and
 // retries will not be successful.
 var ErrSinkClosed = fmt.Errorf("sink: closed")
+
+// ErrQueueFull is returned when an event queue has reached its configured
+// maximum size. The event passed to Write is not queued.
+var ErrQueueFull = fmt.Errorf("event queue: full")

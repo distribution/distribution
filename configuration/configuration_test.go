@@ -49,6 +49,7 @@ var configStruct = Configuration{
 				Headers: http.Header{
 					"Authorization": []string{"Bearer <example>"},
 				},
+				MaxQueueSize:      1000,
 				IgnoredMediaTypes: []string{"application/octet-stream"},
 				Ignore: Ignore{
 					MediaTypes: []string{"application/octet-stream"},
@@ -135,6 +136,7 @@ notifications:
       url:  http://example.com
       headers:
         Authorization: [Bearer <example>]
+      maxqueuesize: 1000
       ignoredmediatypes:
         - application/octet-stream
       ignore:
@@ -190,6 +192,7 @@ notifications:
       url:  http://example.com
       headers:
         Authorization: [Bearer <example>]
+      maxqueuesize: 1000
       ignoredmediatypes:
         - application/octet-stream
       ignore:
