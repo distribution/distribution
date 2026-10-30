@@ -498,6 +498,113 @@ func TestBlobExists(t *testing.T) {
 	// TODO(dmcgowan): Test error cases and ErrBlobUnknown case
 }
 
+// testBlobStatHeadRejected stats a blob on a registry that rejects HEAD with
+// headStatus and answers GET with getResponse (e.g. public.ecr.aws).
+func testBlobStatHeadRejected(t *testing.T, headStatus int, getResponse func(content []byte) testutil.Response) (v1.Descriptor, error) {
+	t.Helper()
+	repo, _ := reference.WithName("test.example.com/repo1")
+	dgst, content := newRandomBlob(1024)
+
+	var m testutil.RequestResponseMap
+	m = append(m, testutil.RequestResponseMapping{
+		Request: testutil.Request{
+			Method: http.MethodHead,
+			Route:  "/v2/" + repo.Name() + "/blobs/" + dgst.String(),
+		},
+		Response: testutil.Response{StatusCode: headStatus},
+	})
+	m = append(m, testutil.RequestResponseMapping{
+		Request: testutil.Request{
+			Method: http.MethodGet,
+			Route:  "/v2/" + repo.Name() + "/blobs/" + dgst.String(),
+		},
+		Response: getResponse(content),
+	})
+
+	e, c := testServer(m)
+	defer c()
+
+	ctx := dcontext.Background()
+	r, err := NewRepository(repo, e, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return r.Blobs(ctx).Stat(ctx, dgst)
+}
+
+func TestBlobStatHeadRejectedRangedGet(t *testing.T) {
+	for _, status := range []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusMethodNotAllowed} {
+		stat, err := testBlobStatHeadRejected(t, status, func(content []byte) testutil.Response {
+			return testutil.Response{
+				StatusCode: http.StatusPartialContent,
+				Body:       content[:1],
+				Headers: http.Header{
+					"Content-Range": {fmt.Sprintf("bytes 0-0/%d", len(content))},
+					"Content-Type":  {"application/octet-stream"},
+				},
+			}
+		})
+		if err != nil {
+			t.Fatalf("HEAD %d: unexpected error: %v", status, err)
+		}
+		if stat.Size != 1024 {
+			t.Fatalf("HEAD %d: unexpected size %d, expected 1024", status, stat.Size)
+		}
+		if stat.MediaType != "application/octet-stream" {
+			t.Fatalf("HEAD %d: unexpected media type %q", status, stat.MediaType)
+		}
+	}
+}
+
+func TestBlobStatHeadRejectedRangeIgnored(t *testing.T) {
+	stat, err := testBlobStatHeadRejected(t, http.StatusUnauthorized, func(content []byte) testutil.Response {
+		return testutil.Response{
+			StatusCode: http.StatusOK,
+			Body:       content,
+			Headers:    http.Header{"Content-Length": {fmt.Sprint(len(content))}},
+		}
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stat.Size != 1024 {
+		t.Fatalf("unexpected size %d, expected 1024", stat.Size)
+	}
+}
+
+func TestBlobStatHeadRejectedEmptyBlob(t *testing.T) {
+	stat, err := testBlobStatHeadRejected(t, http.StatusUnauthorized, func([]byte) testutil.Response {
+		return testutil.Response{
+			StatusCode: http.StatusRequestedRangeNotSatisfiable,
+			Headers:    http.Header{"Content-Range": {"bytes */0"}},
+		}
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stat.Size != 0 {
+		t.Fatalf("unexpected size %d, expected 0", stat.Size)
+	}
+}
+
+func TestBlobStatHeadRejectedRangeNotSatisfiableWithoutContentRange(t *testing.T) {
+	_, err := testBlobStatHeadRejected(t, http.StatusUnauthorized, func([]byte) testutil.Response {
+		return testutil.Response{StatusCode: http.StatusRequestedRangeNotSatisfiable}
+	})
+	if err == nil {
+		t.Fatal("expected an error on a 416 without Content-Range")
+	}
+}
+
+func TestBlobStatHeadAndGetRejected(t *testing.T) {
+	_, err := testBlobStatHeadRejected(t, http.StatusUnauthorized, func([]byte) testutil.Response {
+		return testutil.Response{StatusCode: http.StatusUnauthorized}
+	})
+	if err == nil {
+		t.Fatal("expected an error when both HEAD and GET are rejected")
+	}
+}
+
 func TestBlobUploadChunked(t *testing.T) {
 	dgst, b1 := newRandomBlob(1024)
 	var m testutil.RequestResponseMap
