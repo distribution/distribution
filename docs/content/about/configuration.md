@@ -636,7 +636,7 @@ The `auth` option is **optional**. Possible auth providers include:
 - [`silly`](#silly)
 - [`token`](#token)
 - [`htpasswd`](#htpasswd)
-- [`none`]
+- `none`
 
 You can configure only one authentication provider.
 
