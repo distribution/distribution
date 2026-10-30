@@ -306,7 +306,7 @@ func TestWriterWriteBoundsBufferToChunkSize(t *testing.T) {
 		ChunkSize: chunkSize,
 		pool:      newBufferPool(),
 	}
-	w := d.newWriter(t.Context(), "key", "upload-id", nil).(*writer)
+	w := d.newWriter(t.Context(), "key", "upload-id", nil, nil).(*writer)
 
 	payload := bytes.Repeat([]byte{0xab}, 2*chunkSize+5)
 	n, err := w.Write(payload)
@@ -365,7 +365,7 @@ func TestWriterWriteExcludesFailedPartFromCount(t *testing.T) {
 		ChunkSize: chunkSize,
 		pool:      newBufferPool(),
 	}
-	w := d.newWriter(t.Context(), "key", "upload-id", nil).(*writer)
+	w := d.newWriter(t.Context(), "key", "upload-id", nil, nil).(*writer)
 
 	n, err := w.Write(bytes.Repeat([]byte{0xab}, 2*chunkSize+5))
 	if err == nil {
