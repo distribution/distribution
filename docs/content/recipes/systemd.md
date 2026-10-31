@@ -82,7 +82,7 @@ for Podman, rootless containers generally work out of the box.
 
 Run as root:
 
-* Copy registry.service (and registry.socket if relevant) to /etc/systemd/service/
+* Copy registry.service (and registry.socket if relevant) to /etc/systemd/system/
 * Run `systemctl daemon-reload`
 * Enable the service:
   * When using socket activation: `systemctl enable registry.socket`
