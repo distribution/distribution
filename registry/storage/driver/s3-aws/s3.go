@@ -837,8 +837,17 @@ func (d *driver) List(ctx context.Context, opath string) ([]string, error) {
 	files := []string{}
 	directories := []string{}
 
+	// Some S3 gateways (e.g. SeaweedFS) keep a directory after its last object is
+	// deleted and list it as an object keyed by the directory itself ("a/b/" for
+	// prefix "a/b/"). Skip that key, and report the directory as existing but empty.
+	selfListed := false
+
 	for {
 		for _, key := range resp.Contents {
+			if *key.Key == d.s3Path(path) {
+				selfListed = true
+				continue
+			}
 			files = append(files, strings.Replace(*key.Key, d.s3Path(""), prefix, 1))
 		}
 
@@ -863,7 +872,7 @@ func (d *driver) List(ctx context.Context, opath string) ([]string, error) {
 		}
 	}
 
-	if opath != "/" {
+	if opath != "/" && !selfListed {
 		if len(files) == 0 && len(directories) == 0 {
 			// Treat empty response as missing directory, since we don't actually
 			// have directories in s3.
