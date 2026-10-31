@@ -107,10 +107,6 @@ proxy:
 > made available on your mirror. **You must secure your mirror** by
 > implementing authentication if you expect these resources to stay private!
 
-> **Warning**: For the scheduler to clean up old entries, `delete` must
-> be enabled in the registry configuration. See
-> [Registry Configuration](../about/configuration.md) for more details.
-
 ### Configure the Docker daemon
 
 Either pass the `--registry-mirror` option when starting `dockerd` manually,
