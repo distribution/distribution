@@ -821,6 +821,56 @@ func TestWalkEmptyUploadsDir(t *testing.T) {
 	}
 }
 
+func TestListEmptiedDir(t *testing.T) {
+	skipCheck(t)
+
+	ctx := dcontext.Background()
+
+	drvr, err := s3DriverConstructor("s3listtest", s3.StorageClassStandard)
+	if err != nil {
+		t.Fatalf("unexpected error creating driver with standard storage: %v", err)
+	}
+
+	// the key SeaweedFS lists for a directory whose last object was deleted. We use
+	// the s3 sdk directly because the driver doesn't allow creation of empty directories.
+	emptyDir := "/repo/blobs/sha256"
+	d := drvr.baseEmbed.Base.StorageDriver.(*driver)
+	_, err = d.S3.PutObjectWithContext(ctx, &s3.PutObjectInput{
+		Bucket:      aws.String(d.Bucket),
+		Key:         aws.String(d.s3Path(emptyDir + "/")),
+		ContentType: d.getContentType(),
+		Body:        bytes.NewReader(nil),
+	})
+	if err != nil {
+		t.Fatalf("unable to create empty dir %s: %s", emptyDir, err)
+	}
+	defer func() {
+		_, err := d.S3.DeleteObjectWithContext(ctx, &s3.DeleteObjectInput{
+			Bucket: aws.String(d.Bucket),
+			Key:    aws.String(d.s3Path(emptyDir + "/")),
+		})
+		if err != nil {
+			t.Fatalf("cleanup failed: %s", err)
+		}
+	}()
+
+	entries, err := drvr.List(ctx, emptyDir)
+	if err != nil {
+		t.Fatalf("List(%s) on an empty directory: unexpected error %v", emptyDir, err)
+	}
+	if len(entries) != 0 {
+		t.Fatalf("List(%s) on an empty directory returned %v, want no entries", emptyDir, entries)
+	}
+
+	entries, err = drvr.List(ctx, path.Dir(emptyDir))
+	if err != nil {
+		t.Fatalf("List(%s): unexpected error %v", path.Dir(emptyDir), err)
+	}
+	if len(entries) != 1 || entries[0] != emptyDir {
+		t.Fatalf("List(%s) returned %v, want [%s]", path.Dir(emptyDir), entries, emptyDir)
+	}
+}
+
 func TestWalk(t *testing.T) {
 	skipCheck(t)
 
