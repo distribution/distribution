@@ -4,7 +4,7 @@ keywords: registry, service, driver, images, storage, middleware, rewrite
 title: Rewrite middleware
 ---
 
-A storage middleware which allows to rewrite the URL returned by the storage driver.
+A storage middleware which allows rewriting the URL returned by the storage driver.
 
 For example, it can be used to rewrite the Blob Storage URL returned by the Azure Blob Storage driver to use Azure CDN.
 

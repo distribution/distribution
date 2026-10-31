@@ -7,8 +7,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"time"
 
@@ -27,13 +29,20 @@ const (
 	// parameter. If the driver's parameters are less than this we set
 	// the parameters to minThreads
 	minThreads = uint64(25)
+
+	// defaultWriteBufferSize is the default size, in bytes, of the buffer
+	// used when writing files. It matches the default size of a
+	// bufio.Writer. It is also the minimum value for the writebuffersize
+	// configuration parameter.
+	defaultWriteBufferSize = uint64(4096)
 )
 
 // DriverParameters represents all configuration options available for the
 // filesystem driver
 type DriverParameters struct {
-	RootDirectory string
-	MaxThreads    uint64
+	RootDirectory   string
+	MaxThreads      uint64
+	WriteBufferSize uint64
 }
 
 func init() {
@@ -48,7 +57,8 @@ func (factory *filesystemDriverFactory) Create(ctx context.Context, parameters m
 }
 
 type driver struct {
-	rootDirectory string
+	rootDirectory   string
+	writeBufferSize int
 }
 
 type baseEmbed struct {
@@ -65,6 +75,7 @@ type Driver struct {
 // Optional Parameters:
 // - rootdirectory
 // - maxthreads
+// - writebuffersize
 func FromParameters(parameters map[string]any) (*Driver, error) {
 	params, err := fromParametersImpl(parameters)
 	if err != nil || params == nil {
@@ -75,9 +86,10 @@ func FromParameters(parameters map[string]any) (*Driver, error) {
 
 func fromParametersImpl(parameters map[string]any) (*DriverParameters, error) {
 	var (
-		err           error
-		maxThreads    = defaultMaxThreads
-		rootDirectory = defaultRootDirectory
+		err             error
+		maxThreads      = defaultMaxThreads
+		rootDirectory   = defaultRootDirectory
+		writeBufferSize = defaultWriteBufferSize
 	)
 
 	if parameters != nil {
@@ -89,18 +101,37 @@ func fromParametersImpl(parameters map[string]any) (*DriverParameters, error) {
 		if err != nil {
 			return nil, fmt.Errorf("maxthreads config error: %s", err.Error())
 		}
+
+		writeBufferSize, err = base.GetLimitFromParameter(parameters["writebuffersize"], defaultWriteBufferSize, defaultWriteBufferSize)
+		if err != nil {
+			return nil, fmt.Errorf("writebuffersize config error: %s", err.Error())
+		}
+		if writeBufferSize > math.MaxInt {
+			return nil, fmt.Errorf("writebuffersize config error: %d exceeds the maximum of %d", writeBufferSize, math.MaxInt)
+		}
 	}
 
 	params := &DriverParameters{
-		RootDirectory: rootDirectory,
-		MaxThreads:    maxThreads,
+		RootDirectory:   rootDirectory,
+		MaxThreads:      maxThreads,
+		WriteBufferSize: writeBufferSize,
 	}
 	return params, nil
 }
 
-// New constructs a new Driver with a given rootDirectory
+// New constructs a new Driver with a given rootDirectory. A zero
+// WriteBufferSize, or one that does not fit in an int, selects the default
+// write buffer size.
 func New(params DriverParameters) *Driver {
-	fsDriver := &driver{rootDirectory: params.RootDirectory}
+	writeBufferSize := int(defaultWriteBufferSize)
+	if params.WriteBufferSize > 0 && params.WriteBufferSize <= math.MaxInt {
+		writeBufferSize = int(params.WriteBufferSize)
+	}
+
+	fsDriver := &driver{
+		rootDirectory:   params.RootDirectory,
+		writeBufferSize: writeBufferSize,
+	}
 
 	return &Driver{
 		baseEmbed: baseEmbed{
@@ -158,6 +189,11 @@ func (d *driver) PutContent(ctx context.Context, subPath string, contents []byte
 		return err
 	}
 
+	// Close the file before renaming it, which is required on Windows.
+	if err := writer.Close(); err != nil {
+		return errors.Join(err, d.Delete(ctx, tempPath))
+	}
+
 	// Atomically replace the target file with the temporary file.
 	if err := d.Move(ctx, tempPath, subPath); err != nil {
 		// Clean up the temporary file if rename fails.
@@ -167,32 +203,13 @@ func (d *driver) PutContent(ctx context.Context, subPath string, contents []byte
 	return syncDir(filepath.Dir(d.fullPath(subPath)))
 }
 
-func syncDir(dir string) (retErr error) {
-	dirF, err := os.Open(dir)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return nil
-		}
-		return fmt.Errorf("sync dir: %w", err)
-	}
-	defer func() {
-		if err := dirF.Close(); err != nil {
-			retErr = errors.Join(retErr, fmt.Errorf("failed to close dir: %w", err))
-		}
-	}()
-	if err := dirF.Sync(); err != nil {
-		return fmt.Errorf("sync dir: %w", err)
-	}
-	return nil
-}
-
 // Reader retrieves an io.ReadCloser for the content stored at "path" with a
 // given byte offset.
 func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.ReadCloser, error) {
 	file, err := os.OpenFile(d.fullPath(path), os.O_RDONLY, 0o644)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, storagedriver.PathNotFoundError{Path: path}
+			return nil, storagedriver.PathNotFoundError{Path: path, RootDirectory: d.rootDirectory}
 		}
 
 		return nil, err
@@ -239,7 +256,7 @@ func (d *driver) Writer(ctx context.Context, subPath string, append bool) (stora
 		offset = n
 	}
 
-	return newFileWriter(fp, offset), nil
+	return newFileWriter(fp, offset, d.writeBufferSize), nil
 }
 
 // Stat retrieves the FileInfo for the given path, including the current size
@@ -250,7 +267,7 @@ func (d *driver) Stat(ctx context.Context, subPath string) (storagedriver.FileIn
 	fi, err := os.Stat(fullPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, storagedriver.PathNotFoundError{Path: subPath}
+			return nil, storagedriver.PathNotFoundError{Path: subPath, RootDirectory: d.rootDirectory}
 		}
 
 		return nil, err
@@ -270,7 +287,7 @@ func (d *driver) List(ctx context.Context, subPath string) ([]string, error) {
 	dir, err := os.Open(fullPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, storagedriver.PathNotFoundError{Path: subPath}
+			return nil, storagedriver.PathNotFoundError{Path: subPath, RootDirectory: d.rootDirectory}
 		}
 		return nil, err
 	}
@@ -284,7 +301,7 @@ func (d *driver) List(ctx context.Context, subPath string) ([]string, error) {
 
 	keys := make([]string, 0, len(fileNames))
 	for _, fileName := range fileNames {
-		keys = append(keys, filepath.Join(subPath, fileName))
+		keys = append(keys, path.Join(subPath, fileName))
 	}
 
 	return keys, nil
@@ -297,7 +314,7 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 	dest := d.fullPath(destPath)
 
 	if _, err := os.Stat(source); os.IsNotExist(err) {
-		return storagedriver.PathNotFoundError{Path: sourcePath}
+		return storagedriver.PathNotFoundError{Path: sourcePath, RootDirectory: d.rootDirectory}
 	}
 
 	if err := os.MkdirAll(filepath.Dir(dest), 0o777); err != nil {
@@ -316,7 +333,7 @@ func (d *driver) Delete(ctx context.Context, subPath string) error {
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	} else if err != nil {
-		return storagedriver.PathNotFoundError{Path: subPath}
+		return storagedriver.PathNotFoundError{Path: subPath, RootDirectory: d.rootDirectory}
 	}
 
 	err = os.RemoveAll(fullPath)
@@ -382,11 +399,11 @@ type fileWriter struct {
 	cancelled bool
 }
 
-func newFileWriter(file *os.File, size int64) *fileWriter {
+func newFileWriter(file *os.File, size int64, bufferSize int) *fileWriter {
 	return &fileWriter{
 		file: file,
 		size: size,
-		bw:   bufio.NewWriter(file),
+		bw:   bufio.NewWriterSize(file, bufferSize),
 	}
 }
 

@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/suite"
-	"gopkg.in/yaml.v2"
+	"go.yaml.in/yaml/v2"
 )
 
 // configStruct is a canonical example configuration, which should map to configYamlV0_1

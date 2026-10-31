@@ -51,6 +51,11 @@ func manifestDispatcher(ctx *Context, r *http.Request) http.Handler {
 	ref := getReference(ctx)
 	dgst, err := digest.Parse(ref)
 	if err != nil {
+		if strings.ContainsRune(ref, ':') {
+			// Looks like a digest but failed to parse; reject rather than treating the malformed digest as a tag name.
+			ctx.Errors = append(ctx.Errors, errcode.ErrorCodeDigestInvalid.WithDetail(err))
+			return http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
+		}
 		// We just have a tag
 		manifestHandler.Tag = ref
 	} else {

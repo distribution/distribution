@@ -2,12 +2,12 @@
 
 # GO_VERSION sets the version of the golang base image to use.
 # It must be a supported tag in the docker.io/library/golang image repository.
-ARG GO_VERSION=1.25.9
+ARG GO_VERSION=1.26.10
 
 # ALPINE_VERSION sets the version of the alpine base image to use, including for the golang image.
 # It must be a supported tag in the docker.io/library/alpine image repository
 # that's also available as alpine image variant for the Golang version used.
-ARG ALPINE_VERSION=3.23
+ARG ALPINE_VERSION=3.24
 
 # XX_VERSION sets the version of the tonistiigi/xx utility to use.
 # It must be a valid tag in the docker.io/tonistiigi/xx image repository.
@@ -31,7 +31,7 @@ RUN --mount=target=. \
 FROM base AS build
 ARG TARGETPLATFORM
 ARG LDFLAGS="-s -w"
-ARG BUILDTAGS=""
+ARG BUILDTAGS="grpcnotrace"
 RUN --mount=type=bind,target=/src \
     --mount=type=cache,target=/root/.cache/go-build \
     --mount=target=/go/pkg/mod,type=cache \

@@ -116,6 +116,7 @@ storage:
   filesystem:
     rootdirectory: /var/lib/registry
     maxthreads: 100
+    writebuffersize: 4096
   azure:
     accountname: accountname
     accountkey: base64encodedaccountkey
@@ -424,6 +425,8 @@ Permitted values are `error`, `warn`, `info` and `debug`. The default is
 storage:
   filesystem:
     rootdirectory: /var/lib/registry
+    maxthreads: 100
+    writebuffersize: 4096
   azure:
     accountname: accountname
     accountkey: base64encodedaccountkey
@@ -1125,6 +1128,24 @@ Under the hood distribution uses [`go-redis`](https://github.com/redis/go-redis)
 Redis connectivity and its [`UniversalOptions`](https://pkg.go.dev/github.com/redis/go-redis/v9#UniversalOptions)
 struct.
 
+To use Redis Sentinel, set `mastername` to the name of the monitored Redis master
+and `addrs` to the Sentinel endpoints. Setting `mastername` selects the
+Sentinel-backed failover client; without it, multiple addresses select a Redis
+Cluster client instead.
+
+```yaml
+redis:
+  addrs:
+    - sentinel1.example.com:26379
+    - sentinel2.example.com:26379
+    - sentinel3.example.com:26379
+  mastername: mymaster
+```
+
+The equivalent environment variable for the master name is
+`REGISTRY_REDIS_MASTERNAME`. If authentication is required, use `username` and
+`password` for Redis, and `sentinelusername` and `sentinelpassword` for Sentinel.
+
 You can optionally specify TLS configuration on top of the `UniversalOptions` settings.
 
 Use these settings to configure Redis TLS:
@@ -1256,6 +1277,7 @@ proxy:
   username: [username]
   password: [password]
   ttl: 168h
+  rangepassthrough: false
 ```
 
 The `proxy` structure allows a registry to be configured as a pull-through cache
@@ -1268,6 +1290,22 @@ is unsupported.
 |-----------|----------|-------------------------------------------------------|
 | `remoteurl`| yes     | The URL for the repository on Docker Hub.             |
 | `ttl`      | no      | Expire proxy cache configured in "storage" after this time. Cache 168h(7 days) by default, set to 0 to disable cache expiration, The suffix is one of `ns`, `us`, `ms`, `s`, `m`, or `h`. If you specify a value but omit the suffix, the value is interpreted as a number of nanoseconds. |
+| `rangepassthrough` | no | Forward cache-miss blob GET requests with a non-empty Range header to the upstream without caching the response. Defaults to `false`. |
+
+Set `proxy.rangepassthrough: true` or
+`REGISTRY_PROXY_RANGEPASSTHROUGH=true` to enable origin Range pass-through.
+Omitting the setting or setting it to `false` preserves the existing cache-miss
+behavior. This option does not disable Range support for cached blobs: cache
+hits retain local serving or storage redirects. Ordinary GET requests still
+fetch and cache the complete blob, and HEAD requests keep their existing path.
+
+With pass-through enabled, the upstream interprets `Range` and `If-Range`.
+Its `206` response (including multipart ranges) is relayed without assembling
+pieces or verifying the whole blob digest. If the upstream ignores Range or
+`If-Range` selects the full representation, its `200` response is also relayed
+without caching. An unsatisfiable range is relayed as `416`, including its
+`Content-Range` and body. Traffic consisting only of Range requests therefore
+does not populate the registry's complete blob cache.
 
 To enable pulling private repositories (e.g. `batman/robin`), specify one of the
 following authentication methods for the pull-through cache to authenticate with
@@ -1361,7 +1399,7 @@ index manifests uploaded to the registry.
 
 ##### `platforms`
 
-Set `platformexist` to `all` (the default) to validate all platform images exist.
+Set `platforms` to `all` (the default) to validate all platform images exist.
 The registry will validate that the images referenced by the index exist in the
 registry before accepting the image index.
 

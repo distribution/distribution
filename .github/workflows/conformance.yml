@@ -17,7 +17,7 @@ jobs:
     steps:
       -
         name: Build image
-        uses: docker/bake-action@6614cfa25eff9a0b2b2697efb0b6159e7680d584 # v7.2.0
+        uses: docker/bake-action@59cb1203cd42bcefd40a1b6d73b589e48c86040e # v7.5.0
         with:
           targets: image-local
       -
@@ -44,7 +44,7 @@ jobs:
         run: mkdir -p out/ && mv {report.html,junit.xml} out/
       -
         name: Upload test results
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: oci-test-results-${{ github.sha }}
           path: out/

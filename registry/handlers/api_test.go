@@ -28,6 +28,7 @@ import (
 	v2 "github.com/distribution/distribution/v3/registry/api/v2"
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/distribution/v3/registry/storage/driver/factory"
+	_ "github.com/distribution/distribution/v3/registry/storage/driver/filesystem"
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
 	"github.com/distribution/distribution/v3/testutil"
 	"github.com/distribution/reference"
@@ -773,6 +774,21 @@ func TestBlobAPI(t *testing.T) {
 	testBlobAPI(t, env2, args)
 }
 
+func TestBlobAPIFilesystem(t *testing.T) {
+	config := configuration.Configuration{
+		Storage: configuration.Storage{
+			"filesystem": configuration.Parameters{"rootdirectory": t.TempDir()},
+			"maintenance": configuration.Parameters{"uploadpurging": map[any]any{
+				"enabled": false,
+			}},
+		},
+	}
+	config.HTTP.Headers = headerConfig
+	env := newTestEnvWithConfig(t, &config)
+	defer env.Shutdown()
+	testBlobAPI(t, env, makeBlobArgs(t))
+}
+
 func TestBlobDelete(t *testing.T) {
 	deleteEnabled := true
 	env := newTestEnv(t, deleteEnabled)
@@ -1486,6 +1502,44 @@ func TestManifestAPI_DeleteTag_DeleteDisabled(t *testing.T) {
 	checkErr(t, err, msg)
 	defer resp.Body.Close()
 	checkResponse(t, msg, resp, http.StatusOK)
+}
+
+func TestManifestAPI_NameTooLong(t *testing.T) {
+	config := configuration.Configuration{
+		Storage: configuration.Storage{
+			"inmemory":    configuration.Parameters{},
+			"cache":       configuration.Parameters{"blobdescriptor": "inmemory"},
+			"maintenance": configuration.Parameters{"uploadpurging": map[any]any{"enabled": false}},
+		},
+	}
+	config.HTTP.Headers = headerConfig
+	env := newTestEnvWithConfig(t, &config)
+	defer env.Shutdown()
+
+	// "foo" is a domain to WithName but part of the path (docker.io/foo/...) to the cache.
+	for _, tc := range []struct {
+		name string
+		repo string
+	}{
+		{
+			name: "rejected by reference.WithName",
+			repo: "foo/" + strings.Repeat("a", reference.RepositoryNameTotalLengthMax+1),
+		},
+		{
+			name: "rejected by the blob descriptor cache",
+			repo: "foo/" + strings.Repeat("a", reference.RepositoryNameTotalLengthMax),
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			resp, err := http.Get(env.server.URL + "/v2/" + tc.repo + "/manifests/latest")
+			checkErr(t, err, tc.name)
+			defer resp.Body.Close()
+
+			checkResponse(t, tc.name, resp, http.StatusBadRequest)
+			// nolint:errcheck
+			checkBodyHasErrorCodes(t, tc.name, resp, errcode.ErrorCodeNameInvalid)
+		})
+	}
 }
 
 // storageManifestErrDriverFactory implements the factory.StorageDriverFactory interface.

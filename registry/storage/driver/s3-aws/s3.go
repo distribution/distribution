@@ -21,7 +21,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
-	"path/filepath"
+	"path"
 	"slices"
 	"sort"
 	"strconv"
@@ -455,6 +455,12 @@ func getParameterAsBool(parameters map[string]any, name string, defaultValue boo
 	return defaultValue, nil
 }
 
+func newBufferPool() *sync.Pool {
+	return &sync.Pool{
+		New: func() any { return &bytes.Buffer{} },
+	}
+}
+
 // New constructs a new Driver with the given AWS credentials, region, encryption flag, and
 // bucketName
 func New(ctx context.Context, params DriverParameters) (*Driver, error) {
@@ -541,9 +547,7 @@ func New(ctx context.Context, params DriverParameters) (*Driver, error) {
 		RootDirectory:               params.RootDirectory,
 		StorageClass:                params.StorageClass,
 		ObjectACL:                   params.ObjectACL,
-		pool: &sync.Pool{
-			New: func() any { return &bytes.Buffer{} },
-		},
+		pool:                        newBufferPool(),
 	}
 
 	if params.RedirectEndpoint != "" {
@@ -1236,6 +1240,11 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, from, sta
 //
 //	directoryDiff("/", "/path/to/folder/folder/file")
 //	// => [ "/path", "/path/to", "/path/to/folder", "/path/to/folder/folder" ]
+//
+// prev and current are S3 object keys, which always use "/" as a separator
+// regardless of host OS, so this must use path.Dir rather than filepath.Dir:
+// on Windows, filepath.Dir converges to "\" instead of "/", so the loop's
+// "/" exit condition never fires and it never terminates.
 func directoryDiff(prev, current string) []string {
 	var paths []string
 
@@ -1245,7 +1254,7 @@ func directoryDiff(prev, current string) []string {
 
 	parent := current
 	for {
-		parent = filepath.Dir(parent)
+		parent = path.Dir(parent)
 		if parent == "/" || parent == prev || strings.HasPrefix(prev+"/", parent+"/") {
 			break
 		}
@@ -1421,7 +1430,7 @@ func (w *writer) Write(p []byte) (int, error) {
 
 			w.reset()
 
-			if _, err := io.Copy(w.buf, resp.Body); err != nil {
+			if _, err := io.Copy(writerBuffer{w}, resp.Body); err != nil {
 				return 0, err
 			}
 		} else {
@@ -1444,14 +1453,72 @@ func (w *writer) Write(p []byte) (int, error) {
 		}
 	}
 
-	n, _ := w.buf.Write(p)
+	var n int
+	for len(p) > 0 {
+		remaining := w.driver.ChunkSize - w.buf.Len()
+		if remaining <= 0 {
+			return n, fmt.Errorf("invalid buffer length %d for chunk size %d", w.buf.Len(), w.driver.ChunkSize)
+		}
 
-	for w.buf.Len() >= w.driver.ChunkSize {
-		if err := w.flush(); err != nil {
-			return 0, fmt.Errorf("flush: %w", err)
+		writeSize := min(len(p), remaining)
+		nn, err := w.writeBuffer(p[:writeSize])
+		n += nn
+		p = p[nn:]
+		if err != nil {
+			return n, err
+		}
+
+		if w.buf.Len() == w.driver.ChunkSize {
+			if err := w.flush(); err != nil {
+				return n - nn, fmt.Errorf("flush: %w", err)
+			}
 		}
 	}
+
 	return n, nil
+}
+
+type writerBuffer struct {
+	writer *writer
+}
+
+func (b writerBuffer) Write(p []byte) (int, error) {
+	return b.writer.writeBuffer(p)
+}
+
+// writeBuffer appends p without allowing the buffer capacity to exceed the
+// configured chunk size. Capacity grows only as data arrives, so empty and
+// small uploads do not reserve an entire chunk.
+func (w *writer) writeBuffer(p []byte) (int, error) {
+	// Grow aggressively to limit copies for full chunks, while keeping
+	// allocation proportional for small uploads.
+	const growthFactor = 8
+
+	remaining := w.driver.ChunkSize - w.buf.Len()
+	if len(p) > remaining {
+		return 0, io.ErrShortBuffer
+	}
+
+	required := w.buf.Len() + len(p)
+	if required > w.buf.Cap() {
+		capacity := w.buf.Cap()
+		if capacity == 0 {
+			capacity = required
+		} else if capacity > w.driver.ChunkSize/growthFactor {
+			capacity = w.driver.ChunkSize
+		} else {
+			capacity *= growthFactor
+		}
+		if capacity < required {
+			capacity = required
+		}
+
+		data := make([]byte, w.buf.Len(), capacity)
+		copy(data, w.buf.Bytes())
+		w.buf = bytes.NewBuffer(data)
+	}
+
+	return w.buf.Write(p)
 }
 
 func (w *writer) Size() int64 {

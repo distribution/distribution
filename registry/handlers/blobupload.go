@@ -191,6 +191,30 @@ func (buh *blobUploadHandler) PutBlobUploadComplete(w http.ResponseWriter, r *ht
 	}
 	defer buh.Upload.Close()
 
+	cr := r.Header.Get("Content-Range")
+	cl := r.Header.Get("Content-Length")
+	if cr != "" && cl != "" {
+		start, end, err := parseContentRange(cr)
+		if err != nil {
+			buh.Errors = append(buh.Errors, errcode.ErrorCodeUnknown.WithDetail(err.Error()))
+			return
+		}
+		if start > end || start != buh.Upload.Size() {
+			buh.Errors = append(buh.Errors, errcode.ErrorCodeRangeInvalid)
+			return
+		}
+
+		clInt, err := strconv.ParseInt(cl, 10, 64)
+		if err != nil {
+			buh.Errors = append(buh.Errors, errcode.ErrorCodeUnknown.WithDetail(err.Error()))
+			return
+		}
+		if clInt != (end-start)+1 {
+			buh.Errors = append(buh.Errors, errcode.ErrorCodeSizeInvalid)
+			return
+		}
+	}
+
 	dgstStr := r.FormValue("digest") // TODO(stevvooe): Support multiple digest parameters!
 
 	if dgstStr == "" {

@@ -89,15 +89,21 @@ type App struct {
 
 	// deleteEnabled is true if the registry is configured to enable deletions.
 	deleteEnabled bool
+
+	cancel context.CancelFunc
+
+	purgerDone <-chan struct{}
 }
 
 // NewApp takes a configuration and returns a configured app, ready to serve
 // requests. The app only implements ServeHTTP and can be wrapped in other
 // handlers accordingly.
 func NewApp(ctx context.Context, config *configuration.Configuration) *App {
+	ctx, cancel := context.WithCancel(ctx)
 	app := &App{
 		Config:  config,
 		Context: ctx,
+		cancel:  cancel,
 		router:  v2.RouterWithPrefix(config.HTTP.Prefix),
 		isCache: config.Proxy.RemoteURL != "",
 	}
@@ -153,7 +159,7 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 		}
 	}
 
-	startUploadPurger(app, app.driver, dcontext.GetLogger(app), purgeConfig)
+	app.purgerDone = startUploadPurger(app, app.driver, dcontext.GetLogger(app), purgeConfig)
 
 	app.driver, err = applyStorageMiddleware(app, app.driver, config.Middleware["storage"])
 	if err != nil {
@@ -453,6 +459,9 @@ func (app *App) RegisterHealthChecks(healthRegistries ...*health.Registry) {
 
 // Shutdown close the underlying registry
 func (app *App) Shutdown() error {
+	if app.cancel != nil {
+		defer app.cancel()
+	}
 	if r, ok := app.registry.(proxy.Closer); ok {
 		return r.Close()
 	}
@@ -743,13 +752,10 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 			nameRef, err := reference.WithName(getName(context))
 			if err != nil {
 				dcontext.GetLogger(context).Errorf("error parsing reference from context: %v", err)
-				context.Errors = append(context.Errors, distribution.ErrRepositoryNameInvalid{
+				context.Errors = append(context.Errors, errcode.ErrorCodeNameInvalid.WithDetail(distribution.ErrRepositoryNameInvalid{
 					Name:   getName(context),
 					Reason: err,
-				})
-				if err := errcode.ServeJSON(w, context.Errors); err != nil {
-					dcontext.GetLogger(context).Errorf("error serving error json: %v (from %v)", err, context.Errors)
-				}
+				}))
 				return
 			}
 			repository, err := app.registry.Repository(context, nameRef)
@@ -763,10 +769,8 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 					context.Errors = append(context.Errors, errcode.ErrorCodeNameInvalid.WithDetail(err))
 				case errcode.Error:
 					context.Errors = append(context.Errors, err)
-				}
-
-				if err := errcode.ServeJSON(w, context.Errors); err != nil {
-					dcontext.GetLogger(context).Errorf("error serving error json: %v (from %v)", err, context.Errors)
+				default:
+					context.Errors = append(context.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 				}
 				return
 			}
@@ -781,10 +785,6 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 			if err != nil {
 				dcontext.GetLogger(context).Errorf("error initializing repository middleware: %v", err)
 				context.Errors = append(context.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
-
-				if err := errcode.ServeJSON(w, context.Errors); err != nil {
-					dcontext.GetLogger(context).Errorf("error serving error json: %v (from %v)", err, context.Errors)
-				}
 				return
 			}
 		}
@@ -1072,9 +1072,11 @@ func badPurgeUploadConfig(reason string) {
 
 // startUploadPurger schedules a goroutine which will periodically
 // check upload directories for old files and delete them
-func startUploadPurger(ctx context.Context, storageDriver storagedriver.StorageDriver, log dcontext.Logger, config map[any]any) {
+func startUploadPurger(ctx context.Context, storageDriver storagedriver.StorageDriver, log dcontext.Logger, config map[any]any) <-chan struct{} {
+	done := make(chan struct{})
 	if config["enabled"] == false {
-		return
+		close(done)
+		return done
 	}
 
 	var purgeAgeDuration time.Duration
@@ -1121,6 +1123,8 @@ func startUploadPurger(ctx context.Context, storageDriver storagedriver.StorageD
 	}
 
 	go func() {
+		defer close(done)
+
 		randInt, err := rand.Int(rand.Reader, new(big.Int).SetInt64(math.MaxInt64))
 		if err != nil {
 			log.Infof("Failed to generate random jitter: %v", err)
@@ -1129,12 +1133,27 @@ func startUploadPurger(ctx context.Context, storageDriver storagedriver.StorageD
 		}
 		jitter := time.Duration(randInt.Int64()%60) * time.Minute
 		log.Infof("Starting upload purge in %s", jitter)
-		time.Sleep(jitter)
+
+		select {
+		case <-time.After(jitter):
+		case <-ctx.Done():
+			return
+		}
+
+		ticker := time.NewTicker(intervalDuration)
+		defer ticker.Stop()
 
 		for {
 			storage.PurgeUploads(ctx, storageDriver, time.Now().Add(-purgeAgeDuration), !dryRunBool)
 			log.Infof("Starting upload purge in %s", intervalDuration)
-			time.Sleep(intervalDuration)
+
+			select {
+			case <-ticker.C:
+			case <-ctx.Done():
+				return
+			}
 		}
 	}()
+
+	return done
 }

@@ -149,11 +149,15 @@ func (err ErrUnsupportedMethod) Error() string {
 
 // PathNotFoundError is returned when operating on a nonexistent path.
 type PathNotFoundError struct {
-	Path       string
-	DriverName string
+	Path          string
+	DriverName    string
+	RootDirectory string
 }
 
 func (err PathNotFoundError) Error() string {
+	if err.RootDirectory != "" {
+		return fmt.Sprintf("%s: Path not found: %s (relative to rootdirectory %s)", err.DriverName, err.Path, err.RootDirectory)
+	}
 	return fmt.Sprintf("%s: Path not found: %s", err.DriverName, err.Path)
 }
 

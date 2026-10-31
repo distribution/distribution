@@ -1,11 +1,9 @@
 package handlers
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"strings"
-	"text/template"
 
 	"github.com/sirupsen/logrus"
 )
@@ -24,19 +22,18 @@ func (hook *logHook) Fire(entry *logrus.Entry) error {
 	}
 	subject := fmt.Sprintf("[%s] %s: %s", entry.Level, host, entry.Message)
 
-	html := `
-	{{.Message}}
+	var sb strings.Builder
 
-	{{range $key, $value := .Data}}
-	{{$key}}: {{$value}}
-	{{end}}
-	`
-	b := bytes.NewBuffer(make([]byte, 0))
-	t := template.Must(template.New("mail body").Parse(html))
-	if err := t.Execute(b, entry); err != nil {
-		return err
+	sb.WriteString("\n\t")
+	sb.WriteString(entry.Message)
+	sb.WriteString("\n")
+
+	for key, value := range entry.Data {
+		sb.WriteString(fmt.Sprintf("\t%s: %v\n", key, value))
 	}
-	body := b.String()
+	sb.WriteString("\t")
+
+	body := sb.String()
 
 	return hook.Mail.sendMail(subject, body)
 }

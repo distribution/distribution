@@ -13,7 +13,6 @@ import (
 	"syscall"
 	"time"
 
-	logstash "github.com/bshuster-repo/logrus-logstash-hook"
 	"github.com/docker/go-metrics"
 	gorhandlers "github.com/gorilla/handlers"
 	"github.com/sirupsen/logrus"
@@ -402,8 +401,11 @@ func configureLogging(ctx context.Context, config *configuration.Configuration) 
 			TimestampFormat: time.RFC3339Nano,
 		})
 	case "logstash":
-		logrus.SetFormatter(&logstash.LogstashFormatter{
-			Formatter: &logrus.JSONFormatter{TimestampFormat: time.RFC3339Nano},
+		logrus.SetFormatter(&logrus.JSONFormatter{
+			TimestampFormat: time.RFC3339Nano,
+			FieldMap: logrus.FieldMap{
+				logrus.FieldKeyFunc: "function",
+			},
 		})
 	default:
 		return ctx, fmt.Errorf("unsupported logging formatter: %q", formatter)
@@ -442,6 +444,9 @@ func panicHandler(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
+				if err == http.ErrAbortHandler {
+					panic(err)
+				}
 				logrus.Panic(fmt.Sprintf("%v", err))
 			}
 		}()

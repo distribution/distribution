@@ -50,6 +50,44 @@ func TestWriteSeek(t *testing.T) {
 	}
 }
 
+// TestBlobUploadCloseAfterCancel checks that closing a cancelled upload, as
+// the HTTP handler does with a deferred Close, does not write the hash state
+// back into the upload directory that Cancel removed.
+func TestBlobUploadCloseAfterCancel(t *testing.T) {
+	ctx := context.Background()
+	imageName, _ := reference.WithName("foo/bar")
+	driver := inmemory.New()
+	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableDelete, EnableRedirect)
+	if err != nil {
+		t.Fatalf("error creating registry: %v", err)
+	}
+	repository, err := registry.Repository(ctx, imageName)
+	if err != nil {
+		t.Fatalf("unexpected error getting repo: %v", err)
+	}
+	bs := repository.Blobs(ctx)
+
+	blobUpload, err := bs.Create(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error starting layer upload: %s", err)
+	}
+	if _, err := blobUpload.Write([]byte{1, 2, 3}); err != nil {
+		t.Fatalf("unexpected error writing contents: %v", err)
+	}
+	uploadPath := path.Dir(blobUpload.(*blobWriter).path)
+
+	if err := blobUpload.Cancel(ctx); err != nil {
+		t.Fatalf("unexpected error during upload cancellation: %v", err)
+	}
+	if err := blobUpload.Close(); err != nil {
+		t.Fatalf("unexpected error closing cancelled upload: %v", err)
+	}
+
+	if paths, err := driver.List(ctx, uploadPath); err == nil {
+		t.Fatalf("upload path recreated after cancel and close: %v", paths)
+	}
+}
+
 // TestSimpleBlobUpload covers the blob upload process, exercising common
 // error paths that might be seen during an upload.
 func TestSimpleBlobUpload(t *testing.T) {

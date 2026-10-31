@@ -35,7 +35,7 @@ An implementation of the `storagedriver.StorageDriver` interface which uses [Mic
 
 ## Related information
 
-* To get information about Azure blob storage [the offical docs](https://azure.microsoft.com/en-us/services/storage/).
+* To get information about Azure blob storage [the official docs](https://azure.microsoft.com/en-us/services/storage/).
 * You can use Azure [Blob Service REST API](https://docs.microsoft.com/en-us/rest/api/storageservices/Blob-Service-REST-API) to [create a storage container](https://docs.microsoft.com/en-us/rest/api/storageservices/Create-Container).
 
 ## Azure managed identity 

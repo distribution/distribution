@@ -40,6 +40,7 @@ type blobWriter struct {
 
 	resumableDigestEnabled bool
 	committed              bool
+	cancelled              bool
 }
 
 var _ distribution.BlobWriter = &blobWriter{}
@@ -98,6 +99,7 @@ func (bw *blobWriter) Cancel(ctx context.Context) error {
 	if err := bw.fileWriter.Cancel(ctx); err != nil {
 		return err
 	}
+	bw.cancelled = true
 
 	if err := bw.Close(); err != nil {
 		dcontext.GetLogger(ctx).Errorf("error closing blobwriter: %s", err)
@@ -150,6 +152,16 @@ func (bw *blobWriter) ReadFrom(r io.Reader) (n int64, err error) {
 func (bw *blobWriter) Close() error {
 	if bw.committed {
 		return errors.New("blobwriter close after commit")
+	}
+
+	if bw.cancelled {
+		// The upload is being discarded, so there is no hash state worth
+		// saving. Writing it would recreate the upload directory after
+		// removeResources deleted it, without a startedat file, and
+		// PurgeUploads never removes such a directory. The file writer has
+		// already been cancelled, so an error from closing it is expected.
+		_ = bw.fileWriter.Close()
+		return nil
 	}
 
 	if err := bw.storeHashState(bw.blobStore.ctx); err != nil && err != errResumableDigestNotAvailable {
@@ -244,9 +256,6 @@ func (bw *blobWriter) validateBlob(ctx context.Context, desc v1.Descriptor) (v1.
 		// paths. We may be able to make the size-based check a stronger
 		// guarantee, so this may be defensive.
 		if !verified {
-			digester := digest.Canonical.Digester()
-			verifier := desc.Digest.Verifier()
-
 			// Read the file from the backend driver and validate it.
 			fr, err := newFileReader(ctx, bw.driver, bw.path, desc.Size)
 			if err != nil {
@@ -254,14 +263,26 @@ func (bw *blobWriter) validateBlob(ctx context.Context, desc v1.Descriptor) (v1.
 			}
 			defer fr.Close()
 
-			tr := io.TeeReader(fr, digester.Hash())
+			if desc.Digest.Algorithm() == digest.Canonical {
+				digester := digest.Canonical.Digester()
+				if _, err := io.Copy(digester.Hash(), fr); err != nil {
+					return v1.Descriptor{}, err
+				}
 
-			if _, err := io.Copy(verifier, tr); err != nil {
-				return v1.Descriptor{}, err
+				canonical = digester.Digest()
+				verified = desc.Digest == canonical
+			} else {
+				digester := digest.Canonical.Digester()
+				verifier := desc.Digest.Verifier()
+				tr := io.TeeReader(fr, digester.Hash())
+
+				if _, err := io.Copy(verifier, tr); err != nil {
+					return v1.Descriptor{}, err
+				}
+
+				canonical = digester.Digest()
+				verified = verifier.Verified()
 			}
-
-			canonical = digester.Digest()
-			verified = verifier.Verified()
 		}
 	}
 
