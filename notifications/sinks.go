@@ -9,31 +9,33 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// eventQueue accepts all messages into a queue for asynchronous consumption
-// by a sink. It is unbounded and thread safe but the sink must be reliable or
-// events will be dropped.
+// eventQueue accepts messages into a queue for asynchronous consumption by a
+// sink. It is thread safe and may be bounded to prevent unbounded memory use.
 type eventQueue struct {
-	sink      events.Sink
-	events    *list.List
-	listeners []eventQueueListener
-	cond      *sync.Cond
-	mu        sync.Mutex
-	closed    bool
+	sink         events.Sink
+	events       *list.List
+	listeners    []eventQueueListener
+	cond         *sync.Cond
+	mu           sync.Mutex
+	closed       bool
+	maxQueueSize int
 }
 
 // eventQueueListener is called when various events happen on the queue.
 type eventQueueListener interface {
 	ingress(event events.Event)
 	egress(event events.Event)
+	dropped(event events.Event)
 }
 
-// newEventQueue returns a queue to the provided sink. If the updater is non-
-// nil, it will be called to update pending metrics on ingress and egress.
-func newEventQueue(sink events.Sink, listeners ...eventQueueListener) *eventQueue {
+// newEventQueue returns a queue to the provided sink. A maxQueueSize less than
+// or equal to zero leaves the queue unbounded.
+func newEventQueue(sink events.Sink, maxQueueSize int, listeners ...eventQueueListener) *eventQueue {
 	eq := eventQueue{
-		sink:      sink,
-		events:    list.New(),
-		listeners: listeners,
+		sink:         sink,
+		events:       list.New(),
+		listeners:    listeners,
+		maxQueueSize: maxQueueSize,
 	}
 
 	eq.cond = sync.NewCond(&eq.mu)
@@ -41,14 +43,20 @@ func newEventQueue(sink events.Sink, listeners ...eventQueueListener) *eventQueu
 	return &eq
 }
 
-// Write accepts the events into the queue, only failing if the queue has
-// beend closed.
+// Write accepts an event into the queue. If the queue is full, the new event
+// is dropped and ErrQueueFull is returned.
 func (eq *eventQueue) Write(event events.Event) error {
 	eq.mu.Lock()
 	defer eq.mu.Unlock()
 
 	if eq.closed {
 		return ErrSinkClosed
+	}
+	if eq.maxQueueSize > 0 && eq.events.Len() >= eq.maxQueueSize {
+		for _, listener := range eq.listeners {
+			listener.dropped(event)
+		}
+		return ErrQueueFull
 	}
 
 	for _, listener := range eq.listeners {
