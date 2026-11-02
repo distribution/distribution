@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"slices"
 
 	"github.com/distribution/distribution/v3"
 
@@ -107,7 +108,10 @@ func (msl *manifestServiceListener) Delete(ctx context.Context, dgst digest.Dige
 func (msl *manifestServiceListener) Get(ctx context.Context, dgst digest.Digest, options ...distribution.ManifestServiceOption) (distribution.Manifest, error) {
 	sm, err := msl.ManifestService.Get(ctx, dgst, options...)
 	if err == nil {
-		if err := msl.parent.listener.ManifestPulled(msl.parent.Repository.Named(), sm, options...); err != nil {
+		// Tell the listener which digest the manifest was requested by, since
+		// it can't be recovered from the manifest itself.
+		pulledOptions := append(slices.Clone(options), distribution.WithDigest(dgst))
+		if err := msl.parent.listener.ManifestPulled(msl.parent.Repository.Named(), sm, pulledOptions...); err != nil {
 			dcontext.GetLogger(ctx).Errorf("error dispatching manifest pull to listener: %v", err)
 		}
 	}

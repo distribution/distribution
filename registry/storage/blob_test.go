@@ -91,9 +91,43 @@ func TestBlobUploadCloseAfterCancel(t *testing.T) {
 // TestSimpleBlobUpload covers the blob upload process, exercising common
 // error paths that might be seen during an upload.
 func TestSimpleBlobUpload(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		alg  digest.Algorithm
+		// hint declares alg when creating (and resuming) the upload, letting
+		// it stream-hash with alg instead of re-reading the data at commit.
+		hint bool
+	}{
+		{name: "sha256", alg: digest.SHA256},
+		{name: "sha512", alg: digest.SHA512, hint: true},
+		{name: "sha512 without hint", alg: digest.SHA512},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			testSimpleBlobUpload(t, tc.alg, tc.hint)
+		})
+	}
+}
+
+func testSimpleBlobUpload(t *testing.T, alg digest.Algorithm, hint bool) {
 	randomDataReader, dgst, err := testutil.CreateRandomTarFile()
 	if err != nil {
 		t.Fatalf("error creating random reader: %v", err)
+	}
+	if alg != digest.Canonical {
+		// CreateRandomTarFile digests with sha256
+		if dgst, err = alg.FromReader(randomDataReader); err != nil {
+			t.Fatalf("error digesting random reader: %v", err)
+		}
+		if _, err := randomDataReader.Seek(0, io.SeekStart); err != nil {
+			t.Fatalf("error rewinding random reader: %v", err)
+		}
+	}
+
+	var createOpts []distribution.BlobCreateOption
+	resumeAlg := digest.Canonical
+	if hint {
+		createOpts = append(createOpts, WithDigestAlgorithm(alg))
+		resumeAlg = alg
 	}
 
 	ctx := context.Background()
@@ -109,10 +143,10 @@ func TestSimpleBlobUpload(t *testing.T) {
 	}
 	bs := repository.Blobs(ctx)
 
-	h := sha256.New()
+	h := alg.Hash()
 	rd := io.TeeReader(randomDataReader, h)
 
-	blobUpload, err := bs.Create(ctx)
+	blobUpload, err := bs.Create(ctx, createOpts...)
 	if err != nil {
 		t.Fatalf("unexpected error starting layer upload: %s", err)
 	}
@@ -138,7 +172,7 @@ func TestSimpleBlobUpload(t *testing.T) {
 	}
 
 	// Restart!
-	blobUpload, err = bs.Create(ctx)
+	blobUpload, err = bs.Create(ctx, createOpts...)
 	if err != nil {
 		t.Fatalf("unexpected error starting layer upload: %s", err)
 	}
@@ -166,15 +200,21 @@ func TestSimpleBlobUpload(t *testing.T) {
 	}
 
 	// Do a resume, for good fun
-	blobUpload, err = bs.Resume(ctx, blobUpload.ID())
+	blobUpload, err = bs.Resume(WithResumeDigestAlgorithm(ctx, resumeAlg), blobUpload.ID())
 	if err != nil {
 		t.Fatalf("unexpected error resuming upload: %v", err)
 	}
+	if got := blobUpload.(*blobWriter).digester.Digest().Algorithm(); got != resumeAlg {
+		t.Fatalf("resumed upload digests with %v, expected %v", got, resumeAlg)
+	}
 
-	sha256Digest := digest.NewDigest("sha256", h)
+	blobDigest := digest.NewDigest(alg, h)
 	desc, err := blobUpload.Commit(ctx, v1.Descriptor{Digest: dgst})
 	if err != nil {
 		t.Fatalf("unexpected error finishing layer upload: %v", err)
+	}
+	if desc.Digest != dgst {
+		t.Fatalf("unexpected committed digest: %v != %v", desc.Digest, dgst)
 	}
 
 	// ensure state was cleaned up
@@ -215,8 +255,8 @@ func TestSimpleBlobUpload(t *testing.T) {
 		t.Fatal("incorrect read length")
 	}
 
-	if digest.NewDigest("sha256", h) != sha256Digest {
-		t.Fatalf("unexpected digest from uploaded layer: %q != %q", digest.NewDigest("sha256", h), sha256Digest)
+	if digest.NewDigest(alg, h) != blobDigest {
+		t.Fatalf("unexpected digest from uploaded layer: %q != %q", digest.NewDigest(alg, h), blobDigest)
 	}
 
 	// Delete a blob
@@ -566,6 +606,51 @@ func TestLayerUploadZeroLength(t *testing.T) {
 	bs := repository.Blobs(ctx)
 
 	simpleUpload(t, bs, []byte{}, digestSha256Empty)
+}
+
+// TestLayerUploadZeroLengthSHA512 uploads zero-length content addressed by
+// sha512, with and without declaring the algorithm up front.
+func TestLayerUploadZeroLengthSHA512(t *testing.T) {
+	ctx := context.Background()
+	imageName, _ := reference.WithName("foo/bar")
+
+	expected := digest.SHA512.FromBytes(nil)
+
+	for _, hint := range []bool{false, true} {
+		t.Run(fmt.Sprintf("hint=%t", hint), func(t *testing.T) {
+			// a fresh registry per case, so the blob can't already exist
+			registry, err := NewRegistry(ctx, inmemory.New(), BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableDelete, EnableRedirect)
+			if err != nil {
+				t.Fatalf("error creating registry: %v", err)
+			}
+			repository, err := registry.Repository(ctx, imageName)
+			if err != nil {
+				t.Fatalf("unexpected error getting repo: %v", err)
+			}
+			bs := repository.Blobs(ctx)
+
+			var options []distribution.BlobCreateOption
+			if hint {
+				options = append(options, WithDigestAlgorithm(digest.SHA512))
+			}
+			wr, err := bs.Create(ctx, options...)
+			if err != nil {
+				t.Fatalf("unexpected error starting upload: %v", err)
+			}
+
+			desc, err := wr.Commit(ctx, v1.Descriptor{Digest: expected})
+			if err != nil {
+				t.Fatalf("unexpected error committing write: %v", err)
+			}
+			if desc.Digest != expected {
+				t.Fatalf("unexpected digest: %v != %v", desc.Digest, expected)
+			}
+
+			if _, err := bs.Stat(ctx, expected); err != nil {
+				t.Fatalf("unexpected error stat-ing committed blob: %v", err)
+			}
+		})
+	}
 }
 
 func simpleUpload(t *testing.T, bs distribution.BlobIngester, blob []byte, expectedDigest digest.Digest) {

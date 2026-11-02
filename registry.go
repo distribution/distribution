@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/distribution/reference"
+	"github.com/opencontainers/go-digest"
 )
 
 // Scope defines the set of items that match a namespace.
@@ -74,6 +75,23 @@ type WithTagOption struct{ Tag string }
 
 // Apply conforms to the ManifestServiceOption interface
 func (o WithTagOption) Apply(m ManifestService) error {
+	// no implementation
+	return nil
+}
+
+// WithDigest allows the digest a manifest was referenced by (e.g. in a PUT
+// by digest) to be passed into Put, so the storage layer can address the
+// content using that digest's algorithm instead of always defaulting to
+// canonical (sha256).
+func WithDigest(dgst digest.Digest) ManifestServiceOption {
+	return WithDigestOption{dgst}
+}
+
+// WithDigestOption holds a digest
+type WithDigestOption struct{ Digest digest.Digest }
+
+// Apply conforms to the ManifestServiceOption interface
+func (o WithDigestOption) Apply(m ManifestService) error {
 	// no implementation
 	return nil
 }
