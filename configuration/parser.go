@@ -184,6 +184,17 @@ func (p *Parser) overwriteFields(v reflect.Value, fullpath string, path []string
 			elem := reflect.New(typ).Elem()
 			v.Set(reflect.Append(v, elem))
 		}
+
+		if len(path) == 1 {
+			// Env var specifies this element directly
+			elemVal := reflect.New(v.Type().Elem())
+			err = yaml.Unmarshal([]byte(payload), elemVal.Interface())
+			if err != nil {
+				return err
+			}
+			v.Index(idx).Set(reflect.Indirect(elemVal))
+			return nil
+		}
 		return p.overwriteFields(v.Index(idx), fullpath, path[1:], payload)
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
