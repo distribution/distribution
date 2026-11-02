@@ -123,6 +123,9 @@ Loop:
 			case len(parse) == 0:
 				return nil, parse, fmt.Errorf("unterminated quoted string")
 			case parse[0] == '"':
+				if _, exists := res[parameter]; exists {
+					return nil, parse, fmt.Errorf("duplicate parameter %q at position %d", parameter, len(forwarded)-len(parse))
+				}
 				res[parameter] = value
 				value = ""
 				parse = parse[1:]
