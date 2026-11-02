@@ -78,6 +78,21 @@ func TestParseForwardedHeader(t *testing.T) {
 			expectedError: true,
 		},
 		{
+			name:          "duplicate parameter with quoted value",
+			raw:           `key="a"; p="b"; key="c"`,
+			expectedError: true,
+		},
+		{
+			name:          "duplicate parameter, quoted after unquoted",
+			raw:           `key=a; key="b"`,
+			expectedError: true,
+		},
+		{
+			name:          "duplicate parameter, unquoted after quoted",
+			raw:           `key="a"; key=b`,
+			expectedError: true,
+		},
+		{
 			name:          "empty parameter",
 			raw:           "=value",
 			expectedError: true,
