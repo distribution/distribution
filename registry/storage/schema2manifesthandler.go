@@ -10,6 +10,7 @@ import (
 	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/distribution/distribution/v3/manifest/schema2"
 	"github.com/opencontainers/go-digest"
+	"golang.org/x/sync/errgroup"
 )
 
 var (
@@ -85,54 +86,70 @@ func (ms *schema2ManifestHandler) verifyManifest(ctx context.Context, mnfst sche
 
 	blobsService := ms.repository.Blobs(ctx)
 
-	for _, descriptor := range mnfst.References() {
-		err := descriptor.Digest.Validate()
-		if err != nil {
-			errs = append(errs, err, distribution.ErrManifestBlobUnknown{Digest: descriptor.Digest})
-			continue
-		}
+	references := mnfst.References()
+	g, gCtx := errgroup.WithContext(ctx)
+	g.SetLimit(DefaultManifestVerificationConcurrencyLimit)
+	results := make([][]error, len(references))
 
-		switch descriptor.MediaType {
-		case schema2.MediaTypeForeignLayer:
-			// Clients download this layer from an external URL, so do not check for
-			// its presence.
-			if len(descriptor.URLs) == 0 {
-				err = errMissingURL
+	for i, descriptor := range references {
+		i, descriptor := i, descriptor
+		g.Go(func() error {
+			var localErrs []error
+			err := descriptor.Digest.Validate()
+			if err != nil {
+				localErrs = append(localErrs, err, distribution.ErrManifestBlobUnknown{Digest: descriptor.Digest})
+				results[i] = localErrs
+				return nil
 			}
-			allow := ms.manifestURLs.allow
-			deny := ms.manifestURLs.deny
-			for _, u := range descriptor.URLs {
-				var pu *url.URL
-				pu, err = url.Parse(u)
-				if err != nil || (pu.Scheme != "http" && pu.Scheme != "https") || pu.Fragment != "" || (allow != nil && !allow.MatchString(u)) || (deny != nil && deny.MatchString(u)) {
-					err = errInvalidURL
-					break
+
+			switch descriptor.MediaType {
+			case schema2.MediaTypeForeignLayer:
+				if len(descriptor.URLs) == 0 {
+					err = errMissingURL
 				}
-			}
-		case schema2.MediaTypeManifest:
-			var exists bool
-			exists, err = manifestService.Exists(ctx, descriptor.Digest)
-			if err != nil || !exists {
-				err = distribution.ErrBlobUnknown // just coerce to unknown.
+				allow := ms.manifestURLs.allow
+				deny := ms.manifestURLs.deny
+				for _, u := range descriptor.URLs {
+					var pu *url.URL
+					pu, err = url.Parse(u)
+					if err != nil || (pu.Scheme != "http" && pu.Scheme != "https") || pu.Fragment != "" || (allow != nil && !allow.MatchString(u)) || (deny != nil && deny.MatchString(u)) {
+						err = errInvalidURL
+						break
+					}
+				}
+			case schema2.MediaTypeManifest:
+				var exists bool
+				exists, err = manifestService.Exists(gCtx, descriptor.Digest)
+				if err != nil || !exists {
+					err = distribution.ErrBlobUnknown
+				}
+
+				if err != nil {
+					dcontext.GetLogger(ms.ctx).WithError(err).Debugf("failed to ensure exists of %v in manifest service", descriptor.Digest)
+				}
+				fallthrough
+			default:
+				_, err = blobsService.Stat(gCtx, descriptor.Digest)
 			}
 
 			if err != nil {
-				dcontext.GetLogger(ms.ctx).WithError(err).Debugf("failed to ensure exists of %v in manifest service", descriptor.Digest)
-			}
-			fallthrough // double check the blob store.
-		default:
-			// check its presence
-			_, err = blobsService.Stat(ctx, descriptor.Digest)
-		}
-
-		if err != nil {
-			if err != distribution.ErrBlobUnknown {
-				errs = append(errs, err)
+				if err != distribution.ErrBlobUnknown {
+					localErrs = append(localErrs, err)
+				}
+				localErrs = append(localErrs, distribution.ErrManifestBlobUnknown{Digest: descriptor.Digest})
 			}
 
-			// On error here, we always append unknown blob errors.
-			errs = append(errs, distribution.ErrManifestBlobUnknown{Digest: descriptor.Digest})
-		}
+			results[i] = localErrs
+			return nil
+		})
+	}
+
+	if err := g.Wait(); err != nil {
+		return err
+	}
+
+	for _, localErrs := range results {
+		errs = append(errs, localErrs...)
 	}
 
 	if len(errs) != 0 {
