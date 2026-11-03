@@ -84,6 +84,7 @@ type EndpointMetrics struct {
 	Successes int            // total events written successfully
 	Failures  int            // total events failed
 	Errors    int            // total events errored
+	Dropped   int            // total events dropped before being queued
 	Statuses  map[string]int // status code histogram, per call event
 }
 
@@ -176,6 +177,16 @@ func (eqc *endpointMetricsEventQueueListener) egress(event events.Event) {
 	eqc.Pending--
 
 	pendingGauge.WithValues(eqc.EndpointName).Dec(1)
+}
+
+func (eqc *endpointMetricsEventQueueListener) dropped(event events.Event) {
+	eqc.Lock()
+	defer eqc.Unlock()
+	eqc.Events++
+	eqc.Dropped++
+
+	eventsCounter.WithValues("Events", eqc.EndpointName).Inc()
+	eventsCounter.WithValues("Dropped", eqc.EndpointName).Inc()
 }
 
 // register places the endpoint into expvar so that stats are tracked.

@@ -661,15 +661,16 @@ type Notifications struct {
 // Endpoint describes the configuration of an http webhook notification
 // endpoint.
 type Endpoint struct {
-	Name              string        `yaml:"name"`              // identifies the endpoint in the registry instance.
-	Disabled          bool          `yaml:"disabled"`          // disables the endpoint
-	URL               string        `yaml:"url"`               // post url for the endpoint.
-	Headers           http.Header   `yaml:"headers"`           // static headers that should be added to all requests
-	Timeout           time.Duration `yaml:"timeout"`           // HTTP timeout
-	Threshold         int           `yaml:"threshold"`         // circuit breaker threshold before backing off on failure
-	Backoff           time.Duration `yaml:"backoff"`           // backoff duration
-	IgnoredMediaTypes []string      `yaml:"ignoredmediatypes"` // target media types to ignore
-	Ignore            Ignore        `yaml:"ignore"`            // ignore event types
+	Name              string        `yaml:"name"`                   // identifies the endpoint in the registry instance.
+	Disabled          bool          `yaml:"disabled"`               // disables the endpoint
+	URL               string        `yaml:"url"`                    // post url for the endpoint.
+	Headers           http.Header   `yaml:"headers"`                // static headers that should be added to all requests
+	Timeout           time.Duration `yaml:"timeout"`                // HTTP timeout
+	Threshold         int           `yaml:"threshold"`              // circuit breaker threshold before backing off on failure
+	Backoff           time.Duration `yaml:"backoff"`                // backoff duration
+	MaxQueueSize      int           `yaml:"maxqueuesize,omitempty"` // maximum number of pending events; 0 means unlimited
+	IgnoredMediaTypes []string      `yaml:"ignoredmediatypes"`      // target media types to ignore
+	Ignore            Ignore        `yaml:"ignore"`                 // ignore event types
 }
 
 // Events configures notification events.
