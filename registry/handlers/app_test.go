@@ -213,6 +213,39 @@ func TestNewApp(t *testing.T) {
 	}
 }
 
+// TestNewAppMaintenanceFromEnv covers maintenance sections that were created by
+// environment variables, which the configuration parser stores as
+// map[string]any instead of the map[any]any decoded from yaml.
+func TestNewAppMaintenanceFromEnv(t *testing.T) {
+	ctx := dcontext.Background()
+	config := configuration.Configuration{
+		Storage: configuration.Storage{
+			"inmemory": nil,
+			"maintenance": configuration.Parameters{
+				"uploadpurging": map[string]any{
+					"enabled": false,
+				},
+				"readonly": map[string]any{
+					"enabled": true,
+				},
+			},
+		},
+	}
+
+	app := NewApp(ctx, &config)
+	defer app.Shutdown()
+
+	select {
+	case <-app.purgerDone:
+		// upload purging is disabled, so no purger goroutine was started
+	default:
+		t.Fatal("expected upload purging to be disabled")
+	}
+	if !app.readOnly {
+		t.Fatal("expected registry to be in read-only mode")
+	}
+}
+
 type testProxyCloser struct {
 	distribution.Namespace
 	closeCalled         bool
