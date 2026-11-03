@@ -127,3 +127,37 @@ Stop the local S3 store when done:
 ```
 make stop-s3-storage
 ```
+
+Run the S3 storage driver tests (starts MinIO, runs tests, stops MinIO):
+```
+make test-s3-storage
+```
+
+### Local GCS store environment
+
+You can run Google’s [storage-testbench](https://github.com/googleapis/storage-testbench) locally for the GCS storage driver. The first `docker compose` build clones and builds the pinned testbench image and may take several minutes; later runs reuse the cached image.
+
+Start the local GCS emulator (listens on host port `9020` so it does not clash with MinIO on `9000`):
+```
+make start-gcs-storage
+```
+
+Run the GCS storage driver tests (starts the emulator, runs tests, stops the emulator):
+```
+make test-gcs-storage
+```
+
+That target sets `STORAGE_EMULATOR_HOST=127.0.0.1:9020` and `REGISTRY_STORAGE_GCS_BUCKET=images-local`, runs the full DriverSuite (including the 5GiB large-stream test), and passes `-timeout 30m` so the default 10m limit is not hit mid-upload.
+
+Without those variables, `go test ./registry/storage/driver/gcs/` still runs unit tests and skips the integration suite.
+
+To skip the 5GiB test and shrink concurrent load (faster, less RAM), pass `-short` through Make so the emulator env and teardown stay in place:
+
+```
+TESTFLAGS=-short make test-gcs-storage
+```
+
+Stop the local GCS emulator when done:
+```
+make stop-gcs-storage
+```
