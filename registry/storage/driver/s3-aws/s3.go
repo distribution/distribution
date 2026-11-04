@@ -99,6 +99,7 @@ type DriverParameters struct {
 	Bucket                      string
 	Region                      string
 	RegionEndpoint              string
+	ServiceEndpoints            map[string]ServiceEndpoint
 	ForcePathStyle              bool
 	Encrypt                     bool
 	KeyID                       string
@@ -206,6 +207,11 @@ func FromParameters(ctx context.Context, parameters map[string]any) (*Driver, er
 		regionEndpoint = ""
 	}
 
+	serviceEndpoints, err := parseServiceEndpoints(parameters["serviceendpoints"])
+	if err != nil {
+		return nil, err
+	}
+
 	forcePathStyleBool, err := getParameterAsBool(parameters, "forcepathstyle", false)
 	if err != nil {
 		return nil, err
@@ -215,7 +221,7 @@ func FromParameters(ctx context.Context, parameters map[string]any) (*Driver, er
 	region := fmt.Sprint(regionName)
 
 	// Don't check the region value if a custom endpoint is provided.
-	if regionEndpoint == "" {
+	if regionEndpoint == "" && serviceEndpoints[s3.EndpointsID].URL == "" {
 		if regionName == nil || region == "" {
 			return nil, fmt.Errorf("no region parameter provided")
 		}
@@ -349,6 +355,7 @@ func FromParameters(ctx context.Context, parameters map[string]any) (*Driver, er
 		Bucket:                      fmt.Sprint(bucket),
 		Region:                      region,
 		RegionEndpoint:              fmt.Sprint(regionEndpoint),
+		ServiceEndpoints:            serviceEndpoints,
 		ForcePathStyle:              forcePathStyleBool,
 		Encrypt:                     encryptBool,
 		KeyID:                       fmt.Sprint(keyID),
@@ -464,9 +471,19 @@ func newBufferPool() *sync.Pool {
 // New constructs a new Driver with the given AWS credentials, region, encryption flag, and
 // bucketName
 func New(ctx context.Context, params DriverParameters) (*Driver, error) {
+	if params.RegionEndpoint != "" && params.ServiceEndpoints != nil {
+		return nil, fmt.Errorf("regionendpoint and serviceendpoints cannot both be configured")
+	}
+	if err := validateServiceEndpoints(params.ServiceEndpoints); err != nil {
+		return nil, err
+	}
+	s3Endpoint := params.RegionEndpoint
+	if endpoint, ok := params.ServiceEndpoints[s3.EndpointsID]; ok {
+		s3Endpoint = endpoint.URL
+	}
 	if !params.V4Auth &&
-		(params.RegionEndpoint == "" ||
-			strings.Contains(params.RegionEndpoint, "s3.amazonaws.com")) {
+		(s3Endpoint == "" ||
+			strings.Contains(s3Endpoint, "s3.amazonaws.com")) {
 		return nil, fmt.Errorf("on Amazon S3 this storage driver can only be used with v4 authentication")
 	}
 
@@ -481,7 +498,9 @@ func New(ctx context.Context, params DriverParameters) (*Driver, error) {
 		awsConfig.WithCredentials(creds)
 	}
 
-	if params.RegionEndpoint != "" {
+	if len(params.ServiceEndpoints) != 0 {
+		awsConfig.WithEndpointResolver(serviceEndpointResolver(params.ServiceEndpoints, endpoints.DefaultResolver()))
+	} else if params.RegionEndpoint != "" {
 		awsConfig.WithEndpoint(params.RegionEndpoint)
 	}
 
