@@ -164,11 +164,14 @@ func (bw *blobWriter) Close() error {
 		return nil
 	}
 
+	// Close the file writer even when saving the hash state fails, so the
+	// driver can release what it holds for the upload (e.g. a spool file).
+	var hashErr error
 	if err := bw.storeHashState(bw.blobStore.ctx); err != nil && err != errResumableDigestNotAvailable {
-		return err
+		hashErr = err
 	}
 
-	return bw.fileWriter.Close()
+	return errors.Join(hashErr, bw.fileWriter.Close())
 }
 
 // validateBlob checks the data against the digest, returning an error if it
