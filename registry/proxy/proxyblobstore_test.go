@@ -530,3 +530,35 @@ func testProxyStoreServe(t *testing.T, te *testEnv, numClients int) {
 		t.Fatalf("unexpected remote stats: %#v", remoteStats)
 	}
 }
+
+// readerFromRecorder fails the test if a copy selects ReadFrom.
+type readerFromRecorder struct {
+	*httptest.ResponseRecorder
+	t *testing.T
+}
+
+func (w readerFromRecorder) ReadFrom(r io.Reader) (int64, error) {
+	w.t.Error("copyContent used ReadFrom; wrappers such as promhttp send 200 before the first byte")
+	return io.Copy(w.ResponseRecorder, r)
+}
+
+func TestProxyStoreServeInflightUsesWrite(t *testing.T) {
+	te := makeTestEnv(t, "foo/bar")
+	populate(t, te, 1, 10, 1)
+	dgst := te.inRemote[0].Digest
+	mu.Lock()
+	inflight[dgst] = struct{}{}
+	mu.Unlock()
+	t.Cleanup(func() {
+		mu.Lock()
+		delete(inflight, dgst)
+		mu.Unlock()
+	})
+	w := readerFromRecorder{httptest.NewRecorder(), t}
+	if err := te.store.ServeBlob(te.ctx, w, httptest.NewRequest(http.MethodGet, "/", nil), dgst); err != nil {
+		t.Fatal(err)
+	}
+	if w.Body.Len() != 10 {
+		t.Errorf("body length = %d, want 10", w.Body.Len())
+	}
+}
