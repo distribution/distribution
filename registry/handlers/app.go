@@ -836,7 +836,17 @@ func (app *App) logError(ctx context.Context, errors errcode.Errors) {
 			errCodeKey{},
 			errMessageKey{},
 			errDetailKey{}))
-		dcontext.GetResponseLogger(c).Errorf("response completed with error")
+
+		var statusCode int
+		if coder, ok := e1.(errcode.ErrorCoder); ok {
+			statusCode = coder.ErrorCode().Descriptor().HTTPStatusCode
+		}
+
+		if statusCode == http.StatusNotFound {
+			dcontext.GetResponseLogger(c).Infof("response completed with error")
+		} else {
+			dcontext.GetResponseLogger(c).Errorf("response completed with error")
+		}
 	}
 }
 
