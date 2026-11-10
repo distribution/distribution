@@ -134,7 +134,7 @@ func (fr *fileReader) reader() (io.Reader, error) {
 	fr.rc = rc
 
 	if fr.brd == nil {
-		fr.brd = bufio.NewReaderSize(fr.rc, fileReaderBufferSize)
+		fr.brd = bufio.NewReaderSize(fr.rc, int(min(fr.size, fileReaderBufferSize)))
 	} else {
 		fr.brd.Reset(fr.rc)
 	}
