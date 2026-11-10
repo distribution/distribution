@@ -3,6 +3,7 @@ package storage
 import (
 	"bytes"
 	crand "crypto/rand"
+	"fmt"
 	"io"
 	mrand "math/rand"
 	"testing"
@@ -192,4 +193,50 @@ func TestFileReaderErrors(t *testing.T) {
 	//	4. Timeout: timeouts to backend. Need to better understand these
 	//     failure cases and how the storage driver propagates these errors
 	//     up the stack.
+}
+
+func TestFileReaderBufferSize(t *testing.T) {
+	for _, tc := range []struct {
+		size int
+		want int
+	}{
+		{0, 16}, // bufio's minimum buffer size
+		{1, 16},
+		{4096, 4096},
+		{fileReaderBufferSize, fileReaderBufferSize},
+		{fileReaderBufferSize + 1, fileReaderBufferSize},
+	} {
+		t.Run(fmt.Sprint(tc.size), func(t *testing.T) {
+			ctx := dcontext.Background()
+			driver := inmemory.New()
+			if err := driver.PutContent(ctx, "/blob", make([]byte, tc.size)); err != nil {
+				t.Fatal(err)
+			}
+			fr, err := newFileReader(ctx, driver, "/blob", int64(tc.size))
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer fr.Close()
+			if fr.brd != nil {
+				t.Fatal("buffer allocated before first read")
+			}
+			var p [1]byte
+			if _, err := fr.Read(p[:]); err != nil && err != io.EOF {
+				t.Fatal(err)
+			}
+			if got := fr.brd.Size(); got != tc.want {
+				t.Fatalf("buffer size = %d, want %d", got, tc.want)
+			}
+			buffer := fr.brd
+			if _, err := fr.Seek(0, io.SeekStart); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := fr.Read(p[:]); err != nil && err != io.EOF {
+				t.Fatal(err)
+			}
+			if fr.brd != buffer {
+				t.Fatal("buffer replaced after seek")
+			}
+		})
+	}
 }
