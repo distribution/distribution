@@ -1,6 +1,7 @@
 package notifications
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -95,6 +96,19 @@ type Event struct {
 	// not part of the event body; endpoints receive it as request headers
 	// so they can continue the trace of the originating request.
 	traceContext propagation.MapCarrier
+}
+
+// String returns the JSON encoding of the event, which is the form endpoints
+// receive. The generic formatting of a struct also prints unexported fields,
+// so without this method the trace context, and any baggage in it, would be
+// written to the logs wherever an event is logged, for example when a sink
+// retries a failed delivery.
+func (e Event) String() string {
+	p, err := json.Marshal(e)
+	if err != nil {
+		return fmt.Sprintf("event %s: error marshaling: %v", e.ID, err)
+	}
+	return string(p)
 }
 
 // ActorRecord specifies the agent that initiated the event. For most
