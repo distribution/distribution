@@ -80,8 +80,25 @@ func (hs *httpSink) Write(event events.Event) error {
 		return fmt.Errorf("%v: error marshaling event envelope: %v", hs, err)
 	}
 
-	body := bytes.NewReader(p)
-	resp, err := hs.client.Post(hs.url, EventsMediaType, body)
+	req, err := http.NewRequest(http.MethodPost, hs.url, bytes.NewReader(p))
+	if err != nil {
+		for _, listener := range hs.listeners {
+			listener.err(err, event)
+		}
+
+		return fmt.Errorf("%v: error creating request: %v", hs, err)
+	}
+	req.Header.Set("Content-Type", EventsMediaType)
+
+	// Propagate the trace context of the request that generated the event,
+	// so that the endpoint can continue the trace.
+	if e, ok := event.(Event); ok {
+		for key, value := range e.traceContext {
+			req.Header.Set(key, value)
+		}
+	}
+
+	resp, err := hs.client.Do(req)
 	if err != nil {
 		for _, listener := range hs.listeners {
 			listener.err(err, event)

@@ -6,6 +6,7 @@ import (
 
 	events "github.com/docker/go-events"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
+	"go.opentelemetry.io/otel/propagation"
 )
 
 // EventAction constants used in action field of Event.
@@ -88,6 +89,12 @@ type Event struct {
 	// differently, while the actor "initiates" the event, the source
 	// "generates" it.
 	Source SourceRecord `json:"source"`
+
+	// traceContext holds the trace context of the request that generated
+	// the event, encoded by the configured OpenTelemetry propagator. It is
+	// not part of the event body; endpoints receive it as request headers
+	// so they can continue the trace of the originating request.
+	traceContext propagation.MapCarrier
 }
 
 // ActorRecord specifies the agent that initiated the event. For most
