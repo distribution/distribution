@@ -114,3 +114,29 @@ func UploadBlobs(repository distribution.Repository, layers map[digest.Digest]io
 	}
 	return nil
 }
+
+// SeekerLen returns the apparent size of s
+func SeekerLen(s io.Seeker) (int64, error) {
+	offset, err := s.Seek(0, io.SeekCurrent)
+	if err != nil {
+		return 0, fmt.Errorf("failed to read initial offset: %w", err)
+	}
+	size, err := s.Seek(0, io.SeekEnd)
+	if err != nil {
+		return 0, fmt.Errorf("failed to read size: %w", err)
+	}
+	_, err = s.Seek(offset, io.SeekStart)
+	if err != nil {
+		return 0, fmt.Errorf("failed to restore initial offset: %w", err)
+	}
+	return size, nil
+}
+
+// MustSeekerLen returns the apparent size of s or panics
+func MustSeekerLen(s io.Seeker) int64 {
+	size, err := SeekerLen(s)
+	if err != nil {
+		panic(err)
+	}
+	return size
+}
