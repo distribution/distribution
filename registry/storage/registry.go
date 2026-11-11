@@ -15,6 +15,12 @@ var (
 	DefaultConcurrencyLimit = runtime.GOMAXPROCS(0)
 )
 
+// DefaultManifestVerificationConcurrencyLimit bounds the concurrency of I/O-bound
+// descriptor verification checks (e.g. manifest presence and blob existence checks)
+// in parallel. This is decoupled from GOMAXPROCS to allow highly overlapping network
+// and storage round trips for concurrent dependency validation without resource exhaustion.
+const DefaultManifestVerificationConcurrencyLimit = 16
+
 // registry is the top-level implementation of Registry for use in the storage
 // package. All instances should descend from this object.
 type registry struct {
