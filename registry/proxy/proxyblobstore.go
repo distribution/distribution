@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -40,7 +41,7 @@ func setResponseHeaders(h http.Header, length int64, mediaType string, digest di
 	h.Set("Content-Length", strconv.FormatInt(length, 10))
 	h.Set("Content-Type", mediaType)
 	h.Set("Docker-Content-Digest", digest.String())
-	h.Set("Etag", digest.String())
+	h.Set("Etag", fmt.Sprintf(`"%s"`, digest))
 }
 
 func (pbs *proxyBlobStore) copyContent(ctx context.Context, dgst digest.Digest, writer io.Writer, h http.Header) (v1.Descriptor, error) {
