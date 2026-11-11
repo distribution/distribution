@@ -759,6 +759,58 @@ func makeBlobArgs(t *testing.T) blobArgs {
 	return args
 }
 
+type closeErrorBlobWriter struct {
+	distribution.BlobWriter
+	err error
+}
+
+func (w closeErrorBlobWriter) Close() error {
+	_ = w.BlobWriter.Close()
+	return w.err
+}
+
+func TestBlobUploadResponseCloseError(t *testing.T) {
+	env := newTestEnv(t, false)
+	defer env.Shutdown()
+	name, err := reference.WithName("foo/bar")
+	if err != nil {
+		t.Fatal(err)
+	}
+	repository, err := env.app.registry.Repository(env.ctx, name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	upload, err := repository.Blobs(env.ctx).Create(env.ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer upload.Cancel(env.ctx)
+	if _, err := upload.Write([]byte{1}); err != nil {
+		t.Fatal(err)
+	}
+	closeErr := errors.New("upload close failed")
+	buh := &blobUploadHandler{
+		Context: &Context{
+			App:        env.app,
+			Context:    env.ctx,
+			Repository: repository,
+			urlBuilder: env.builder,
+		},
+		Upload: closeErrorBlobWriter{BlobWriter: upload, err: closeErr},
+		UUID:   upload.ID(),
+	}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPatch, "/", nil)
+	if err := buh.blobUploadResponse(w, r); !errors.Is(err, closeErr) {
+		t.Fatalf("blobUploadResponse error = %v, want %v", err, closeErr)
+	}
+	for _, header := range []string{"Location", "Range", "Docker-Upload-UUID", "Content-Length"} {
+		if value := w.Header().Get(header); value != "" {
+			t.Errorf("failed upload advertised %s: %q", header, value)
+		}
+	}
+}
+
 // TestBlobAPI conducts a full test of the of the blob api.
 func TestBlobAPI(t *testing.T) {
 	deleteEnabled := false
