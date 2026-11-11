@@ -142,6 +142,20 @@ func New(params DriverParameters) *Driver {
 	}
 }
 
+// ReadSeeker opens path at offset zero for reading and seeking.
+func (d *Driver) ReadSeeker(ctx context.Context, path string) (io.ReadSeekCloser, error) {
+	rc, err := d.Reader(ctx, path, 0)
+	if err != nil {
+		return nil, err
+	}
+	rsc, ok := rc.(io.ReadSeekCloser)
+	if !ok {
+		rc.Close()
+		return nil, fmt.Errorf("filesystem reader for %q does not support seeking", path)
+	}
+	return rsc, nil
+}
+
 // Implement the storagedriver.StorageDriver interface
 
 func (d *driver) Name() string {
