@@ -837,16 +837,18 @@ func (app *App) logError(ctx context.Context, errors errcode.Errors) {
 			errMessageKey{},
 			errDetailKey{}))
 
-		var statusCode int
+		statusCode := http.StatusInternalServerError
 		if coder, ok := e1.(errcode.ErrorCoder); ok {
 			statusCode = coder.ErrorCode().Descriptor().HTTPStatusCode
 		}
 
-		if statusCode == http.StatusNotFound {
+		if statusCode < http.StatusInternalServerError {
+			// Client errors (4xx) and redirects (3xx) are expected
+			// traffic, not server errors; log them below Error level.
 			dcontext.GetResponseLogger(c).Infof("response completed with error")
-		} else {
-			dcontext.GetResponseLogger(c).Errorf("response completed with error")
+			continue
 		}
+		dcontext.GetResponseLogger(c).Errorf("response completed with error")
 	}
 }
 

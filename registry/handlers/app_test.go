@@ -375,7 +375,7 @@ func TestLogErrorLevel(t *testing.T) {
 	ctx := dcontext.Background()
 
 	// 404 client not-found errors should be logged at Info level
-	app.logError(ctx, errcode.Errors{v2.ErrorCodeManifestUnknown})
+	app.logError(ctx, errcode.Errors{errcode.ErrorCodeManifestUnknown})
 	entry := hook.LastEntry()
 	if entry == nil {
 		t.Fatal("expected log entry for ErrorCodeManifestUnknown")
@@ -384,13 +384,33 @@ func TestLogErrorLevel(t *testing.T) {
 		t.Errorf("expected InfoLevel for ErrorCodeManifestUnknown, got %v", entry.Level)
 	}
 
-	app.logError(ctx, errcode.Errors{v2.ErrorCodeBlobUnknown})
+	app.logError(ctx, errcode.Errors{errcode.ErrorCodeBlobUnknown})
 	entry = hook.LastEntry()
 	if entry == nil {
 		t.Fatal("expected log entry for ErrorCodeBlobUnknown")
 	}
 	if entry.Level != logrus.InfoLevel {
 		t.Errorf("expected InfoLevel for ErrorCodeBlobUnknown, got %v", entry.Level)
+	}
+
+	// other 4xx errors (e.g. unauthorized) should also be logged at Info level
+	app.logError(ctx, errcode.Errors{errcode.ErrorCodeUnauthorized})
+	entry = hook.LastEntry()
+	if entry == nil {
+		t.Fatal("expected log entry for ErrorCodeUnauthorized")
+	}
+	if entry.Level != logrus.InfoLevel {
+		t.Errorf("expected InfoLevel for ErrorCodeUnauthorized, got %v", entry.Level)
+	}
+
+	// 5xx errors should still be logged at Error level
+	app.logError(ctx, errcode.Errors{errcode.ErrorCodeUnavailable})
+	entry = hook.LastEntry()
+	if entry == nil {
+		t.Fatal("expected log entry for ErrorCodeUnavailable")
+	}
+	if entry.Level != logrus.ErrorLevel {
+		t.Errorf("expected ErrorLevel for ErrorCodeUnavailable, got %v", entry.Level)
 	}
 
 	// 500 / other errors should still be logged at Error level
