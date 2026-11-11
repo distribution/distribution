@@ -1,11 +1,14 @@
 package proxy
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -294,6 +297,60 @@ func TestProxyStoreStat(t *testing.T) {
 
 	if te.store.authChallenger.(*mockChallenger).count != len(te.inRemote) {
 		t.Fatalf("Unexpected auth challenge count, got %#v", te.store.authChallenger)
+	}
+}
+
+func TestProxyStoreETagRoundTrip(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		data []byte
+	}{
+		{name: "empty", data: []byte{}},
+		{name: "one byte", data: []byte("x")},
+		{name: "65 bytes", data: []byte(strings.Repeat("x", 65))},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			te := makeTestEnv(t, "foo/bar")
+			te.store.cacheWriteTimeout = 5 * time.Minute
+			desc, err := te.store.remoteStore.Put(te.ctx, "application/octet-stream", tc.data)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			serve := func(etag string) *httptest.ResponseRecorder {
+				t.Helper()
+				r := httptest.NewRequest(http.MethodGet, "/", nil)
+				r.Header.Set("If-None-Match", etag)
+				w := httptest.NewRecorder()
+				if err := te.store.ServeBlob(te.ctx, w, r, desc.Digest); err != nil {
+					t.Fatal(err)
+				}
+				return w
+			}
+
+			cold := serve("")
+			etag := cold.Header().Get("ETag")
+			conditional := serve(etag)
+			if conditional.Code != http.StatusNotModified || conditional.Body.Len() != 0 {
+				t.Errorf("conditional GET with cold ETag %q returned status %d and %d body bytes", etag, conditional.Code, conditional.Body.Len())
+			}
+
+			warm := serve("")
+			for _, w := range []*httptest.ResponseRecorder{cold, warm, serve(`"stale"`)} {
+				if w.Code != http.StatusOK || !bytes.Equal(w.Body.Bytes(), tc.data) {
+					t.Errorf("full GET returned status %d and body %q", w.Code, w.Body.Bytes())
+				}
+				if got := w.Header().Get("Content-Length"); got != strconv.Itoa(len(tc.data)) {
+					t.Errorf("Content-Length = %q, want %d", got, len(tc.data))
+				}
+				if got := w.Header().Get("Docker-Content-Digest"); got != desc.Digest.String() {
+					t.Errorf("Docker-Content-Digest = %q, want %s", got, desc.Digest)
+				}
+				if got := w.Header().Get("ETag"); got != `"`+desc.Digest.String()+`"` {
+					t.Errorf("ETag = %q, want quoted digest %s", got, desc.Digest)
+				}
+			}
+		})
 	}
 }
 
