@@ -39,6 +39,7 @@ type blobWriter struct {
 	path       string
 
 	resumableDigestEnabled bool
+	closed                 bool
 	committed              bool
 	cancelled              bool
 }
@@ -164,11 +165,22 @@ func (bw *blobWriter) Close() error {
 		return nil
 	}
 
-	if err := bw.storeHashState(bw.blobStore.ctx); err != nil && err != errResumableDigestNotAvailable {
-		return err
+	if !bw.resumableDigestEnabled {
+		return bw.fileWriter.Close()
 	}
 
-	return bw.fileWriter.Close()
+	// Do not checkpoint the same writer again after a successful close.
+	if !bw.closed {
+		if err := bw.storeHashState(bw.blobStore.ctx); err != nil && err != errResumableDigestNotAvailable {
+			return err
+		}
+	}
+
+	err := bw.fileWriter.Close()
+	if err == nil {
+		bw.closed = true
+	}
+	return err
 }
 
 // validateBlob checks the data against the digest, returning an error if it
