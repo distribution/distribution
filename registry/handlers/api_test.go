@@ -2725,7 +2725,7 @@ func pushChunk(t *testing.T, ub *v2.URLBuilder, name reference.Named, uploadURLB
 
 func checkResponse(t *testing.T, msg string, resp *http.Response, expectedStatus int) {
 	if resp.StatusCode != expectedStatus {
-		t.Logf("unexpected status %s: expected %v, got %v", msg, resp.StatusCode, expectedStatus)
+		t.Logf("unexpected status %s: expected %v, got %v", msg, expectedStatus, resp.StatusCode)
 		maybeDumpResponse(t, resp)
 		t.FailNow()
 	}
