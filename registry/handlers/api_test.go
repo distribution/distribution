@@ -1210,6 +1210,26 @@ func testBlobAPI(t *testing.T, env *testEnv, args blobArgs) *testEnv {
 	defer resp.Body.Close()
 	checkResponse(t, "fetching layer with etag", resp, http.StatusNotModified)
 
+	// Send an If-Match value that does not match the ETag of the blob.
+	// The registry must answer with 412 Precondition Failed.
+	req, err = http.NewRequest(http.MethodGet, layerURL, nil)
+	if err != nil {
+		t.Fatalf("Error constructing request: %s", err)
+	}
+	req.Header.Set("If-Match", `"different"`)
+
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("Error constructing request: %s", err)
+	}
+	defer resp.Body.Close()
+	checkResponse(t, "in response to request with bad If-Match value", resp, http.StatusPreconditionFailed)
+	// The registry sends this 412 without a body, so the response
+	// must announce a Content-Length of 0.
+	if resp.ContentLength != 0 {
+		t.Fatalf("412 response announces Content-Length %d, want 0", resp.ContentLength)
+	}
+
 	// Non-matching etag, gives 200
 	req, err = http.NewRequest(http.MethodGet, layerURL, nil)
 	if err != nil {

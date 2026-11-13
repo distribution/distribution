@@ -65,11 +65,7 @@ func (bs *blobServer) ServeBlob(ctx context.Context, w http.ResponseWriter, r *h
 		w.Header().Set("Content-Type", desc.MediaType)
 	}
 
-	if w.Header().Get("Content-Length") == "" {
-		// Set the content length if not already set.
-		w.Header().Set("Content-Length", fmt.Sprint(desc.Size))
-	}
-
+	// ServeContent sets Content-Length. A value set here would be sent with a 412.
 	http.ServeContent(w, r, desc.Digest.String(), time.Time{}, br)
 	return nil
 }
