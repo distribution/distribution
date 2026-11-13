@@ -152,7 +152,9 @@ func (bw *blobWriter) ReadFrom(r io.Reader) (n int64, err error) {
 
 func (bw *blobWriter) Close() error {
 	if bw.committed {
-		return errors.New("blobwriter close after commit")
+		// Commit already closed the file writer. The upload handler defers
+		// Close, so a second call after a successful commit is a no-op.
+		return nil
 	}
 
 	if bw.cancelled {
