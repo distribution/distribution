@@ -1,11 +1,13 @@
 package notifications
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
 	events "github.com/docker/go-events"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
+	"go.opentelemetry.io/otel/propagation"
 )
 
 // EventAction constants used in action field of Event.
@@ -88,6 +90,25 @@ type Event struct {
 	// differently, while the actor "initiates" the event, the source
 	// "generates" it.
 	Source SourceRecord `json:"source"`
+
+	// traceContext holds the trace context of the request that generated
+	// the event, encoded by the configured OpenTelemetry propagator. It is
+	// not part of the event body; endpoints receive it as request headers
+	// so they can continue the trace of the originating request.
+	traceContext propagation.MapCarrier
+}
+
+// String returns the JSON encoding of the event, which is the form endpoints
+// receive. The generic formatting of a struct also prints unexported fields,
+// so without this method the trace context, and any baggage in it, would be
+// written to the logs wherever an event is logged, for example when a sink
+// retries a failed delivery.
+func (e Event) String() string {
+	p, err := json.Marshal(e)
+	if err != nil {
+		return fmt.Sprintf("event %s: error marshaling: %v", e.ID, err)
+	}
+	return string(p)
 }
 
 // ActorRecord specifies the agent that initiated the event. For most
