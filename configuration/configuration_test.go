@@ -417,6 +417,49 @@ func (suite *ConfigSuite) TestParseEnvVarImplicitMaps() {
 	suite.Require().Equal(suite.expectedConfig, config)
 }
 
+// TestParseEnvVarYamlMaps validates that environment variables can set values
+// in nested maps defined in the yaml configuration, which are decoded with
+// interface{} keys.
+func (suite *ConfigSuite) TestParseEnvVarYamlMaps() {
+	configYaml := `
+version: 0.1
+storage:
+  somedriver:
+    options:
+      nested:
+        string1: string-value1
+  maintenance:
+    uploadpurging:
+      enabled: true
+      age: 168h
+      interval: 24h
+      dryrun: false
+    readonly:
+      enabled: false
+`
+	suite.T().Setenv("REGISTRY_STORAGE_SOMEDRIVER_OPTIONS_NESTED_STRING1", "string-value2")
+	suite.T().Setenv("REGISTRY_STORAGE_MAINTENANCE_UPLOADPURGING_AGE", "72h")
+	suite.T().Setenv("REGISTRY_STORAGE_MAINTENANCE_UPLOADPURGING_DRYRUN", "true")
+	suite.T().Setenv("REGISTRY_STORAGE_MAINTENANCE_READONLY_ENABLED", "true")
+
+	config, err := Parse(bytes.NewReader([]byte(configYaml)))
+	suite.Require().NoError(err)
+	suite.Require().Equal(Parameters{
+		"options": map[any]any{
+			"nested": map[any]any{"string1": "string-value2"},
+		},
+	}, config.Storage.Parameters())
+	suite.Require().Equal(Parameters{
+		"uploadpurging": map[any]any{
+			"enabled":  true,
+			"age":      "72h",
+			"interval": "24h",
+			"dryrun":   true,
+		},
+		"readonly": map[any]any{"enabled": true},
+	}, config.Storage["maintenance"])
+}
+
 // TestParseEnvWrongTypeMap validates that incorrectly attempting to unmarshal a
 // string over existing map fails.
 func (suite *ConfigSuite) TestParseEnvWrongTypeMap() {
