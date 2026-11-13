@@ -1,6 +1,9 @@
 package storage
 
 import (
+	"bytes"
+	"context"
+	"errors"
 	"io"
 	"path"
 	"testing"
@@ -920,5 +923,97 @@ func TestTaggedManifestlistWithDeletedReference(t *testing.T) {
 	after := allBlobs(t, registry)
 	if len(after) != 0 {
 		t.Fatalf("Garbage collection affected storage: %d != %d", len(after), 0)
+	}
+}
+
+// gcErrorDriver fails one Stat call and records destructive work during GC.
+type gcErrorDriver struct {
+	driver.StorageDriver
+	statPath    string
+	statErr     error
+	deleteCalls int
+}
+
+func (d *gcErrorDriver) Stat(ctx context.Context, p string) (driver.FileInfo, error) {
+	if p == d.statPath && d.statErr != nil {
+		err := d.statErr
+		d.statErr = nil
+		return nil, err
+	}
+	return d.StorageDriver.Stat(ctx, p)
+}
+
+func (d *gcErrorDriver) Delete(ctx context.Context, p string) error {
+	d.deleteCalls++
+	return d.StorageDriver.Delete(ctx, p)
+}
+
+func TestGCWithManifestExistsError(t *testing.T) {
+	ctx := dcontext.Background()
+	d := &gcErrorDriver{StorageDriver: inmemory.New()}
+	registry := createRegistry(t, d)
+	repo := makeRepository(t, registry, "gc/exists-error")
+	manifests := makeManifestService(t, repo)
+
+	builder := ocischema.NewManifestBuilder(repo.Blobs(ctx), []byte("{}"), nil)
+	manifest, err := builder.Build(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	child, err := manifests.Put(ctx, manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	index, err := ocischema.FromDescriptors([]v1.Descriptor{{
+		Digest: child, MediaType: v1.MediaTypeImageManifest,
+	}}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	root, err := manifests.Put(ctx, index)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.Tags(ctx).Tag(ctx, "latest", v1.Descriptor{Digest: root}); err != nil {
+		t.Fatal(err)
+	}
+
+	before := make(map[string][]byte)
+	for dgst := range allBlobs(t, registry) {
+		p, err := pathFor(blobDataPathSpec{digest: dgst})
+		if err != nil {
+			t.Fatal(err)
+		}
+		before[p], err = d.GetContent(ctx, p)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// With --delete-untagged, only the tagged index is initially visited.
+	// Fail the existence check of its child, before the child's config is marked.
+	d.statPath, err = pathFor(blobDataPathSpec{digest: child})
+	if err != nil {
+		t.Fatal(err)
+	}
+	d.statErr = errors.New("temporary storage failure")
+	d.deleteCalls = 0
+	err = MarkAndSweep(ctx, d, registry, GCOpts{RemoveUntagged: true, Quiet: true})
+	if d.statErr != nil {
+		t.Fatal("child existence check did not reach the storage fault")
+	}
+	if err == nil {
+		t.Error("expected marking to fail after a manifest existence lookup error")
+	}
+	if d.deleteCalls != 0 {
+		t.Errorf("expected no deletes after a marking error, got %d", d.deleteCalls)
+	}
+	for p, want := range before {
+		got, err := d.GetContent(ctx, p)
+		if err != nil {
+			t.Errorf("failed to read retained blob %s: %v", p, err)
+		} else if !bytes.Equal(got, want) {
+			t.Errorf("retained blob %s changed after a marking error", p)
+		}
 	}
 }
