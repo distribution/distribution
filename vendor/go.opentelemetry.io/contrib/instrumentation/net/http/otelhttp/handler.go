@@ -168,11 +168,19 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 		Write: func(httpsnoop.WriteFunc) httpsnoop.WriteFunc {
 			return rww.Write
 		},
+		ReadFrom: func(httpsnoop.ReadFromFunc) httpsnoop.ReadFromFunc {
+			return rww.ReadFrom
+		},
 		WriteHeader: func(httpsnoop.WriteHeaderFunc) httpsnoop.WriteHeaderFunc {
 			return rww.WriteHeader
 		},
 		Flush: func(httpsnoop.FlushFunc) httpsnoop.FlushFunc {
 			return rww.Flush
+		},
+		FlushError: func(flush httpsnoop.FlushErrorFunc) httpsnoop.FlushErrorFunc {
+			return func() error {
+				return rww.FlushWithError(flush)
+			}
 		},
 	})
 

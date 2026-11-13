@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"slices"
@@ -839,6 +840,40 @@ func TestBlobAPIFilesystem(t *testing.T) {
 	env := newTestEnvWithConfig(t, &config)
 	defer env.Shutdown()
 	testBlobAPI(t, env, makeBlobArgs(t))
+}
+
+// The registry answers a GET with BLOB_UNKNOWN when the blob file is missing
+// on disk and the blob descriptor cache still has its descriptor.
+func TestBlobAPIFilesystemMissingFile(t *testing.T) {
+	root := t.TempDir()
+	config := configuration.Configuration{
+		Storage: configuration.Storage{
+			"filesystem": configuration.Parameters{"rootdirectory": root},
+			"cache":      configuration.Parameters{"blobdescriptor": "inmemory"},
+			"maintenance": configuration.Parameters{"uploadpurging": map[any]any{
+				"enabled": false,
+			}},
+		},
+	}
+	config.HTTP.Headers = headerConfig
+	env := newTestEnvWithConfig(t, &config)
+	defer env.Shutdown()
+
+	args := makeBlobArgs(t)
+	uploadURLBase, _ := startPushLayer(t, env, args.imageName)
+	blobURL := pushLayer(t, env.builder, args.imageName, args.layerDigest, uploadURLBase, args.layerFile)
+
+	// Remove the blob file; the cached descriptor stays.
+	if err := os.RemoveAll(filepath.Join(root, "docker/registry/v2/blobs")); err != nil {
+		t.Fatal(err)
+	}
+	resp, err := http.Get(blobURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	checkResponse(t, "fetching a blob whose file is missing", resp, http.StatusNotFound)
+	checkBodyHasErrorCodes(t, "fetching a blob whose file is missing", resp, errcode.ErrorCodeBlobUnknown)
 }
 
 func TestBlobDelete(t *testing.T) {

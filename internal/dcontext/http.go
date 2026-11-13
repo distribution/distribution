@@ -3,6 +3,7 @@ package dcontext
 import (
 	"context"
 	"errors"
+	"io"
 	"net/http"
 	"strings"
 	"sync"
@@ -222,6 +223,31 @@ func (irw *instrumentedResponseWriter) WriteHeader(status int) {
 	irw.mu.Lock()
 	irw.status = status
 	irw.mu.Unlock()
+}
+
+// ReadFrom lets net/http use the sendfile system call for file sources copied by ServeContent.
+func (irw *instrumentedResponseWriter) ReadFrom(r io.Reader) (int64, error) {
+	rf, ok := irw.ResponseWriter.(io.ReaderFrom)
+	if !ok {
+		// Hide ReadFrom to prevent recursion and keep byte accounting in Write.
+		return io.Copy(struct{ io.Writer }{irw}, r)
+	}
+
+	// Calling the wrapped writer's ReadFrom lets net/http use sendfile through net.TCPConn.ReadFrom.
+	// Preserve the original reader so net/http can recognize *os.File inside *io.LimitedReader.
+	n, err := rf.ReadFrom(r)
+
+	irw.mu.Lock()
+	// Count copied bytes even when ReadFrom returns an error.
+	// Record implicit HTTP 200 so status 0 does not suppress the "response completed" log.
+	// Leave an unset status unchanged after a zero-byte copy; we have no evidence that a response started.
+	irw.written += n
+	if irw.status == 0 && n > 0 {
+		irw.status = http.StatusOK
+	}
+	irw.mu.Unlock()
+
+	return n, err
 }
 
 func (irw *instrumentedResponseWriter) Flush() {
