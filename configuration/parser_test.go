@@ -43,12 +43,8 @@ notifications:
   - name: "bar"
   - name: "car"`
 
-func TestParserOverwriteIninitializedPoiner(t *testing.T) {
-	config := localConfiguration{}
-
-	t.Setenv("REGISTRY_LOG_FORMATTER", "json")
-
-	p := NewParser("registry", []VersionedParseInfo{
+func localParseInfos() []VersionedParseInfo {
+	return []VersionedParseInfo{
 		{
 			Version: "0.1",
 			ParseAs: reflect.TypeFor[localConfiguration](),
@@ -56,7 +52,15 @@ func TestParserOverwriteIninitializedPoiner(t *testing.T) {
 				return c, nil
 			},
 		},
-	})
+	}
+}
+
+func TestParserOverwriteIninitializedPoiner(t *testing.T) {
+	config := localConfiguration{}
+
+	t.Setenv("REGISTRY_LOG_FORMATTER", "json")
+
+	p := NewParser("registry", localParseInfos())
 
 	err := p.Parse([]byte(testConfig), &config)
 	require.NoError(t, err)
@@ -81,15 +85,7 @@ func TestParseOverwriteUnininitializedPoiner(t *testing.T) {
 	t.Setenv("REGISTRY_NOTIFICATIONS_0_NAME", "foo")
 	t.Setenv("REGISTRY_NOTIFICATIONS_1_NAME", "bar")
 
-	p := NewParser("registry", []VersionedParseInfo{
-		{
-			Version: "0.1",
-			ParseAs: reflect.TypeFor[localConfiguration](),
-			ConversionFunc: func(c any) (any, error) {
-				return c, nil
-			},
-		},
-	})
+	p := NewParser("registry", localParseInfos())
 
 	err := p.Parse([]byte(testConfig2), &config)
 	require.NoError(t, err)
@@ -119,17 +115,76 @@ func TestParseInlinedStruct(t *testing.T) {
 	// Test with the inlined struct name in the env variable name, for backward compatibility
 	t.Setenv("REGISTRY_INLINED_SECONDVALUE", "bar")
 
-	p := NewParser("registry", []VersionedParseInfo{
-		{
-			Version: "0.1",
-			ParseAs: reflect.TypeFor[localConfiguration](),
-			ConversionFunc: func(c any) (any, error) {
-				return c, nil
-			},
-		},
-	})
+	p := NewParser("registry", localParseInfos())
 
 	err := p.Parse([]byte(testConfig3), &config)
 	require.NoError(t, err)
 	require.Equal(t, expected, config)
+}
+
+func TestNewParserWithOptionsUsesProcessEnvironmentByDefault(t *testing.T) {
+	t.Setenv("REGISTRY_LOG_FORMATTER", "json")
+	p := NewParserWithOptions("registry", localParseInfos())
+
+	config := localConfiguration{}
+	err := p.Parse([]byte(testConfig), &config)
+	require.NoError(t, err)
+	require.Equal(t, "json", config.Log.Formatter)
+}
+
+func TestWithEnvironmentSnapshotsBeforeApplication(t *testing.T) {
+	environment := []string{"REGISTRY_LOG_FORMATTER=json"}
+	option := WithEnvironment(environment)
+
+	environment[0] = "REGISTRY_LOG_FORMATTER=text"
+	p := NewParserWithOptions("registry", localParseInfos(), option)
+
+	config := localConfiguration{}
+	err := p.Parse([]byte(testConfig), &config)
+	require.NoError(t, err)
+	require.Equal(t, "json", config.Log.Formatter)
+}
+
+func TestNewParserWithOptionsNilEnvironmentDisablesOverrides(t *testing.T) {
+	t.Setenv("REGISTRY_LOG_FORMATTER", "json")
+	p := NewParserWithOptions("registry", localParseInfos(), WithEnvironment(nil))
+
+	config := localConfiguration{}
+	err := p.Parse([]byte(testConfig), &config)
+	require.NoError(t, err)
+	require.Equal(t, "text", config.Log.Formatter)
+}
+
+func TestNewParserWithOptionsHandlesMalformedAndEmptyValues(t *testing.T) {
+	tests := []struct {
+		name        string
+		environment []string
+		wantFormat  string
+	}{
+		{
+			name:        "malformed entry is ignored",
+			environment: []string{"REGISTRY_LOG_FORMATTER"},
+			wantFormat:  "text",
+		},
+		{
+			name:        "valid empty value is applied",
+			environment: []string{"REGISTRY_LOG_FORMATTER="},
+			wantFormat:  "",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			p := NewParserWithOptions(
+				"registry",
+				localParseInfos(),
+				WithEnvironment(test.environment),
+			)
+
+			config := localConfiguration{}
+			err := p.Parse([]byte(testConfig), &config)
+			require.NoError(t, err)
+			require.Equal(t, test.wantFormat, config.Log.Formatter)
+		})
+	}
 }
