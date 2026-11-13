@@ -415,10 +415,9 @@ func TestBlobGetUnsupportedDigestAlgorithm(t *testing.T) {
 }
 
 func TestBlobExistsNoContentLength(t *testing.T) {
-	var m testutil.RequestResponseMap
-
 	repo, _ := reference.WithName("biff")
 	dgst, content := newRandomBlob(1024)
+	m := make(testutil.RequestResponseMap, 0, 2)
 	m = append(m, testutil.RequestResponseMapping{
 		Request: testutil.Request{
 			Method: http.MethodGet,
@@ -428,7 +427,7 @@ func TestBlobExistsNoContentLength(t *testing.T) {
 			StatusCode: http.StatusOK,
 			Body:       content,
 			Headers: http.Header(map[string][]string{
-				//			"Content-Length": {fmt.Sprint(len(content))},
+				"Content-Type":  {"application/octet-stream"},
 				"Last-Modified": {time.Now().Add(-1 * time.Second).Format(time.ANSIC)},
 			}),
 		},
@@ -442,7 +441,7 @@ func TestBlobExistsNoContentLength(t *testing.T) {
 		Response: testutil.Response{
 			StatusCode: http.StatusOK,
 			Headers: http.Header(map[string][]string{
-				//			"Content-Length": {fmt.Sprint(len(content))},
+				"Content-Type":  {"application/octet-stream"},
 				"Last-Modified": {time.Now().Add(-1 * time.Second).Format(time.ANSIC)},
 			}),
 		},
@@ -457,12 +456,18 @@ func TestBlobExistsNoContentLength(t *testing.T) {
 	}
 	l := r.Blobs(ctx)
 
-	_, err = l.Stat(ctx, dgst)
-	if err == nil {
-		t.Fatal(err)
+	stat, err := l.Stat(ctx, dgst)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
-	if !strings.Contains(err.Error(), "missing content-length heade") {
-		t.Fatal("Expected missing content-length error message")
+	if stat.Digest != dgst {
+		t.Fatalf("Unexpected digest: %s, expected %s", stat.Digest, dgst)
+	}
+	if stat.MediaType != "application/octet-stream" {
+		t.Fatalf("Unexpected mediaType: %s, expected %s", stat.MediaType, "application/octet-stream")
+	}
+	if stat.Size != 0 {
+		t.Fatalf("Unexpected size: %d, expected 0", stat.Size)
 	}
 }
 
@@ -491,11 +496,70 @@ func TestBlobExists(t *testing.T) {
 		t.Fatalf("Unexpected digest: %s, expected %s", stat.Digest, d1)
 	}
 
+	if stat.MediaType != "application/octet-stream" {
+		t.Fatalf("Unexpected mediaType: %s, expected %s", stat.MediaType, "application/octet-stream")
+	}
+
 	if stat.Size != int64(len(b1)) {
 		t.Fatalf("Unexpected length: %d, expected %d", stat.Size, len(b1))
 	}
 
 	// TODO(dmcgowan): Test error cases and ErrBlobUnknown case
+}
+
+func TestBlobExistsInvalidContentLength(t *testing.T) {
+	testCases := []struct {
+		name          string
+		contentLength string
+	}{
+		{
+			name:          "non-numeric",
+			contentLength: "not-a-number",
+		},
+		{
+			name:          "negative",
+			contentLength: "-1",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			repo, _ := reference.WithName("biff")
+			dgst, _ := newRandomBlob(1024)
+
+			tr := roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Header: http.Header{
+						"Content-Length": []string{tc.contentLength},
+						"Content-Type":   []string{"application/octet-stream"},
+					},
+					Body: io.NopCloser(strings.NewReader("")),
+				}, nil
+			})
+
+			ctx := dcontext.Background()
+			r, err := NewRepository(repo, "http://example.com", tr)
+			if err != nil {
+				t.Fatal(err)
+			}
+			l := r.Blobs(ctx)
+
+			_, err = l.Stat(ctx, dgst)
+			if err == nil {
+				t.Fatal("expected error, got nil")
+			}
+			if !strings.Contains(err.Error(), "error parsing content-length") {
+				t.Fatalf("expected error parsing content-length, got %v", err)
+			}
+		})
+	}
+}
+
+type roundTripperFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripperFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
 }
 
 func TestBlobUploadChunked(t *testing.T) {

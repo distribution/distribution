@@ -1067,14 +1067,16 @@ func (bs *blobStatter) Stat(ctx context.Context, dgst digest.Digest) (v1.Descrip
 		return v1.Descriptor{}, err
 	}
 
-	lengthHeader := resp.Header.Get("Content-Length")
-	if lengthHeader == "" {
-		return v1.Descriptor{}, fmt.Errorf("missing content-length header for request: %s", u)
-	}
-
-	length, err := strconv.ParseInt(lengthHeader, 10, 64)
-	if err != nil {
-		return v1.Descriptor{}, fmt.Errorf("error parsing content-length: %v", err)
+	var length int64
+	if lengthHeader := strings.TrimSpace(resp.Header.Get("Content-Length")); lengthHeader != "" {
+		var err error
+		length, err = strconv.ParseInt(lengthHeader, 10, 64)
+		if err != nil {
+			return v1.Descriptor{}, fmt.Errorf("error parsing content-length: %w", err)
+		}
+		if length < 0 {
+			return v1.Descriptor{}, fmt.Errorf("error parsing content-length: negative value %d", length)
+		}
 	}
 
 	return v1.Descriptor{
