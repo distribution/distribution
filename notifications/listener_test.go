@@ -232,3 +232,78 @@ func checkTestRepository(t *testing.T, repository distribution.Repository, remov
 		t.Fatalf("unexpected error deleting repo: %v", err)
 	}
 }
+
+// pulledDigestListener records the digest the listener was told a manifest
+// was pulled by.
+type pulledDigestListener struct {
+	testListener
+	pulled digest.Digest
+}
+
+func (l *pulledDigestListener) ManifestPulled(repo reference.Named, m distribution.Manifest, options ...distribution.ManifestServiceOption) error {
+	for _, option := range options {
+		if opt, ok := option.(distribution.WithDigestOption); ok {
+			l.pulled = opt.Digest
+		}
+	}
+	return l.testListener.ManifestPulled(repo, m, options...)
+}
+
+func TestListenerManifestPulledDigest(t *testing.T) {
+	ctx := dcontext.Background()
+
+	registry, err := storage.NewRegistry(ctx, inmemory.New(),
+		storage.BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)))
+	if err != nil {
+		t.Fatalf("error creating registry: %v", err)
+	}
+	tl := &pulledDigestListener{testListener: testListener{ops: make(map[string]int)}}
+
+	repoRef, _ := reference.WithName("foo/bar")
+	repository, err := registry.Repository(ctx, repoRef)
+	if err != nil {
+		t.Fatalf("unexpected error getting repo: %v", err)
+	}
+	repository, _ = Listen(repository, nil, tl)
+
+	config := []byte(`{"name": "foo"}`)
+	configDgst := digest.FromBytes(config)
+	if err := testutil.PushBlob(ctx, repository, bytes.NewReader(config), configDgst); err != nil {
+		t.Fatal(err)
+	}
+
+	sm, err := schema2.FromStruct(schema2.Manifest{
+		Versioned: specs.Versioned{SchemaVersion: 2},
+		MediaType: schema2.MediaTypeManifest,
+		Config: v1.Descriptor{
+			MediaType: "foo/bar",
+			Digest:    configDgst,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, payload, err := sm.Payload()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	manifests, err := repository.Manifests(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, dgst := range []digest.Digest{digest.SHA256.FromBytes(payload), digest.SHA512.FromBytes(payload)} {
+		if _, err := manifests.Put(ctx, sm, distribution.WithDigest(dgst)); err != nil {
+			t.Fatalf("unexpected error putting manifest by %s: %v", dgst, err)
+		}
+
+		tl.pulled = ""
+		if _, err := manifests.Get(ctx, dgst); err != nil {
+			t.Fatalf("unexpected error getting manifest by %s: %v", dgst, err)
+		}
+		if tl.pulled != dgst {
+			t.Errorf("listener told manifest was pulled by %q, expected %q", tl.pulled, dgst)
+		}
+	}
+}

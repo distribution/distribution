@@ -58,7 +58,7 @@ func NewRequestRecord(id string, r *http.Request) RequestRecord {
 }
 
 func (b *bridge) ManifestPushed(repo reference.Named, sm distribution.Manifest, options ...distribution.ManifestServiceOption) error {
-	manifestEvent, err := b.createManifestEvent(EventActionPush, repo, sm)
+	manifestEvent, err := b.createManifestEvent(EventActionPush, repo, sm, options...)
 	if err != nil {
 		return err
 	}
@@ -73,7 +73,7 @@ func (b *bridge) ManifestPushed(repo reference.Named, sm distribution.Manifest, 
 }
 
 func (b *bridge) ManifestPulled(repo reference.Named, sm distribution.Manifest, options ...distribution.ManifestServiceOption) error {
-	manifestEvent, err := b.createManifestEvent(EventActionPull, repo, sm)
+	manifestEvent, err := b.createManifestEvent(EventActionPull, repo, sm, options...)
 	if err != nil {
 		return err
 	}
@@ -135,7 +135,7 @@ func (b *bridge) createManifestDeleteEventAndWrite(action string, repo reference
 	return b.sink.Write(*event)
 }
 
-func (b *bridge) createManifestEvent(action string, repo reference.Named, sm distribution.Manifest) (*Event, error) {
+func (b *bridge) createManifestEvent(action string, repo reference.Named, sm distribution.Manifest, options ...distribution.ManifestServiceOption) (*Event, error) {
 	event := b.createEvent(action)
 	event.Target.Repository = repo.Name()
 
@@ -148,6 +148,17 @@ func (b *bridge) createManifestEvent(action string, repo reference.Named, sm dis
 	manifest, desc, err := distribution.UnmarshalManifest(mt, p)
 	if err != nil {
 		return nil, err
+	}
+
+	// UnmarshalManifest always digests with the canonical algorithm; if the
+	// manifest was stored under another one, report that digest instead.
+	for _, option := range options {
+		if opt, ok := option.(distribution.WithDigestOption); ok {
+			if alg := opt.Digest.Algorithm(); alg.Available() && alg != desc.Digest.Algorithm() {
+				desc.Digest = alg.FromBytes(p)
+			}
+			break
+		}
 	}
 
 	event.Target.MediaType = mt

@@ -134,6 +134,12 @@ func (ms *manifestStore) Get(ctx context.Context, dgst digest.Digest, options ..
 func (ms *manifestStore) Put(ctx context.Context, manifest distribution.Manifest, options ...distribution.ManifestServiceOption) (digest.Digest, error) {
 	dcontext.GetLogger(ms.ctx).Debug("(*manifestStore).Put")
 
+	for _, option := range options {
+		if opt, ok := option.(distribution.WithDigestOption); ok {
+			ctx = withPutDigestAlgorithm(ctx, opt.Digest.Algorithm())
+		}
+	}
+
 	switch manifest.(type) {
 	case *schema2.DeserializedManifest:
 		return ms.schema2Handler.Put(ctx, manifest, ms.skipDependencyVerification)

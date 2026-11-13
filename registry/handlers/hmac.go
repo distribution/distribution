@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/opencontainers/go-digest"
 )
 
 // blobUploadState captures the state serializable state of the blob upload.
@@ -22,6 +24,11 @@ type blobUploadState struct {
 
 	// StartedAt is the original start time of the upload.
 	StartedAt time.Time
+
+	// DigestAlgorithm is the non-canonical algorithm the client declared up
+	// front (via the digest-algorithm upload parameter), so each chunk
+	// request can rebuild the upload's digester without a storage lookup.
+	DigestAlgorithm digest.Algorithm `json:",omitempty"`
 }
 
 type hmacKey string

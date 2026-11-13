@@ -99,6 +99,45 @@ func TestEventBridgeManifestPulledWithTag(t *testing.T) {
 	}
 }
 
+func TestEventBridgeManifestSHA512(t *testing.T) {
+	for _, action := range []string{EventActionPush, EventActionPull} {
+		t.Run(action, func(t *testing.T) {
+			var sha512Digest digest.Digest
+			l := createTestEnv(t, testSinkFn(func(event events.Event) error {
+				target := event.(Event).Target
+				if target.Digest != sha512Digest {
+					t.Fatalf("unexpected digest on event target: %q != %q", target.Digest, sha512Digest)
+				}
+
+				repoRef, _ := reference.WithName(repo)
+				ref, _ := reference.WithDigest(repoRef, sha512Digest)
+				u, err := ub.BuildManifestURL(ref)
+				if err != nil {
+					t.Fatalf("error building expected url: %v", err)
+				}
+				if target.URL != u {
+					t.Fatalf("incorrect url passed: \n%q != \n%q", target.URL, u)
+				}
+
+				return nil
+			}))
+			sha512Digest = digest.SHA512.FromBytes(payload)
+
+			repoRef, _ := reference.WithName(repo)
+			option := distribution.WithDigest(sha512Digest)
+			var err error
+			if action == EventActionPush {
+				err = l.ManifestPushed(repoRef, sm, option)
+			} else {
+				err = l.ManifestPulled(repoRef, sm, option)
+			}
+			if err != nil {
+				t.Fatalf("unexpected error notifying manifest %s: %v", action, err)
+			}
+		})
+	}
+}
+
 func TestEventBridgeManifestDeleted(t *testing.T) {
 	l := createTestEnv(t, testSinkFn(func(event events.Event) error {
 		checkDeleted(t, EventActionDelete, event)
