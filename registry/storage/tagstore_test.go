@@ -2,11 +2,13 @@ package storage
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"testing"
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/manifest/schema2"
+	"github.com/distribution/distribution/v3/registry/storage/driver/filesystem"
 	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
 	"github.com/distribution/reference"
 	digest "github.com/opencontainers/go-digest"
@@ -180,6 +182,53 @@ func TestTagStoreAll(t *testing.T) {
 		if tag == removed {
 			t.Errorf("unexpected tag in enumerate %s", removed)
 		}
+	}
+}
+
+func BenchmarkTagStoreAll(b *testing.B) {
+	for _, count := range []int{1, 26, 1000} {
+		b.Run(fmt.Sprintf("Tags%d", count), func(b *testing.B) {
+			ctx := context.Background()
+			d, err := filesystem.FromParameters(map[string]any{"rootdirectory": b.TempDir()})
+			if err != nil {
+				b.Fatal(err)
+			}
+			reg, err := NewRegistry(ctx, d)
+			if err != nil {
+				b.Fatal(err)
+			}
+			name, err := reference.WithName("a/b")
+			if err != nil {
+				b.Fatal(err)
+			}
+			repo, err := reg.Repository(ctx, name)
+			if err != nil {
+				b.Fatal(err)
+			}
+			tags := repo.Tags(ctx)
+			const alpha = "abcdefghijklmnopqrstuvwxyz"
+			desc := v1.Descriptor{Digest: "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"}
+			for i := range count {
+				tag := string(alpha[i%len(alpha)])
+				if count > len(alpha) {
+					tag = fmt.Sprintf("tag%05d", i)
+				}
+				if err := tags.Tag(ctx, tag, desc); err != nil {
+					b.Fatal(err)
+				}
+			}
+
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				all, err := tags.All(ctx)
+				if err != nil {
+					b.Fatal(err)
+				}
+				if len(all) != count {
+					b.Fatalf("got %d tags, want %d", len(all), count)
+				}
+			}
+		})
 	}
 }
 
