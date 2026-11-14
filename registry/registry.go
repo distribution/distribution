@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"os"
 	"os/signal"
@@ -390,6 +391,7 @@ func configureLogging(ctx context.Context, config *configuration.Configuration) 
 		formatter = defaultLogFormatter
 	}
 
+	logFields := config.Log.Fields
 	switch formatter {
 	case "json":
 		logrus.SetFormatter(&logrus.JSONFormatter{
@@ -401,9 +403,21 @@ func configureLogging(ctx context.Context, config *configuration.Configuration) 
 			TimestampFormat: time.RFC3339Nano,
 		})
 	case "logstash":
+		logFields = maps.Clone(logFields)
+		if logFields == nil {
+			logFields = make(map[string]any, 2)
+		}
+		if _, ok := logFields["@version"]; !ok {
+			logFields["@version"] = "1"
+		}
+		if _, ok := logFields["type"]; !ok {
+			logFields["type"] = "log"
+		}
 		logrus.SetFormatter(&logrus.JSONFormatter{
 			TimestampFormat: time.RFC3339Nano,
 			FieldMap: logrus.FieldMap{
+				logrus.FieldKeyTime: "@timestamp",
+				logrus.FieldKeyMsg:  "message",
 				logrus.FieldKeyFunc: "function",
 			},
 		})
@@ -412,14 +426,14 @@ func configureLogging(ctx context.Context, config *configuration.Configuration) 
 	}
 
 	logrus.Debugf("using %q logging formatter", formatter)
-	if len(config.Log.Fields) > 0 {
+	if len(logFields) > 0 {
 		// build up the static fields, if present.
 		var fields []any
-		for k := range config.Log.Fields {
+		for k := range logFields {
 			fields = append(fields, k)
 		}
 
-		ctx = dcontext.WithValues(ctx, config.Log.Fields)
+		ctx = dcontext.WithValues(ctx, logFields)
 		ctx = dcontext.WithLogger(ctx, dcontext.GetLogger(ctx, fields...))
 	}
 
