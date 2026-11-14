@@ -155,7 +155,10 @@ func (r *regulator) List(ctx context.Context, path string) ([]string, error) {
 }
 
 // ListNames regulates name-only listings just like List.
-func (r *regulator) ListNames(ctx context.Context, path string, _ storagedriver.StorageDriver) ([]string, error) {
+func (r *regulator) ListNames(ctx context.Context, path string, owner storagedriver.StorageDriver) ([]string, error) {
+	if owner != r {
+		return nil, storagedriver.ErrUnsupportedMethod{DriverName: r.Name()}
+	}
 	r.enter()
 	defer r.exit()
 

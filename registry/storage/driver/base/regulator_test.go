@@ -92,6 +92,12 @@ func TestRegulatorListNames(t *testing.T) {
 		return nil, wantErr
 	}}
 	r = NewRegulator(d, 1).(*regulator)
+	if got, err := r.ListNames(context.Background(), "/tags", d); got != nil {
+		t.Fatalf("unsupported owner returned %q", got)
+	} else if _, ok := err.(storagedriver.ErrUnsupportedMethod); !ok {
+		t.Fatalf("unsupported owner: %v", err)
+	}
+
 	for range 2 {
 		_, err := storagedriver.ListNames(context.Background(), r, "/tags")
 		if err != wantErr {

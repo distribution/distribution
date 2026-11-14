@@ -304,7 +304,10 @@ func (d *driver) List(ctx context.Context, subPath string) ([]string, error) {
 }
 
 // ListNames returns direct descendant names in a caller-owned slice.
-func (d *driver) ListNames(ctx context.Context, subPath string, _ storagedriver.StorageDriver) ([]string, error) {
+func (d *driver) ListNames(ctx context.Context, subPath string, owner storagedriver.StorageDriver) ([]string, error) {
+	if owner != d {
+		return nil, storagedriver.ErrUnsupportedMethod{DriverName: driverName}
+	}
 	fullPath := d.fullPath(subPath)
 
 	dir, err := os.Open(fullPath)
