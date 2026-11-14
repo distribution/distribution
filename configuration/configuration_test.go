@@ -479,6 +479,42 @@ func (suite *ConfigSuite) TestParseEnvInlinedStruct() {
 	suite.Require().Equal(suite.expectedConfig, config)
 }
 
+// TestParseEnvSliceElement validates that environment variables can replace
+// and append slice elements by index.
+func (suite *ConfigSuite) TestParseEnvSliceElement() {
+	suite.expectedConfig.HTTP.TLS.ClientCAs = []string{"/path/to/other-ca.pem", "/path/to/new-ca.pem"}
+	suite.expectedConfig.Redis.Options.Addrs = []string{"redis-0:6379"}
+	suite.expectedConfig.Notifications.Endpoints = append(suite.expectedConfig.Notifications.Endpoints, Endpoint{
+		Name: "endpoint-2",
+		URL:  "http://example.org",
+	})
+
+	suite.T().Setenv("REGISTRY_HTTP_TLS_CLIENTCAS_0", "/path/to/other-ca.pem")
+	suite.T().Setenv("REGISTRY_HTTP_TLS_CLIENTCAS_1", "/path/to/new-ca.pem")
+	suite.T().Setenv("REGISTRY_REDIS_ADDRS_0", "redis-0:6379")
+	suite.T().Setenv("REGISTRY_NOTIFICATIONS_ENDPOINTS_1", "{name: endpoint-2, url: http://example.org}")
+
+	config, err := Parse(bytes.NewReader([]byte(configYamlV0_1)))
+	suite.Require().NoError(err)
+	suite.Require().Equal(suite.expectedConfig, config)
+}
+
+// TestParseEnvSliceElementEmptySlice validates that environment variables can
+// populate a slice that is not set in the yaml configuration.
+func (suite *ConfigSuite) TestParseEnvSliceElementEmptySlice() {
+	suite.expectedConfig.Storage = Storage{"inmemory": Parameters{}}
+	suite.expectedConfig.Log.Fields = nil
+	suite.expectedConfig.HTTP.TLS.ClientCAs = []string{"/path/to/ca.pem"}
+	suite.expectedConfig.HTTP.TLS.ClientAuth = ""
+	suite.expectedConfig.Redis = Redis{}
+
+	suite.T().Setenv("REGISTRY_HTTP_TLS_CLIENTCAS_0", "/path/to/ca.pem")
+
+	config, err := Parse(bytes.NewReader([]byte(inmemoryConfigYamlV0_1)))
+	suite.Require().NoError(err)
+	suite.Require().Equal(suite.expectedConfig, config)
+}
+
 func checkStructs(tt *testing.T, t reflect.Type, structsChecked map[string]struct{}) {
 	tt.Helper()
 
