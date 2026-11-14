@@ -73,7 +73,10 @@ type Driver struct {
 
 // ListNames returns direct descendant names in a caller-owned slice, with the
 // same validation, instrumentation and concurrency limit as List.
-func (d *Driver) ListNames(ctx context.Context, path string) ([]string, error) {
+func (d *Driver) ListNames(ctx context.Context, path string, owner storagedriver.StorageDriver) ([]string, error) {
+	if owner != d {
+		return nil, storagedriver.ErrUnsupportedMethod{DriverName: driverName}
+	}
 	return base.ListNames(ctx, &d.baseEmbed.Base, path)
 }
 
@@ -288,7 +291,7 @@ func (d *driver) Stat(ctx context.Context, subPath string) (storagedriver.FileIn
 // List returns a list of the objects that are direct descendants of the given
 // path.
 func (d *driver) List(ctx context.Context, subPath string) ([]string, error) {
-	fileNames, err := d.ListNames(ctx, subPath)
+	fileNames, err := d.ListNames(ctx, subPath, d)
 	if err != nil {
 		return nil, err
 	}
@@ -301,7 +304,7 @@ func (d *driver) List(ctx context.Context, subPath string) ([]string, error) {
 }
 
 // ListNames returns direct descendant names in a caller-owned slice.
-func (d *driver) ListNames(ctx context.Context, subPath string) ([]string, error) {
+func (d *driver) ListNames(ctx context.Context, subPath string, _ storagedriver.StorageDriver) ([]string, error) {
 	fullPath := d.fullPath(subPath)
 
 	dir, err := os.Open(fullPath)

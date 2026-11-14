@@ -155,7 +155,7 @@ func (r *regulator) List(ctx context.Context, path string) ([]string, error) {
 }
 
 // ListNames regulates name-only listings just like List.
-func (r *regulator) ListNames(ctx context.Context, path string) ([]string, error) {
+func (r *regulator) ListNames(ctx context.Context, path string, _ storagedriver.StorageDriver) ([]string, error) {
 	r.enter()
 	defer r.exit()
 

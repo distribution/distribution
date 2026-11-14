@@ -76,7 +76,7 @@ type nameListDriver struct {
 
 func (d *nameListDriver) Name() string { return "names" }
 
-func (d *nameListDriver) ListNames(ctx context.Context, path string) ([]string, error) {
+func (d *nameListDriver) ListNames(ctx context.Context, path string, _ storagedriver.StorageDriver) ([]string, error) {
 	return d.list(ctx, path)
 }
 

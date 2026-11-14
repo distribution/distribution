@@ -317,3 +317,23 @@ func TestFromParametersImpl(t *testing.T) {
 		}
 	}
 }
+
+type filteredListDriver struct {
+	*Driver
+}
+
+func (d *filteredListDriver) List(context.Context, string) ([]string, error) {
+	return []string{"/tags/a"}, nil
+}
+
+func TestListNamesEmbeddedDriver(t *testing.T) {
+	ctx := context.Background()
+	d, err := FromParameters(map[string]any{"rootdirectory": t.TempDir()})
+	require.NoError(t, err)
+	require.NoError(t, d.PutContent(ctx, "/tags/a", nil))
+	require.NoError(t, d.PutContent(ctx, "/tags/z", nil))
+	wrapped := &filteredListDriver{Driver: d}
+	names, err := storagedriver.ListNames(ctx, wrapped, "/tags")
+	require.NoError(t, err)
+	require.Equal(t, []string{"a"}, names)
+}

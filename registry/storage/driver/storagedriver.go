@@ -117,16 +117,24 @@ type StorageDriver interface {
 // parent paths. It has the same completeness and error semantics as List, and
 // does not guarantee an order. The caller owns the returned slice.
 //
-// A driver may implement ListNames(context.Context, string) ([]string, error) to
-// avoid constructing full paths. That method must return a slice the caller can
-// modify without affecting the driver or other calls. Otherwise, ListNames copies
-// the basenames from List. Middleware must explicitly forward the optional method
-// to opt in; ListNames never unwraps a driver.
+// A driver may implement ListNames(context.Context, string, StorageDriver)
+// ([]string, error) to avoid constructing full paths. The last argument identifies
+// the driver whose List is being replaced. Implementations must return
+// ErrUnsupportedMethod when it is not their receiver, unless they explicitly
+// support that outer driver's behavior. This prevents a promoted method from
+// bypassing List overrides in embedding drivers or middleware.
+//
+// An implemented method must return a slice the caller can modify without
+// affecting the driver or other calls. Otherwise, including ErrUnsupportedMethod,
+// ListNames copies the basenames from List. It never unwraps a driver.
 func ListNames(ctx context.Context, d StorageDriver, directory string) ([]string, error) {
 	if lister, ok := d.(interface {
-		ListNames(context.Context, string) ([]string, error)
+		ListNames(context.Context, string, StorageDriver) ([]string, error)
 	}); ok {
-		return lister.ListNames(ctx, directory)
+		names, err := lister.ListNames(ctx, directory, d)
+		if _, unsupported := err.(ErrUnsupportedMethod); !unsupported {
+			return names, err
+		}
 	}
 
 	entries, err := d.List(ctx, directory)
