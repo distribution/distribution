@@ -45,7 +45,7 @@ var (
 
 // GCCmd is the cobra command that corresponds to the garbage-collect subcommand
 var GCCmd = &cobra.Command{
-	Use:   "garbage-collect <config>",
+	Use:   "garbage-collect <config> [<config>...]",
 	Short: "`garbage-collect` deletes layers not referenced by any manifests",
 	Long:  "`garbage-collect` deletes layers not referenced by any manifests",
 	Run: func(cmd *cobra.Command, args []string) {
