@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"path"
 	"regexp"
 	"strconv"
 	"strings"
@@ -110,6 +111,33 @@ type StorageDriver interface {
 	// will continue the traversal.
 	// If the returned error from the WalkFn is ErrFilledBuffer, processing stops.
 	Walk(ctx context.Context, path string, f WalkFn, options ...func(*WalkOptions)) error
+}
+
+// ListNames returns the names of the direct descendants of path, without their
+// parent paths. It has the same completeness and error semantics as List, and
+// does not guarantee an order. The caller owns the returned slice.
+//
+// A driver may implement ListNames(context.Context, string) ([]string, error) to
+// avoid constructing full paths. That method must return a slice the caller can
+// modify without affecting the driver or other calls. Otherwise, ListNames copies
+// the basenames from List. Middleware must explicitly forward the optional method
+// to opt in; ListNames never unwraps a driver.
+func ListNames(ctx context.Context, d StorageDriver, directory string) ([]string, error) {
+	if lister, ok := d.(interface {
+		ListNames(context.Context, string) ([]string, error)
+	}); ok {
+		return lister.ListNames(ctx, directory)
+	}
+
+	entries, err := d.List(ctx, directory)
+	if err != nil {
+		return nil, err
+	}
+	names := make([]string, len(entries))
+	for i, entry := range entries {
+		_, names[i] = path.Split(entry)
+	}
+	return names, nil
 }
 
 // FileWriter provides an abstraction for an opened writable file-like object in

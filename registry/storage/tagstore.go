@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"path"
 	"sort"
 	"strings"
 	"sync"
@@ -40,7 +39,7 @@ func (ts *tagStore) All(ctx context.Context) ([]string, error) {
 		return nil, err
 	}
 
-	entries, err := ts.blobStore.driver.List(ctx, pathSpec)
+	tags, err := storagedriver.ListNames(ctx, ts.blobStore.driver, pathSpec)
 	if err != nil {
 		switch err := err.(type) {
 		case storagedriver.PathNotFoundError:
@@ -50,10 +49,8 @@ func (ts *tagStore) All(ctx context.Context) ([]string, error) {
 		}
 	}
 
-	tags := make([]string, 0, len(entries))
-	for _, entry := range entries {
-		_, filename := path.Split(entry)
-		tags = append(tags, filename)
+	if tags == nil {
+		tags = []string{}
 	}
 
 	// there is no guarantee for the order,

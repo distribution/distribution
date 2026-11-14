@@ -145,7 +145,26 @@ func TestTagStoreUnTag_DeleteDisabled(t *testing.T) {
 }
 
 func TestTagStoreAll(t *testing.T) {
-	env := testTagStore(t)
+	testTagStoreAll(t, inmemory.New())
+}
+
+func TestTagStoreFilesystem(t *testing.T) {
+	for name, test := range map[string]func(*testing.T, storagedriver.StorageDriver){
+		"All":    testTagStoreAll,
+		"Lookup": testTagLookup,
+	} {
+		t.Run(name, func(t *testing.T) {
+			d, err := filesystem.FromParameters(map[string]any{"rootdirectory": t.TempDir()})
+			if err != nil {
+				t.Fatal(err)
+			}
+			test(t, d)
+		})
+	}
+}
+
+func testTagStoreAll(t *testing.T, d storagedriver.StorageDriver) {
+	env := testTagStoreWithDriver(t, d)
 	tagStore := env.ts
 	ctx := env.ctx
 
@@ -228,7 +247,11 @@ func BenchmarkTagStoreAll(b *testing.B) {
 }
 
 func TestTagLookup(t *testing.T) {
-	env := testTagStore(t)
+	testTagLookup(t, inmemory.New())
+}
+
+func testTagLookup(t *testing.T, d storagedriver.StorageDriver) {
+	env := testTagStoreWithDriver(t, d)
 	tagStore := env.ts
 	ctx := env.ctx
 

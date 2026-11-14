@@ -142,6 +142,52 @@ func BenchmarkFilesystemDriverSuite(b *testing.B) {
 	testsuites.BenchDriver(b, newDriverConstructor(b))
 }
 
+func TestListNames(t *testing.T) {
+	ctx := context.Background()
+	d, err := FromParameters(map[string]any{"rootdirectory": t.TempDir()})
+	require.NoError(t, err)
+	require.NoError(t, d.PutContent(ctx, "/tags/z", nil))
+	require.NoError(t, d.PutContent(ctx, "/tags/a/link", nil))
+
+	names, err := storagedriver.ListNames(ctx, d, "/tags")
+	require.NoError(t, err)
+	require.ElementsMatch(t, []string{"z", "a"}, names)
+	original := slices.Clone(names)
+	next, err := storagedriver.ListNames(ctx, d, "/tags")
+	require.NoError(t, err)
+	next[0] = "changed"
+	require.Equal(t, original, names, "results must not share their slice")
+	keys, err := d.List(ctx, "/tags")
+	require.NoError(t, err)
+	require.ElementsMatch(t, []string{"/tags/z", "/tags/a"}, keys)
+
+	names, err = storagedriver.ListNames(ctx, d, "/")
+	require.NoError(t, err)
+	require.Equal(t, []string{"tags"}, names)
+	keys, err = d.List(ctx, "/")
+	require.NoError(t, err)
+	require.Equal(t, []string{"/tags"}, keys)
+
+	for _, path := range []string{"/missing", "/tags/z", "relative", "/tags/", "/tags/invalid!"} {
+		t.Run(path, func(t *testing.T) {
+			_, wantErr := d.List(ctx, path)
+			require.Error(t, wantErr)
+			got, err := storagedriver.ListNames(ctx, d, path)
+			require.Nil(t, got)
+			require.Equal(t, wantErr, err)
+		})
+	}
+
+	require.NoError(t, d.Delete(ctx, "/tags/a"))
+	names, err = storagedriver.ListNames(ctx, d, "/tags")
+	require.NoError(t, err)
+	require.Equal(t, []string{"z"}, names)
+	require.NoError(t, d.Delete(ctx, "/tags/z"))
+	names, err = storagedriver.ListNames(ctx, d, "/tags")
+	require.NoError(t, err)
+	require.Empty(t, names)
+}
+
 func TestFromParametersImpl(t *testing.T) {
 	tests := []struct {
 		params   map[string]any // technically the yaml can contain anything
