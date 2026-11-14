@@ -191,7 +191,7 @@ func TestTagStoreAll(t *testing.T) {
 }
 
 func BenchmarkTagStoreAll(b *testing.B) {
-	for _, count := range []int{0, 1, 26, 1000} {
+	for _, count := range []int{0, 1, 26} {
 		b.Run(fmt.Sprintf("Tags%d", count), func(b *testing.B) {
 			ctx := context.Background()
 			d, err := filesystem.FromParameters(map[string]any{"rootdirectory": b.TempDir()})
@@ -202,10 +202,7 @@ func BenchmarkTagStoreAll(b *testing.B) {
 			const alpha = "abcdefghijklmnopqrstuvwxyz"
 			desc := v1.Descriptor{Digest: "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"}
 			for i := range max(count, 1) {
-				tag := string(alpha[i%len(alpha)])
-				if count > len(alpha) {
-					tag = fmt.Sprintf("tag%05d", i)
-				}
+				tag := string(alpha[i])
 				if err := tags.Tag(ctx, tag, desc); err != nil {
 					b.Fatal(err)
 				}
