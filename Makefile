@@ -13,7 +13,7 @@ COMPOSE ?= docker compose
 PKG=github.com/distribution/distribution/v3
 
 # Project packages.
-PACKAGES=$(shell go list -tags "${BUILDTAGS}" ./... | grep -v /vendor/)
+PACKAGES=$(shell go list -tags "$(strip ${BUILDTAGS} ${STORAGE_TAGS})" ./... | grep -v /vendor/)
 INTEGRATION_PACKAGE=${PKG}
 COVERAGE_PACKAGES=$(filter-out ${PKG}/registry/storage/driver/%,${PACKAGES})
 
@@ -36,8 +36,34 @@ WHALE = "+"
 #
 TESTFLAGS_RACE=
 GOFILES=$(shell find . -type f -name '*.go')
+
+# Optional build tags, e.g. noresumabledigest.
 BUILDTAGS ?= grpcnotrace
-GO_TAGS=$(if $(BUILDTAGS),-tags "$(BUILDTAGS)",)
+
+# Storage drivers compiled into the registry binary.
+#   filesystem and inmemory are local drivers and are always compiled in.
+#   s3, azure and gcs are optional and can be selected individually.
+# Use "local" as a shorthand for a registry that only supports local storage.
+#
+#   make bin/registry STORAGE_DRIVERS=local
+#   make bin/registry STORAGE_DRIVERS="filesystem inmemory s3"
+STORAGE_DRIVERS ?= filesystem inmemory s3 azure gcs
+
+# Translate STORAGE_DRIVERS into the build tags understood by cmd/registry
+# (see BUILDING.md). Listing no remote driver is equivalent to "local" only.
+ifeq ($(filter local,$(STORAGE_DRIVERS)),)
+STORAGE_TAGS=$(foreach d,$(filter-out $(STORAGE_DRIVERS),s3 azure gcs),exclude_$(d))
+else
+STORAGE_TAGS=only_local
+endif
+
+# All build tags passed to the go toolchain.
+GO_TAGS=$(if $(strip $(BUILDTAGS) $(STORAGE_TAGS)),-tags "$(strip $(BUILDTAGS) $(STORAGE_TAGS))",)
+
+# Propagate the selected build tags to the Docker image build.
+IMAGE_BUILDTAGS=$(strip $(BUILDTAGS) $(STORAGE_TAGS))
+IMAGE_BUILDTAGS_ARGS=$(if $(IMAGE_BUILDTAGS),--set "*.args.BUILDTAGS=$(IMAGE_BUILDTAGS)")
+
 # Enable immediate symbol binding on Linux, using the target OS for cross builds.
 GO_EXTLDFLAGS=
 ifeq ($(shell go env GOOS),linux)
@@ -75,8 +101,8 @@ build: ## build go packages
 	@echo "$(WHALE) $@"
 	@go build -buildmode=pie ${GO_GCFLAGS} ${GO_BUILD_FLAGS} ${GO_LDFLAGS} ${GO_TAGS} $(PACKAGES)
 
-image: ## build docker image IMAGE_NAME=<name>
-	docker buildx bake --set "*.tags=${IMAGE_NAME}" image-local
+image: ## build docker image IMAGE_NAME=<name> (honours BUILDTAGS/STORAGE_DRIVERS)
+	docker buildx bake --set "*.tags=${IMAGE_NAME}" $(IMAGE_BUILDTAGS_ARGS) image-local
 
 clean: ## clean up binaries
 	@echo "$(WHALE) $@"
@@ -210,4 +236,5 @@ help:
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m\033[0m\n"} /^[a-zA-Z0-9_\/%-]+:.*?##/ { printf "  \033[36m%-27s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 	@echo ""
 	@echo "Go binaries:   $(BINARIES)"
+	@echo "Storage:       $(STORAGE_DRIVERS)"
 	@echo "Docker image: $(IMAGE_NAME)"

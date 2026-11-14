@@ -100,7 +100,29 @@ the environment variable `BUILDTAGS`.
 <dl>
 <dt>noresumabledigest</dt>
 <dd>Compiles without resumable digest support</dd>
+
+<dt>only_local</dt>
+<dd>Compiles only the local storage drivers (filesystem and inmemory), excluding
+the s3, azure and gcs drivers together with the cloudfront middleware</dd>
+
+<dt>exclude_s3</dt>
+<dd>Compiles without the S3 (AWS) storage driver and its cloudfront middleware</dd>
+
+<dt>exclude_azure</dt>
+<dd>Compiles without the Azure Blob Storage driver</dd>
+
+<dt>exclude_gcs</dt>
+<dd>Compiles without the Google Cloud Storage driver</dd>
 </dl>
+
+The remote storage drivers can be combined freely, for example to build a
+registry that only supports local storage:
+
+    make bin/registry BUILDTAGS="grpcnotrace only_local"
+
+or to drop just S3 and Azure:
+
+    make bin/registry BUILDTAGS="grpcnotrace exclude_s3 exclude_azure"
 
 ### Local S3 store environment
 
