@@ -224,6 +224,15 @@ var (
 		the maximum allowed.`,
 		HTTPStatusCode: http.StatusBadRequest,
 	})
+
+	// ErrorCodeQueryParameterInvalid is returned when a query parameter
+	// contains an unrecognised or unsupported value.
+	ErrorCodeQueryParameterInvalid = register(errGroup, ErrorDescriptor{
+		Value:          "QUERY_PARAMETER_INVALID",
+		Message:        "invalid query parameter value",
+		Description:    `Returned when a query parameter contains an unrecognised or unsupported value.`,
+		HTTPStatusCode: http.StatusBadRequest,
+	})
 )
 
 var (
