@@ -215,17 +215,6 @@ func (base *Base) Stat(ctx context.Context, path string) (storagedriver.FileInfo
 
 // List wraps List of underlying storage driver.
 func (base *Base) List(ctx context.Context, path string) ([]string, error) {
-	return base.list(ctx, path, false)
-}
-
-// ListNames wraps name-only listing with the same checks and instrumentation as
-// Base.List. Drivers must explicitly expose this operation; adding it to Base's
-// method set would opt in drivers that embed Base but override List.
-func ListNames(ctx context.Context, base *Base, path string) ([]string, error) {
-	return base.list(ctx, path, true)
-}
-
-func (base *Base) list(ctx context.Context, path string, namesOnly bool) ([]string, error) {
 	attrs := []attribute.KeyValue{
 		attribute.String(tracing.AttributePrefix+"storage.driver.name", base.Name()),
 		attribute.String(tracing.AttributePrefix+"storage.path", path),
@@ -242,15 +231,32 @@ func (base *Base) list(ctx context.Context, path string, namesOnly bool) ([]stri
 	}
 
 	start := time.Now()
-	var (
-		str []string
-		e   error
-	)
-	if namesOnly {
-		str, e = storagedriver.ListNames(ctx, base.StorageDriver, path)
-	} else {
-		str, e = base.StorageDriver.List(ctx, path)
+	str, e := base.StorageDriver.List(ctx, path)
+	storageAction.WithValues(base.Name(), "List").UpdateSince(start)
+	return str, base.setDriverName(e)
+}
+
+// ListNames wraps name-only listing with the same checks and instrumentation as
+// Base.List. Drivers must explicitly expose this operation; adding it to Base's
+// method set would opt in drivers that embed Base but override List.
+func ListNames(ctx context.Context, base *Base, path string) ([]string, error) {
+	attrs := []attribute.KeyValue{
+		attribute.String(tracing.AttributePrefix+"storage.driver.name", base.Name()),
+		attribute.String(tracing.AttributePrefix+"storage.path", path),
 	}
+	ctx, span := tracer.Start(
+		ctx,
+		"List",
+		trace.WithAttributes(attrs...))
+
+	defer span.End()
+
+	if !storagedriver.PathRegexp.MatchString(path) && path != "/" {
+		return nil, storagedriver.InvalidPathError{Path: path, DriverName: base.StorageDriver.Name()}
+	}
+
+	start := time.Now()
+	str, e := storagedriver.ListNames(ctx, base.StorageDriver, path)
 	storageAction.WithValues(base.Name(), "List").UpdateSince(start)
 	return str, base.setDriverName(e)
 }
