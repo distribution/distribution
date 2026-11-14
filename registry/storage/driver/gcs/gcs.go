@@ -77,6 +77,10 @@ type driverParameters struct {
 	// pushes by ensuring we aren't DoSing our own server with many
 	// connections.
 	maxConcurrency uint64
+
+	// uploadAPIBase is set from STORAGE_EMULATOR_HOST for resumable uploads;
+	// nil uses production www.googleapis.com.
+	uploadAPIBase *url.URL
 }
 
 func init() {
@@ -102,6 +106,7 @@ type driver struct {
 	privateKey    []byte
 	rootDirectory string
 	chunkSize     int
+	uploadAPIBase *url.URL
 }
 
 // Wrapper wraps `driver` with a throttler, ensuring that no more than N
@@ -153,11 +158,21 @@ func FromParameters(ctx context.Context, parameters map[string]any) (storagedriv
 		}
 	}
 
+	// cloud.google.com/go/storage uses STORAGE_EMULATOR_HOST for emulator mode
+	// (endpoint rewrite + WithoutAuthentication; no special credential type).
+	// Mirror that for auth options below and for the hand-rolled newSession client.
+	uploadAPIBase, err := emulatorUploadAPIBase()
+	if err != nil {
+		return nil, err
+	}
+	useEmulator := uploadAPIBase != nil
+
 	var ts oauth2.TokenSource
 	jwtConf := new(jwt.Config)
-	var err error
 	var gcs *storage.Client
 	var options []option.ClientOption
+	var client *http.Client
+
 	if keyfile, ok := parameters["keyfile"]; ok {
 		jsonKey, err := os.ReadFile(fmt.Sprint(keyfile))
 		if err != nil {
@@ -167,8 +182,10 @@ func FromParameters(ctx context.Context, parameters map[string]any) (storagedriv
 		if err != nil {
 			return nil, err
 		}
-		ts = jwtConf.TokenSource(ctx)
-		options = append(options, option.WithAuthCredentialsJSON(option.ServiceAccount, jsonKey))
+		if !useEmulator {
+			ts = jwtConf.TokenSource(ctx)
+			options = append(options, option.WithAuthCredentialsJSON(option.ServiceAccount, jsonKey))
+		}
 	} else if credentials, ok := parameters["credentials"]; ok {
 		credentialMap, ok := credentials.(map[any]any)
 		if !ok {
@@ -193,10 +210,11 @@ func FromParameters(ctx context.Context, parameters map[string]any) (storagedriv
 		if err != nil {
 			return nil, err
 		}
-		ts = jwtConf.TokenSource(ctx)
-		options = append(options, option.WithAuthCredentialsJSON(option.ServiceAccount, data))
-	} else {
-		var err error
+		if !useEmulator {
+			ts = jwtConf.TokenSource(ctx)
+			options = append(options, option.WithAuthCredentialsJSON(option.ServiceAccount, data))
+		}
+	} else if !useEmulator {
 		// DefaultTokenSource is a convenience method. It first calls FindDefaultCredentials,
 		// then uses the credentials to construct an http.Client or an oauth2.TokenSource.
 		// https://pkg.go.dev/golang.org/x/oauth2/google#hdr-Credentials
@@ -212,9 +230,20 @@ func FromParameters(ctx context.Context, parameters map[string]any) (storagedriv
 		}
 	}
 
-	gcs, err = storage.NewClient(ctx, options...)
-	if err != nil {
-		return nil, err
+	if useEmulator {
+		// NewClient already honors the env; avoid auth options that would
+		// re-enable OAuth. newSession uses this client outside the SDK.
+		gcs, err = storage.NewClient(ctx, options...)
+		if err != nil {
+			return nil, err
+		}
+		client = http.DefaultClient
+	} else {
+		gcs, err = storage.NewClient(ctx, options...)
+		if err != nil {
+			return nil, err
+		}
+		client = oauth2.NewClient(ctx, ts)
 	}
 
 	maxConcurrency, err := base.GetLimitFromParameter(parameters["maxconcurrency"], minConcurrency, defaultMaxConcurrency)
@@ -227,13 +256,56 @@ func FromParameters(ctx context.Context, parameters map[string]any) (storagedriv
 		rootDirectory:  fmt.Sprint(rootDirectory),
 		email:          jwtConf.Email,
 		privateKey:     jwtConf.PrivateKey,
-		client:         oauth2.NewClient(ctx, ts),
+		client:         client,
 		chunkSize:      chunkSize,
 		maxConcurrency: maxConcurrency,
 		gcs:            gcs,
+		uploadAPIBase:  uploadAPIBase,
 	}
 
 	return New(ctx, params)
+}
+
+// emulatorUploadAPIBase returns the origin from STORAGE_EMULATOR_HOST, or nil
+// if unset. A host without a scheme defaults to http, as in the Go storage client.
+func emulatorUploadAPIBase() (*url.URL, error) {
+	host := os.Getenv("STORAGE_EMULATOR_HOST")
+	if host == "" {
+		return nil, nil
+	}
+
+	var u *url.URL
+	var err error
+	if strings.Contains(host, "://") {
+		u, err = url.Parse(host)
+		if err != nil {
+			return nil, fmt.Errorf("invalid STORAGE_EMULATOR_HOST %q: %w", host, err)
+		}
+	} else {
+		u = &url.URL{Scheme: "http", Host: host}
+	}
+
+	if u.Host == "" {
+		return nil, fmt.Errorf("invalid STORAGE_EMULATOR_HOST %q: missing host", host)
+	}
+
+	return &url.URL{Scheme: u.Scheme, Host: u.Host}, nil
+}
+
+// resumableUploadURL builds the resumable-upload session URL. A non-nil
+// apiBase redirects the session to the emulator; nil uses www.googleapis.com.
+func resumableUploadURL(apiBase *url.URL, bucketName, objectName string) *url.URL {
+	scheme, host := "https", "www.googleapis.com"
+	if apiBase != nil {
+		scheme, host = apiBase.Scheme, apiBase.Host
+	}
+
+	return &url.URL{
+		Scheme:   scheme,
+		Host:     host,
+		Path:     fmt.Sprintf("/upload/storage/v1/b/%v/o", bucketName),
+		RawQuery: fmt.Sprintf("uploadType=resumable&name=%v", objectName),
+	}
 }
 
 // New constructs a new driver
@@ -252,6 +324,7 @@ func New(ctx context.Context, params driverParameters) (storagedriver.StorageDri
 		privateKey:    params.privateKey,
 		client:        params.client,
 		chunkSize:     params.chunkSize,
+		uploadAPIBase: params.uploadAPIBase,
 	}
 
 	return &Wrapper{
@@ -815,12 +888,7 @@ func (d *driver) Walk(ctx context.Context, path string, f storagedriver.WalkFn, 
 }
 
 func (w *writer) newSession() (uri string, err error) {
-	u := &url.URL{
-		Scheme:   "https",
-		Host:     "www.googleapis.com",
-		Path:     fmt.Sprintf("/upload/storage/v1/b/%v/o", w.object.BucketName()),
-		RawQuery: fmt.Sprintf("uploadType=resumable&name=%v", w.object.ObjectName()),
-	}
+	u := resumableUploadURL(w.driver.uploadAPIBase, w.object.BucketName(), w.object.ObjectName())
 	req, err := http.NewRequestWithContext(w.ctx, http.MethodPost, u.String(), nil)
 	if err != nil {
 		return "", err
