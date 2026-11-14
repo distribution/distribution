@@ -135,6 +135,11 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 		if len(deleteLayers) > 0 {
 			deleteLayerSet[repoName] = deleteLayers
 		}
+		// A repository can have manifests but no _layers directory,
+		// e.g. in a pull-through cache that has only fetched manifests.
+		if _, ok := err.(driver.PathNotFoundError); ok {
+			return nil
+		}
 		return err
 	})
 	if err != nil {
