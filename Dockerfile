@@ -22,11 +22,22 @@ ENV CGO_ENABLED=0
 WORKDIR /src
 
 FROM base AS version
+ARG GIT_FETCH_HISTORY=0
 ARG PKG=github.com/distribution/distribution/v3
-RUN --mount=target=. \
-  VERSION=$(git describe --match 'v[0-9]*' --dirty='.m' --always --tags) REVISION=$(git rev-parse HEAD)$(if ! git diff --no-ext-diff --quiet --exit-code; then echo .m; fi); \
-  echo "-X ${PKG}/version.version=${VERSION#v} -X ${PKG}/version.revision=${REVISION} -X ${PKG}/version.mainpkg=${PKG}" | tee /tmp/.ldflags; \
-  echo -n "${VERSION}" | tee /tmp/.version;
+RUN --mount=target=.,rw <<EOT
+  set -eu
+  if [ "$GIT_FETCH_HISTORY" = 1 ]; then
+    if [ "$(git rev-parse --is-shallow-repository)" = true ]; then
+      git fetch --unshallow --tags origin
+    else
+      git fetch --tags origin
+    fi
+  fi
+  VERSION=$(git describe --match 'v[0-9]*' --dirty='.m' --always --tags)
+  REVISION=$(git rev-parse HEAD)$(if ! git diff --no-ext-diff --quiet --exit-code; then echo .m; fi)
+  echo "-X ${PKG}/version.version=${VERSION#v} -X ${PKG}/version.revision=${REVISION} -X ${PKG}/version.mainpkg=${PKG}" | tee /tmp/.ldflags
+  echo -n "${VERSION}" | tee /tmp/.version
+EOT
 
 FROM base AS build
 ARG TARGETPLATFORM

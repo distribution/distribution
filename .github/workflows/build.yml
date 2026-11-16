@@ -106,6 +106,7 @@ jobs:
       sign: ${{ github.event_name != 'pull_request' }}
       set: |
         *.args.BUILDKIT_CONTEXT_KEEP_GIT_DIR=1
+        *.args.GIT_FETCH_HISTORY=1
 
   binaries-finalize:
     runs-on: ubuntu-latest
@@ -167,6 +168,7 @@ jobs:
       sbom: true
       set: |
         *.args.BUILDKIT_CONTEXT_KEEP_GIT_DIR=1
+        *.args.GIT_FETCH_HISTORY=1
       set-meta-labels: true
       meta-images: |
         distribution/distribution
