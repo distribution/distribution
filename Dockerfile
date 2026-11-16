@@ -52,6 +52,8 @@ RUN --mount=type=bind,target=/src \
 
 FROM scratch AS binary
 COPY --from=build /usr/bin/registry /
+# enable scanning for this stage
+ARG BUILDKIT_SBOM_SCAN_STAGE=true
 
 FROM base AS releaser
 ARG TARGETOS

@@ -103,6 +103,7 @@ jobs:
       cache: true
       cache-mode: max
       cache-scope: registry
+      sbom: true
       sign: ${{ github.event_name != 'pull_request' }}
       set: |
         *.args.BUILDKIT_CONTEXT_KEEP_GIT_DIR=1
@@ -120,7 +121,7 @@ jobs:
           name: ${{ needs.binaries.outputs.artifact-name }}
           path: /tmp/registry-output
       -
-        name: Rename provenance and signatures
+        name: Rename provenance, SBOMs, and signatures
         run: |
           for pdir in /tmp/registry-output/*/; do
             (
@@ -128,6 +129,8 @@ jobs:
               binname=$(find . -name '*.tar.gz')
               filename=$(basename "${binname%.tar.gz}")
               mv "provenance.json" "${filename}.provenance.json"
+              mv "sbom-binary.spdx.json" "${filename}.sbom.json"
+              find . -name 'sbom*.json' -exec rm {} \;
               if [ -f "provenance.sigstore.json" ]; then
                 mv "provenance.sigstore.json" "${filename}.sigstore.json"
               fi
@@ -226,6 +229,7 @@ jobs:
           files: |
             bin/*.tar.gz
             bin/*.provenance.json
+            bin/*.sbom.json
             bin/*.sigstore.json
             bin/*.sha256
         env:
