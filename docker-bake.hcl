@@ -14,29 +14,39 @@ target "lint" {
 variable "COMMIT_RANGE" {
   default = ""
 }
+
+target "_common" {
+  args = {
+    BUILDKIT_CONTEXT_KEEP_GIT_DIR = 1
+  }
+}
+
 target "validate-git" {
+  inherits = ["_common"]
   dockerfile = "./dockerfiles/git.Dockerfile"
   target = "validate"
   args = {
     COMMIT_RANGE = COMMIT_RANGE
-    BUILDKIT_CONTEXT_KEEP_GIT_DIR = 1
   }
   output = ["type=cacheonly"]
 }
 
 target "validate-vendor" {
+  inherits = ["_common"]
   dockerfile = "./dockerfiles/vendor.Dockerfile"
   target = "validate"
   output = ["type=cacheonly"]
 }
 
 target "update-vendor" {
+  inherits = ["_common"]
   dockerfile = "./dockerfiles/vendor.Dockerfile"
   target = "update"
   output = ["."]
 }
 
 target "mod-outdated" {
+  inherits = ["_common"]
   dockerfile = "./dockerfiles/vendor.Dockerfile"
   target = "outdated"
   no-cache-filter = ["outdated"]
@@ -44,11 +54,13 @@ target "mod-outdated" {
 }
 
 target "binary" {
+  inherits = ["_common"]
   target = "binary"
   output = ["./bin"]
 }
 
 target "artifact" {
+  inherits = ["_common"]
   target = "artifact"
   output = ["./bin"]
 }
@@ -72,7 +84,7 @@ target "docker-metadata-action" {
 }
 
 target "image" {
-  inherits = ["docker-metadata-action"]
+  inherits = ["_common", "docker-metadata-action"]
 }
 
 target "image-local" {
@@ -117,13 +129,14 @@ target "docs-test" {
 }
 
 target "authors" {
+  inherits = ["_common"]
   dockerfile = "./dockerfiles/authors.Dockerfile"
   target = "update"
   output = ["."]
 }
 
 target "validate-authors" {
-  dockerfile = "./dockerfiles/authors.Dockerfile"
+  inherits = ["authors"]
   target = "validate"
   output = ["type=cacheonly"]
 }
