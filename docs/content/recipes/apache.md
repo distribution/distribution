@@ -42,6 +42,7 @@ mkdir -p data
 
 # This is the main apache configuration
 cat <<EOF > auth/httpd.conf
+LoadModule mpm_event_module modules/mod_mpm_event.so
 LoadModule headers_module modules/mod_headers.so
 
 LoadModule authn_file_module modules/mod_authn_file.so
@@ -167,22 +168,23 @@ cp domain.key auth
 # Now create your compose file
 
 cat <<EOF > docker-compose.yml
-apache:
-  image: "httpd:2.4"
-  hostname: myregistrydomain.com
-  ports:
-    - 5043:5043
-  links:
-    - registry:registry
-  volumes:
-    - `pwd`/auth:/usr/local/apache2/conf
+services:
+  apache:
+    image: "httpd:2.4"
+    hostname: myregistrydomain.com
+    ports:
+      - 5043:5043
+    links:
+      - registry:registry
+    volumes:
+      - `pwd`/auth:/usr/local/apache2/conf
 
-registry:
-  image: registry:3
-  ports:
-    - 127.0.0.1:5000:5000
-  volumes:
-    - `pwd`/data:/var/lib/registry
+  registry:
+    image: registry:3
+    ports:
+      - 127.0.0.1:5000:5000
+    volumes:
+      - `pwd`/data:/var/lib/registry
 
 EOF
 ```
@@ -199,6 +201,7 @@ Log in with a "push" authorized user (using `testuserpush` and `testpasswordpush
 
 ```console
 $ docker login myregistrydomain.com:5043
+$ docker pull ubuntu
 $ docker tag ubuntu myregistrydomain.com:5043/test
 $ docker push myregistrydomain.com:5043/test
 ```
