@@ -106,7 +106,6 @@ jobs:
       sbom: true
       sign: ${{ github.event_name != 'pull_request' }}
       set: |
-        *.args.BUILDKIT_CONTEXT_KEEP_GIT_DIR=1
         *.args.GIT_FETCH_HISTORY=1
 
   binaries-finalize:
@@ -170,7 +169,6 @@ jobs:
       cache-scope: registry
       sbom: true
       set: |
-        *.args.BUILDKIT_CONTEXT_KEEP_GIT_DIR=1
         *.args.GIT_FETCH_HISTORY=1
       set-meta-labels: true
       meta-images: |
