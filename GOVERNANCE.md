@@ -89,7 +89,7 @@ required duties they can be removed with a vote of at least 66% of the current
 maintainers. In this case, maintainers should first propose the change to
 maintainers via the maintainers communication channel, then open a pull request
 for voting. The voting period is five business days. The voting pull request
-should not come as a surpise to any maintainer and any discussion related to
+should not come as a surprise to any maintainer and any discussion related to
 performance must not be discussed on the pull request.
 
 ## How are decisions made?
