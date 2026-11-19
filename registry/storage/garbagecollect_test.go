@@ -1,9 +1,13 @@
 package storage
 
 import (
+	"encoding/json"
 	"io"
+	"os"
 	"path"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/internal/dcontext"
@@ -920,5 +924,351 @@ func TestTaggedManifestlistWithDeletedReference(t *testing.T) {
 	after := allBlobs(t, registry)
 	if len(after) != 0 {
 		t.Fatalf("Garbage collection affected storage: %d != %d", len(after), 0)
+	}
+}
+
+func TestTwoPassGarbageCollect(t *testing.T) {
+	ctx := dcontext.Background()
+	inmemoryDriver := inmemory.New()
+
+	registry := createRegistry(t, inmemoryDriver)
+	repo := makeRepository(t, registry, "twopass")
+
+	// Create and upload two images, delete one
+	image1 := uploadRandomSchema2Image(t, repo)
+	image2 := uploadRandomSchema2Image(t, repo)
+
+	manifestService := makeManifestService(t, repo)
+	err := manifestService.Delete(ctx, image2.manifestDigest)
+	if err != nil {
+		t.Fatalf("Failed to delete manifest: %v", err)
+	}
+
+	before := allBlobs(t, registry)
+
+	// Create temp checkpoint dir
+	checkpointDir := t.TempDir()
+
+	// Phase 1: Mark-only phase
+	err = MarkAndSweep(ctx, inmemoryDriver, registry, GCOpts{
+		DryRun:        false,
+		CheckpointDir: checkpointDir,
+		MarkOnly:      true,
+		Quiet:         true,
+	})
+	if err != nil {
+		t.Fatalf("Failed mark-only phase: %v", err)
+	}
+
+	// Verify checkpoint file was created (on filesystem, not in inmemory driver)
+	checkpointPath := checkpointDir + "/candidates.json"
+	if _, err := os.Stat(checkpointPath); err != nil {
+		t.Fatalf("Checkpoint file not created: %v", err)
+	}
+
+	// Verify no blobs deleted yet
+	afterMark := allBlobs(t, registry)
+	if len(before) != len(afterMark) {
+		t.Fatalf("Mark-only phase deleted blobs: %d != %d", len(before), len(afterMark))
+	}
+
+	// Phase 2: Sweep phase
+	err = MarkAndSweep(ctx, inmemoryDriver, registry, GCOpts{
+		DryRun:        false,
+		CheckpointDir: checkpointDir,
+		SweepOnly:     true,
+		Quiet:         true,
+	})
+	if err != nil {
+		t.Fatalf("Failed sweep phase: %v", err)
+	}
+
+	// Verify checkpoint file was automatically deleted after successful sweep
+	if _, err := os.Stat(checkpointPath); !os.IsNotExist(err) {
+		t.Fatalf("Checkpoint file should be deleted after sweep: %v", err)
+	}
+
+	// Verify image2 layers were deleted but image1 layers remain
+	afterSweep := allBlobs(t, registry)
+	if len(afterSweep) >= len(before) {
+		t.Fatalf("Sweep phase did not delete blobs: %d >= %d", len(afterSweep), len(before))
+	}
+
+	// Verify image1 is still intact
+	if _, ok := afterSweep[image1.manifestDigest]; !ok {
+		t.Fatal("Image1 manifest was deleted")
+	}
+	for layer := range image1.layers {
+		if _, ok := afterSweep[layer]; !ok {
+			t.Fatalf("Image1 layer missing: %v", layer)
+		}
+	}
+
+	// Verify image2 layers were deleted
+	for layer := range image2.layers {
+		if _, ok := afterSweep[layer]; ok {
+			t.Fatalf("Image2 layer still exists: %v", layer)
+		}
+	}
+}
+
+func TestTwoPassWithNewReferences(t *testing.T) {
+	ctx := dcontext.Background()
+	inmemoryDriver := inmemory.New()
+
+	registry := createRegistry(t, inmemoryDriver)
+	repo := makeRepository(t, registry, "twopass_newrefs")
+
+	// Upload initial image and delete it (should be GC candidate)
+	image1 := uploadRandomSchema2Image(t, repo)
+	manifestService := makeManifestService(t, repo)
+	err := manifestService.Delete(ctx, image1.manifestDigest)
+	if err != nil {
+		t.Fatalf("Failed to delete manifest: %v", err)
+	}
+
+	checkpointDir := t.TempDir()
+
+	// Phase 1: Mark-only phase (image1 is candidate for deletion)
+	err = MarkAndSweep(ctx, inmemoryDriver, registry, GCOpts{
+		DryRun:        false,
+		CheckpointDir: checkpointDir,
+		MarkOnly:      true,
+		Quiet:         true,
+	})
+	if err != nil {
+		t.Fatalf("Failed mark-only phase: %v", err)
+	}
+
+	// Simulate new push AFTER mark phase: upload new image with fresh layers
+	// (we can't reuse image1.layers because the ReadSeeker has been consumed)
+	newLayers, err := testutil.CreateRandomLayers(2)
+	if err != nil {
+		t.Fatalf("Failed to create layers: %v", err)
+	}
+
+	// Track one of the new layers to verify it's protected
+	newLayerDigest := getAnyKey(newLayers)
+
+	err = testutil.UploadBlobs(repo, newLayers)
+	if err != nil {
+		t.Fatalf("Failed to upload new image: %v", err)
+	}
+
+	newManifest, err := testutil.MakeSchema2Manifest(repo, getKeys(newLayers))
+	if err != nil {
+		t.Fatalf("Failed to make manifest: %v", err)
+	}
+
+	newManifestDigest, err := manifestService.Put(ctx, newManifest)
+	if err != nil {
+		t.Fatalf("Failed to put manifest: %v", err)
+	}
+
+	// Phase 2: Sweep phase (should re-mark and protect the new image)
+	err = MarkAndSweep(ctx, inmemoryDriver, registry, GCOpts{
+		DryRun:        false,
+		CheckpointDir: checkpointDir,
+		SweepOnly:     true,
+		Quiet:         true,
+	})
+	if err != nil {
+		t.Fatalf("Failed sweep phase: %v", err)
+	}
+
+	// Verify checkpoint file was automatically deleted after successful sweep
+	checkpointPath := checkpointDir + "/candidates.json"
+	if _, err := os.Stat(checkpointPath); !os.IsNotExist(err) {
+		t.Fatalf("Checkpoint file should be deleted after sweep: %v", err)
+	}
+
+	// Verify new image and its layers were NOT deleted (protected by re-mark)
+	afterSweep := allBlobs(t, registry)
+	if _, ok := afterSweep[newManifestDigest]; !ok {
+		t.Fatalf("New manifest was deleted: %v", newManifestDigest)
+	}
+	if _, ok := afterSweep[newLayerDigest]; !ok {
+		t.Fatalf("New layer was deleted despite being pushed between mark and sweep: %v", newLayerDigest)
+	}
+}
+
+func TestGarbageCollectConcurrency(t *testing.T) {
+	ctx := dcontext.Background()
+	inmemoryDriver := inmemory.New()
+
+	registry := createRegistry(t, inmemoryDriver)
+
+	// Create multiple repositories with images
+	for i := 0; i < 10; i++ {
+		repoName := "concurrent_" + string(rune('a'+i))
+		repo := makeRepository(t, registry, repoName)
+		uploadRandomSchema2Image(t, repo)
+		image := uploadRandomSchema2Image(t, repo)
+
+		// Delete one image per repo
+		manifestService := makeManifestService(t, repo)
+		err := manifestService.Delete(ctx, image.manifestDigest)
+		if err != nil {
+			t.Fatalf("Failed to delete manifest: %v", err)
+		}
+	}
+
+	beforeSerial := allBlobs(t, registry)
+
+	// Run GC with 1 worker (serial)
+	err := MarkAndSweep(ctx, inmemoryDriver, registry, GCOpts{
+		DryRun:         false,
+		MaxConcurrency: 1,
+		Quiet:          true,
+	})
+	if err != nil {
+		t.Fatalf("Failed serial GC: %v", err)
+	}
+
+	afterSerial := allBlobs(t, registry)
+
+	// Reset registry state
+	inmemoryDriver = inmemory.New()
+	registry = createRegistry(t, inmemoryDriver)
+
+	// Recreate same data
+	for i := 0; i < 10; i++ {
+		repoName := "concurrent_" + string(rune('a'+i))
+		repo := makeRepository(t, registry, repoName)
+		uploadRandomSchema2Image(t, repo)
+		image := uploadRandomSchema2Image(t, repo)
+
+		manifestService := makeManifestService(t, repo)
+		err := manifestService.Delete(ctx, image.manifestDigest)
+		if err != nil {
+			t.Fatalf("Failed to delete manifest: %v", err)
+		}
+	}
+
+	beforeParallel := allBlobs(t, registry)
+
+	// Run GC with 8 workers (parallel)
+	err = MarkAndSweep(ctx, inmemoryDriver, registry, GCOpts{
+		DryRun:         false,
+		MaxConcurrency: 8,
+		Quiet:          true,
+	})
+	if err != nil {
+		t.Fatalf("Failed parallel GC: %v", err)
+	}
+
+	afterParallel := allBlobs(t, registry)
+
+	// Verify same blobs were deleted in both modes
+	if len(beforeSerial) != len(beforeParallel) {
+		t.Fatalf("Initial state differs: %d != %d", len(beforeSerial), len(beforeParallel))
+	}
+
+	if len(afterSerial) != len(afterParallel) {
+		t.Fatalf("Results differ between serial and parallel: %d != %d", len(afterSerial), len(afterParallel))
+	}
+}
+
+func TestDistributedLock(t *testing.T) {
+	ctx := dcontext.Background()
+	inmemoryDriver := inmemory.New()
+
+	registry := createRegistry(t, inmemoryDriver)
+	repo := makeRepository(t, registry, "locktest")
+	uploadRandomSchema2Image(t, repo)
+
+	checkpointDir := t.TempDir()
+
+	// Start first GC with mark-only (acquires lock)
+	err := MarkAndSweep(ctx, inmemoryDriver, registry, GCOpts{
+		DryRun:        false,
+		CheckpointDir: checkpointDir,
+		MarkOnly:      true,
+		Quiet:         true,
+	})
+	if err != nil {
+		t.Fatalf("First GC failed: %v", err)
+	}
+
+	// Lock should be released after mark-only completes
+	// Try to run second GC immediately (should succeed)
+	err = MarkAndSweep(ctx, inmemoryDriver, registry, GCOpts{
+		DryRun:        false,
+		CheckpointDir: checkpointDir,
+		MarkOnly:      true,
+		Quiet:         true,
+	})
+	if err != nil {
+		t.Fatalf("Second GC failed (lock should be released): %v", err)
+	}
+}
+
+func TestCheckpointExpiration(t *testing.T) {
+	ctx := dcontext.Background()
+	inmemoryDriver := inmemory.New()
+
+	registry := createRegistry(t, inmemoryDriver)
+	repo := makeRepository(t, registry, "expiration")
+
+	// Upload and delete an image
+	image := uploadRandomSchema2Image(t, repo)
+	manifestService := makeManifestService(t, repo)
+	err := manifestService.Delete(ctx, image.manifestDigest)
+	if err != nil {
+		t.Fatalf("Failed to delete manifest: %v", err)
+	}
+
+	checkpointDir := t.TempDir()
+
+	// Run mark-only to create checkpoint
+	err = MarkAndSweep(ctx, inmemoryDriver, registry, GCOpts{
+		DryRun:        false,
+		CheckpointDir: checkpointDir,
+		MarkOnly:      true,
+		Quiet:         true,
+	})
+	if err != nil {
+		t.Fatalf("Mark phase failed: %v", err)
+	}
+
+	// Manually modify checkpoint timestamp to be 8 days old (expired)
+	checkpointPath := checkpointDir + "/candidates.json"
+	data, err := os.ReadFile(checkpointPath)
+	if err != nil {
+		t.Fatalf("Failed to read checkpoint: %v", err)
+	}
+
+	// Unmarshal, modify timestamp, and marshal back
+	var checkpoint CheckpointState
+	if err := json.Unmarshal(data, &checkpoint); err != nil {
+		t.Fatalf("Failed to unmarshal checkpoint: %v", err)
+	}
+
+	// Set timestamp to 8 days ago (expired)
+	checkpoint.Timestamp = time.Now().Add(-8 * 24 * time.Hour)
+
+	// Write modified checkpoint back
+	modifiedData, err := json.MarshalIndent(checkpoint, "", "  ")
+	if err != nil {
+		t.Fatalf("Failed to marshal checkpoint: %v", err)
+	}
+
+	err = os.WriteFile(checkpointPath, modifiedData, 0644)
+	if err != nil {
+		t.Fatalf("Failed to write modified checkpoint: %v", err)
+	}
+
+	// Try to run sweep with expired checkpoint (should fail)
+	err = MarkAndSweep(ctx, inmemoryDriver, registry, GCOpts{
+		DryRun:        false,
+		CheckpointDir: checkpointDir,
+		SweepOnly:     true,
+		Quiet:         true,
+	})
+	if err == nil {
+		t.Fatal("Sweep phase should have failed with expired checkpoint")
+	}
+	if !strings.Contains(err.Error(), "checkpoint is too old") && !strings.Contains(err.Error(), "expired") {
+		t.Fatalf("Expected expiration error, got: %v", err)
 	}
 }
