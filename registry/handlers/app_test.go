@@ -19,6 +19,8 @@ import (
 	"github.com/distribution/distribution/v3/registry/storage"
 	memorycache "github.com/distribution/distribution/v3/registry/storage/cache/memory"
 	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
+	"github.com/sirupsen/logrus"
+	hookstest "github.com/sirupsen/logrus/hooks/test"
 )
 
 // TestAppDispatcher builds an application with a test dispatcher and ensures
@@ -362,5 +364,62 @@ func TestAppendAccessRecords(t *testing.T) {
 	expectedResult = []auth.Access{expectedDeleteRecord}
 	if ok := reflect.DeepEqual(result, expectedResult); !ok {
 		t.Fatal("Actual access record differs from expected")
+	}
+}
+
+func TestLogErrorLevel(t *testing.T) {
+	app := &App{}
+	hook := hookstest.NewGlobal()
+	defer hook.Reset()
+
+	ctx := dcontext.Background()
+
+	// 404 client not-found errors should be logged at Info level
+	app.logError(ctx, errcode.Errors{errcode.ErrorCodeManifestUnknown})
+	entry := hook.LastEntry()
+	if entry == nil {
+		t.Fatal("expected log entry for ErrorCodeManifestUnknown")
+	}
+	if entry.Level != logrus.InfoLevel {
+		t.Errorf("expected InfoLevel for ErrorCodeManifestUnknown, got %v", entry.Level)
+	}
+
+	app.logError(ctx, errcode.Errors{errcode.ErrorCodeBlobUnknown})
+	entry = hook.LastEntry()
+	if entry == nil {
+		t.Fatal("expected log entry for ErrorCodeBlobUnknown")
+	}
+	if entry.Level != logrus.InfoLevel {
+		t.Errorf("expected InfoLevel for ErrorCodeBlobUnknown, got %v", entry.Level)
+	}
+
+	// other 4xx errors (e.g. unauthorized) should also be logged at Info level
+	app.logError(ctx, errcode.Errors{errcode.ErrorCodeUnauthorized})
+	entry = hook.LastEntry()
+	if entry == nil {
+		t.Fatal("expected log entry for ErrorCodeUnauthorized")
+	}
+	if entry.Level != logrus.InfoLevel {
+		t.Errorf("expected InfoLevel for ErrorCodeUnauthorized, got %v", entry.Level)
+	}
+
+	// 5xx errors should still be logged at Error level
+	app.logError(ctx, errcode.Errors{errcode.ErrorCodeUnavailable})
+	entry = hook.LastEntry()
+	if entry == nil {
+		t.Fatal("expected log entry for ErrorCodeUnavailable")
+	}
+	if entry.Level != logrus.ErrorLevel {
+		t.Errorf("expected ErrorLevel for ErrorCodeUnavailable, got %v", entry.Level)
+	}
+
+	// 500 / other errors should still be logged at Error level
+	app.logError(ctx, errcode.Errors{errcode.ErrorCodeUnknown})
+	entry = hook.LastEntry()
+	if entry == nil {
+		t.Fatal("expected log entry for ErrorCodeUnknown")
+	}
+	if entry.Level != logrus.ErrorLevel {
+		t.Errorf("expected ErrorLevel for ErrorCodeUnknown, got %v", entry.Level)
 	}
 }
