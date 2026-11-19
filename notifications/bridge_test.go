@@ -1,6 +1,7 @@
 package notifications
 
 import (
+	"context"
 	"testing"
 
 	"github.com/distribution/distribution/v3"
@@ -12,6 +13,9 @@ import (
 	"github.com/opencontainers/go-digest"
 	"github.com/opencontainers/image-spec/specs-go"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var (
@@ -237,4 +241,82 @@ func mustUB(ub *v2.URLBuilder, err error) *v2.URLBuilder {
 	}
 
 	return ub
+}
+
+func TestEventBridgeTraceContext(t *testing.T) {
+	prev := otel.GetTextMapPropagator()
+	otel.SetTextMapPropagator(propagation.TraceContext{})
+	t.Cleanup(func() { otel.SetTextMapPropagator(prev) })
+
+	traceID, err := trace.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
+	if err != nil {
+		t.Fatalf("unexpected error parsing trace id: %v", err)
+	}
+	spanID, err := trace.SpanIDFromHex("00f067aa0ba902b7")
+	if err != nil {
+		t.Fatalf("unexpected error parsing span id: %v", err)
+	}
+	spanCtx := trace.ContextWithSpanContext(context.Background(), trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    traceID,
+		SpanID:     spanID,
+		TraceFlags: trace.FlagsSampled,
+	}))
+
+	for _, tc := range []struct {
+		name     string
+		listener func(sink events.Sink) Listener
+		expected string
+	}{
+		{
+			name: "context with span",
+			listener: func(sink events.Sink) Listener {
+				return NewBridgeWithContext(spanCtx, ub, source, actor, request, sink, true)
+			},
+			expected: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+		},
+		{
+			name: "context without span",
+			listener: func(sink events.Sink) Listener {
+				return NewBridgeWithContext(context.Background(), ub, source, actor, request, sink, true)
+			},
+		},
+		{
+			name: "no context",
+			listener: func(sink events.Sink) Listener {
+				return NewBridge(ub, source, actor, request, sink, true)
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var written []events.Event
+			l := tc.listener(testSinkFn(func(event events.Event) error {
+				written = append(written, event)
+				return nil
+			}))
+
+			repoRef, _ := reference.WithName(repo)
+			if err := l.TagDeleted(repoRef, tag); err != nil {
+				t.Fatalf("unexpected error notifying tag deletion: %v", err)
+			}
+			if err := l.RepoDeleted(repoRef); err != nil {
+				t.Fatalf("unexpected error notifying repo deletion: %v", err)
+			}
+
+			if len(written) != 2 {
+				t.Fatalf("unexpected number of events written: %d != 2", len(written))
+			}
+			for _, event := range written {
+				traceContext := event.(Event).traceContext
+				if tc.expected == "" {
+					if traceContext != nil {
+						t.Fatalf("unexpected trace context on event: %v", traceContext)
+					}
+					continue
+				}
+				if traceparent := traceContext.Get("traceparent"); traceparent != tc.expected {
+					t.Fatalf("unexpected traceparent on event: %q != %q", traceparent, tc.expected)
+				}
+			}
+		})
+	}
 }

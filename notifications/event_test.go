@@ -1,12 +1,16 @@
 package notifications
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/distribution/distribution/v3/manifest/schema2"
+	"github.com/sirupsen/logrus"
+	"go.opentelemetry.io/otel/propagation"
 )
 
 // TestEventJSONFormat provides silly test to detect if the event format or
@@ -150,5 +154,42 @@ func TestEventEnvelopeJSONFormat(t *testing.T) {
 	}
 	if string(p) != expected {
 		t.Fatalf("format has changed\n%s\n != \n%s", string(p), expected)
+	}
+}
+
+// TestEventTraceContextNotLogged ensures that the trace context recorded on an
+// event does not end up in the text representation of the event, which is what
+// gets logged, for example, when a sink retries a failed delivery.
+func TestEventTraceContextNotLogged(t *testing.T) {
+	const (
+		traceparent = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+		baggage     = "userId=alice"
+	)
+
+	event := createTestEvent("push", "library/test", schema2.MediaTypeManifest)
+	event.traceContext = propagation.MapCarrier{
+		"traceparent": traceparent,
+		"baggage":     baggage,
+	}
+
+	var buf bytes.Buffer
+	logger := logrus.New()
+	logger.Out = &buf
+	logger.Formatter = &logrus.TextFormatter{DisableColors: true}
+	logger.WithField("event", event).Info("retrying")
+
+	for name, got := range map[string]string{
+		"fmt.Sprint":   fmt.Sprint(event),
+		"fmt.Sprintf":  fmt.Sprintf("%+v", &event),
+		"text logging": buf.String(),
+	} {
+		for _, leaked := range []string{traceparent, baggage} {
+			if strings.Contains(got, leaked) {
+				t.Errorf("%s leaks the trace context %q: %s", name, leaked, got)
+			}
+		}
+		if !strings.Contains(got, event.ID) {
+			t.Errorf("%s does not identify the event: %s", name, got)
+		}
 	}
 }
