@@ -15,6 +15,7 @@ require (
 	github.com/docker/docker-credential-helpers v0.9.5
 	github.com/docker/go-events v0.0.0-20250808211157-605354379745
 	github.com/docker/go-metrics v0.1.0
+	github.com/felixge/httpsnoop v1.1.0
 	github.com/go-jose/go-jose/v4 v4.1.6
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/handlers v1.5.2
@@ -30,7 +31,7 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.12.1
 	go.opentelemetry.io/contrib/exporters/autoexport v0.67.0
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.72.0
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.72.1-0.20261023153556-ec3c636e3541
 	go.opentelemetry.io/otel v1.47.0
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.42.0
 	go.opentelemetry.io/otel/sdk v1.47.0
@@ -64,7 +65,6 @@ require (
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/envoyproxy/go-control-plane/envoy v1.37.0 // indirect
 	github.com/envoyproxy/protoc-gen-validate v1.3.3 // indirect
-	github.com/felixge/httpsnoop v1.1.0 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/golang-jwt/jwt/v5 v5.3.0 // indirect

@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/docker/go-metrics"
-	gorhandlers "github.com/gorilla/handlers"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -153,7 +152,7 @@ func NewRegistry(ctx context.Context, config *configuration.Configuration) (*Reg
 	handler = health.Handler(handler)
 	handler = panicHandler(handler)
 	if !config.Log.AccessLog.Disabled {
-		handler = gorhandlers.CombinedLoggingHandler(os.Stdout, handler)
+		handler = accessLogHandler(os.Stdout, handler)
 	}
 
 	for _, applyHandlerMiddleware := range handlerMiddlewares {
