@@ -335,12 +335,16 @@ Some examples of _digests_ include the following:
 digest                                                                            | description                                   |
 ----------------------------------------------------------------------------------|------------------------------------------------
 sha256:6c3c624b58dbbcd3c0dd82b4c53f04194d1247c6eebdaab7c610cf7d66709b3b           | Common sha256 based digest                    |
+sha512:94e07c055b247220f450d65ffc69fe8d8963931fe7c22213236707ab7731366f728403d5788d4d8a03fbf15236d5ed3631bd7841cf126a5675fbe746789277ba | Common sha512 based digest |
 
 While the _algorithm_ does allow one to implement a wide variety of
-algorithms, compliant implementations should use sha256. Heavy processing of
-input before calculating a hash is discouraged to avoid degrading the
-uniqueness of the _digest_ but some canonicalization may be performed to
-ensure consistent identifiers.
+algorithms, compliant implementations should use sha256 or sha512, the two
+algorithms defined by the OCI distribution specification. This registry
+stores content under the digest algorithm it was pushed with, and rejects any
+other algorithm for newly pushed content. Heavy processing of input before
+calculating a hash is discouraged to avoid degrading the uniqueness of the
+_digest_ but some canonicalization may be performed to ensure consistent
+identifiers.
 
 Let's use a simple example in pseudo-code to demonstrate a digest calculation:
 ```
@@ -711,6 +715,16 @@ sha256:6c3c624b58dbbcd3c0dd82b4c53f04194d1247c6eebdaab7c610cf7d66709b3b
 
 Given this parameter, the registry will verify that the provided content does
 match this digest.
+
+###### Digest Algorithm Parameter
+
+A client that intends to complete an upload with a digest that is not sha256
+can declare the algorithm when initiating the upload, using the optional
+"digest-algorithm" query parameter (for example, `?digest-algorithm=sha512`).
+The registry then hashes the content as it is received, instead of having to
+re-read the whole blob to compute the digest when the upload is completed. The
+digest provided on completion is still verified, and may use a different
+algorithm than the one declared.
 
 ##### Canceling an Upload
 
@@ -3349,7 +3363,7 @@ The error codes that may be included in the response body are enumerated below:
 ##### Initiate Resumable Blob Upload
 
 ```none
-POST /v2/<name>/blobs/uploads/
+POST /v2/<name>/blobs/uploads/?digest-algorithm=<algorithm>
 Host: <registry host>
 Authorization: <scheme> <token>
 Content-Length: 0
@@ -3363,6 +3377,7 @@ The following parameters should be specified on the request:
 |`Authorization`|header|An RFC7235 compliant authorization header.|
 |`Content-Length`|header|The `Content-Length` header must be zero and the body must be empty.|
 |`name`|path|Name of the target repository.|
+|`digest-algorithm`|query|Optional. The digest algorithm (for example, `sha256` or `sha512`) the blob's final digest will use. Declaring it up front lets the registry hash the content as it is received, instead of re-reading the whole blob at commit. An unsupported algorithm is rejected with a `DIGEST_INVALID` error.|
 
 ###### On Success: Accepted
 

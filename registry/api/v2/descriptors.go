@@ -1049,6 +1049,14 @@ var routeDescriptors = []RouteDescriptor{
 						PathParameters: []ParameterDescriptor{
 							nameParameterDescriptor,
 						},
+						QueryParameters: []ParameterDescriptor{
+							{
+								Name:        "digest-algorithm",
+								Type:        "query",
+								Format:      "<algorithm>",
+								Description: `Optional. The digest algorithm (for example, ` + "`sha256` or `sha512`" + `) the blob's final digest will use. Declaring it up front lets the registry hash the content as it is received, instead of re-reading the whole blob at commit. An unsupported algorithm is rejected with a ` + "`DIGEST_INVALID`" + ` error.`,
+							},
+						},
 						Successes: []ResponseDescriptor{
 							{
 								Description: "The upload has been created. The `Location` header must be used to complete the upload. The response should be identical to a `GET` request on the contents of the returned `Location` header.",
