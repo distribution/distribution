@@ -1783,6 +1783,120 @@ func TestManifestTagsPaginated(t *testing.T) {
 	}
 }
 
+// TestManifestTagsPaginatedForeignNextLink checks that All stops instead of
+// fetching a next page from a host other than the one it was pointed at.
+func TestManifestTagsPaginatedForeignNextLink(t *testing.T) {
+	foreign := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Errorf("All requested %s from a different host", r.URL.Path)
+		body := []byte(`{"name":"test.example.com/repo/tags/list","tags":["injected"]}`)
+		w.Header().Set("Content-Length", fmt.Sprint(len(body)))
+		_, _ = w.Write(body)
+	}))
+	defer foreign.Close()
+
+	repo, _ := reference.WithName("test.example.com/repo/tags/list")
+	body, err := json.Marshal(map[string]any{
+		"name": "test.example.com/repo/tags/list",
+		"tags": []string{"tag1"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var m testutil.RequestResponseMap
+	m = append(m, testutil.RequestResponseMapping{
+		Request: testutil.Request{
+			Method: http.MethodGet,
+			Route:  "/v2/" + repo.Name() + "/tags/list",
+		},
+		Response: testutil.Response{
+			StatusCode: http.StatusOK,
+			Body:       body,
+			Headers: http.Header(map[string][]string{
+				"Content-Length": {fmt.Sprint(len(body))},
+				"Last-Modified":  {time.Now().Add(-1 * time.Second).Format(time.ANSIC)},
+				"Link":           {fmt.Sprintf(`<%s/v2/%s/tags/list?n=1&last=tag1>; rel="next"`, foreign.URL, repo.Name())},
+			}),
+		},
+	})
+
+	e, c := testServer(m)
+	defer c()
+
+	r, err := NewRepository(repo, e, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := dcontext.Background()
+	if _, err := r.Tags(ctx).All(ctx); err == nil {
+		t.Error("All accepted a next link pointing at a different host")
+	}
+}
+
+// TestManifestTagsPaginatedRedirectForeignHost checks that All doesn't follow
+// a redirect from a same-host next page to a different host.
+func TestManifestTagsPaginatedRedirectForeignHost(t *testing.T) {
+	foreign := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Errorf("All requested %s from a different host", r.URL.Path)
+		_, _ = w.Write([]byte(`{"tags":["injected"]}`))
+	}))
+	defer foreign.Close()
+
+	repo, _ := reference.WithName("test.example.com/repo")
+	listPath := "/v2/" + repo.Name() + "/tags/list"
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("last") == "" {
+			w.Header().Set("Link", fmt.Sprintf(`<%s?n=1&last=tag1>; rel="next"`, listPath))
+			_, _ = w.Write([]byte(`{"tags":["tag1"]}`))
+			return
+		}
+		http.Redirect(w, r, foreign.URL+listPath, http.StatusFound)
+	}))
+	defer s.Close()
+
+	r, err := NewRepository(repo, s.URL, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := dcontext.Background()
+	if _, err := r.Tags(ctx).All(ctx); err == nil {
+		t.Error("All followed a redirect to a different host")
+	}
+}
+
+// TestManifestTagsPaginatedHostCase checks that a next link whose host only
+// differs in case is treated as the same host.
+func TestManifestTagsPaginatedHostCase(t *testing.T) {
+	repo, _ := reference.WithName("test.example.com/repo")
+	listPath := "/v2/" + repo.Name() + "/tags/list"
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("last") == "" {
+			w.Header().Set("Link", fmt.Sprintf(`<HTTP://%s%s?n=1&last=tag1>; rel="next"`, strings.ToUpper(r.Host), listPath))
+			_, _ = w.Write([]byte(`{"tags":["tag1"]}`))
+			return
+		}
+		_, _ = w.Write([]byte(`{"tags":["tag2"]}`))
+	}))
+	defer s.Close()
+
+	_, port, _ := strings.Cut(strings.TrimPrefix(s.URL, "http://"), ":")
+	r, err := NewRepository(repo, "http://localhost:"+port, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := dcontext.Background()
+	tags, err := r.Tags(ctx).All(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(tags, []string{"tag1", "tag2"}) {
+		t.Fatalf("unexpected tags: %v", tags)
+	}
+}
+
 func TestManifestTagsListPaginated(t *testing.T) {
 	s := httptest.NewServer(http.NotFoundHandler())
 	defer s.Close()
