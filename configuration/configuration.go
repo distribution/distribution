@@ -161,6 +161,10 @@ type HTTP struct {
 	// receives a stop signal
 	DrainTimeout time.Duration `yaml:"draintimeout,omitempty"`
 
+	// IdleTimeout is the maximum amount of time to wait for the next request
+	// when keep-alives are enabled. If IdleTimeout is zero, there is no timeout.
+	IdleTimeout time.Duration `yaml:"idletimeout,omitempty"`
+
 	// TLS instructs the http server to listen with a TLS configuration.
 	// This only support simple tls configuration with a cert and key.
 	// Mostly, this is useful for testing situations or simple deployments

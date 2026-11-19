@@ -167,8 +167,9 @@ func NewRegistry(ctx context.Context, config *configuration.Configuration) (*Reg
 	handler = otelHandler(handler)
 
 	server := &http.Server{
-		Handler:   handler,
-		Protocols: serverProtocols(config),
+		Handler:     handler,
+		Protocols:   serverProtocols(config),
+		IdleTimeout: config.HTTP.IdleTimeout,
 	}
 
 	return &Registry{
