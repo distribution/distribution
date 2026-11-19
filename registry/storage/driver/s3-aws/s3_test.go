@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"io"
@@ -20,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -376,6 +378,192 @@ func TestWriterWriteExcludesFailedPartFromCount(t *testing.T) {
 	}
 	if w.Size() != chunkSize {
 		t.Errorf("Size() = %d, want %d", w.Size(), chunkSize)
+	}
+}
+
+func TestWriterResumeCopy(t *testing.T) {
+	const copyLimit int64 = 5 * 1024 * 1024 * 1024
+	for _, size := range []int64{
+		copyLimit - 1, copyLimit, copyLimit + 1,
+		copyLimit + minChunkSize - 1, copyLimit + minChunkSize,
+		2 * copyLimit, 2*copyLimit + 1,
+	} {
+		t.Run(strconv.FormatInt(size, 10), func(t *testing.T) {
+			var copied int64
+			var parts []*s3.CompletedPart
+			var committed bool
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				q := r.URL.Query()
+				switch {
+				case r.Method == http.MethodGet && q.Has("uploads"):
+					fmt.Fprint(w, `<ListMultipartUploadsResult><IsTruncated>false</IsTruncated><Upload><Key>key</Key><UploadId>old</UploadId></Upload></ListMultipartUploadsResult>`)
+				case r.Method == http.MethodGet && q.Get("uploadId") == "old":
+					// Only metadata is needed: no multi-GiB payload is allocated.
+					// Paginate just as S3 does when a history has over 1000 parts.
+					marker, _ := strconv.Atoi(q.Get("part-number-marker"))
+					const partSize = 6 * 1024 * 1024
+					count := int((size + partSize - 1) / partSize)
+					end := min(marker+1000, count)
+					fmt.Fprintf(w, `<ListPartsResult><IsTruncated>%t</IsTruncated><NextPartNumberMarker>%d</NextPartNumberMarker>`, end < count, end)
+					for i := marker; i < end; i++ {
+						fmt.Fprintf(w, `<Part><PartNumber>%d</PartNumber><Size>%d</Size><ETag>old-%d</ETag></Part>`, i+1, min(size-int64(i)*partSize, partSize), i+1)
+					}
+					fmt.Fprint(w, `</ListPartsResult>`)
+				case r.Method == http.MethodPost && q.Get("uploadId") == "old":
+					fmt.Fprint(w, `<CompleteMultipartUploadResult><ETag>saved</ETag></CompleteMultipartUploadResult>`)
+				case r.Method == http.MethodPost && q.Has("uploads"):
+					fmt.Fprint(w, `<InitiateMultipartUploadResult><UploadId>new</UploadId></InitiateMultipartUploadResult>`)
+				case r.Method == http.MethodPut && q.Get("uploadId") == "new":
+					number := int64(len(parts) + 1)
+					if q.Get("partNumber") != strconv.FormatInt(number, 10) || number > 10000 {
+						t.Errorf("part number = %q, want %d in 1..10000", q.Get("partNumber"), number)
+					}
+					if r.Header.Get("X-Amz-Copy-Source") != "" {
+						if got := r.Header.Get("X-Amz-Copy-Source"); got != "bucket/key" {
+							t.Errorf("copy source = %q, want bucket/key", got)
+						}
+						rangeHeader := r.Header.Get("X-Amz-Copy-Source-Range")
+						first, last := int64(0), size-1
+						if rangeHeader != "" {
+							if _, err := fmt.Sscanf(rangeHeader, "bytes=%d-%d", &first, &last); err != nil {
+								t.Errorf("invalid copy range %q: %v", rangeHeader, err)
+							}
+						}
+						if last-first+1 > copyLimit {
+							w.WriteHeader(http.StatusBadRequest)
+							fmt.Fprint(w, `<Error><Code>EntityTooLarge</Code><Message>copy part exceeds 5 GiB</Message></Error>`)
+							return
+						}
+						if first != copied || last < first || last >= size || last-first+1 < minChunkSize {
+							t.Errorf("copy range %d-%d after %d bytes of %d does not preserve an appendable prefix", first, last, copied, size)
+						}
+						copied = last + 1
+					} else {
+						body, err := io.ReadAll(r.Body)
+						if err != nil || string(body) != "tail" || copied != size {
+							t.Errorf("appended body = %q, err=%v, copied=%d, want tail after %d", body, err, copied, size)
+						}
+					}
+					etag := fmt.Sprintf("new-%d", number)
+					parts = append(parts, &s3.CompletedPart{ETag: aws.String(etag), PartNumber: aws.Int64(number)})
+					w.Header().Set("ETag", etag)
+					fmt.Fprintf(w, `<CopyPartResult><ETag>%s</ETag></CopyPartResult>`, etag)
+				case r.Method == http.MethodPost && q.Get("uploadId") == "new":
+					var completion struct {
+						Parts []struct {
+							ETag       string
+							PartNumber int64
+						} `xml:"Part"`
+					}
+					if err := xml.NewDecoder(r.Body).Decode(&completion); err != nil {
+						t.Errorf("decode completion: %v", err)
+					}
+					if len(completion.Parts) != len(parts) {
+						t.Errorf("completion has %d parts, want %d", len(completion.Parts), len(parts))
+					} else {
+						for i, part := range completion.Parts {
+							if part.ETag != *parts[i].ETag || part.PartNumber != *parts[i].PartNumber {
+								t.Errorf("completed part %d = %+v, want %v", i, part, parts[i])
+							}
+						}
+					}
+					committed = true
+					fmt.Fprint(w, `<CompleteMultipartUploadResult><ETag>done</ETag></CompleteMultipartUploadResult>`)
+				default:
+					t.Errorf("unexpected request: %s %s", r.Method, r.URL)
+					w.WriteHeader(http.StatusBadRequest)
+				}
+			}))
+			t.Cleanup(server.Close)
+			sess := session.Must(session.NewSession(&aws.Config{
+				Credentials:      credentials.NewStaticCredentials("access-key", "secret-key", ""),
+				Endpoint:         aws.String(server.URL),
+				Region:           aws.String("us-east-1"),
+				S3ForcePathStyle: aws.Bool(true),
+			}))
+			d := &driver{S3: s3.New(sess), Bucket: "bucket", ChunkSize: defaultChunkSize, pool: newBufferPool()}
+			w, err := d.Writer(t.Context(), "/key", true)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if w.Size() != size {
+				t.Fatalf("initial size = %d, want %d", w.Size(), size)
+			}
+			for _, data := range [][]byte{[]byte("ta"), nil, []byte("il")} {
+				n, err := w.Write(data)
+				if err != nil || n != len(data) {
+					t.Fatalf("resumed write: n=%d err=%v", n, err)
+				}
+			}
+			if err := w.Commit(t.Context()); err != nil {
+				t.Fatalf("resumed commit: %v", err)
+			}
+			if copied != size || w.Size() != size+4 || !committed {
+				t.Errorf("resumed prefix: copied=%d size=%d committed=%t, want %d %d true", copied, w.Size(), committed, size, size+4)
+			}
+			if err := w.Close(); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestWriterResumeCopyFailure(t *testing.T) {
+	const size int64 = 5*1024*1024*1024 + 1
+	for _, failPart := range []int{1, 2} {
+		t.Run(strconv.Itoa(failPart), func(t *testing.T) {
+			var aborted bool
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				switch r.Method {
+				case http.MethodPost:
+					if r.URL.Query().Has("uploads") {
+						fmt.Fprint(w, `<InitiateMultipartUploadResult><UploadId>new</UploadId></InitiateMultipartUploadResult>`)
+					} else {
+						fmt.Fprint(w, `<CompleteMultipartUploadResult><ETag>saved</ETag></CompleteMultipartUploadResult>`)
+					}
+				case http.MethodPut:
+					if r.URL.Query().Get("partNumber") == strconv.Itoa(failPart) {
+						w.WriteHeader(http.StatusForbidden)
+						fmt.Fprint(w, `<Error><Code>AccessDenied</Code><Message>copy denied</Message></Error>`)
+						return
+					}
+					fmt.Fprint(w, `<CopyPartResult><ETag>copied</ETag></CopyPartResult>`)
+				case http.MethodDelete:
+					if got := r.URL.Query().Get("uploadId"); got != "new" {
+						t.Errorf("aborted upload = %q, want new", got)
+					}
+					aborted = true
+					w.WriteHeader(http.StatusNoContent)
+				default:
+					t.Errorf("unexpected request: %s %s", r.Method, r.URL)
+					w.WriteHeader(http.StatusBadRequest)
+				}
+			}))
+			t.Cleanup(server.Close)
+			sess := session.Must(session.NewSession(&aws.Config{
+				Credentials:      credentials.NewStaticCredentials("access-key", "secret-key", ""),
+				Endpoint:         aws.String(server.URL),
+				Region:           aws.String("us-east-1"),
+				S3ForcePathStyle: aws.Bool(true),
+			}))
+			d := &driver{S3: s3.New(sess), Bucket: "bucket", ChunkSize: defaultChunkSize, pool: newBufferPool()}
+			parts := []*s3.Part{
+				{ETag: aws.String("old-1"), PartNumber: aws.Int64(1), Size: aws.Int64(size - 1)},
+				{ETag: aws.String("old-2"), PartNumber: aws.Int64(2), Size: aws.Int64(1)},
+			}
+			w := d.newWriter(t.Context(), "key", "old", parts).(*writer)
+			n, err := w.Write([]byte("tail"))
+			var s3err awserr.Error
+			if !errors.As(err, &s3err) || s3err.Code() != "AccessDenied" {
+				t.Fatalf("copy failure = %v, want AccessDenied", err)
+			}
+			if n != 0 || w.Size() != size || w.buf.Len() != 0 || w.parts[0] != parts[0] || !aborted {
+				t.Errorf("failed copy: n=%d size=%d buffer=%d parts=%v aborted=%t", n, w.Size(), w.buf.Len(), w.parts, aborted)
+			}
+			if err := w.Close(); err != nil {
+				t.Fatal(err)
+			}
+		})
 	}
 }
 
