@@ -701,6 +701,16 @@ func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Set a header with the Docker Distribution API Version for all responses.
 	w.Header().Add("Docker-Distribution-API-Version", "registry/2.0")
+
+	// Add the configured headers here rather than in the route dispatcher, so
+	// that they are also included in responses the router generates itself,
+	// such as 404 Not Found for unknown paths and trailing slash redirects.
+	for headerName, headerValues := range app.Config.HTTP.Headers {
+		for _, value := range headerValues {
+			w.Header().Add(headerName, value)
+		}
+	}
+
 	app.router.ServeHTTP(w, r)
 }
 
@@ -717,12 +727,6 @@ type dispatchFunc func(ctx *Context, r *http.Request) http.Handler
 // handler, using the dispatch factory function.
 func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		for headerName, headerValues := range app.Config.HTTP.Headers {
-			for _, value := range headerValues {
-				w.Header().Add(headerName, value)
-			}
-		}
-
 		context := app.context(w, r)
 
 		defer func() {
