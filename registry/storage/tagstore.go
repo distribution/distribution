@@ -248,6 +248,24 @@ func (ts *tagStore) List(ctx context.Context, limit int, last string) ([]string,
 		return tags, errors.New("attempted to list 0 tags")
 	}
 
+	// WalkFallback (filesystem) stats every tag; All lists the directory once.
+	if limit < 0 {
+		all, err := ts.All(ctx)
+		if err == nil {
+			for _, tag := range all {
+				if lessPath(last, tag) {
+					tags = append(tags, tag)
+				}
+			}
+			return tags, io.EOF
+		}
+		// On S3 a repository without tags fails List but walks empty, so let Walk decide.
+		var unknown distribution.ErrRepositoryUnknown
+		if !errors.As(err, &unknown) {
+			return tags, err
+		}
+	}
+
 	root, err := pathFor(manifestTagsPathSpec{
 		name: ts.repository.Named().Name(),
 	})
