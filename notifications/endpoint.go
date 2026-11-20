@@ -16,6 +16,7 @@ type EndpointConfig struct {
 	Timeout           time.Duration
 	Threshold         int
 	Backoff           time.Duration
+	MaxQueueSize      int
 	IgnoredMediaTypes []string
 	Transport         *http.Transport `json:"-"`
 	Ignore            configuration.Ignore
@@ -41,8 +42,8 @@ func (ec *EndpointConfig) defaults() {
 }
 
 // Endpoint is a reliable, queued, thread-safe sink that notify external http
-// services when events are written. Writes are non-blocking and always
-// succeed for callers but events may be queued internally.
+// services when events are written. Writes are non-blocking, but may return
+// ErrQueueFull when a configured queue limit is reached.
 type Endpoint struct {
 	events.Sink
 	url  string
@@ -67,7 +68,7 @@ func NewEndpoint(name, url string, config EndpointConfig) *Endpoint {
 		endpoint.url, endpoint.Timeout, endpoint.Headers,
 		endpoint.Transport, endpoint.metrics.httpStatusListener())
 	endpoint.Sink = events.NewRetryingSink(endpoint.Sink, events.NewBreaker(endpoint.Threshold, endpoint.Backoff))
-	endpoint.Sink = newEventQueue(endpoint.Sink, endpoint.metrics.eventQueueListener())
+	endpoint.Sink = newEventQueue(endpoint.Sink, endpoint.MaxQueueSize, endpoint.metrics.eventQueueListener())
 	mediaTypes := append(config.Ignore.MediaTypes, config.IgnoredMediaTypes...)
 	endpoint.Sink = newIgnoredSink(endpoint.Sink, mediaTypes, config.Ignore.Actions)
 

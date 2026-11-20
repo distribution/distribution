@@ -269,6 +269,7 @@ notifications:
       timeout: 1s
       threshold: 10
       backoff: 1s
+      maxqueuesize: 1000
       ignoredmediatypes:
         - application/octet-stream
       ignore:
@@ -1061,6 +1062,7 @@ notifications:
       timeout: 1s
       threshold: 10
       backoff: 1s
+      maxqueuesize: 1000
       ignoredmediatypes:
         - application/octet-stream
       ignore:
@@ -1087,6 +1089,7 @@ accept event notifications.
 | `timeout` | yes      | A value for the HTTP timeout. A positive integer and an optional suffix indicating the unit of time, which may be `ns`, `us`, `ms`, `s`, `m`, or `h`. If you omit the unit of time, `ns` is used. |
 | `threshold` | yes    | An integer specifying how long to wait before backing off a failure. |
 | `backoff` | yes      | How long the system backs off before retrying after a failure. A positive integer and an optional suffix indicating the unit of time, which may be `ns`, `us`, `ms`, `s`, `m`, or `h`. If you omit the unit of time, `ns` is used. |
+| `maxqueuesize` | no  | Maximum number of events waiting to be delivered. When the queue is full, new events are dropped. A value of `0`, or omitting this option, leaves the queue unlimited. |
 | `ignoredmediatypes`|no| A list of target media types to ignore. Events with these target media types are not published to the endpoint. |
 | `ignore`  |no| Events with these mediatypes or actions are not published to the endpoint. |
 
