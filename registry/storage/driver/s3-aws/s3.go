@@ -86,8 +86,8 @@ var s3StorageClasses = []string{
 	s3.StorageClassExpressOnezone,
 }
 
-// validRegions maps known s3 region identifiers to region descriptors
-var validRegions = map[string]struct{}{}
+// sdkV1Regions contains the regions explicitly listed by AWS SDK v1.
+var sdkV1Regions = map[string]struct{}{}
 
 // validObjectACLs contains known s3 object Acls
 var validObjectACLs = map[string]struct{}{}
@@ -125,7 +125,7 @@ func init() {
 	partitions := endpoints.DefaultPartitions()
 	for _, p := range partitions {
 		for region := range p.Regions() {
-			validRegions[region] = struct{}{}
+			sdkV1Regions[region] = struct{}{}
 		}
 	}
 
@@ -218,9 +218,6 @@ func FromParameters(ctx context.Context, parameters map[string]any) (*Driver, er
 	if regionEndpoint == "" {
 		if regionName == nil || region == "" {
 			return nil, fmt.Errorf("no region parameter provided")
-		}
-		if _, ok := validRegions[region]; !ok {
-			return nil, fmt.Errorf("invalid region provided: %v", region)
 		}
 	}
 
@@ -484,6 +481,10 @@ func New(ctx context.Context, params DriverParameters) (*Driver, error) {
 	if params.RegionEndpoint != "" {
 		awsConfig.WithEndpoint(params.RegionEndpoint)
 	}
+
+	awsConfig.WithEndpointResolver(endpoints.ResolverFunc(func(service, region string, options ...func(*endpoints.Options)) (endpoints.ResolvedEndpoint, error) {
+		return resolveRegionEndpoint(ctx, service, region, options...)
+	}))
 
 	awsConfig.WithS3ForcePathStyle(params.ForcePathStyle)
 	awsConfig.WithS3UseAccelerate(params.Accelerate)
