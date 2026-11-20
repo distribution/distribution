@@ -525,6 +525,39 @@ func TestGCWithMissingManifests(t *testing.T) {
 	}
 }
 
+func TestGCWithMissingLayers(t *testing.T) {
+	ctx := dcontext.Background()
+	d := inmemory.New()
+
+	registry := createRegistry(t, d)
+	repo := makeRepository(t, registry, "testrepo")
+	image := uploadRandomSchema2Image(t, repo)
+
+	err := repo.Tags(ctx).Tag(ctx, "image", v1.Descriptor{Digest: image.manifestDigest})
+	if err != nil {
+		t.Fatalf("Failed to tag descriptor: %v", err)
+	}
+
+	// Simulate a missing _layers directory
+	layersPath, err := pathFor(layersPathSpec{name: "testrepo"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = d.Delete(ctx, layersPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = MarkAndSweep(dcontext.Background(), d, registry, GCOpts{
+		DryRun:         false,
+		RemoveUntagged: true,
+	})
+	if err != nil {
+		t.Fatalf("Failed mark and sweep: %v", err)
+	}
+}
+
 func TestDeletionHasEffect(t *testing.T) {
 	ctx := dcontext.Background()
 	inmemoryDriver := inmemory.New()
