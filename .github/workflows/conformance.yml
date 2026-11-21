@@ -30,7 +30,7 @@ jobs:
           docker run --rm -p 5000:5000 -e REGISTRY_STORAGE_DELETE_ENABLED=true -idt "registry:local"
       -
         name: Run OCI Distribution Spec conformance tests
-        uses: opencontainers/distribution-spec@10efb871ee08eb13678fe275e2cf89b3df86542b # v1.0.1
+        uses: opencontainers/distribution-spec@a139cc423184af6078077b9b7ee336eddbd03f8f # v1.1.1
         env:
           OCI_ROOT_URL: ${{ env.OCI_ROOT_URL }}
           OCI_NAMESPACE: oci-conformance/distribution-test
