@@ -8,6 +8,37 @@ The Registry configuration is based on a YAML file, detailed below. While it
 comes with sane default values out of the box, you should review it exhaustively
 before moving your systems to production.
 
+## Load configuration from multiple files
+
+Pass configuration files in order to layer settings, for example when keeping
+storage credentials in a separate Kubernetes Secret:
+
+```console
+registry serve base.yml storage.yml credentials.yml
+```
+
+Later files override earlier values. Mappings merge recursively; sequences,
+scalars and explicit `null` values replace the earlier value. Sequences are not
+concatenated, and `null` is a value, not a key-deletion operator. The merged result
+must still satisfy the normal configuration schema, including selecting only one
+storage driver and one authentication method.
+
+Each file in a layered configuration must contain at most one YAML mapping
+document. Empty layers are ignored, but an entirely empty configuration is an
+error. Duplicate keys and non-string mapping keys are rejected. A layer may omit
+`version`; all explicitly supplied versions must agree. Environment overrides
+are applied once, after all files have been merged.
+
+For example, `base.yml` can supply the version and non-secret storage parameters,
+while `credentials.yml` supplies only the nested access credentials. Do not put a
+second storage driver in an overlay: that would leave two drivers in the merged
+configuration and fail validation.
+
+`registry garbage-collect` accepts the same ordered configuration file arguments
+so maintenance uses the same effective configuration as the server. Existing
+single-file behavior is retained. `REGISTRY_CONFIGURATION_PATH` remains a single
+fallback filename used only when no positional paths are supplied.
+
 ## Override specific configuration options
 
 In a typical setup where you run your registry as a container, you can
