@@ -1084,9 +1084,9 @@ accept event notifications.
 | `disabled` | no      | If `true`, notifications are disabled for the service.|
 | `url`     | yes      | The URL to which events should be published.          |
 | `headers` | yes      | A list of static headers to add to each request. Each header's name is a key beneath `headers`, and each value is a list of payloads for that header name. Values must always be lists. |
-| `timeout` | yes      | A value for the HTTP timeout. A positive integer and an optional suffix indicating the unit of time, which may be `ns`, `us`, `ms`, `s`, `m`, or `h`. If you omit the unit of time, `ns` is used. |
-| `threshold` | yes    | An integer specifying how long to wait before backing off a failure. |
-| `backoff` | yes      | How long the system backs off before retrying after a failure. A positive integer and an optional suffix indicating the unit of time, which may be `ns`, `us`, `ms`, `s`, `m`, or `h`. If you omit the unit of time, `ns` is used. |
+| `timeout` | no       | A value for the HTTP timeout. A positive integer and an optional suffix indicating the unit of time, which may be `ns`, `us`, `ms`, `s`, `m`, or `h`. If you omit the unit of time, `ns` is used. Defaults to `1s` when omitted or not positive. |
+| `threshold` | no     | An integer specifying how long to wait before backing off a failure. Defaults to `10` when omitted or not positive. |
+| `backoff` | no       | How long the system backs off before retrying after a failure. A positive integer and an optional suffix indicating the unit of time, which may be `ns`, `us`, `ms`, `s`, `m`, or `h`. If you omit the unit of time, `ns` is used. Defaults to `1s` when omitted or not positive. |
 | `ignoredmediatypes`|no| A list of target media types to ignore. Events with these target media types are not published to the endpoint. |
 | `ignore`  |no| Events with these mediatypes or actions are not published to the endpoint. |
 
