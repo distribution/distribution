@@ -22,6 +22,6 @@ jobs:
           persist-credentials: false
 
       - name: Run FOSSA scan and upload build data
-        uses: fossa-contrib/fossa-action@3d2ef181b1820d6dcd1972f86a767d18167fa19b # v3.0.1
+        uses: fossa-contrib/fossa-action@d28f0c947e7406706981a62a91ecc009bcc39fd7 # v4.0.0
         with:
           fossa-api-key: cac3dc8d4f2ba86142f6c0f2199a160f
