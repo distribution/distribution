@@ -320,9 +320,10 @@ func (imh *manifestHandler) PutManifest(w http.ResponseWriter, r *http.Request) 
 				case distribution.ErrManifestUnverified:
 					imh.Errors = append(imh.Errors, errcode.ErrorCodeManifestUnverified)
 				default:
-					if verificationError == digest.ErrDigestInvalidFormat {
+					switch verificationError {
+					case digest.ErrDigestInvalidFormat, digest.ErrDigestInvalidLength, digest.ErrDigestUnsupported:
 						imh.Errors = append(imh.Errors, errcode.ErrorCodeDigestInvalid)
-					} else {
+					default:
 						imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown, verificationError)
 					}
 				}
