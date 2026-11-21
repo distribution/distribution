@@ -5,8 +5,10 @@ import (
 	"math"
 
 	"github.com/distribution/distribution/v3"
+	prometheus "github.com/distribution/distribution/v3/metrics"
 	"github.com/distribution/distribution/v3/registry/storage/cache"
 	"github.com/distribution/reference"
+	"github.com/docker/go-metrics"
 	"github.com/hashicorp/golang-lru/arc/v2"
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -21,13 +23,19 @@ const (
 	UnlimitedSize = math.MaxInt
 )
 
+var (
+	lruCacheSize = prometheus.StorageNamespace.NewGauge("memory_cache_size", "The size of the memory cache", metrics.Total)
+	lruMaxSize   = prometheus.StorageNamespace.NewGauge("memory_cache_max_size", "The max size of the memory cache", metrics.Total)
+)
+
 type descriptorCacheKey struct {
 	digest digest.Digest
 	repo   string
 }
 
 type inMemoryBlobDescriptorCacheProvider struct {
-	lru *arc.ARCCache[descriptorCacheKey, v1.Descriptor]
+	lru     *arc.ARCCache[descriptorCacheKey, v1.Descriptor]
+	maxSize int
 }
 
 // NewInMemoryBlobDescriptorCacheProvider returns a new mapped-based cache for
@@ -42,8 +50,14 @@ func NewInMemoryBlobDescriptorCacheProvider(size int) cache.BlobDescriptorCacheP
 		panic(err)
 	}
 	return &inMemoryBlobDescriptorCacheProvider{
-		lru: lruCache,
+		lru:     lruCache,
+		maxSize: size,
 	}
+}
+
+func (imbdcp *inMemoryBlobDescriptorCacheProvider) emitMetrics() {
+	lruCacheSize.Set(float64(imbdcp.lru.Len()))
+	lruMaxSize.Set(float64(imbdcp.maxSize))
 }
 
 func (imbdcp *inMemoryBlobDescriptorCacheProvider) RepositoryScoped(repo string) (distribution.BlobDescriptorService, error) {
@@ -79,6 +93,7 @@ func (imbdcp *inMemoryBlobDescriptorCacheProvider) Stat(ctx context.Context, dgs
 }
 
 func (imbdcp *inMemoryBlobDescriptorCacheProvider) Clear(ctx context.Context, dgst digest.Digest) error {
+	defer imbdcp.emitMetrics()
 	key := descriptorCacheKey{
 		digest: dgst,
 	}
@@ -87,6 +102,7 @@ func (imbdcp *inMemoryBlobDescriptorCacheProvider) Clear(ctx context.Context, dg
 }
 
 func (imbdcp *inMemoryBlobDescriptorCacheProvider) SetDescriptor(ctx context.Context, dgst digest.Digest, desc v1.Descriptor) error {
+	defer imbdcp.emitMetrics()
 	_, err := imbdcp.Stat(ctx, dgst)
 	if err == distribution.ErrBlobUnknown {
 		if dgst.Algorithm() != desc.Digest.Algorithm() && dgst != desc.Digest {
@@ -139,6 +155,7 @@ func (rsimbdcp *repositoryScopedInMemoryBlobDescriptorCache) Stat(ctx context.Co
 }
 
 func (rsimbdcp *repositoryScopedInMemoryBlobDescriptorCache) Clear(ctx context.Context, dgst digest.Digest) error {
+	defer rsimbdcp.parent.emitMetrics()
 	key := descriptorCacheKey{
 		digest: dgst,
 		repo:   rsimbdcp.repo,
@@ -148,6 +165,7 @@ func (rsimbdcp *repositoryScopedInMemoryBlobDescriptorCache) Clear(ctx context.C
 }
 
 func (rsimbdcp *repositoryScopedInMemoryBlobDescriptorCache) SetDescriptor(ctx context.Context, dgst digest.Digest, desc v1.Descriptor) error {
+	defer rsimbdcp.parent.emitMetrics()
 	if err := dgst.Validate(); err != nil {
 		return err
 	}
