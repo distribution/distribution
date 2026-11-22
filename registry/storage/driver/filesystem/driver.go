@@ -12,6 +12,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/distribution/distribution/v3/internal/uuid"
@@ -84,6 +85,10 @@ func FromParameters(parameters map[string]any) (*Driver, error) {
 	return New(*params), nil
 }
 
+// filesystemParams lists every parameter the filesystem driver understands, sorted for a stable
+// error message.
+var filesystemParams = []string{"maxthreads", "rootdirectory", "writebuffersize"}
+
 func fromParametersImpl(parameters map[string]any) (*DriverParameters, error) {
 	var (
 		err             error
@@ -93,6 +98,16 @@ func fromParametersImpl(parameters map[string]any) (*DriverParameters, error) {
 	)
 
 	if parameters != nil {
+		for key := range parameters {
+			switch key {
+			case "rootdirectory", "maxthreads", "writebuffersize":
+			default:
+				// an unrecognized parameter is dropped silently, so a typo such as
+				// "rootdirctory" leaves the registry writing to the default directory
+				return nil, fmt.Errorf("unsupported parameter %q; valid parameters are: %s", key, strings.Join(filesystemParams, ", "))
+			}
+		}
+
 		if rootDir, ok := parameters["rootdirectory"]; ok {
 			rootDirectory = fmt.Sprint(rootDir)
 		}

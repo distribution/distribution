@@ -249,6 +249,24 @@ func TestFromParametersImpl(t *testing.T) {
 			expected: DriverParameters{},
 			pass:     false,
 		},
+		// an unrecognized parameter would otherwise be dropped silently, leaving the default
+		// in place (e.g. a misspelled rootdirectory writes to the default directory)
+		{
+			params: map[string]any{
+				"rootdirctory": "/tmp/registry",
+			},
+			expected: DriverParameters{},
+			pass:     false,
+		},
+		{
+			params: map[string]any{
+				"rootdirectory":   "/tmp/registry",
+				"writebuffersize": 1048576,
+				"unknown":         "value",
+			},
+			expected: DriverParameters{},
+			pass:     false,
+		},
 	}
 
 	for _, item := range tests {
