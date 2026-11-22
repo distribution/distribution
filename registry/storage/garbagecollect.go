@@ -229,7 +229,11 @@ func markManifestReferences(dgst digest.Digest, manifestService distribution.Man
 			continue
 		}
 
-		if ok, _ := manifestService.Exists(ctx, descriptor.Digest); ok {
+		ok, err := manifestService.Exists(ctx, descriptor.Digest)
+		if err != nil {
+			return fmt.Errorf("failed to check existence of manifest %v: %v", descriptor.Digest, err)
+		}
+		if ok {
 			err := markManifestReferences(descriptor.Digest, manifestService, ctx, ingester)
 			if err != nil {
 				return err
