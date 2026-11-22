@@ -55,7 +55,7 @@ func (bs *blobServer) ServeBlob(ctx context.Context, w http.ResponseWriter, r *h
 	}
 
 	var br io.ReadSeekCloser
-	if seekable, ok := bs.driver.(seekableReaderDriver); ok && r.Method == http.MethodGet {
+	if seekable, ok := bs.driver.(seekableReaderDriver); ok {
 		br, err = seekable.ReadSeeker(ctx, path)
 		if _, ok := err.(driver.PathNotFoundError); ok {
 			return distribution.ErrBlobUnknown
