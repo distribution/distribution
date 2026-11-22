@@ -12,7 +12,7 @@ func Package() string {
 	return mainpkg
 }
 
-// Version returns returns the module version the running binary was
+// Version returns the module version the running binary was
 // built from.
 func Version() string {
 	return version
