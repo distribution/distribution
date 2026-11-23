@@ -300,6 +300,9 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 			if _, ok := cc["blobdescriptorsize"]; ok {
 				dcontext.GetLogger(app).Warnf("blobdescriptorsize parameter is not supported with redis cache")
 			}
+			if _, ok := cc["blobdescriptorttl"]; ok {
+				dcontext.GetLogger(app).Warnf("blobdescriptorttl parameter is not supported with redis cache")
+			}
 			cacheProvider := rediscache.NewRedisBlobDescriptorCacheProvider(app.redis)
 			localOptions := append(options, storage.BlobDescriptorCacheProvider(cacheProvider))
 			app.registry, err = storage.NewRegistry(app, app.driver, localOptions...)
@@ -318,7 +321,16 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 				}
 			}
 
-			cacheProvider := memorycache.NewInMemoryBlobDescriptorCacheProvider(blobDescriptorSize)
+			var blobDescriptorTTL time.Duration
+			configuredTTL, ok := cc["blobdescriptorttl"]
+			if ok {
+				blobDescriptorTTL, err = time.ParseDuration(fmt.Sprint(configuredTTL))
+				if err != nil {
+					panic(fmt.Sprintf("invalid blobdescriptorttl value %s: %s", configuredTTL, err))
+				}
+			}
+
+			cacheProvider := memorycache.NewInMemoryBlobDescriptorCacheProviderWithTTL(blobDescriptorSize, blobDescriptorTTL)
 			localOptions := append(options, storage.BlobDescriptorCacheProvider(cacheProvider))
 			app.registry, err = storage.NewRegistry(app, app.driver, localOptions...)
 			if err != nil {
