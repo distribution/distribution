@@ -20,7 +20,7 @@ func TestEventQueue(t *testing.T) {
 		&delayedSink{
 			Sink:  &ts,
 			delay: time.Millisecond * 1,
-		}, metrics.eventQueueListener())
+		}, 0, metrics.eventQueueListener())
 
 	var wg sync.WaitGroup
 	var event events.Event
@@ -61,6 +61,65 @@ func TestEventQueue(t *testing.T) {
 	if metrics.Pending != 0 {
 		t.Fatalf("unexpected egress count: %d != %d", metrics.Pending, 0)
 	}
+}
+
+func TestEventQueueMaxSize(t *testing.T) {
+	const maxQueueSize = 2
+
+	ts := &testSink{}
+	blocking := &blockingSink{
+		Sink:    ts,
+		started: make(chan struct{}),
+		release: make(chan struct{}),
+	}
+	metrics := newSafeMetrics("")
+	eq := newEventQueue(blocking, maxQueueSize, metrics.eventQueueListener())
+
+	event := createTestEvent("push", "library/test", "blob")
+	if err := eq.Write(event); err != nil {
+		t.Fatalf("failed to write first event: %v", err)
+	}
+	select {
+	case <-blocking.started:
+	case <-time.After(5 * time.Second):
+		t.Fatal("sink did not start processing the first event")
+	}
+
+	for range maxQueueSize {
+		if err := eq.Write(event); err != nil {
+			t.Fatalf("failed to fill queue: %v", err)
+		}
+	}
+	if err := eq.Write(event); err != ErrQueueFull {
+		t.Fatalf("expected ErrQueueFull, got %v", err)
+	}
+
+	metrics.Lock()
+	if metrics.Events != 4 {
+		t.Errorf("unexpected event count: %d != 4", metrics.Events)
+	}
+	if metrics.Pending != 3 {
+		t.Errorf("unexpected pending count: %d != 3", metrics.Pending)
+	}
+	if metrics.Dropped != 1 {
+		t.Errorf("unexpected dropped count: %d != 1", metrics.Dropped)
+	}
+	metrics.Unlock()
+
+	close(blocking.release)
+	checkClose(t, eq)
+
+	ts.mu.Lock()
+	if ts.count != 3 {
+		t.Errorf("unexpected delivered event count: %d != 3", ts.count)
+	}
+	ts.mu.Unlock()
+
+	metrics.Lock()
+	if metrics.Pending != 0 {
+		t.Errorf("unexpected final pending count: %d != 0", metrics.Pending)
+	}
+	metrics.Unlock()
 }
 
 func TestIgnoredSink(t *testing.T) {
@@ -159,6 +218,21 @@ type delayedSink struct {
 func (ds *delayedSink) Write(event events.Event) error {
 	time.Sleep(ds.delay)
 	return ds.Sink.Write(event)
+}
+
+type blockingSink struct {
+	events.Sink
+	once    sync.Once
+	started chan struct{}
+	release chan struct{}
+}
+
+func (bs *blockingSink) Write(event events.Event) error {
+	bs.once.Do(func() {
+		close(bs.started)
+	})
+	<-bs.release
+	return bs.Sink.Write(event)
 }
 
 func checkClose(t *testing.T, sink events.Sink) {
