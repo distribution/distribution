@@ -2,6 +2,8 @@ module github.com/distribution/distribution/v3
 
 go 1.26.0
 
+godebug multipathtcp=0
+
 require (
 	cloud.google.com/go/storage v1.56.0
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20221103172237-443f56ff4ba8
