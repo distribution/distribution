@@ -1000,6 +1000,11 @@ func (bs *blobs) Create(ctx context.Context, options ...distribution.BlobCreateO
 			return nil, err
 		}
 
+		maxRange, err := v2.GetOCIMaxRange(resp)
+		if err != nil {
+			return nil, err
+		}
+
 		return &httpBlobUpload{
 			ctx:       ctx,
 			statter:   bs.statter,
@@ -1007,6 +1012,7 @@ func (bs *blobs) Create(ctx context.Context, options ...distribution.BlobCreateO
 			uuid:      uuid,
 			startedAt: time.Now(),
 			location:  location,
+			maxRange:  maxRange,
 		}, nil
 	default:
 		return nil, HandleHTTPResponseError(resp)
