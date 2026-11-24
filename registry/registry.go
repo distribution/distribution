@@ -23,6 +23,7 @@ import (
 	"github.com/distribution/distribution/v3/configuration"
 	"github.com/distribution/distribution/v3/health"
 	"github.com/distribution/distribution/v3/internal/dcontext"
+	"github.com/distribution/distribution/v3/internal/requestutil"
 	"github.com/distribution/distribution/v3/registry/handlers"
 	"github.com/distribution/distribution/v3/registry/listener"
 	"github.com/distribution/distribution/v3/tracing"
@@ -153,6 +154,9 @@ func NewRegistry(ctx context.Context, config *configuration.Configuration) (*Reg
 	handler = panicHandler(handler)
 	if !config.Log.AccessLog.Disabled {
 		handler = accessLogHandler(os.Stdout, handler)
+		if config.Log.AccessLog.ProxyHeaders {
+			handler = proxyRemoteAddr(handler)
+		}
 	}
 
 	for _, applyHandlerMiddleware := range handlerMiddlewares {
@@ -466,6 +470,19 @@ func alive(path string, handler http.Handler) http.Handler {
 			return
 		}
 
+		handler.ServeHTTP(w, r)
+	})
+}
+
+// proxyRemoteAddr sets the remote address of the request to the client address
+// from the X-Forwarded-For or X-Real-Ip header, so the access log shows the
+// client instead of the proxy in front of the registry.
+func proxyRemoteAddr(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if addr := requestutil.RemoteAddr(r); addr != r.RemoteAddr {
+			r = r.WithContext(r.Context())
+			r.RemoteAddr = addr
+		}
 		handler.ServeHTTP(w, r)
 	})
 }

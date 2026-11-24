@@ -19,6 +19,7 @@ import (
 	"math/big"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path"
 	"reflect"
@@ -542,5 +543,44 @@ func TestConfigureLoggingFormatterLogStash(t *testing.T) {
 	}
 	if _, ok := got["func"]; ok {
 		t.Error(`unexpected "func" field`)
+	}
+}
+
+func TestProxyRemoteAddr(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		headers map[string]string
+		want    string
+	}{
+		{name: "no headers", want: "192.0.2.10 "},
+		{name: "x-forwarded-for", headers: map[string]string{"X-Forwarded-For": "203.0.113.7, 10.0.0.1"}, want: "203.0.113.7 "},
+		{name: "x-real-ip", headers: map[string]string{"X-Real-Ip": "2001:db8::7"}, want: "2001:db8::7 "},
+		{name: "invalid header", headers: map[string]string{"X-Forwarded-For": "not-an-ip"}, want: "192.0.2.10 "},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var seen string
+			app := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				seen = r.RemoteAddr
+			})
+			var buf bytes.Buffer
+			handler := proxyRemoteAddr(accessLogHandler(&buf, app))
+
+			r := httptest.NewRequest(http.MethodGet, "/v2/", nil)
+			r.RemoteAddr = "192.0.2.10:51234"
+			for k, v := range tc.headers {
+				r.Header.Set(k, v)
+			}
+			handler.ServeHTTP(httptest.NewRecorder(), r)
+
+			if !strings.HasPrefix(buf.String(), tc.want) {
+				t.Errorf("access log line %q does not start with %q", buf.String(), tc.want)
+			}
+			if r.RemoteAddr != "192.0.2.10:51234" {
+				t.Errorf("caller's request was modified: RemoteAddr = %q", r.RemoteAddr)
+			}
+			if seen == "" {
+				t.Error("wrapped handler was not called")
+			}
+		})
 	}
 }

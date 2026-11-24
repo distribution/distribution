@@ -383,6 +383,18 @@ system. By default, the access logging system outputs to stdout in
 [Combined Log Format](https://httpd.apache.org/docs/2.4/logs.html#combined).
 Access logging can be disabled by setting the boolean flag `disabled` to `true`.
 
+By default, the access log shows the address of the connection, which is the
+proxy or load balancer when the registry runs behind one. Set `proxyheaders` to
+`true` to log the client address from the `X-Forwarded-For` header instead,
+falling back to `X-Real-Ip` and then to the connection address. Clients can set
+these headers themselves, so only enable it when every request comes through a
+proxy that overwrites them.
+
+```yaml
+accesslog:
+  proxyheaders: true
+```
+
 ## `hooks`
 
 ```yaml
