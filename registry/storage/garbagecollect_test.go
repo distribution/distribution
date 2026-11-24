@@ -1098,51 +1098,76 @@ func TestGCPartialManifestEnumeration(t *testing.T) {
 }
 
 func TestGCManifestAliasReferences(t *testing.T) {
-	ctx := dcontext.Background()
-	d := inmemory.New()
-	registry := createRegistry(t, d)
-	repo := makeRepository(t, registry, "gc/alias")
-	child := uploadRandomOCIImage(t, repo)
-	_, payload, err := child.manifest.Payload()
-	if err != nil {
-		t.Fatal(err)
-	}
-	alias := digest.SHA512.FromBytes(payload)
-	aliasPath, err := manifestRevisionLinkPath(repo.Named().Name(), alias)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := d.PutContent(ctx, aliasPath, []byte(child.manifestDigest)); err != nil {
-		t.Fatal(err)
-	}
-	index, err := ocischema.FromDescriptors([]v1.Descriptor{{Digest: alias}}, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	ms := makeManifestService(t, repo)
-	root, err := ms.Put(ctx, index)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := repo.Tags(ctx).Tag(ctx, "latest", v1.Descriptor{Digest: root}); err != nil {
-		t.Fatal(err)
-	}
-	// Leave an alias-only revision, so enumeration cannot visit the child
-	// independently and mask a missing recursive alias traversal.
-	canonicalPath, err := manifestRevisionLinkPath(repo.Named().Name(), child.manifestDigest)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := d.Delete(ctx, canonicalPath); err != nil {
-		t.Fatal(err)
-	}
-	if err := MarkAndSweep(ctx, d, registry, GCOpts{RemoveUntagged: true, Quiet: true}); err != nil {
-		t.Fatal(err)
-	}
-	for _, ref := range child.manifest.References() {
-		if _, err := repo.Blobs(ctx).Stat(ctx, ref.Digest); err != nil {
-			t.Errorf("aliased child's referenced blob %s was lost: %v", ref.Digest, err)
-		}
+	for _, aliasOnly := range []bool{false, true} {
+		t.Run(fmt.Sprintf("alias-only=%v", aliasOnly), func(t *testing.T) {
+			ctx := dcontext.Background()
+			d := inmemory.New()
+			registry := createRegistry(t, d)
+			repo := makeRepository(t, registry, "gc/alias")
+			child := uploadRandomOCIImage(t, repo)
+			_, payload, err := child.manifest.Payload()
+			if err != nil {
+				t.Fatal(err)
+			}
+			alias := digest.SHA512.FromBytes(payload)
+			aliasPath, err := manifestRevisionLinkPath(repo.Named().Name(), alias)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := d.PutContent(ctx, aliasPath, []byte(child.manifestDigest)); err != nil {
+				t.Fatal(err)
+			}
+			index, err := ocischema.FromDescriptors([]v1.Descriptor{{Digest: alias}}, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			ms := makeManifestService(t, repo)
+			root, err := ms.Put(ctx, index)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := repo.Tags(ctx).Tag(ctx, "latest", v1.Descriptor{Digest: root}); err != nil {
+				t.Fatal(err)
+			}
+			if aliasOnly {
+				// Exercise the incomplete-inventory fallback as well as alias lookup.
+				canonicalPath, err := manifestRevisionLinkPath(repo.Named().Name(), child.manifestDigest)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := d.Delete(ctx, canonicalPath); err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				// Mark the canonical blob in an earlier repository without traversing
+				// its references. This also prevents duplicate canonical revision
+				// entries in gc/alias from causing duplicate manifest deletions.
+				prior := makeRepository(t, registry, "gc/0-blob-reference")
+				canonical, err := prior.Blobs(ctx).Put(ctx, v1.MediaTypeImageManifest, payload)
+				if err != nil {
+					t.Fatal(err)
+				}
+				priorIndex, err := ocischema.FromDescriptors([]v1.Descriptor{canonical}, nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+				priorRoot, err := makeManifestService(t, prior).Put(ctx, priorIndex)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := prior.Tags(ctx).Tag(ctx, "latest", v1.Descriptor{Digest: priorRoot}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := MarkAndSweep(ctx, d, registry, GCOpts{RemoveUntagged: true, Quiet: true}); err != nil {
+				t.Fatal(err)
+			}
+			for _, ref := range child.manifest.References() {
+				if _, err := repo.Blobs(ctx).Stat(ctx, ref.Digest); err != nil {
+					t.Errorf("aliased child's referenced blob %s was lost: %v", ref.Digest, err)
+				}
+			}
+		})
 	}
 }
 
