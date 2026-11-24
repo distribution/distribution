@@ -1097,42 +1097,95 @@ func TestGCPartialManifestEnumeration(t *testing.T) {
 	}
 }
 
-func TestGCManifestAliasLookupError(t *testing.T) {
+func TestGCManifestAliasReferences(t *testing.T) {
 	ctx := dcontext.Background()
-	d := &gcTestDriver{StorageDriver: inmemory.New()}
+	d := inmemory.New()
 	registry := createRegistry(t, d)
 	repo := makeRepository(t, registry, "gc/alias")
-	if _, err := repo.Blobs(ctx).Put(ctx, v1.MediaTypeImageConfig, nil); err != nil {
-		t.Fatal(err)
-	}
-	ms, err := repo.Manifests(ctx, SkipLayerVerification())
+	child := uploadRandomOCIImage(t, repo)
+	_, payload, err := child.manifest.Payload()
 	if err != nil {
 		t.Fatal(err)
 	}
-	alias := digest.SHA512.FromString("missing config")
-	manifest, err := ocischema.FromStruct(ocischema.Manifest{
-		Versioned: specs.Versioned{SchemaVersion: 2},
-		MediaType: v1.MediaTypeImageManifest,
-		Config:    v1.Descriptor{Digest: alias},
-	})
+	alias := digest.SHA512.FromBytes(payload)
+	aliasPath, err := manifestRevisionLinkPath(repo.Named().Name(), alias)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := ms.Put(ctx, manifest); err != nil {
+	if err := d.PutContent(ctx, aliasPath, []byte(child.manifestDigest)); err != nil {
 		t.Fatal(err)
 	}
-	d.lookupPath, err = manifestRevisionLinkPath(repo.Named().Name(), alias)
+	index, err := ocischema.FromDescriptors([]v1.Descriptor{{Digest: alias}}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	d.lookupError = errors.New("manifest alias lookup interrupted")
+	ms := makeManifestService(t, repo)
+	root, err := ms.Put(ctx, index)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.Tags(ctx).Tag(ctx, "latest", v1.Descriptor{Digest: root}); err != nil {
+		t.Fatal(err)
+	}
+	// Leave an alias-only revision, so enumeration cannot visit the child
+	// independently and mask a missing recursive alias traversal.
+	canonicalPath, err := manifestRevisionLinkPath(repo.Named().Name(), child.manifestDigest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := d.Delete(ctx, canonicalPath); err != nil {
+		t.Fatal(err)
+	}
+	if err := MarkAndSweep(ctx, d, registry, GCOpts{RemoveUntagged: true, Quiet: true}); err != nil {
+		t.Fatal(err)
+	}
+	for _, ref := range child.manifest.References() {
+		if _, err := repo.Blobs(ctx).Stat(ctx, ref.Digest); err != nil {
+			t.Errorf("aliased child's referenced blob %s was lost: %v", ref.Digest, err)
+		}
+	}
+}
+
+type gcManifestReadErrorDriver struct{ *gcTestDriver }
+
+func (d *gcManifestReadErrorDriver) Reader(ctx context.Context, p string, offset int64) (io.ReadCloser, error) {
+	if p == d.lookupPath {
+		return nil, d.lookupError
+	}
+	return d.StorageDriver.Reader(ctx, p, offset)
+}
+
+func TestGCStopsAfterManifestError(t *testing.T) {
+	ctx := dcontext.Background()
+	d := &gcManifestReadErrorDriver{&gcTestDriver{StorageDriver: inmemory.New()}}
+	registry := createRegistry(t, d)
+	repo := makeRepository(t, registry, "gc/mark-error")
+	uploadRandomOCIImage(t, repo)
+	uploadRandomOCIImage(t, repo)
+	var revisions []digest.Digest
+	ms := makeManifestService(t, repo)
+	if err := ms.(distribution.ManifestEnumerator).Enumerate(ctx, func(dgst digest.Digest) error {
+		revisions = append(revisions, dgst)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if len(revisions) != 2 {
+		t.Fatalf("expected two manifest revisions, got %v", revisions)
+	}
+	var err error
+	d.lookupPath, err = pathFor(blobDataPathSpec{digest: revisions[0]})
+	if err != nil {
+		t.Fatal(err)
+	}
+	d.lookupError = errors.New("manifest content unavailable")
 	d.deletes.Store(0)
 	err = MarkAndSweep(ctx, d, registry, GCOpts{Quiet: true})
 	if err == nil || !strings.Contains(err.Error(), d.lookupError.Error()) {
-		t.Fatalf("expected manifest alias lookup error, got %v", err)
+		t.Errorf("expected first manifest's retrieval error, got %v", err)
 	}
 	if d.deletes.Load() != 0 {
-		t.Fatal("sweep started after manifest lookup failure")
+		t.Error("sweep started after manifest retrieval failure")
 	}
 }
 

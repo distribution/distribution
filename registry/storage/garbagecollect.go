@@ -259,14 +259,7 @@ func markManifestReferences(dgst digest.Digest, manifestService distribution.Man
 		if !isManifest && (manifestSet == nil || !strings.HasPrefix(string(descriptor.Digest), string(digest.Canonical)+":")) {
 			// Enumeration yields canonical digests, but references can use aliases.
 			// Also fall back if enumeration was interrupted by a missing path.
-			isManifest, err = manifestService.Exists(ctx, descriptor.Digest)
-			if err != nil {
-				// References stored without dependency verification may be invalid.
-				if descriptor.Digest.Validate() != nil {
-					continue
-				}
-				return fmt.Errorf("failed to check manifest for digest %v: %v", descriptor.Digest, err)
-			}
+			isManifest, _ = manifestService.Exists(ctx, descriptor.Digest)
 		}
 		if isManifest {
 			err := markManifestReferences(descriptor.Digest, manifestService, manifestSet, ctx, ingester)
