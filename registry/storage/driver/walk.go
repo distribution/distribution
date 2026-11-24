@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/sirupsen/logrus"
 )
 
@@ -102,6 +103,7 @@ func doWalkFallback(ctx context.Context, driver StorageDriver, from string, star
 			switch err.(type) {
 			case PathNotFoundError:
 				// repository was removed in between listing and enumeration. Ignore it.
+				dcontext.EnumerationSkipped(ctx)
 				logrus.WithField("path", child).Infof("ignoring deleted path")
 				continue
 			default:

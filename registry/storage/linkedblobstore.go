@@ -257,6 +257,7 @@ func (lbs *linkedBlobStore) Enumerate(ctx context.Context, ingestor func(digest.
 		if err != nil {
 			// we expect this error to occur so we move on
 			if err == distribution.ErrBlobUnknown {
+				dcontext.EnumerationSkipped(ctx)
 				return nil
 			}
 			return err
