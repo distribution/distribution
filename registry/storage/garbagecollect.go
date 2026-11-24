@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/reference"
 	"github.com/opencontainers/go-digest"
@@ -71,8 +70,7 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 		// Enumerate before traversing references so a complete inventory can rule
 		// out canonical non-manifest references without backend lookups.
 		var manifests []digest.Digest
-		enumeration := dcontext.WithEnumerationStatus(ctx)
-		err = manifestEnumerator.Enumerate(enumeration, func(dgst digest.Digest) error {
+		err = manifestEnumerator.Enumerate(ctx, func(dgst digest.Digest) error {
 			manifests = append(manifests, dgst)
 			return nil
 		})
@@ -82,7 +80,7 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 				return err
 			}
 			// A partial enumeration cannot rule out a referenced manifest.
-		} else if enumeration.Complete() {
+		} else {
 			manifestSet = make(map[digest.Digest]struct{}, len(manifests))
 			for _, dgst := range manifests {
 				manifestSet[dgst] = struct{}{}
@@ -260,7 +258,7 @@ func markManifestReferences(dgst digest.Digest, manifestService distribution.Man
 		_, isManifest := manifestSet[descriptor.Digest]
 		if !isManifest && (manifestSet == nil || !strings.HasPrefix(string(descriptor.Digest), string(digest.Canonical)+":")) {
 			// Enumeration yields canonical digests, but references can use aliases.
-			// Also fall back if enumeration was interrupted or skipped entries.
+			// Also fall back if enumeration was interrupted.
 			isManifest, _ = manifestService.Exists(ctx, descriptor.Digest)
 		}
 		if isManifest {
