@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/registry/storage/driver"
@@ -66,7 +67,27 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 			return fmt.Errorf("unable to convert ManifestService into ManifestEnumerator")
 		}
 
+		// Enumerate before traversing references so a complete inventory can rule
+		// out canonical non-manifest references without backend lookups.
+		var manifests []digest.Digest
 		err = manifestEnumerator.Enumerate(ctx, func(dgst digest.Digest) error {
+			manifests = append(manifests, dgst)
+			return nil
+		})
+		var manifestSet map[digest.Digest]struct{}
+		if err != nil {
+			if _, ok := err.(driver.PathNotFoundError); !ok {
+				return err
+			}
+			// A partial enumeration cannot rule out a referenced manifest.
+		} else {
+			manifestSet = make(map[digest.Digest]struct{}, len(manifests))
+			for _, dgst := range manifests {
+				manifestSet[dgst] = struct{}{}
+			}
+		}
+
+		markManifest := func(dgst digest.Digest) error {
 			if opts.RemoveUntagged {
 				// fetch all tags where this manifest is the latest one
 				tags, err := repository.Tags(ctx).Lookup(ctx, v1.Descriptor{Digest: dgst})
@@ -97,7 +118,7 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 			}
 			markSet[dgst] = struct{}{}
 
-			return markManifestReferences(dgst, manifestService, ctx, func(d digest.Digest) bool {
+			return markManifestReferences(dgst, manifestService, manifestSet, ctx, func(d digest.Digest) bool {
 				_, marked := markSet[d]
 				if !marked {
 					markSet[d] = struct{}{}
@@ -107,7 +128,12 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 				}
 				return marked
 			})
-		})
+		}
+		for _, dgst := range manifests {
+			if err = markManifest(dgst); err != nil {
+				break
+			}
+		}
 
 		if err != nil {
 			// In certain situations such as unfinished uploads, deleting all
@@ -215,7 +241,7 @@ func unmarkReferencedManifest(manifestArr []ManifestDel, markSet map[digest.Dige
 }
 
 // markManifestReferences marks the manifest references
-func markManifestReferences(dgst digest.Digest, manifestService distribution.ManifestService, ctx context.Context, ingester func(digest.Digest) bool) error {
+func markManifestReferences(dgst digest.Digest, manifestService distribution.ManifestService, manifestSet map[digest.Digest]struct{}, ctx context.Context, ingester func(digest.Digest) bool) error {
 	manifest, err := manifestService.Get(ctx, dgst)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve manifest for digest %v: %v", dgst, err)
@@ -229,8 +255,14 @@ func markManifestReferences(dgst digest.Digest, manifestService distribution.Man
 			continue
 		}
 
-		if ok, _ := manifestService.Exists(ctx, descriptor.Digest); ok {
-			err := markManifestReferences(descriptor.Digest, manifestService, ctx, ingester)
+		_, isManifest := manifestSet[descriptor.Digest]
+		if !isManifest && (manifestSet == nil || !strings.HasPrefix(string(descriptor.Digest), string(digest.Canonical)+":")) {
+			// Enumeration yields canonical digests, but references can use aliases.
+			// Also fall back if enumeration was interrupted.
+			isManifest, _ = manifestService.Exists(ctx, descriptor.Digest)
+		}
+		if isManifest {
+			err := markManifestReferences(descriptor.Digest, manifestService, manifestSet, ctx, ingester)
 			if err != nil {
 				return err
 			}

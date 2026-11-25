@@ -1,18 +1,26 @@
 package storage
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"io"
 	"path"
+	"reflect"
+	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/internal/dcontext"
 	"github.com/distribution/distribution/v3/manifest/ocischema"
 	"github.com/distribution/distribution/v3/registry/storage/driver"
+	"github.com/distribution/distribution/v3/registry/storage/driver/filesystem"
 	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
 	"github.com/distribution/distribution/v3/testutil"
 	"github.com/distribution/reference"
 	"github.com/opencontainers/go-digest"
+	"github.com/opencontainers/image-spec/specs-go"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
@@ -22,7 +30,7 @@ type image struct {
 	layers         map[digest.Digest]io.ReadSeeker
 }
 
-func createRegistry(t *testing.T, driver driver.StorageDriver, options ...RegistryOption) distribution.Namespace {
+func createRegistry(t testing.TB, driver driver.StorageDriver, options ...RegistryOption) distribution.Namespace {
 	ctx := dcontext.Background()
 	options = append(options, EnableDelete)
 	registry, err := NewRegistry(ctx, driver, options...)
@@ -32,7 +40,7 @@ func createRegistry(t *testing.T, driver driver.StorageDriver, options ...Regist
 	return registry
 }
 
-func makeRepository(t *testing.T, registry distribution.Namespace, name string) distribution.Repository {
+func makeRepository(t testing.TB, registry distribution.Namespace, name string) distribution.Repository {
 	ctx := dcontext.Background()
 
 	// Initialize a dummy repository
@@ -48,7 +56,7 @@ func makeRepository(t *testing.T, registry distribution.Namespace, name string) 
 	return repo
 }
 
-func makeManifestService(t *testing.T, repository distribution.Repository) distribution.ManifestService {
+func makeManifestService(t testing.TB, repository distribution.Repository) distribution.ManifestService {
 	ctx := dcontext.Background()
 
 	manifestService, err := repository.Manifests(ctx)
@@ -920,5 +928,325 @@ func TestTaggedManifestlistWithDeletedReference(t *testing.T) {
 	after := allBlobs(t, registry)
 	if len(after) != 0 {
 		t.Fatalf("Garbage collection affected storage: %d != %d", len(after), 0)
+	}
+}
+
+// gcTestDriver observes lookups and injects storage failures during marking.
+type gcTestDriver struct {
+	driver.StorageDriver
+	misses           atomic.Int64
+	partialRevision  string
+	enumerationError error
+	deletes          atomic.Int64
+	lookupPath       string
+	lookupError      error
+}
+
+func (d *gcTestDriver) GetContent(ctx context.Context, p string) ([]byte, error) {
+	if p == d.lookupPath {
+		return nil, d.lookupError
+	}
+	content, err := d.StorageDriver.GetContent(ctx, p)
+	var notFound driver.PathNotFoundError
+	if strings.Contains(p, "/_manifests/revisions/") && errors.As(err, &notFound) {
+		d.misses.Add(1)
+	}
+	return content, err
+}
+
+func (d *gcTestDriver) Walk(ctx context.Context, p string, fn driver.WalkFn, options ...func(*driver.WalkOptions)) error {
+	if d.partialRevision != "" && strings.HasSuffix(p, "/_manifests/revisions") {
+		info, err := d.StorageDriver.Stat(ctx, d.partialRevision)
+		if err != nil {
+			return err
+		}
+		if err := fn(info); err != nil {
+			return err
+		}
+		return d.enumerationError
+	}
+	return d.StorageDriver.Walk(ctx, p, fn, options...)
+}
+
+func (d *gcTestDriver) Delete(ctx context.Context, p string) error {
+	d.deletes.Add(1)
+	return d.StorageDriver.Delete(ctx, p)
+}
+
+func TestGCWithoutBlobManifestLookups(t *testing.T) {
+	for _, backend := range []string{"inmemory", "filesystem"} {
+		t.Run(backend, func(t *testing.T) {
+			for _, removeUntagged := range []bool{false, true} {
+				t.Run(fmt.Sprint(removeUntagged), func(t *testing.T) {
+					ctx := dcontext.Background()
+					var backendDriver driver.StorageDriver = inmemory.New()
+					if backend == "filesystem" {
+						var err error
+						backendDriver, err = filesystem.FromParameters(map[string]any{"rootdirectory": t.TempDir()})
+						if err != nil {
+							t.Fatal(err)
+						}
+					}
+					d := &gcTestDriver{StorageDriver: backendDriver}
+					registry, _ := gcTaggedIndex(t, d)
+					d.misses.Store(0)
+					if err := MarkAndSweep(ctx, d, registry, GCOpts{RemoveUntagged: removeUntagged, Quiet: true}); err != nil {
+						t.Fatal(err)
+					}
+					if misses := d.misses.Load(); misses != 0 {
+						t.Errorf("non-manifest revision lookups: got %d misses, want 0", misses)
+					}
+				})
+			}
+		})
+	}
+}
+
+func BenchmarkGarbageCollect(b *testing.B) {
+	ctx := dcontext.Background()
+	d, err := filesystem.FromParameters(map[string]any{"rootdirectory": b.TempDir()})
+	if err != nil {
+		b.Fatal(err)
+	}
+	registry := createRegistry(b, d)
+	repo := makeRepository(b, registry, "gc/benchmark")
+	manifests := makeManifestService(b, repo)
+	for image := range 20 {
+		layers := make([]digest.Digest, 0, 10)
+		for layer := range 10 {
+			desc, err := repo.Blobs(ctx).Put(ctx, v1.MediaTypeImageLayer, fmt.Appendf(nil, "image-%d-layer-%d", image, layer))
+			if err != nil {
+				b.Fatal(err)
+			}
+			layers = append(layers, desc.Digest)
+		}
+		manifest, err := testutil.MakeOCIManifest(repo, layers)
+		if err != nil {
+			b.Fatal(err)
+		}
+		if _, err := manifests.Put(ctx, manifest); err != nil {
+			b.Fatal(err)
+		}
+	}
+	for b.Loop() {
+		if err := MarkAndSweep(ctx, d, registry, GCOpts{}); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func gcTaggedIndex(t *testing.T, d driver.StorageDriver) (distribution.Namespace, digest.Digest) {
+	t.Helper()
+	ctx := dcontext.Background()
+	registry := createRegistry(t, d)
+	repo := makeRepository(t, registry, "gc/references")
+	im := uploadRandomOCIImage(t, repo)
+	manifests := makeManifestService(t, repo)
+	index, err := testutil.MakeManifestList(registry.BlobStatter(), []digest.Digest{im.manifestDigest})
+	if err != nil {
+		t.Fatal(err)
+	}
+	dgst, err := manifests.Put(ctx, index)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.Tags(ctx).Tag(ctx, "latest", v1.Descriptor{Digest: dgst}); err != nil {
+		t.Fatal(err)
+	}
+	return registry, dgst
+}
+
+func TestGCPartialManifestEnumeration(t *testing.T) {
+	for _, removeUntagged := range []bool{false, true} {
+		t.Run(fmt.Sprint(removeUntagged), func(t *testing.T) {
+			for _, missing := range []bool{false, true} {
+				t.Run(fmt.Sprint(missing), func(t *testing.T) {
+					ctx := dcontext.Background()
+					d := &gcTestDriver{StorageDriver: inmemory.New()}
+					registry, indexDigest := gcTaggedIndex(t, d)
+					before := allBlobs(t, registry)
+					var err error
+					d.partialRevision, err = manifestRevisionLinkPath("gc/references", indexDigest)
+					if err != nil {
+						t.Fatal(err)
+					}
+					d.enumerationError = errors.New("enumeration interrupted")
+					if missing {
+						d.enumerationError = driver.PathNotFoundError{Path: "missing revision"}
+					}
+					d.deletes.Store(0)
+					err = MarkAndSweep(ctx, d, registry, GCOpts{RemoveUntagged: removeUntagged, Quiet: true})
+					if missing {
+						if err != nil {
+							t.Fatal(err)
+						}
+					} else {
+						if err == nil || !strings.Contains(err.Error(), "enumeration interrupted") {
+							t.Fatalf("expected enumeration error, got %v", err)
+						}
+						if d.deletes.Load() != 0 {
+							t.Fatal("sweep started after enumeration failure")
+						}
+					}
+					if after := allBlobs(t, registry); !reflect.DeepEqual(before, after) {
+						t.Fatalf("referenced blobs changed: before %v, after %v", before, after)
+					}
+				})
+			}
+		})
+	}
+}
+
+func TestGCManifestAliasReferences(t *testing.T) {
+	for _, aliasOnly := range []bool{false, true} {
+		t.Run(fmt.Sprintf("alias-only=%v", aliasOnly), func(t *testing.T) {
+			ctx := dcontext.Background()
+			d := inmemory.New()
+			registry := createRegistry(t, d)
+			repo := makeRepository(t, registry, "gc/alias")
+			child := uploadRandomOCIImage(t, repo)
+			_, payload, err := child.manifest.Payload()
+			if err != nil {
+				t.Fatal(err)
+			}
+			alias := digest.SHA512.FromBytes(payload)
+			aliasPath, err := manifestRevisionLinkPath(repo.Named().Name(), alias)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := d.PutContent(ctx, aliasPath, []byte(child.manifestDigest)); err != nil {
+				t.Fatal(err)
+			}
+			index, err := ocischema.FromDescriptors([]v1.Descriptor{{Digest: alias}}, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			ms := makeManifestService(t, repo)
+			root, err := ms.Put(ctx, index)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := repo.Tags(ctx).Tag(ctx, "latest", v1.Descriptor{Digest: root}); err != nil {
+				t.Fatal(err)
+			}
+			if aliasOnly {
+				// Exercise the incomplete-inventory fallback as well as alias lookup.
+				canonicalPath, err := manifestRevisionLinkPath(repo.Named().Name(), child.manifestDigest)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := d.Delete(ctx, canonicalPath); err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				// Mark the canonical blob in an earlier repository without traversing
+				// its references. This also prevents duplicate canonical revision
+				// entries in gc/alias from causing duplicate manifest deletions.
+				prior := makeRepository(t, registry, "gc/0-blob-reference")
+				canonical, err := prior.Blobs(ctx).Put(ctx, v1.MediaTypeImageManifest, payload)
+				if err != nil {
+					t.Fatal(err)
+				}
+				priorIndex, err := ocischema.FromDescriptors([]v1.Descriptor{canonical}, nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+				priorRoot, err := makeManifestService(t, prior).Put(ctx, priorIndex)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := prior.Tags(ctx).Tag(ctx, "latest", v1.Descriptor{Digest: priorRoot}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := MarkAndSweep(ctx, d, registry, GCOpts{RemoveUntagged: true, Quiet: true}); err != nil {
+				t.Fatal(err)
+			}
+			for _, ref := range child.manifest.References() {
+				if _, err := repo.Blobs(ctx).Stat(ctx, ref.Digest); err != nil {
+					t.Errorf("aliased child's referenced blob %s was lost: %v", ref.Digest, err)
+				}
+			}
+		})
+	}
+}
+
+type gcManifestReadErrorDriver struct{ *gcTestDriver }
+
+func (d *gcManifestReadErrorDriver) Reader(ctx context.Context, p string, offset int64) (io.ReadCloser, error) {
+	if p == d.lookupPath {
+		return nil, d.lookupError
+	}
+	return d.StorageDriver.Reader(ctx, p, offset)
+}
+
+func TestGCStopsAfterManifestError(t *testing.T) {
+	ctx := dcontext.Background()
+	d := &gcManifestReadErrorDriver{&gcTestDriver{StorageDriver: inmemory.New()}}
+	registry := createRegistry(t, d)
+	repo := makeRepository(t, registry, "gc/mark-error")
+	uploadRandomOCIImage(t, repo)
+	uploadRandomOCIImage(t, repo)
+	var revisions []digest.Digest
+	ms := makeManifestService(t, repo)
+	if err := ms.(distribution.ManifestEnumerator).Enumerate(ctx, func(dgst digest.Digest) error {
+		revisions = append(revisions, dgst)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if len(revisions) != 2 {
+		t.Fatalf("expected two manifest revisions, got %v", revisions)
+	}
+	var err error
+	d.lookupPath, err = pathFor(blobDataPathSpec{digest: revisions[0]})
+	if err != nil {
+		t.Fatal(err)
+	}
+	d.lookupError = errors.New("manifest content unavailable")
+	d.deletes.Store(0)
+	err = MarkAndSweep(ctx, d, registry, GCOpts{Quiet: true})
+	if err == nil || !strings.Contains(err.Error(), d.lookupError.Error()) {
+		t.Errorf("expected first manifest's retrieval error, got %v", err)
+	}
+	if d.deletes.Load() != 0 {
+		t.Error("sweep started after manifest retrieval failure")
+	}
+}
+
+func TestGCInvalidReferences(t *testing.T) {
+	ctx := dcontext.Background()
+	d := inmemory.New()
+	registry := createRegistry(t, d)
+	repo := makeRepository(t, registry, "gc/invalid-references")
+	layer, err := repo.Blobs(ctx).Put(ctx, v1.MediaTypeImageLayer, []byte("retained layer"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ms, err := repo.Manifests(ctx, SkipLayerVerification())
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest, err := ocischema.FromStruct(ocischema.Manifest{
+		Versioned: specs.Versioned{SchemaVersion: 2},
+		MediaType: v1.MediaTypeImageManifest,
+		Config:    v1.Descriptor{},
+		Layers:    []v1.Descriptor{{Digest: "not-a-digest"}, layer},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	root, err := ms.Put(ctx, manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.Tags(ctx).Tag(ctx, "latest", v1.Descriptor{Digest: root}); err != nil {
+		t.Fatal(err)
+	}
+	if err := MarkAndSweep(ctx, d, registry, GCOpts{Quiet: true}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repo.Blobs(ctx).Get(ctx, layer.Digest); err != nil {
+		t.Fatalf("valid reference after invalid references was lost: %v", err)
 	}
 }
