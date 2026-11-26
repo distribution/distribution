@@ -91,6 +91,11 @@ func (lbs *linkedBlobStore) Put(ctx context.Context, mediaType string, p []byte)
 		return v1.Descriptor{}, err
 	}
 
+	// Publish the descriptor only after the repository link is written.
+	if err := lbs.linkBlob(ctx, desc); err != nil {
+		return v1.Descriptor{}, err
+	}
+
 	if err := lbs.blobAccessController.SetDescriptor(ctx, dgst, desc); err != nil {
 		return v1.Descriptor{}, err
 	}
@@ -99,7 +104,7 @@ func (lbs *linkedBlobStore) Put(ctx context.Context, mediaType string, p []byte)
 	// returned by Put above. Note that we should allow updates for a given
 	// repository.
 
-	return desc, lbs.linkBlob(ctx, desc)
+	return desc, nil
 }
 
 type optionFunc func(any) error
