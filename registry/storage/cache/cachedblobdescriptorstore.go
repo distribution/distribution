@@ -18,10 +18,12 @@ type cachedBlobStatter struct {
 var (
 	// cacheRequestCount is the number of total cache requests received.
 	cacheRequestCount = prometheus.StorageNamespace.NewCounter("cache_requests", "The number of cache request received")
-	// cacheRequestCount is the number of total cache requests received.
+	// cacheHitCount is the number of total cache requests that were a hit.
 	cacheHitCount = prometheus.StorageNamespace.NewCounter("cache_hits", "The number of cache request received")
 	// cacheErrorCount is the number of cache request errors.
 	cacheErrorCount = prometheus.StorageNamespace.NewCounter("cache_errors", "The number of cache request errors")
+	// cacheStaleClearCount is the number of stale cache entries cleared after backend validation.
+	cacheStaleClearCount = prometheus.StorageNamespace.NewCounter("cache_stale_clears", "The number of stale cache entries cleared after backend miss")
 )
 
 // NewCachedBlobStatter creates a new statter which prefers a cache and
@@ -40,6 +42,22 @@ func (cbds *cachedBlobStatter) Stat(ctx context.Context, dgst digest.Digest) (v1
 	desc, cacheErr := cbds.cache.Stat(ctx, dgst)
 	if cacheErr == nil {
 		cacheHitCount.Inc(1)
+
+		// Verify the blob still exists on the backend. A separate GC process
+		// may have deleted the blob from storage without being able to clear
+		// the in-process cache. Without this check, clients are told the
+		// layer already exists and skip uploading, leading to pull failures.
+		if _, err := cbds.backend.Stat(ctx, dgst); err != nil {
+			if err == distribution.ErrBlobUnknown {
+				if clearErr := cbds.cache.Clear(ctx, dgst); clearErr != nil {
+					dcontext.GetLoggerWithField(ctx, "blob", dgst).WithError(clearErr).Error("error clearing stale cache entry")
+				}
+				cacheStaleClearCount.Inc(1)
+				return v1.Descriptor{}, err
+			}
+			dcontext.GetLoggerWithField(ctx, "blob", dgst).WithError(err).Error("error from backend validating cache hit")
+		}
+
 		return desc, nil
 	}
 
