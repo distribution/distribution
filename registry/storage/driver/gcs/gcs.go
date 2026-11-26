@@ -77,6 +77,10 @@ type driverParameters struct {
 	// pushes by ensuring we aren't DoSing our own server with many
 	// connections.
 	maxConcurrency uint64
+
+	// uploadAPIBase is set from STORAGE_EMULATOR_HOST for resumable uploads;
+	// nil uses production www.googleapis.com.
+	uploadAPIBase *url.URL
 }
 
 func init() {
@@ -102,6 +106,7 @@ type driver struct {
 	privateKey    []byte
 	rootDirectory string
 	chunkSize     int
+	uploadAPIBase *url.URL
 }
 
 // Wrapper wraps `driver` with a throttler, ensuring that no more than N
@@ -153,11 +158,21 @@ func FromParameters(ctx context.Context, parameters map[string]any) (storagedriv
 		}
 	}
 
+	// cloud.google.com/go/storage uses STORAGE_EMULATOR_HOST for emulator mode
+	// (endpoint rewrite + WithoutAuthentication; no special credential type).
+	// Mirror that for auth options below and for the hand-rolled newSession client.
+	uploadAPIBase, err := emulatorUploadAPIBase()
+	if err != nil {
+		return nil, err
+	}
+	useEmulator := uploadAPIBase != nil
+
 	var ts oauth2.TokenSource
 	jwtConf := new(jwt.Config)
-	var err error
 	var gcs *storage.Client
 	var options []option.ClientOption
+	var client *http.Client
+
 	if keyfile, ok := parameters["keyfile"]; ok {
 		jsonKey, err := os.ReadFile(fmt.Sprint(keyfile))
 		if err != nil {
@@ -167,8 +182,10 @@ func FromParameters(ctx context.Context, parameters map[string]any) (storagedriv
 		if err != nil {
 			return nil, err
 		}
-		ts = jwtConf.TokenSource(ctx)
-		options = append(options, option.WithAuthCredentialsJSON(option.ServiceAccount, jsonKey))
+		if !useEmulator {
+			ts = jwtConf.TokenSource(ctx)
+			options = append(options, option.WithAuthCredentialsJSON(option.ServiceAccount, jsonKey))
+		}
 	} else if credentials, ok := parameters["credentials"]; ok {
 		credentialMap, ok := credentials.(map[any]any)
 		if !ok {
@@ -193,10 +210,11 @@ func FromParameters(ctx context.Context, parameters map[string]any) (storagedriv
 		if err != nil {
 			return nil, err
 		}
-		ts = jwtConf.TokenSource(ctx)
-		options = append(options, option.WithAuthCredentialsJSON(option.ServiceAccount, data))
-	} else {
-		var err error
+		if !useEmulator {
+			ts = jwtConf.TokenSource(ctx)
+			options = append(options, option.WithAuthCredentialsJSON(option.ServiceAccount, data))
+		}
+	} else if !useEmulator {
 		// DefaultTokenSource is a convenience method. It first calls FindDefaultCredentials,
 		// then uses the credentials to construct an http.Client or an oauth2.TokenSource.
 		// https://pkg.go.dev/golang.org/x/oauth2/google#hdr-Credentials
@@ -212,9 +230,20 @@ func FromParameters(ctx context.Context, parameters map[string]any) (storagedriv
 		}
 	}
 
-	gcs, err = storage.NewClient(ctx, options...)
-	if err != nil {
-		return nil, err
+	if useEmulator {
+		// NewClient already honors the env; avoid auth options that would
+		// re-enable OAuth. newSession uses this client outside the SDK.
+		gcs, err = storage.NewClient(ctx, options...)
+		if err != nil {
+			return nil, err
+		}
+		client = http.DefaultClient
+	} else {
+		gcs, err = storage.NewClient(ctx, options...)
+		if err != nil {
+			return nil, err
+		}
+		client = oauth2.NewClient(ctx, ts)
 	}
 
 	maxConcurrency, err := base.GetLimitFromParameter(parameters["maxconcurrency"], minConcurrency, defaultMaxConcurrency)
@@ -227,13 +256,56 @@ func FromParameters(ctx context.Context, parameters map[string]any) (storagedriv
 		rootDirectory:  fmt.Sprint(rootDirectory),
 		email:          jwtConf.Email,
 		privateKey:     jwtConf.PrivateKey,
-		client:         oauth2.NewClient(ctx, ts),
+		client:         client,
 		chunkSize:      chunkSize,
 		maxConcurrency: maxConcurrency,
 		gcs:            gcs,
+		uploadAPIBase:  uploadAPIBase,
 	}
 
 	return New(ctx, params)
+}
+
+// emulatorUploadAPIBase returns the origin from STORAGE_EMULATOR_HOST, or nil
+// if unset. A host without a scheme defaults to http, as in the Go storage client.
+func emulatorUploadAPIBase() (*url.URL, error) {
+	host := os.Getenv("STORAGE_EMULATOR_HOST")
+	if host == "" {
+		return nil, nil
+	}
+
+	var u *url.URL
+	var err error
+	if strings.Contains(host, "://") {
+		u, err = url.Parse(host)
+		if err != nil {
+			return nil, fmt.Errorf("invalid STORAGE_EMULATOR_HOST %q: %w", host, err)
+		}
+	} else {
+		u = &url.URL{Scheme: "http", Host: host}
+	}
+
+	if u.Host == "" {
+		return nil, fmt.Errorf("invalid STORAGE_EMULATOR_HOST %q: missing host", host)
+	}
+
+	return &url.URL{Scheme: u.Scheme, Host: u.Host}, nil
+}
+
+// resumableUploadURL builds the resumable-upload session URL. A non-nil
+// apiBase redirects the session to the emulator; nil uses www.googleapis.com.
+func resumableUploadURL(apiBase *url.URL, bucketName, objectName string) *url.URL {
+	scheme, host := "https", "www.googleapis.com"
+	if apiBase != nil {
+		scheme, host = apiBase.Scheme, apiBase.Host
+	}
+
+	return &url.URL{
+		Scheme:   scheme,
+		Host:     host,
+		Path:     fmt.Sprintf("/upload/storage/v1/b/%v/o", bucketName),
+		RawQuery: fmt.Sprintf("uploadType=resumable&name=%v", objectName),
+	}
 }
 
 // New constructs a new driver
@@ -252,6 +324,7 @@ func New(ctx context.Context, params driverParameters) (storagedriver.StorageDri
 		privateKey:    params.privateKey,
 		client:        params.client,
 		chunkSize:     params.chunkSize,
+		uploadAPIBase: params.uploadAPIBase,
 	}
 
 	return &Wrapper{
@@ -274,7 +347,7 @@ func (d *driver) Name() string {
 func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
 	r, err := d.bucket.Object(d.pathToKey(path)).NewReader(ctx)
 	if err != nil {
-		if err == storage.ErrObjectNotExist {
+		if isObjectNotExist(err) {
 			return nil, storagedriver.PathNotFoundError{Path: path}
 		}
 		return nil, err
@@ -307,14 +380,12 @@ func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.Read
 	// See: https://pkg.go.dev/cloud.google.com/go/storage#ObjectHandle.NewRangeReader
 	r, err := obj.NewRangeReader(ctx, offset, -1)
 	if err != nil {
-		if err == storage.ErrObjectNotExist {
+		if isObjectNotExist(err) {
 			return nil, storagedriver.PathNotFoundError{Path: path}
 		}
 		var status *googleapi.Error
 		if errors.As(err, &status) {
 			switch status.Code {
-			case http.StatusNotFound:
-				return nil, storagedriver.PathNotFoundError{Path: path}
 			case http.StatusRequestedRangeNotSatisfiable:
 				attrs, err := obj.Attrs(ctx)
 				if err != nil {
@@ -374,10 +445,8 @@ func (w *writer) Cancel(ctx context.Context) error {
 	w.cancelled = true
 
 	err := w.object.Delete(ctx)
-	if err != nil {
-		if err == storage.ErrObjectNotExist {
-			err = nil
-		}
+	if isObjectNotExist(err) {
+		return nil
 	}
 	return err
 }
@@ -728,14 +797,26 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 	return nil
 }
 
-// listAll recursively lists all names of objects stored at "prefix" and its subpaths.
-func (d *driver) listAll(ctx context.Context, prefix string) ([]string, error) {
+// objectVersion is one object generation returned by listAll.
+type objectVersion struct {
+	name       string
+	generation int64
+}
+
+// listAll lists object generations with Prefix set to prefix. Versions are
+// included so resumable-upload session generations (left behind by Writer.Close
+// before Commit) are removed by Delete; otherwise delimiter List can still
+// report their parent prefixes after the live object is gone.
+// When exactName is true, only generations whose name equals prefix are kept;
+// the Objects API is prefix-based (so "a" would also match "ab"), and results
+// are lexicographic by name, so the iteration stops once the name differs.
+func (d *driver) listAll(ctx context.Context, prefix string, exactName bool) ([]objectVersion, error) {
 	objects := d.bucket.Objects(ctx, &storage.Query{
 		Prefix:   prefix,
-		Versions: false,
+		Versions: true,
 	})
 
-	list := make([]string, 0, 64)
+	list := make([]objectVersion, 0, 64)
 	for {
 		object, err := objects.Next()
 		if err != nil {
@@ -744,12 +825,13 @@ func (d *driver) listAll(ctx context.Context, prefix string) ([]string, error) {
 			}
 			return nil, err
 		}
-		// GCS does not guarantee strong consistency between
-		// DELETE and LIST operations. Check that the object is not deleted,
-		// and filter out any objects with a non-zero time-deleted
-		if object.Deleted.IsZero() {
-			list = append(list, object.Name)
+		if object.Name == "" {
+			continue
 		}
+		if exactName && object.Name != prefix {
+			break
+		}
+		list = append(list, objectVersion{name: object.Name, generation: object.Generation})
 	}
 
 	return list, nil
@@ -758,44 +840,74 @@ func (d *driver) listAll(ctx context.Context, prefix string) ([]string, error) {
 // Delete recursively deletes all objects stored at "path" and its subpaths.
 func (d *driver) Delete(ctx context.Context, path string) error {
 	prefix := d.pathToDirKey(path)
-	keys, err := d.listAll(ctx, prefix)
+	keys, err := d.listAll(ctx, prefix, false)
 	if err != nil {
 		return err
 	}
-	if len(keys) > 0 {
-		// NOTE(milosgajdos): d.listAll calls (BucketHandle).Objects
-		// See: https://pkg.go.dev/cloud.google.com/go/storage#BucketHandle.Objects
-		// docs: Objects will be iterated over lexicographically by name.
-		// This means we don't have to reverse order the slice; we can
-		// range over the keys slice in reverse order
-		for _, v := range slices.Backward(keys) {
-			key := v
-			err := d.bucket.Object(key).Delete(ctx)
-			// GCS only guarantees eventual consistency, so listAll might return
-			// paths that no longer exist. If this happens, just ignore any not
-			// found error
-			if status, ok := err.(*googleapi.Error); ok {
-				if status.Code == http.StatusNotFound {
-					err = nil
-				}
-			}
-			if err != nil {
-				return err
-			}
+
+	// pathToDirKey is key+"/", so it misses generations of the exact object at
+	// path. List those too, except at the driver root ("/"): pathToKey("/") with
+	// a non-empty rootdirectory is the trimmed root name (outside the prefix).
+	if strings.Trim(path, "/") != "" {
+		exact, err := d.listAll(ctx, d.pathToKey(path), true)
+		if err != nil {
+			return err
 		}
-		return nil
+		keys = append(keys, exact...)
 	}
-	err = d.bucket.Object(d.pathToKey(path)).Delete(ctx)
-	if err == storage.ErrObjectNotExist {
+
+	if len(keys) == 0 {
 		return storagedriver.PathNotFoundError{Path: path}
 	}
-	return err
+
+	// NOTE(milosgajdos): d.listAll calls (BucketHandle).Objects
+	// See: https://pkg.go.dev/cloud.google.com/go/storage#BucketHandle.Objects
+	// docs: Objects will be iterated over lexicographically by name.
+	// This means we don't have to reverse order the slice; we can
+	// range over the keys slice in reverse order
+	for _, v := range slices.Backward(keys) {
+		obj := d.bucket.Object(v.name)
+		if v.generation != 0 {
+			obj = obj.Generation(v.generation)
+		}
+		err := obj.Delete(ctx)
+		// GCS only guarantees eventual consistency, so listAll might return
+		// paths that no longer exist. If this happens, just ignore any not
+		// found error. The storage client wraps googleapi errors, so use
+		// errors.Is/As rather than a direct type assert.
+		if isObjectNotExist(err) {
+			err = nil
+		}
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// isObjectNotExist reports whether err is a missing-object error from the
+// storage client or underlying JSON API (including emulator "Live version
+// … does not exist" 404s).
+func isObjectNotExist(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, storage.ErrObjectNotExist) {
+		return true
+	}
+	var status *googleapi.Error
+	return errors.As(err, &status) && status.Code == http.StatusNotFound
 }
 
 // RedirectURL returns a URL which may be used to retrieve the content stored at
 // the given path, possibly using the given options.
 func (d *driver) RedirectURL(r *http.Request, path string) (string, error) {
 	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		return "", nil
+	}
+
+	// Signed URLs target production hosts; the storage emulator cannot serve them.
+	if d.uploadAPIBase != nil {
 		return "", nil
 	}
 
@@ -815,12 +927,7 @@ func (d *driver) Walk(ctx context.Context, path string, f storagedriver.WalkFn, 
 }
 
 func (w *writer) newSession() (uri string, err error) {
-	u := &url.URL{
-		Scheme:   "https",
-		Host:     "www.googleapis.com",
-		Path:     fmt.Sprintf("/upload/storage/v1/b/%v/o", w.object.BucketName()),
-		RawQuery: fmt.Sprintf("uploadType=resumable&name=%v", w.object.ObjectName()),
-	}
+	u := resumableUploadURL(w.driver.uploadAPIBase, w.object.BucketName(), w.object.ObjectName())
 	req, err := http.NewRequestWithContext(w.ctx, http.MethodPost, u.String(), nil)
 	if err != nil {
 		return "", err
