@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"go.yaml.in/yaml/v2"
 )
@@ -215,6 +216,99 @@ type ConfigSuite struct {
 
 func TestConfigSuite(t *testing.T) {
 	suite.Run(t, new(ConfigSuite))
+}
+
+func TestParseUsesProcessEnvironmentByDefault(t *testing.T) {
+	t.Setenv("REGISTRY_LOG_LEVEL", "debug")
+
+	config, err := Parse(bytes.NewReader([]byte(configYamlV0_1)))
+	require.NoError(t, err)
+	require.Equal(t, Loglevel("debug"), config.Log.Level)
+}
+
+func TestParseWithOptionsUsesProcessEnvironmentByDefault(t *testing.T) {
+	t.Setenv("REGISTRY_LOG_LEVEL", "debug")
+
+	config, err := ParseWithOptions(bytes.NewReader([]byte(configYamlV0_1)))
+	require.NoError(t, err)
+	require.Equal(t, Loglevel("debug"), config.Log.Level)
+}
+
+func TestParseWithOptions(t *testing.T) {
+	tests := []struct {
+		name        string
+		environment []string
+		wantLevel   Loglevel
+		wantFormat  string
+	}{
+		{
+			name:        "supplied environment replaces process environment",
+			environment: []string{"REGISTRY_LOG_LEVEL=error"},
+			wantLevel:   "error",
+		},
+		{
+			name:        "omitted process variable is filtered",
+			environment: []string{"REGISTRY_LOG_FORMATTER=json"},
+			wantLevel:   "info",
+			wantFormat:  "json",
+		},
+		{
+			name:        "empty environment disables overrides",
+			environment: []string{},
+			wantLevel:   "info",
+		},
+		{
+			name:        "nil environment disables overrides",
+			environment: nil,
+			wantLevel:   "info",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Setenv("REGISTRY_LOG_LEVEL", "debug")
+
+			config, err := ParseWithOptions(
+				bytes.NewReader([]byte(configYamlV0_1)),
+				WithEnvironment(test.environment),
+			)
+			require.NoError(t, err)
+			require.Equal(t, test.wantLevel, config.Log.Level)
+			require.Equal(t, test.wantFormat, config.Log.Formatter)
+		})
+	}
+}
+
+func TestParseWithOptionsAppliesOptionsInOrder(t *testing.T) {
+	config, err := ParseWithOptions(
+		bytes.NewReader([]byte(configYamlV0_1)),
+		WithEnvironment([]string{"REGISTRY_LOG_LEVEL=debug"}),
+		WithEnvironment([]string{"REGISTRY_LOG_LEVEL=error"}),
+	)
+	require.NoError(t, err)
+	require.Equal(t, Loglevel("error"), config.Log.Level)
+}
+
+func TestParseWithOptionsIgnoresMalformedEntries(t *testing.T) {
+	config, err := ParseWithOptions(
+		bytes.NewReader([]byte(configYamlV0_1)),
+		WithEnvironment([]string{
+			"REGISTRY_REDIS_OPTIONS_USERNAME",
+			"REGISTRY_LOG_FIELDS",
+		}),
+	)
+	require.NoError(t, err)
+	require.Equal(t, "alice", config.Redis.Options.Username)
+	require.Equal(t, map[string]any{"environment": "test"}, config.Log.Fields)
+}
+
+func TestParseWithOptionsAppliesValidEmptyValue(t *testing.T) {
+	config, err := ParseWithOptions(
+		bytes.NewReader([]byte(configYamlV0_1)),
+		WithEnvironment([]string{"REGISTRY_REDIS_OPTIONS_USERNAME="}),
+	)
+	require.NoError(t, err)
+	require.Empty(t, config.Redis.Options.Username)
 }
 
 func (suite *ConfigSuite) SetupTest() {
