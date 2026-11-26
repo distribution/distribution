@@ -200,7 +200,7 @@ func (d *driver) PutContent(ctx context.Context, subPath string, contents []byte
 	}
 
 	if err := writer.Commit(ctx); err != nil {
-		return err
+		return errors.Join(err, writer.Cancel(ctx))
 	}
 
 	// Close the file before renaming it, which is required on Windows.
