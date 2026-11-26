@@ -217,10 +217,9 @@ middleware:
         keypairid: cloudfrontkeypairid
         duration: 3000s
         ipfilteredby: awsregion
-        awsregion: us-east-1, use-east-2
+        awsregion: us-east-1, us-east-2
         updatefrequency: 12h
         iprangesurl: https://ip-ranges.amazonaws.com/ip-ranges.json
-  storage:
     - name: redirect
       options:
         baseurl: https://example.com/
@@ -291,8 +290,6 @@ redis:
   maxidleconns: 16
   poolsize: 64
   connmaxidletime: 300s
-  tls:
-    enabled: false
 health:
   storagedriver:
     enabled: true
@@ -762,7 +759,7 @@ middleware:
         keypairid: cloudfrontkeypairid
         duration: 3000s
         ipfilteredby: awsregion
-        awsregion: us-east-1, use-east-2
+        awsregion: us-east-1, us-east-2
         updatefrequency: 12h
         iprangesurl: https://ip-ranges.amazonaws.com/ip-ranges.json
 ```
