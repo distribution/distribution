@@ -13,6 +13,7 @@ import (
 	"os"
 	"path"
 	"sort"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -1026,16 +1027,16 @@ func (suite *DriverSuite) TestConcurrentFileStreams() {
 		suite.T().Log("Reducing number of streams to 8 for short mode")
 	}
 
+	// Keep every stream's file until all workers have finished reading.
+	dir := "/" + randomFilename(16)
+	defer suite.deletePath(dir)
+
+	size := int64(numStreams) * 1024 * 1024
 	var wg sync.WaitGroup
-
-	testStream := func(size int64) {
-		defer wg.Done()
-		suite.testFileStreams(size)
-	}
-
-	wg.Add(numStreams)
-	for i := numStreams; i > 0; i-- {
-		go testStream(int64(numStreams) * 1024 * 1024)
+	for i := range numStreams {
+		wg.Go(func() {
+			suite.testFileStreams(path.Join(dir, strconv.Itoa(i)), size)
+		})
 	}
 
 	wg.Wait()
@@ -1264,14 +1265,11 @@ func (s *DriverBenchmarkSuite) benchmarkDeleteFiles(b *testing.B, numFiles int64
 	}
 }
 
-func (suite *DriverSuite) testFileStreams(size int64) {
+func (suite *DriverSuite) testFileStreams(filename string, size int64) {
 	tf, err := os.CreateTemp("", "tf")
 	suite.Require().NoError(err)
 	defer os.Remove(tf.Name())
 	defer tf.Close()
-
-	filename := randomPath(32)
-	defer suite.deletePath(firstPart(filename))
 
 	contents := randomContents(size)
 
