@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io"
 	"path"
@@ -12,6 +13,8 @@ import (
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/registry/storage/cache/memory"
+	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
+	"github.com/distribution/distribution/v3/registry/storage/driver/filesystem"
 	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
 	"github.com/distribution/distribution/v3/testutil"
 	"github.com/distribution/reference"
@@ -85,6 +88,172 @@ func TestBlobUploadCloseAfterCancel(t *testing.T) {
 
 	if paths, err := driver.List(ctx, uploadPath); err == nil {
 		t.Fatalf("upload path recreated after cancel and close: %v", paths)
+	}
+}
+
+// TestBlobWriterCancel checks cancellation before and after the driver writer
+// has been closed or committed, including deferred and repeated cancellation.
+func TestBlobWriterCancel(t *testing.T) {
+	for _, backend := range []string{"inmemory", "filesystem"} {
+		for _, resumable := range []bool{false, true} {
+			for _, size := range []int{0, 1, 11} {
+				for _, state := range []string{"open", "closed", "wrong digest", "empty digest", "committed"} {
+					t.Run(fmt.Sprintf("%s/resumable=%t/size=%d/%s", backend, resumable, size, state), func(t *testing.T) {
+						ctx := context.Background()
+						var driver storagedriver.StorageDriver = inmemory.New()
+						if backend == "filesystem" {
+							driver = filesystem.New(filesystem.DriverParameters{RootDirectory: t.TempDir(), MaxThreads: 25})
+						}
+						var options []RegistryOption
+						if !resumable {
+							options = append(options, DisableDigestResumption)
+						}
+						cleanupDriver := &uploadCleanupErrorDriver{StorageDriver: driver}
+						reg, err := NewRegistry(ctx, cleanupDriver, options...)
+						if err != nil {
+							t.Fatal(err)
+						}
+						name, _ := reference.WithName("foo/bar")
+						repo, err := reg.Repository(ctx, name)
+						if err != nil {
+							t.Fatal(err)
+						}
+						bs := repo.Blobs(ctx)
+						upload, err := bs.Create(ctx)
+						if err != nil {
+							t.Fatal(err)
+						}
+						defer upload.Close()
+						bw := upload.(*blobWriter)
+						data := bytes.Repeat([]byte("x"), size)
+						if _, err := upload.Write(data); err != nil {
+							t.Fatal(err)
+						}
+						switch state {
+						case "closed":
+							if err := upload.Close(); err != nil {
+								t.Fatalf("Close: %v", err)
+							}
+						case "wrong digest", "empty digest", "committed":
+							dgst := digest.FromBytes(data)
+							switch state {
+							case "wrong digest":
+								dgst = digest.FromString("different payload")
+							case "empty digest":
+								dgst = ""
+							}
+							_, err := upload.Commit(ctx, v1.Descriptor{Digest: dgst})
+							if (err == nil) != (state == "committed") {
+								t.Fatalf("Commit in state %s: %v", state, err)
+							}
+						}
+						if state == "committed" {
+							cleanupDriver.err = errors.New("backend unavailable after Commit")
+						}
+						for range 2 {
+							if err := upload.Cancel(ctx); err != nil {
+								t.Errorf("Cancel returned %v", err)
+							}
+							if _, err := driver.Stat(ctx, path.Dir(bw.path)); err == nil {
+								t.Error("upload directory remains after Cancel")
+							} else if _, ok := err.(storagedriver.PathNotFoundError); !ok {
+								t.Fatalf("Stat upload directory: %v", err)
+							}
+							resumed, err := bs.Resume(ctx, upload.ID())
+							if resumed != nil {
+								_ = resumed.Close()
+							}
+							if err != distribution.ErrBlobUploadUnknown {
+								t.Errorf("Resume after Cancel returned %v, want ErrBlobUploadUnknown", err)
+							}
+							if state == "committed" {
+								got, err := bs.Get(ctx, digest.FromBytes(data))
+								if err != nil || !bytes.Equal(got, data) {
+									t.Errorf("committed blob after Cancel = %q, %v; want %q", got, err, data)
+								}
+							}
+						}
+					})
+				}
+			}
+		}
+	}
+}
+
+type cancelErrorWriter struct {
+	storagedriver.FileWriter
+	err error
+}
+
+func (w *cancelErrorWriter) Cancel(ctx context.Context) error {
+	if w.err != nil {
+		return w.err
+	}
+	return w.FileWriter.Cancel(ctx)
+}
+
+type uploadCleanupErrorDriver struct {
+	storagedriver.StorageDriver
+	err error
+}
+
+func (d *uploadCleanupErrorDriver) Delete(ctx context.Context, path string) error {
+	if d.err != nil {
+		return d.err
+	}
+	return d.StorageDriver.Delete(ctx, path)
+}
+
+func TestBlobWriterCancelError(t *testing.T) {
+	for _, stage := range []string{"driver cancellation", "resource cleanup"} {
+		t.Run(stage, func(t *testing.T) {
+			ctx := context.Background()
+			driver := &uploadCleanupErrorDriver{StorageDriver: inmemory.New()}
+			reg, err := NewRegistry(ctx, driver)
+			if err != nil {
+				t.Fatal(err)
+			}
+			name, _ := reference.WithName("foo/bar")
+			repo, err := reg.Repository(ctx, name)
+			if err != nil {
+				t.Fatal(err)
+			}
+			bs := repo.Blobs(ctx)
+			upload, err := bs.Create(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer upload.Close()
+			cancelErr := errors.New(stage + " failed")
+			bw := upload.(*blobWriter)
+			fw := &cancelErrorWriter{FileWriter: bw.fileWriter}
+			bw.fileWriter = fw
+			if stage == "driver cancellation" {
+				fw.err = cancelErr
+			} else {
+				driver.err = cancelErr
+			}
+			if err := upload.Cancel(ctx); err != cancelErr {
+				t.Errorf("Cancel error = %v, want %v", err, cancelErr)
+			}
+			if stage == "driver cancellation" {
+				// A driver that rejected cancellation must remain usable.
+				if _, err := upload.Write([]byte("x")); err != nil {
+					t.Fatalf("Write after failed Cancel: %v", err)
+				}
+			}
+			fw.err, driver.err = nil, nil
+			if err := upload.Cancel(ctx); err != nil {
+				t.Errorf("Cancel retry: %v", err)
+			}
+			if _, err := bs.Resume(ctx, upload.ID()); err != distribution.ErrBlobUploadUnknown {
+				t.Errorf("Resume after Cancel retry returned %v", err)
+			}
+			driver.err = errors.New("backend unavailable after cleanup")
+			if err := upload.Cancel(ctx); err != nil {
+				t.Errorf("Cancel after completed cleanup returned %v", err)
+			}
+		})
 	}
 }
 
