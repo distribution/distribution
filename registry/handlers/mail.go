@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"net"
 	"net/smtp"
 	"strings"
 )
@@ -15,11 +16,11 @@ type mailer struct {
 
 // sendMail allows users to send email, only if mail parameters is configured correctly.
 func (mail *mailer) sendMail(subject, message string) error {
-	addr := strings.Split(mail.Addr, ":")
-	if len(addr) != 2 {
+	// SplitHostPort also accepts IPv6 addresses such as "[2001:db8::1]:587".
+	host, _, err := net.SplitHostPort(mail.Addr)
+	if err != nil {
 		return errors.New("invalid Mail Address")
 	}
-	host := addr[0]
 	msg := []byte("To:" + strings.Join(mail.To, ";") +
 		"\r\nFrom: " + mail.From +
 		"\r\nSubject: " + subject +
@@ -31,7 +32,7 @@ func (mail *mailer) sendMail(subject, message string) error {
 		mail.Password,
 		host,
 	)
-	err := smtp.SendMail(
+	err = smtp.SendMail(
 		mail.Addr,
 		auth,
 		mail.From,
