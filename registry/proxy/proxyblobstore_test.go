@@ -3,10 +3,13 @@ package proxy
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -351,6 +354,90 @@ func TestProxyStoreETagRoundTrip(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+type emptyRemoteBlobStore struct {
+	distribution.BlobStore
+	openErr error
+}
+
+func (s emptyRemoteBlobStore) Open(context.Context, digest.Digest) (io.ReadSeekCloser, error) {
+	if s.openErr != nil {
+		return nil, s.openErr
+	}
+	return os.Open(os.DevNull)
+}
+
+func TestProxyStoreInflightBlobHeaders(t *testing.T) {
+	openErr := errors.New("cannot open upstream blob")
+	for _, tc := range []struct {
+		name    string
+		content string
+		openErr error
+		wantErr error
+	}{
+		{name: "open fails", content: "blob", openErr: openErr, wantErr: openErr},
+		{name: "first read fails", content: "blob", wantErr: io.EOF},
+		{name: "empty blob"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			te := makeTestEnv(t, "foo/bar")
+			remote := te.store.remoteStore
+			desc, err := remote.Put(te.ctx, "application/octet-stream", []byte(tc.content))
+			if err != nil {
+				t.Fatal(err)
+			}
+			te.store.remoteStore = emptyRemoteBlobStore{BlobStore: remote, openErr: tc.openErr}
+			mu.Lock()
+			inflight[desc.Digest] = struct{}{}
+			mu.Unlock()
+			t.Cleanup(func() {
+				mu.Lock()
+				delete(inflight, desc.Digest)
+				mu.Unlock()
+			})
+
+			w := httptest.NewRecorder()
+			w.Header().Set("ETag", `"original"`)
+			before := w.Header().Clone()
+			err = te.store.ServeBlob(te.ctx, w, httptest.NewRequest(http.MethodGet, "/", nil), desc.Digest)
+			if !errors.Is(err, tc.wantErr) {
+				t.Fatalf("ServeBlob error = %v, want %v", err, tc.wantErr)
+			}
+			if tc.wantErr != nil {
+				if !reflect.DeepEqual(w.Header(), before) {
+					t.Errorf("failed transfer changed headers from %v to %v", before, w.Header())
+				}
+				return
+			}
+			if w.Header().Get("Content-Length") != "0" || w.Header().Get("Docker-Content-Digest") != desc.Digest.String() {
+				t.Errorf("unexpected empty blob headers: %v", w.Header())
+			}
+		})
+	}
+}
+
+func TestProxyStoreCacheWriteErrorPreservesBlobHeaders(t *testing.T) {
+	te := makeTestEnv(t, "foo/bar")
+	populate(t, te, 1, 10, 1)
+	dgst := te.inRemote[0].Digest
+	w := httptest.NewRecorder()
+	reader, cache := io.Pipe()
+	reader.Close()
+	defer cache.Close()
+
+	_, err := te.store.copyContent(te.ctx, dgst, io.MultiWriter(w, cache), w.Header())
+	if !errors.Is(err, io.ErrClosedPipe) {
+		t.Fatalf("copyContent error = %v, want cache write failure", err)
+	}
+	resp := w.Result()
+	defer resp.Body.Close()
+	if digest.FromBytes(w.Body.Bytes()) != dgst || resp.Header.Get("Docker-Content-Digest") != dgst.String() {
+		t.Fatal("client did not receive the blob and its digest before the cache write failed")
+	}
+	if !reflect.DeepEqual(w.Header(), resp.Header) {
+		t.Errorf("cache write failure changed committed headers from %v to %v", resp.Header, w.Header())
 	}
 }
 

@@ -37,11 +37,31 @@ var inflight = make(map[digest.Digest]struct{})
 // mu protects inflight
 var mu sync.Mutex
 
-func setResponseHeaders(h http.Header, length int64, mediaType string, digest digest.Digest) {
-	h.Set("Content-Length", strconv.FormatInt(length, 10))
-	h.Set("Content-Type", mediaType)
+func setResponseHeaders(h http.Header, desc v1.Descriptor, digest digest.Digest) {
+	h.Set("Content-Length", strconv.FormatInt(desc.Size, 10))
+	h.Set("Content-Type", desc.MediaType)
 	h.Set("Docker-Content-Digest", digest.String())
 	h.Set("Etag", fmt.Sprintf(`"%s"`, digest))
+}
+
+// blobResponseWriter sets the blob headers on the first body write. Until then
+// the handler can still send an error response with its own headers.
+type blobResponseWriter struct {
+	dst    io.Writer
+	header http.Header
+	desc   v1.Descriptor
+	digest digest.Digest
+}
+
+func (w *blobResponseWriter) Write(p []byte) (int, error) {
+	if len(p) == 0 {
+		return 0, nil
+	}
+	if w.header != nil {
+		setResponseHeaders(w.header, w.desc, w.digest)
+		w.header = nil
+	}
+	return w.dst.Write(p)
 }
 
 func (pbs *proxyBlobStore) copyContent(ctx context.Context, dgst digest.Digest, writer io.Writer, h http.Header) (v1.Descriptor, error) {
@@ -50,8 +70,6 @@ func (pbs *proxyBlobStore) copyContent(ctx context.Context, dgst digest.Digest, 
 		return v1.Descriptor{}, err
 	}
 
-	setResponseHeaders(h, desc.Size, desc.MediaType, dgst)
-
 	remoteReader, err := pbs.remoteStore.Open(ctx, dgst)
 	if err != nil {
 		return v1.Descriptor{}, err
@@ -59,8 +77,8 @@ func (pbs *proxyBlobStore) copyContent(ctx context.Context, dgst digest.Digest, 
 
 	defer remoteReader.Close()
 
-	_, err = io.CopyN(writer, remoteReader, desc.Size)
-	if err != nil {
+	dst := &blobResponseWriter{dst: writer, header: h, desc: desc, digest: dgst}
+	if _, err := io.CopyN(dst, remoteReader, desc.Size); err != nil {
 		return v1.Descriptor{}, err
 	}
 
@@ -126,7 +144,10 @@ func (pbs *proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter,
 		// Will return the blob from the remote store directly.
 		// TODO Maybe we could reuse the these blobs are serving remotely and caching locally.
 		mu.Unlock()
-		_, err := pbs.copyContent(ctx, dgst, w, w.Header())
+		desc, err := pbs.copyContent(ctx, dgst, w, w.Header())
+		if err == nil && desc.Size == 0 {
+			setResponseHeaders(w.Header(), desc, dgst)
+		}
 		return err
 	}
 	inflight[dgst] = struct{}{}
@@ -188,6 +209,11 @@ func (pbs *proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter,
 		}
 	}
 
+	// An empty blob has no body write. Its headers can go out once the cache
+	// has accepted it and the request has succeeded.
+	if desc.Size == 0 {
+		setResponseHeaders(w.Header(), desc, dgst)
+	}
 	return nil
 }
 
