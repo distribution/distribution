@@ -725,7 +725,13 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 
 		context := app.context(w, r)
 
+		formOnEntry := r.MultipartForm
 		defer func() {
+			// net/http cannot clean up a form parsed on our request copy.
+			if form := r.MultipartForm; form != nil && form != formOnEntry {
+				_ = form.RemoveAll()
+			}
+
 			// Automated error response handling here. Handlers may return their
 			// own errors if they need different behavior (such as range errors
 			// for layer upload).

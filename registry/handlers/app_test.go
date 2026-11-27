@@ -5,7 +5,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -135,6 +137,44 @@ func TestAppDispatcher(t *testing.T) {
 		if resp.StatusCode != http.StatusOK {
 			t.Fatalf("unexpected status code: %v != %v", resp.StatusCode, http.StatusOK)
 		}
+	}
+}
+
+func TestBlobUploadRemovesMultipartFiles(t *testing.T) {
+	// FormValue spills file parts larger than 32 MiB to disk.
+	body := "--test\r\n" + `Content-Disposition: form-data; name="file"; filename="blob"` +
+		"\r\n\r\n" + strings.Repeat("x", (32<<20)+1) + "\r\n--test--\r\n"
+	for _, tc := range []struct {
+		name   string
+		auth   configuration.Auth
+		status int
+	}{
+		{"rejected", configuration.Auth{"silly": {"realm": "test", "service": "test"}}, http.StatusUnauthorized},
+		{"accepted", nil, http.StatusAccepted},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			t.Setenv("TMPDIR", dir)
+			t.Setenv("TMP", dir) // Windows
+			app := NewApp(t.Context(), &configuration.Configuration{
+				Storage: configuration.Storage{"inmemory": nil},
+				Auth:    tc.auth,
+			})
+			req := httptest.NewRequest(http.MethodPost, "/v2/probe/blobs/uploads/", strings.NewReader(body))
+			req.Header.Set("Content-Type", "multipart/form-data; boundary=test")
+			rec := httptest.NewRecorder()
+			app.ServeHTTP(rec, req)
+			if rec.Code != tc.status {
+				t.Fatalf("status = %d, want %d", rec.Code, tc.status)
+			}
+			files, err := os.ReadDir(dir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(files) != 0 {
+				t.Errorf("temporary files after request: %v", files)
+			}
+		})
 	}
 }
 
