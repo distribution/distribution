@@ -20,11 +20,7 @@ func (mail *mailer) sendMail(subject, message string) error {
 		return errors.New("invalid Mail Address")
 	}
 	host := addr[0]
-	msg := []byte("To:" + strings.Join(mail.To, ";") +
-		"\r\nFrom: " + mail.From +
-		"\r\nSubject: " + subject +
-		"\r\nContent-Type: text/plain\r\n\r\n" +
-		message)
+	msg := mail.message(subject, message)
 	auth := smtp.PlainAuth(
 		"",
 		mail.Username,
@@ -42,4 +38,14 @@ func (mail *mailer) sendMail(subject, message string) error {
 		return err
 	}
 	return nil
+}
+
+// message builds the mail sent by sendMail. RFC 5322 separates the addresses
+// of the To header with commas.
+func (mail *mailer) message(subject, body string) []byte {
+	return []byte("To: " + strings.Join(mail.To, ", ") +
+		"\r\nFrom: " + mail.From +
+		"\r\nSubject: " + subject +
+		"\r\nContent-Type: text/plain\r\n\r\n" +
+		body)
 }
