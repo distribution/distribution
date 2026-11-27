@@ -842,7 +842,7 @@ func TestBlobAPIFilesystem(t *testing.T) {
 	testBlobAPI(t, env, makeBlobArgs(t))
 }
 
-// The registry answers a GET with BLOB_UNKNOWN when the blob file is missing
+// The registry answers GET and HEAD with BLOB_UNKNOWN when the blob file is missing
 // on disk and the blob descriptor cache still has its descriptor.
 func TestBlobAPIFilesystemMissingFile(t *testing.T) {
 	root := t.TempDir()
@@ -867,7 +867,13 @@ func TestBlobAPIFilesystemMissingFile(t *testing.T) {
 	if err := os.RemoveAll(filepath.Join(root, "docker/registry/v2/blobs")); err != nil {
 		t.Fatal(err)
 	}
-	resp, err := http.Get(blobURL)
+	resp, err := http.Head(blobURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	checkResponse(t, "checking a blob whose file is missing", resp, http.StatusNotFound)
+	resp, err = http.Get(blobURL)
 	if err != nil {
 		t.Fatal(err)
 	}
