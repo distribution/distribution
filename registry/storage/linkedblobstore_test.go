@@ -1,15 +1,23 @@
 package storage
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"reflect"
 	"sort"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/distribution/distribution/v3"
+	"github.com/distribution/distribution/v3/manifest/manifestlist"
+	"github.com/distribution/distribution/v3/manifest/schema2"
+	"github.com/distribution/distribution/v3/registry/storage/cache/memory"
+	"github.com/distribution/distribution/v3/registry/storage/driver"
+	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
 	"github.com/distribution/distribution/v3/testutil"
 	"github.com/distribution/reference"
 	"github.com/opencontainers/go-digest"
@@ -262,4 +270,116 @@ func (f statCrossMountCreateOption) Apply(v any) error {
 	opts.Mount.Stat = &f.desc
 
 	return nil
+}
+
+// putErrorDriver fails a selected write before changing storage.
+type putErrorDriver struct {
+	driver.StorageDriver
+	failSuffix string
+	err        error
+}
+
+func (d *putErrorDriver) PutContent(ctx context.Context, path string, content []byte) error {
+	if d.err != nil && strings.HasSuffix(path, d.failSuffix) {
+		return d.err
+	}
+	return d.StorageDriver.PutContent(ctx, path, content)
+}
+
+func TestLinkedBlobStorePutFailure(t *testing.T) {
+	for _, cached := range []bool{false, true} {
+		for _, mediaType := range []string{
+			"application/octet-stream",
+			schema2.MediaTypeManifest,
+			v1.MediaTypeImageManifest,
+			manifestlist.MediaTypeManifestList,
+			v1.MediaTypeImageIndex,
+		} {
+			for _, failSuffix := range []string{"/data", "/link"} {
+				t.Run(fmt.Sprintf("cached=%t/%s/fail=%s", cached, mediaType, failSuffix), func(t *testing.T) {
+					ctx := context.Background()
+					writeErr := errors.New("storage write failed")
+					drvr := &putErrorDriver{StorageDriver: inmemory.New(), failSuffix: failSuffix, err: writeErr}
+					var options []RegistryOption
+					var repoCache distribution.BlobDescriptorService
+					if cached {
+						provider := memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)
+						var err error
+						repoCache, err = provider.RepositoryScoped("test/put")
+						if err != nil {
+							t.Fatal(err)
+						}
+						options = append(options, BlobDescriptorCacheProvider(provider))
+					}
+					repo := makeRepository(t, createRegistry(t, drvr, options...), "test/put")
+					blobs := repo.Blobs(ctx)
+					payload := []byte("small blob")
+					put := func() (v1.Descriptor, error) { return blobs.Put(ctx, mediaType, payload) }
+					get := func(dgst digest.Digest) ([]byte, error) { return blobs.Get(ctx, dgst) }
+					var manifests distribution.ManifestService
+					if mediaType != "application/octet-stream" {
+						var err error
+						manifests, err = repo.Manifests(ctx, SkipLayerVerification())
+						if err != nil {
+							t.Fatal(err)
+						}
+						switch mediaType {
+						case manifestlist.MediaTypeManifestList, v1.MediaTypeImageIndex:
+							payload = fmt.Appendf(nil, `{"schemaVersion":2,"mediaType":%q,"manifests":[]}`, mediaType)
+						default:
+							payload = fmt.Appendf(nil, `{"schemaVersion":2,"mediaType":%q,"config":{"mediaType":%q,"size":2,"digest":%q},"layers":[]}`, mediaType, v1.MediaTypeImageConfig, digest.FromString("{}"))
+						}
+						manifest, _, err := distribution.UnmarshalManifest(mediaType, payload)
+						if err != nil {
+							t.Fatal(err)
+						}
+						put = func() (v1.Descriptor, error) {
+							_, err := manifests.Put(ctx, manifest)
+							return v1.Descriptor{}, err
+						}
+						get = func(dgst digest.Digest) ([]byte, error) {
+							m, err := manifests.Get(ctx, dgst)
+							if err != nil {
+								return nil, err
+							}
+							_, p, err := m.Payload()
+							return p, err
+						}
+					}
+					dgst := digest.FromBytes(payload)
+					desc, err := put()
+					if !errors.Is(err, writeErr) {
+						t.Fatalf("Put error = %v, want %v", err, writeErr)
+					}
+					if !reflect.DeepEqual(desc, v1.Descriptor{}) {
+						t.Errorf("failed Put returned descriptor %#v", desc)
+					}
+					drvr.err = nil
+					if _, err := blobs.Stat(ctx, dgst); err != distribution.ErrBlobUnknown {
+						t.Errorf("Stat after failed Put = %v, want ErrBlobUnknown", err)
+					}
+					if manifests != nil {
+						if exists, err := manifests.Exists(ctx, dgst); err != nil || exists {
+							t.Errorf("Exists after failed Put = %t, %v, want false, nil", exists, err)
+						}
+					}
+					if p, err := get(dgst); err == nil {
+						t.Errorf("Get after failed Put returned %q", p)
+					}
+					// Retry on the same owner, including the already-written global blob.
+					if _, err := put(); err != nil {
+						t.Fatal(err)
+					}
+					if cached {
+						if desc, err := repoCache.Stat(ctx, dgst); err != nil || desc.Digest != dgst {
+							t.Errorf("successful Put not cached: %#v, %v", desc, err)
+						}
+					}
+					if p, err := get(dgst); err != nil || !bytes.Equal(p, payload) {
+						t.Errorf("Get after retry = %q, %v, want %q", p, err, payload)
+					}
+				})
+			}
+		}
+	}
 }
