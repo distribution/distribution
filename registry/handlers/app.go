@@ -874,7 +874,10 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 
 	if repo != "" {
 		accessRecords = appendAccessRecords(accessRecords, r.Method, repo)
-		if fromRepo := r.FormValue("from"); fromRepo != "" {
+		// from is a query parameter. FormValue would parse a multipart
+		// body onto this copied request, and the temp files would not
+		// be removed when the original request is cleaned up.
+		if fromRepo := r.URL.Query().Get("from"); fromRepo != "" {
 			// mounting a blob from one repository to another requires pull (GET)
 			// access to the source repository.
 			accessRecords = appendAccessRecords(accessRecords, http.MethodGet, fromRepo)
