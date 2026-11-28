@@ -67,8 +67,12 @@ type blobUploadHandler struct {
 func (buh *blobUploadHandler) StartBlobUpload(w http.ResponseWriter, r *http.Request) {
 	var options []distribution.BlobCreateOption
 
-	fromRepo := r.FormValue("from")
-	mountDigest := r.FormValue("mount")
+	// from and mount are query parameters. FormValue parses a multipart
+	// body, which leaks its temp files: ServeHTTP copies the request
+	// before this runs, so net/http never sees the form.
+	q := r.URL.Query()
+	fromRepo := q.Get("from")
+	mountDigest := q.Get("mount")
 
 	if mountDigest != "" && fromRepo != "" {
 		opt, err := buh.createBlobMountOption(fromRepo, mountDigest)
@@ -215,7 +219,7 @@ func (buh *blobUploadHandler) PutBlobUploadComplete(w http.ResponseWriter, r *ht
 		}
 	}
 
-	dgstStr := r.FormValue("digest") // TODO(stevvooe): Support multiple digest parameters!
+	dgstStr := r.URL.Query().Get("digest") // TODO(stevvooe): Support multiple digest parameters!
 
 	if dgstStr == "" {
 		// no digest? return error, but allow retry.
@@ -295,7 +299,7 @@ func (buh *blobUploadHandler) CancelBlobUpload(w http.ResponseWriter, r *http.Re
 }
 
 func (buh *blobUploadHandler) ResumeBlobUpload(ctx *Context, r *http.Request) http.Handler {
-	state, err := hmacKey(ctx.Config.HTTP.Secret).unpackUploadState(r.FormValue("_state"))
+	state, err := hmacKey(ctx.Config.HTTP.Secret).unpackUploadState(r.URL.Query().Get("_state"))
 	if err != nil {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			dcontext.GetLogger(ctx).Infof("error resolving upload: %v", err)
