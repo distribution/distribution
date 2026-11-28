@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/configuration"
@@ -3056,6 +3057,66 @@ func TestRegistryAsCacheMutationAPIs(t *testing.T) {
 	}
 	defer resp.Body.Close()
 	checkResponse(t, "deleting blob from cache", resp, errcode.ErrorCodeUnsupported.Descriptor().HTTPStatusCode)
+}
+
+func TestProxyBlobReadError(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		size int
+	}{
+		{name: "first read fails", size: 4096},
+		{name: "empty body fails digest verification", size: 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dgst := digest.FromString(strings.Repeat("x", 4096))
+			blobPath := "/v2/foo/bar/blobs/" + dgst.String()
+			origin := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/v2/" {
+					return
+				}
+				if r.URL.Path != blobPath {
+					http.NotFound(w, r)
+					return
+				}
+				// The origin has metadata for the blob but sends an empty body.
+				w.Header().Set("Content-Length", strconv.Itoa(tc.size))
+				w.Header().Set("Content-Type", "application/octet-stream")
+				w.Header().Set("Docker-Content-Digest", dgst.String())
+			}))
+			defer origin.Close()
+
+			config := &configuration.Configuration{
+				Storage: configuration.Storage{
+					"inmemory":    {},
+					"maintenance": {"uploadpurging": map[any]any{"enabled": false}},
+				},
+				Proxy: configuration.Proxy{RemoteURL: origin.URL, TTL: new(time.Duration)},
+			}
+			config.HTTP.Headers = headerConfig
+			env := newTestEnvWithConfig(t, config)
+			defer env.app.Shutdown()
+			defer env.Shutdown()
+
+			resp, err := env.server.Client().Get(env.server.URL + blobPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer resp.Body.Close()
+			checkResponse(t, tc.name, resp, http.StatusInternalServerError)
+			_, body, _ := checkBodyHasErrorCodes(t, tc.name, resp, errcode.ErrorCodeUnknown)
+			if resp.ContentLength != int64(len(body)) {
+				t.Errorf("Content-Length = %d for %d bytes of JSON", resp.ContentLength, len(body))
+			}
+			if got := resp.Header.Get("Content-Type"); got != "application/json" {
+				t.Errorf("Content-Type = %q, want application/json", got)
+			}
+			for _, header := range []string{"ETag", "Docker-Content-Digest"} {
+				if got := resp.Header.Get(header); got != "" {
+					t.Errorf("unexpected %s on error response: %q", header, got)
+				}
+			}
+		})
+	}
 }
 
 func TestProxyManifestGetByTag(t *testing.T) {
