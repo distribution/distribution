@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"slices"
 
 	"github.com/distribution/distribution/v3/internal/client/auth"
 	"github.com/distribution/distribution/v3/internal/client/auth/challenge"
@@ -80,7 +81,7 @@ func getAuthURLs(remoteURL string) ([]string, error) {
 	defer resp.Body.Close()
 
 	for _, c := range challenge.ResponseChallenges(resp) {
-		if strings.EqualFold(c.Scheme, "bearer") && realmAllowed(remote, c.Parameters["realm"]) {
+		if strings.EqualFold(c.Scheme, "bearer") && realmAllowed(remote, c.Parameters["realm"], []string{}) {
 			authURLs = append(authURLs, c.Parameters["realm"])
 		}
 	}
@@ -88,7 +89,7 @@ func getAuthURLs(remoteURL string) ([]string, error) {
 	return authURLs, nil
 }
 
-func realmAllowed(remote *url.URL, realm string) bool {
+func realmAllowed(remote *url.URL, realm string, trustedRealmHosts []string) bool {
 	realmURL, err := url.Parse(realm)
 	if err != nil {
 		return false
@@ -98,6 +99,10 @@ func realmAllowed(remote *url.URL, realm string) bool {
 	}
 
 	if strings.EqualFold(remote.Host, realmURL.Host) {
+		return true
+	}
+
+	if slices.Contains(trustedRealmHosts, realmURL.Host) {
 		return true
 	}
 
