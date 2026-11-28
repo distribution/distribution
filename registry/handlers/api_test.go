@@ -1474,6 +1474,112 @@ type manifestArgs struct {
 	dgst      digest.Digest
 }
 
+func TestPutManifestInvalidReferenceDigest(t *testing.T) {
+	env := newTestEnv(t, false)
+	defer env.Shutdown()
+
+	repo, err := reference.WithName("foo/invalid-digest")
+	checkErr(t, err, "creating repository name")
+	ref, err := reference.WithTag(repo, "latest")
+	checkErr(t, err, "creating tag reference")
+	manifestURL, err := env.builder.BuildManifestURL(ref)
+	checkErr(t, err, "building manifest URL")
+
+	for _, mediaType := range []string{
+		v1.MediaTypeImageIndex,
+		manifestlist.MediaTypeManifestList,
+		v1.MediaTypeImageManifest,
+		schema2.MediaTypeManifest,
+	} {
+		for _, dgst := range []digest.Digest{
+			"notadigest",
+			"sha256:abcd",
+			"md5:d41d8cd98f00b204e9800998ecf8427e",
+		} {
+			descriptor := v1.Descriptor{Digest: dgst, Size: 1}
+			var manifest any
+			switch mediaType {
+			case v1.MediaTypeImageIndex, manifestlist.MediaTypeManifestList:
+				manifest = v1.Index{
+					Versioned: specs.Versioned{SchemaVersion: 2},
+					MediaType: mediaType,
+					Manifests: []v1.Descriptor{descriptor},
+				}
+			default:
+				manifest = v1.Manifest{
+					Versioned: specs.Versioned{SchemaVersion: 2},
+					MediaType: mediaType,
+					Config:    descriptor,
+				}
+			}
+
+			msg := fmt.Sprintf("putting %s manifest with reference %s", mediaType, dgst)
+			resp := putManifest(t, msg, manifestURL, mediaType, manifest)
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusBadRequest {
+				t.Fatalf("unexpected status %s: expected %d, got %d", msg, http.StatusBadRequest, resp.StatusCode)
+			}
+			checkBodyHasErrorCodes(t, msg, resp, errcode.ErrorCodeDigestInvalid, errcode.ErrorCodeManifestBlobUnknown)
+		}
+	}
+}
+
+func TestPutManifestInvalidStoredDigest(t *testing.T) {
+	env := newTestEnv(t, false)
+	defer env.Shutdown()
+
+	repo, err := reference.WithName("foo/invalid-stored-digest")
+	checkErr(t, err, "creating repository name")
+	ref, err := reference.WithTag(repo, "latest")
+	checkErr(t, err, "creating tag reference")
+	manifestURL, err := env.builder.BuildManifestURL(ref)
+	checkErr(t, err, "building manifest URL")
+
+	for _, mediaType := range []string{
+		v1.MediaTypeImageIndex,
+		manifestlist.MediaTypeManifestList,
+		v1.MediaTypeImageManifest,
+		schema2.MediaTypeManifest,
+	} {
+		for _, storedDigest := range []string{
+			"notadigest",
+			"sha256:abcd",
+			"md5:d41d8cd98f00b204e9800998ecf8427e",
+		} {
+			t.Run(mediaType+"/"+storedDigest, func(t *testing.T) {
+				descriptor := v1.Descriptor{Digest: digest.FromString("child"), Size: 1}
+				var manifest any
+				var linkPath string
+				switch mediaType {
+				case v1.MediaTypeImageIndex, manifestlist.MediaTypeManifestList:
+					manifest = v1.Index{
+						Versioned: specs.Versioned{SchemaVersion: 2},
+						MediaType: mediaType,
+						Manifests: []v1.Descriptor{descriptor},
+					}
+					linkPath = path.Join("/docker/registry/v2/repositories", repo.Name(), "_manifests/revisions/sha256", descriptor.Digest.Encoded(), "link")
+				default:
+					manifest = v1.Manifest{
+						Versioned: specs.Versioned{SchemaVersion: 2},
+						MediaType: mediaType,
+						Config:    descriptor,
+					}
+					linkPath = path.Join("/docker/registry/v2/repositories", repo.Name(), "_layers/sha256", descriptor.Digest.Encoded(), "link")
+				}
+				checkErr(t, env.app.driver.PutContent(env.ctx, linkPath, []byte(storedDigest)), "writing damaged link")
+
+				msg := "putting manifest with damaged stored link"
+				resp := putManifest(t, msg, manifestURL, mediaType, manifest)
+				defer resp.Body.Close()
+				if resp.StatusCode != http.StatusInternalServerError {
+					t.Fatalf("unexpected status for damaged stored link: expected %d, got %d", http.StatusInternalServerError, resp.StatusCode)
+				}
+				checkBodyHasErrorCodes(t, msg, resp, errcode.ErrorCodeUnknown, errcode.ErrorCodeManifestBlobUnknown)
+			})
+		}
+	}
+}
+
 func TestManifestAPI(t *testing.T) {
 	schema2Repo, _ := reference.WithName("foo/schema2")
 
