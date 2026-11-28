@@ -185,8 +185,10 @@ func TestBlobWriterCancel(t *testing.T) {
 type stagedUploadDriver struct {
 	storagedriver.StorageDriver
 	staged       map[string]int64
+	writers      []*stagedUploadWriter
 	cancelClosed bool
 	reopenErr    error
+	cancelErr    error
 }
 
 func (d *stagedUploadDriver) Writer(ctx context.Context, path string, appendMode bool) (storagedriver.FileWriter, error) {
@@ -197,13 +199,17 @@ func (d *stagedUploadDriver) Writer(ctx context.Context, path string, appendMode
 	if err != nil {
 		return nil, err
 	}
-	return &stagedUploadWriter{FileWriter: w, driver: d, path: path}, nil
+	writer := &stagedUploadWriter{FileWriter: w, driver: d, path: path, reopened: appendMode}
+	d.writers = append(d.writers, writer)
+	return writer, nil
 }
 
 type stagedUploadWriter struct {
 	storagedriver.FileWriter
-	driver *stagedUploadDriver
-	path   string
+	driver   *stagedUploadDriver
+	path     string
+	reopened bool
+	closes   int
 }
 
 func (w *stagedUploadWriter) Write(p []byte) (int, error) {
@@ -212,7 +218,15 @@ func (w *stagedUploadWriter) Write(p []byte) (int, error) {
 	return n, err
 }
 
+func (w *stagedUploadWriter) Close() error {
+	w.closes++
+	return w.FileWriter.Close()
+}
+
 func (w *stagedUploadWriter) Cancel(ctx context.Context) error {
+	if w.reopened && w.driver.cancelErr != nil {
+		return w.driver.cancelErr
+	}
 	var err error
 	if w.driver.cancelClosed {
 		// Like GCS, allow cancellation even after the writer has closed.
@@ -236,11 +250,22 @@ func (w *stagedUploadWriter) Commit(ctx context.Context) error {
 }
 
 func TestBlobWriterCancelStagedData(t *testing.T) {
+	errUnavailable := errors.New("storage unavailable")
 	for _, resumable := range []bool{false, true} {
-		for _, cancelClosed := range []bool{false, true} {
-			t.Run(fmt.Sprintf("resumable=%t/cancelClosed=%t", resumable, cancelClosed), func(t *testing.T) {
+		for _, tc := range []struct {
+			name         string
+			cancelClosed bool
+			reopenErr    error
+			cancelErr    error
+		}{
+			{name: "closed"},
+			{name: "reopen error", reopenErr: errUnavailable},
+			{name: "cancel error", cancelErr: errUnavailable},
+			{name: "cancel closed", cancelClosed: true, reopenErr: errUnavailable},
+		} {
+			t.Run(fmt.Sprintf("resumable=%t/%s", resumable, tc.name), func(t *testing.T) {
 				ctx := context.Background()
-				driver := &stagedUploadDriver{StorageDriver: inmemory.New(), staged: make(map[string]int64), cancelClosed: cancelClosed}
+				driver := &stagedUploadDriver{StorageDriver: inmemory.New(), staged: make(map[string]int64), cancelClosed: tc.cancelClosed}
 				var options []RegistryOption
 				if !resumable {
 					options = append(options, DisableDigestResumption)
@@ -267,14 +292,30 @@ func TestBlobWriterCancelStagedData(t *testing.T) {
 				if err := upload.Close(); err != nil {
 					t.Fatal(err)
 				}
-				if cancelClosed {
-					driver.reopenErr = errors.New("resuming is unavailable, cancellation is supported")
+				driver.reopenErr, driver.cancelErr = tc.reopenErr, tc.cancelErr
+				wantErr := errUnavailable
+				if tc.cancelClosed || (tc.reopenErr == nil && tc.cancelErr == nil) {
+					wantErr = nil
 				}
-				if err := upload.Cancel(ctx); err != nil {
-					if cancelClosed {
+				writers := len(driver.writers)
+				err = upload.Cancel(ctx)
+				if err != wantErr {
+					if tc.cancelClosed {
 						t.Errorf("Cancel on a closed-capable writer returned %v", err)
+					} else {
+						t.Errorf("Cancel error = %v, want %v", err, wantErr)
 					}
-					driver.reopenErr = nil
+				}
+				for _, writer := range driver.writers[writers:] {
+					if writer.closes != 1 {
+						t.Errorf("reopened writer closed %d times, want 1", writer.closes)
+					}
+				}
+				if err != nil {
+					if staged := driver.staged[upload.(*blobWriter).path]; staged != int64(len(data)) {
+						t.Errorf("staged bytes after failed Cancel = %d, want %d", staged, len(data))
+					}
+					driver.reopenErr, driver.cancelErr = nil, nil
 					resumed, resumeErr := bs.Resume(ctx, upload.ID())
 					if resumeErr != nil {
 						t.Fatalf("Resume after failed Cancel: %v (Cancel: %v)", resumeErr, err)
