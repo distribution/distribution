@@ -1,10 +1,14 @@
 package base
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"testing"
 	"time"
+
+	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 )
 
 func TestRegulatorEnterExit(t *testing.T) {
@@ -61,6 +65,46 @@ func TestRegulatorEnterExit(t *testing.T) {
 
 		if r.available != limit {
 			t.Fatalf("r.available: got %d, want %d", r.available, limit)
+		}
+	}
+}
+
+type nameListDriver struct {
+	storagedriver.StorageDriver
+	list func(context.Context, string) ([]string, error)
+}
+
+func (d *nameListDriver) Name() string { return "names" }
+
+func (d *nameListDriver) ListNames(ctx context.Context, path string, _ storagedriver.StorageDriver) ([]string, error) {
+	return d.list(ctx, path)
+}
+
+func TestRegulatorListNames(t *testing.T) {
+	var r *regulator
+	wantErr := errors.New("listing failed")
+	d := &nameListDriver{list: func(context.Context, string) ([]string, error) {
+		r.L.Lock()
+		defer r.L.Unlock()
+		if r.available != 0 {
+			t.Error("ListNames did not acquire a regulator permit")
+		}
+		return nil, wantErr
+	}}
+	r = NewRegulator(d, 1).(*regulator)
+	if got, err := r.ListNames(context.Background(), "/tags", d); got != nil {
+		t.Fatalf("unsupported owner returned %q", got)
+	} else if _, ok := err.(storagedriver.ErrUnsupportedMethod); !ok {
+		t.Fatalf("unsupported owner: %v", err)
+	}
+
+	for range 2 {
+		_, err := storagedriver.ListNames(context.Background(), r, "/tags")
+		if err != wantErr {
+			t.Fatalf("got %v, want %v", err, wantErr)
+		}
+		if r.available != 1 {
+			t.Fatal("ListNames did not release its permit after an error")
 		}
 	}
 }

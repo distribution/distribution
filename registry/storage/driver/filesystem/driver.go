@@ -71,6 +71,15 @@ type Driver struct {
 	baseEmbed
 }
 
+// ListNames returns direct descendant names in a caller-owned slice, with the
+// same validation, instrumentation and concurrency limit as List.
+func (d *Driver) ListNames(ctx context.Context, path string, owner storagedriver.StorageDriver) ([]string, error) {
+	if owner != d {
+		return nil, storagedriver.ErrUnsupportedMethod{DriverName: driverName}
+	}
+	return base.ListNames(ctx, &d.baseEmbed.Base, path)
+}
+
 // FromParameters constructs a new Driver with a given parameters map
 // Optional Parameters:
 // - rootdirectory
@@ -296,6 +305,23 @@ func (d *driver) Stat(ctx context.Context, subPath string) (storagedriver.FileIn
 // List returns a list of the objects that are direct descendants of the given
 // path.
 func (d *driver) List(ctx context.Context, subPath string) ([]string, error) {
+	fileNames, err := d.ListNames(ctx, subPath, d)
+	if err != nil {
+		return nil, err
+	}
+
+	keys := make([]string, 0, len(fileNames))
+	for _, fileName := range fileNames {
+		keys = append(keys, path.Join(subPath, fileName))
+	}
+	return keys, nil
+}
+
+// ListNames returns direct descendant names in a caller-owned slice.
+func (d *driver) ListNames(ctx context.Context, subPath string, owner storagedriver.StorageDriver) ([]string, error) {
+	if owner != d {
+		return nil, storagedriver.ErrUnsupportedMethod{DriverName: driverName}
+	}
 	fullPath := d.fullPath(subPath)
 
 	dir, err := os.Open(fullPath)
@@ -313,12 +339,7 @@ func (d *driver) List(ctx context.Context, subPath string) ([]string, error) {
 		return nil, err
 	}
 
-	keys := make([]string, 0, len(fileNames))
-	for _, fileName := range fileNames {
-		keys = append(keys, path.Join(subPath, fileName))
-	}
-
-	return keys, nil
+	return fileNames, nil
 }
 
 // Move moves an object stored at sourcePath to destPath, removing the original

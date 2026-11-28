@@ -236,6 +236,31 @@ func (base *Base) List(ctx context.Context, path string) ([]string, error) {
 	return str, base.setDriverName(e)
 }
 
+// ListNames wraps name-only listing with the same checks and instrumentation as
+// Base.List. Drivers must explicitly expose this operation; adding it to Base's
+// method set would opt in drivers that embed Base but override List.
+func ListNames(ctx context.Context, base *Base, path string) ([]string, error) {
+	attrs := []attribute.KeyValue{
+		attribute.String(tracing.AttributePrefix+"storage.driver.name", base.Name()),
+		attribute.String(tracing.AttributePrefix+"storage.path", path),
+	}
+	ctx, span := tracer.Start(
+		ctx,
+		"List",
+		trace.WithAttributes(attrs...))
+
+	defer span.End()
+
+	if !storagedriver.PathRegexp.MatchString(path) && path != "/" {
+		return nil, storagedriver.InvalidPathError{Path: path, DriverName: base.StorageDriver.Name()}
+	}
+
+	start := time.Now()
+	str, e := storagedriver.ListNames(ctx, base.StorageDriver, path)
+	storageAction.WithValues(base.Name(), "List").UpdateSince(start)
+	return str, base.setDriverName(e)
+}
+
 // Move wraps Move of underlying storage driver.
 func (base *Base) Move(ctx context.Context, sourcePath string, destPath string) error {
 	attrs := []attribute.KeyValue{

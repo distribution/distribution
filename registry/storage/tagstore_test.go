@@ -2,11 +2,14 @@ package storage
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"testing"
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/manifest/schema2"
+	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
+	"github.com/distribution/distribution/v3/registry/storage/driver/filesystem"
 	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
 	"github.com/distribution/reference"
 	digest "github.com/opencontainers/go-digest"
@@ -23,8 +26,12 @@ type tagsTestEnv struct {
 }
 
 func testTagStore(t *testing.T) *tagsTestEnv {
+	return testTagStoreWithDriver(t, inmemory.New())
+}
+
+func testTagStoreWithDriver(t testing.TB, d storagedriver.StorageDriver) *tagsTestEnv {
+	t.Helper()
 	ctx := context.Background()
-	d := inmemory.New()
 	reg, err := NewRegistry(ctx, d, EnableDelete)
 	if err != nil {
 		t.Fatal(err)
@@ -138,7 +145,26 @@ func TestTagStoreUnTag_DeleteDisabled(t *testing.T) {
 }
 
 func TestTagStoreAll(t *testing.T) {
-	env := testTagStore(t)
+	testTagStoreAll(t, inmemory.New())
+}
+
+func TestTagStoreFilesystem(t *testing.T) {
+	for name, test := range map[string]func(*testing.T, storagedriver.StorageDriver){
+		"All":    testTagStoreAll,
+		"Lookup": testTagLookup,
+	} {
+		t.Run(name, func(t *testing.T) {
+			d, err := filesystem.FromParameters(map[string]any{"rootdirectory": t.TempDir()})
+			if err != nil {
+				t.Fatal(err)
+			}
+			test(t, d)
+		})
+	}
+}
+
+func testTagStoreAll(t *testing.T, d storagedriver.StorageDriver) {
+	env := testTagStoreWithDriver(t, d)
 	tagStore := env.ts
 	ctx := env.ctx
 
@@ -183,8 +209,49 @@ func TestTagStoreAll(t *testing.T) {
 	}
 }
 
+func BenchmarkTagStoreAll(b *testing.B) {
+	for _, count := range []int{0, 1, 26} {
+		b.Run(fmt.Sprintf("Tags%d", count), func(b *testing.B) {
+			ctx := context.Background()
+			d, err := filesystem.FromParameters(map[string]any{"rootdirectory": b.TempDir()})
+			if err != nil {
+				b.Fatal(err)
+			}
+			tags := testTagStoreWithDriver(b, d).ts
+			const alpha = "abcdefghijklmnopqrstuvwxyz"
+			desc := v1.Descriptor{Digest: "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"}
+			for i := range max(count, 1) {
+				tag := string(alpha[i])
+				if err := tags.Tag(ctx, tag, desc); err != nil {
+					b.Fatal(err)
+				}
+			}
+			if count == 0 {
+				if err := tags.Untag(ctx, "a"); err != nil {
+					b.Fatal(err)
+				}
+			}
+
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				all, err := tags.All(ctx)
+				if err != nil {
+					b.Fatal(err)
+				}
+				if len(all) != count {
+					b.Fatalf("got %d tags, want %d", len(all), count)
+				}
+			}
+		})
+	}
+}
+
 func TestTagLookup(t *testing.T) {
-	env := testTagStore(t)
+	testTagLookup(t, inmemory.New())
+}
+
+func testTagLookup(t *testing.T, d storagedriver.StorageDriver) {
+	env := testTagStoreWithDriver(t, d)
 	tagStore := env.ts
 	ctx := env.ctx
 

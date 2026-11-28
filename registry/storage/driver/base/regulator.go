@@ -154,6 +154,17 @@ func (r *regulator) List(ctx context.Context, path string) ([]string, error) {
 	return r.StorageDriver.List(ctx, path)
 }
 
+// ListNames regulates name-only listings just like List.
+func (r *regulator) ListNames(ctx context.Context, path string, owner storagedriver.StorageDriver) ([]string, error) {
+	if owner != r {
+		return nil, storagedriver.ErrUnsupportedMethod{DriverName: r.Name()}
+	}
+	r.enter()
+	defer r.exit()
+
+	return storagedriver.ListNames(ctx, r.StorageDriver, path)
+}
+
 // Move moves an object stored at sourcePath to destPath, removing the
 // original object.
 // Note: This may be no more efficient than a copy followed by a delete for
