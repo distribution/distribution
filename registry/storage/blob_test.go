@@ -257,8 +257,10 @@ func TestBlobWriterCancelStagedData(t *testing.T) {
 			cancelClosed bool
 			reopenErr    error
 			cancelErr    error
+			absentData   bool
 		}{
 			{name: "closed"},
+			{name: "absent data", absentData: true},
 			{name: "reopen error", reopenErr: errUnavailable},
 			{name: "cancel error", cancelErr: errUnavailable},
 			{name: "cancel closed", cancelClosed: true, reopenErr: errUnavailable},
@@ -297,6 +299,18 @@ func TestBlobWriterCancelStagedData(t *testing.T) {
 				if tc.cancelClosed || (tc.reopenErr == nil && tc.cancelErr == nil) {
 					wantErr = nil
 				}
+				if tc.absentData {
+					dataPath := upload.(*blobWriter).path
+					if err := driver.StorageDriver.Delete(ctx, dataPath); err != nil {
+						t.Fatal(err)
+					}
+					delete(driver.staged, dataPath)
+					// Model drivers that cannot reopen data which is already gone.
+					driver.reopenErr = storagedriver.PathNotFoundError{Path: dataPath}
+					if _, err := driver.Stat(ctx, path.Dir(dataPath)); err != nil {
+						t.Fatalf("staging metadata before Cancel: %v", err)
+					}
+				}
 				writers := len(driver.writers)
 				err = upload.Cancel(ctx)
 				if err != wantErr {
@@ -310,6 +324,21 @@ func TestBlobWriterCancelStagedData(t *testing.T) {
 					if writer.closes != 1 {
 						t.Errorf("reopened writer closed %d times, want 1", writer.closes)
 					}
+				}
+				if tc.absentData {
+					if _, err := driver.Stat(ctx, path.Dir(upload.(*blobWriter).path)); err == nil {
+						t.Error("upload directory remains after Cancel")
+					} else if _, ok := err.(storagedriver.PathNotFoundError); !ok {
+						t.Errorf("upload directory after Cancel: %v", err)
+					}
+					resumed, err := bs.Resume(ctx, upload.ID())
+					if resumed != nil {
+						defer resumed.Close()
+					}
+					if err != distribution.ErrBlobUploadUnknown {
+						t.Errorf("Resume after Cancel returned %v, want ErrBlobUploadUnknown", err)
+					}
+					return
 				}
 				if err != nil {
 					if staged := driver.staged[upload.(*blobWriter).path]; staged != int64(len(data)) {
