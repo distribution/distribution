@@ -49,6 +49,9 @@ const driverName = "s3aws"
 // S3 API requires multipart upload chunks to be at least 5MB
 const minChunkSize = 5 * 1024 * 1024
 
+// maxPartSize is the S3 limit for a multipart upload part, including copies.
+const maxPartSize = 5 * 1024 * 1024 * 1024
+
 const defaultChunkSize = 2 * minChunkSize
 
 const (
@@ -1428,22 +1431,45 @@ func (w *writer) Write(p []byte) (int, error) {
 				return 0, err
 			}
 		} else {
-			// Otherwise we can use the old file as the new first part
-			copyPartResp, err := w.driver.S3.UploadPartCopyWithContext(w.ctx, &s3.UploadPartCopyInput{
-				Bucket:     aws.String(w.driver.Bucket),
-				CopySource: aws.String(w.driver.Bucket + "/" + w.key),
-				Key:        aws.String(w.key),
-				PartNumber: aws.Int64(1),
-				UploadId:   resp.UploadId,
-			})
-			if err != nil {
-				return 0, err
+			// Copy the saved file into parts that fit the backend limit. Each
+			// must also be large enough to allow more parts to be appended.
+			var parts []*s3.Part
+			for firstByte := int64(0); firstByte < w.size; {
+				partSize := min(w.size-firstByte, int64(maxPartSize))
+				if remaining := w.size - firstByte - partSize; remaining > 0 && remaining < minChunkSize {
+					partSize -= minChunkSize - remaining
+				}
+				partNumber := int64(len(parts)) + 1
+				input := &s3.UploadPartCopyInput{
+					Bucket:     aws.String(w.driver.Bucket),
+					CopySource: aws.String(w.driver.Bucket + "/" + w.key),
+					Key:        aws.String(w.key),
+					PartNumber: aws.Int64(partNumber),
+					UploadId:   resp.UploadId,
+				}
+				if w.size > int64(maxPartSize) {
+					input.CopySourceRange = aws.String(fmt.Sprintf("bytes=%d-%d", firstByte, firstByte+partSize-1))
+				}
+				copyPartResp, err := w.driver.S3.UploadPartCopyWithContext(w.ctx, input)
+				if err != nil {
+					// Do not leave a partially replayed prefix available to resume.
+					if _, aErr := w.driver.S3.AbortMultipartUploadWithContext(w.ctx, &s3.AbortMultipartUploadInput{
+						Bucket:   aws.String(w.driver.Bucket),
+						Key:      aws.String(w.key),
+						UploadId: resp.UploadId,
+					}); aErr != nil {
+						return 0, errors.Join(err, aErr)
+					}
+					return 0, err
+				}
+				parts = append(parts, &s3.Part{
+					ETag:       copyPartResp.CopyPartResult.ETag,
+					PartNumber: aws.Int64(partNumber),
+					Size:       aws.Int64(partSize),
+				})
+				firstByte += partSize
 			}
-			w.parts = []*s3.Part{{
-				ETag:       copyPartResp.CopyPartResult.ETag,
-				PartNumber: aws.Int64(1),
-				Size:       aws.Int64(w.size),
-			}}
+			w.parts = parts
 		}
 	}
 
