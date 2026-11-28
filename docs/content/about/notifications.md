@@ -258,6 +258,23 @@ Content-Type: application/vnd.docker.distribution.events.v2+json
 }
 ```
 
+## Trace context
+
+The registry propagates the [OpenTelemetry](https://opentelemetry.io/) trace
+context of the request that generated an event to the endpoint. Each
+notification request carries the [W3C Trace Context](https://www.w3.org/TR/trace-context/)
+`traceparent` header, along with the `tracestate` and
+[W3C Baggage](https://www.w3.org/TR/baggage/) `baggage` headers when they are
+set, identifying the registry span that served the originating request. An
+endpoint instrumented with OpenTelemetry can use these headers to continue the
+trace, linking the work it performs in response to the event to the registry
+request, and to the client request that preceded it, if that client propagated
+its own trace context to the registry.
+
+The trace context is only sent as request headers and is not part of the event
+envelope. Since each notification request currently carries a single event,
+the headers always refer to the request that generated that event.
+
 ## Responses
 
 The registry is fairly accepting of the response codes from endpoints. If an

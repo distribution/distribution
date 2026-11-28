@@ -1,6 +1,7 @@
 package notifications
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -11,9 +12,12 @@ import (
 	events "github.com/docker/go-events"
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 )
 
 type bridge struct {
+	ctx               context.Context
 	ub                URLBuilder
 	includeReferences bool
 	actor             ActorRecord
@@ -35,7 +39,17 @@ type URLBuilder interface {
 // this bridge will be created using the URLBuilder.
 // TODO(stevvooe): Update this to simply take a context.Context object.
 func NewBridge(ub URLBuilder, source SourceRecord, actor ActorRecord, request RequestRecord, sink events.Sink, includeReferences bool) Listener {
+	return NewBridgeWithContext(context.Background(), ub, source, actor, request, sink, includeReferences)
+}
+
+// NewBridgeWithContext is like NewBridge, but additionally records the trace
+// context carried by ctx, typically the context of the request that triggers
+// the events, on every event created by the bridge. Endpoints receive this
+// trace context as request headers, which lets them link their own traces to
+// the registry request that generated the event.
+func NewBridgeWithContext(ctx context.Context, ub URLBuilder, source SourceRecord, actor ActorRecord, request RequestRecord, sink events.Sink, includeReferences bool) Listener {
 	return &bridge{
+		ctx:               ctx,
 		ub:                ub,
 		includeReferences: includeReferences,
 		actor:             actor,
@@ -213,8 +227,20 @@ func (b *bridge) createEvent(action string) *Event {
 	event.Source = b.source
 	event.Actor = b.actor
 	event.Request = b.request
+	event.traceContext = b.traceContext()
 
 	return event
+}
+
+// traceContext returns the trace context of the bridge context, encoded with
+// the globally configured OpenTelemetry propagator, or nil if there is none.
+func (b *bridge) traceContext() propagation.MapCarrier {
+	carrier := propagation.MapCarrier{}
+	otel.GetTextMapPropagator().Inject(b.ctx, carrier)
+	if len(carrier) == 0 {
+		return nil
+	}
+	return carrier
 }
 
 // createEvent returns a new event, timestamped, with the specified action.

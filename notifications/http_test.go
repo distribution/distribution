@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"io"
 	"mime"
 	"net"
 	"net/http"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/distribution/distribution/v3/manifest/schema2"
 	events "github.com/docker/go-events"
+	"go.opentelemetry.io/otel/propagation"
 )
 
 // TestHTTPSink mocks out an http endpoint and notifies it under a couple of
@@ -196,6 +198,66 @@ func TestHTTPSink(t *testing.T) {
 	// double close returns error
 	if err := sink.Close(); err == nil {
 		t.Fatalf("second close should have returned error: %v", err)
+	}
+}
+
+// TestHTTPSinkTraceContext ensures that the trace context recorded on an
+// event is sent to the endpoint as request headers, but not in the body.
+func TestHTTPSinkTraceContext(t *testing.T) {
+	const traceparent = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+
+	type received struct {
+		header http.Header
+		body   []byte
+	}
+	requests := make(chan received, 1)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer r.Body.Close()
+
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		requests <- received{header: r.Header.Clone(), body: body}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	sink := newHTTPSink(server.URL, 0, http.Header{"Authorization": {"Bearer token"}}, nil)
+	defer sink.Close()
+
+	event := createTestEvent("push", "library/test", schema2.MediaTypeManifest)
+	event.traceContext = propagation.MapCarrier{"traceparent": traceparent}
+	if err := sink.Write(event); err != nil {
+		t.Fatalf("unexpected error writing event: %v", err)
+	}
+	req := <-requests
+
+	if got := req.header.Get("Traceparent"); got != traceparent {
+		t.Fatalf("unexpected traceparent header: %q != %q", got, traceparent)
+	}
+	if got := req.header.Get("Authorization"); got != "Bearer token" {
+		t.Fatalf("unexpected authorization header: %q != %q", got, "Bearer token")
+	}
+	mediaType, _, err := mime.ParseMediaType(req.header.Get("Content-Type"))
+	if err != nil {
+		t.Fatalf("error parsing media type: %v", err)
+	}
+	if mediaType != EventsMediaType {
+		t.Fatalf("incorrect media type: %q != %q", mediaType, EventsMediaType)
+	}
+	if strings.Contains(string(req.body), traceparent) {
+		t.Fatalf("trace context should not be part of the event body: %s", req.body)
+	}
+
+	// Events without a trace context are sent without trace headers.
+	if err := sink.Write(createTestEvent("push", "library/test", schema2.MediaTypeManifest)); err != nil {
+		t.Fatalf("unexpected error writing event: %v", err)
+	}
+	req = <-requests
+	if got := req.header.Get("Traceparent"); got != "" {
+		t.Fatalf("unexpected traceparent header: %q", got)
 	}
 }
 
