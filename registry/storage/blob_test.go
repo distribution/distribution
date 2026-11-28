@@ -88,6 +88,53 @@ func TestBlobUploadCloseAfterCancel(t *testing.T) {
 	}
 }
 
+// TestBlobUploadCloseAfterCommit checks that closing a committed upload, as
+// PutBlobUploadComplete does with a deferred Close, does not fail the upload.
+func TestBlobUploadCloseAfterCommit(t *testing.T) {
+	ctx := context.Background()
+	imageName, _ := reference.WithName("foo/bar")
+	driver := inmemory.New()
+	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableDelete, EnableRedirect)
+	if err != nil {
+		t.Fatalf("error creating registry: %v", err)
+	}
+	repository, err := registry.Repository(ctx, imageName)
+	if err != nil {
+		t.Fatalf("unexpected error getting repo: %v", err)
+	}
+	bs := repository.Blobs(ctx)
+
+	blobUpload, err := bs.Create(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error starting layer upload: %s", err)
+	}
+	contents := []byte{1, 2, 3}
+	if _, err := blobUpload.Write(contents); err != nil {
+		t.Fatalf("unexpected error writing contents: %v", err)
+	}
+
+	desc, err := blobUpload.Commit(ctx, v1.Descriptor{Digest: digest.FromBytes(contents)})
+	if err != nil {
+		t.Fatalf("unexpected error committing upload: %v", err)
+	}
+	if err := blobUpload.Close(); err != nil {
+		t.Fatalf("close after commit: %v", err)
+	}
+
+	rc, err := bs.Open(ctx, desc.Digest)
+	if err != nil {
+		t.Fatalf("unexpected error opening committed blob: %v", err)
+	}
+	defer rc.Close()
+	got, err := io.ReadAll(rc)
+	if err != nil {
+		t.Fatalf("unexpected error reading committed blob: %v", err)
+	}
+	if !bytes.Equal(got, contents) {
+		t.Fatalf("committed blob = %v, want %v", got, contents)
+	}
+}
+
 // TestSimpleBlobUpload covers the blob upload process, exercising common
 // error paths that might be seen during an upload.
 func TestSimpleBlobUpload(t *testing.T) {
