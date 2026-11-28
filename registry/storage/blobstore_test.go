@@ -2,6 +2,8 @@ package storage
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/distribution/distribution/v3/registry/storage/cache"
@@ -137,5 +139,27 @@ func TestBlobStorePutAfterGCWithStaleCache(t *testing.T) {
 	}
 	if string(got) != string(content) {
 		t.Fatalf("content: got %q, want %q", got, content)
+	}
+}
+
+func TestBlobStoreReadlinkInvalidDigest(t *testing.T) {
+	ctx := context.Background()
+	bs := &blobStore{driver: inmemory.New()}
+	for _, content := range []string{
+		"notadigest",
+		"sha256:abcd",
+		"md5:d41d8cd98f00b204e9800998ecf8427e",
+	} {
+		if err := bs.driver.PutContent(ctx, "/link", []byte(content)); err != nil {
+			t.Fatal(err)
+		}
+		_, parseErr := digest.Parse(content)
+		linked, err := bs.readlink(ctx, "/link")
+		if linked != "" || err == nil || err == parseErr || !errors.Is(err, parseErr) {
+			t.Fatalf("expected wrapped parse error and no digest for %q, got %q, %v", content, linked, err)
+		}
+		if want := fmt.Sprintf("invalid digest in stored blob link: %v", parseErr); err.Error() != want {
+			t.Fatalf("expected error %q, got %q", want, err)
+		}
 	}
 }
