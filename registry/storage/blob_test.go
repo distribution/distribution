@@ -180,6 +180,117 @@ func TestBlobWriterCancel(t *testing.T) {
 	}
 }
 
+// stagedUploadDriver models data, such as S3 multipart parts, that Delete
+// cannot remove. Only cancelling or committing the driver writer releases it.
+type stagedUploadDriver struct {
+	storagedriver.StorageDriver
+	staged       map[string]int64
+	cancelClosed bool
+	reopenErr    error
+}
+
+func (d *stagedUploadDriver) Writer(ctx context.Context, path string, appendMode bool) (storagedriver.FileWriter, error) {
+	if appendMode && d.reopenErr != nil {
+		return nil, d.reopenErr
+	}
+	w, err := d.StorageDriver.Writer(ctx, path, appendMode)
+	if err != nil {
+		return nil, err
+	}
+	return &stagedUploadWriter{FileWriter: w, driver: d, path: path}, nil
+}
+
+type stagedUploadWriter struct {
+	storagedriver.FileWriter
+	driver *stagedUploadDriver
+	path   string
+}
+
+func (w *stagedUploadWriter) Write(p []byte) (int, error) {
+	n, err := w.FileWriter.Write(p)
+	w.driver.staged[w.path] += int64(n)
+	return n, err
+}
+
+func (w *stagedUploadWriter) Cancel(ctx context.Context) error {
+	var err error
+	if w.driver.cancelClosed {
+		// Like GCS, allow cancellation even after the writer has closed.
+		err = w.driver.StorageDriver.Delete(ctx, w.path)
+	} else {
+		err = w.FileWriter.Cancel(ctx)
+	}
+	if err != nil {
+		return err
+	}
+	delete(w.driver.staged, w.path)
+	return nil
+}
+
+func (w *stagedUploadWriter) Commit(ctx context.Context) error {
+	if err := w.FileWriter.Commit(ctx); err != nil {
+		return err
+	}
+	delete(w.driver.staged, w.path)
+	return nil
+}
+
+func TestBlobWriterCancelStagedData(t *testing.T) {
+	for _, resumable := range []bool{false, true} {
+		for _, cancelClosed := range []bool{false, true} {
+			t.Run(fmt.Sprintf("resumable=%t/cancelClosed=%t", resumable, cancelClosed), func(t *testing.T) {
+				ctx := context.Background()
+				driver := &stagedUploadDriver{StorageDriver: inmemory.New(), staged: make(map[string]int64), cancelClosed: cancelClosed}
+				var options []RegistryOption
+				if !resumable {
+					options = append(options, DisableDigestResumption)
+				}
+				reg, err := NewRegistry(ctx, driver, options...)
+				if err != nil {
+					t.Fatal(err)
+				}
+				name, _ := reference.WithName("foo/bar")
+				repo, err := reg.Repository(ctx, name)
+				if err != nil {
+					t.Fatal(err)
+				}
+				bs := repo.Blobs(ctx)
+				upload, err := bs.Create(ctx)
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer upload.Close()
+				data := []byte("staged bytes")
+				if _, err := upload.Write(data); err != nil {
+					t.Fatal(err)
+				}
+				if err := upload.Close(); err != nil {
+					t.Fatal(err)
+				}
+				if cancelClosed {
+					driver.reopenErr = errors.New("resuming is unavailable, cancellation is supported")
+				}
+				if err := upload.Cancel(ctx); err != nil {
+					if cancelClosed {
+						t.Errorf("Cancel on a closed-capable writer returned %v", err)
+					}
+					driver.reopenErr = nil
+					resumed, resumeErr := bs.Resume(ctx, upload.ID())
+					if resumeErr != nil {
+						t.Fatalf("Resume after failed Cancel: %v (Cancel: %v)", resumeErr, err)
+					}
+					defer resumed.Close()
+					if resumed.Size() != int64(len(data)) {
+						t.Errorf("resumed size = %d, want %d", resumed.Size(), len(data))
+					}
+				} else if staged := driver.staged[upload.(*blobWriter).path]; staged != 0 {
+					t.Errorf("staged bytes after successful Cancel = %d, want 0", staged)
+				}
+			})
+		}
+	}
+}
+
 type cancelErrorWriter struct {
 	storagedriver.FileWriter
 	err error

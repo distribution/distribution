@@ -107,9 +107,27 @@ func (bw *blobWriter) Cancel(ctx context.Context) error {
 	if bw.committed || bw.cancelComplete {
 		return nil
 	}
-	// A closed or committed driver writer cannot be cancelled. Its staged
-	// content is still owned by this upload until removeResources deletes it.
-	if !bw.closed && !bw.fileWriterCommitted && !bw.cancelled {
+	switch {
+	case bw.fileWriterCommitted || bw.cancelled:
+		// Committed data is removed with the upload directory below.
+	case bw.closed:
+		if err := bw.fileWriter.Cancel(ctx); err == nil {
+			break
+		}
+		// Reopen to abort staged data, such as S3 multipart parts, that
+		// deleting the upload directory alone cannot remove.
+		fileWriter, err := bw.driver.Writer(ctx, bw.path, true)
+		if err != nil {
+			if _, ok := err.(storagedriver.PathNotFoundError); !ok {
+				return err
+			}
+		} else {
+			defer fileWriter.Close()
+			if err := fileWriter.Cancel(ctx); err != nil {
+				return err
+			}
+		}
+	default:
 		if err := bw.fileWriter.Cancel(ctx); err != nil {
 			return err
 		}
