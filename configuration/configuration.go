@@ -131,6 +131,11 @@ type Log struct {
 type AccessLog struct {
 	// Disabled disables access logging.
 	Disabled bool `yaml:"disabled,omitempty"`
+
+	// ProxyHeaders logs the client address from the X-Forwarded-For or
+	// X-Real-Ip header instead of the address of the connection. Enable it
+	// only when the registry runs behind a proxy that sets these headers.
+	ProxyHeaders bool `yaml:"proxyheaders,omitempty"`
 }
 
 // HTTP defines configuration options for the HTTP interface of the registry.
