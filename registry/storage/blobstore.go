@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"path"
 
@@ -152,7 +153,7 @@ func (bs *blobStore) readlink(ctx context.Context, path string) (digest.Digest, 
 
 	linked, err := digest.Parse(string(content))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("invalid digest in stored blob link: %w", err)
 	}
 
 	return linked, nil
