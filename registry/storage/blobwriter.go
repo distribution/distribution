@@ -40,8 +40,10 @@ type blobWriter struct {
 
 	resumableDigestEnabled bool
 	closed                 bool
+	fileWriterCommitted    bool
 	committed              bool
 	cancelled              bool
+	cancelComplete         bool
 }
 
 var _ distribution.BlobWriter = &blobWriter{}
@@ -64,7 +66,12 @@ func (bw *blobWriter) Commit(ctx context.Context, desc v1.Descriptor) (v1.Descri
 		return v1.Descriptor{}, err
 	}
 
-	bw.Close()
+	bw.fileWriterCommitted = true
+
+	if err := bw.Close(); err != nil {
+		// A failed checkpoint must not leave the data file open during Move.
+		_ = bw.fileWriter.Close()
+	}
 	desc.Size = bw.Size()
 
 	canonical, err := bw.validateBlob(ctx, desc)
@@ -97,8 +104,33 @@ func (bw *blobWriter) Commit(ctx context.Context, desc v1.Descriptor) (v1.Descri
 // the writer and canceling the operation.
 func (bw *blobWriter) Cancel(ctx context.Context) error {
 	dcontext.GetLogger(ctx).Debug("(*blobWriter).Cancel")
-	if err := bw.fileWriter.Cancel(ctx); err != nil {
-		return err
+	if bw.committed || bw.cancelComplete {
+		return nil
+	}
+	switch {
+	case bw.fileWriterCommitted || bw.cancelled:
+		// Committed data is removed with the upload directory below.
+	case bw.closed:
+		if err := bw.fileWriter.Cancel(ctx); err == nil {
+			break
+		}
+		// Reopen to abort staged data, such as S3 multipart parts, that
+		// deleting the upload directory alone cannot remove.
+		fileWriter, err := bw.driver.Writer(ctx, bw.path, true)
+		if err != nil {
+			if _, ok := err.(storagedriver.PathNotFoundError); !ok {
+				return err
+			}
+		} else {
+			defer fileWriter.Close()
+			if err := fileWriter.Cancel(ctx); err != nil {
+				return err
+			}
+		}
+	default:
+		if err := bw.fileWriter.Cancel(ctx); err != nil {
+			return err
+		}
 	}
 	bw.cancelled = true
 
@@ -106,7 +138,11 @@ func (bw *blobWriter) Cancel(ctx context.Context) error {
 		dcontext.GetLogger(ctx).Errorf("error closing blobwriter: %s", err)
 	}
 
-	return bw.removeResources(ctx)
+	if err := bw.removeResources(ctx); err != nil {
+		return err
+	}
+	bw.cancelComplete = true
+	return nil
 }
 
 func (bw *blobWriter) Size() int64 {
@@ -165,12 +201,8 @@ func (bw *blobWriter) Close() error {
 		return nil
 	}
 
-	if !bw.resumableDigestEnabled {
-		return bw.fileWriter.Close()
-	}
-
 	// Do not checkpoint the same writer again after a successful close.
-	if !bw.closed {
+	if bw.resumableDigestEnabled && !bw.closed {
 		if err := bw.storeHashState(bw.blobStore.ctx); err != nil && err != errResumableDigestNotAvailable {
 			return err
 		}
